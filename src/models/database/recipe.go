@@ -16,14 +16,20 @@ type Recipe struct {
 	Ingredients  []RecipeIngredient `gorm:"foreignKey:RecipeID" json:"ingredients"`
 }
 
-// RecipeIngredient is one recipe entry. Amount is expressed in Unit; a nil
-// ProductID marks a free-text ingredient that is not linked to household stock.
+// RecipeIngredient is one recipe entry. Portion is the portion the recipe
+// calls for, as free text ("200 g", "1 cup", "a pinch"). It is never
+// converted and never computed with: a recipe states how much of something a
+// dish needs, not how many packs of it are in the cupboard. A nil ProductID
+// marks a free-text ingredient that is not linked to household stock.
+//
+// The portion is display metadata. Cooking a recipe consumes a pack of every
+// product it links, scaled by the servings, so the portion never decides what
+// leaves the stock.
 type RecipeIngredient struct {
 	gorm.Model
 	RecipeID  uint   `gorm:"index, not null"`
 	ProductID *uint  `gorm:"index"`
 	Name      string `gorm:"not null" json:"name"`
-	Amount    int    `json:"amount"`
-	Unit      string `json:"unit"`
+	Portion   string `json:"portion"`
 	SortOrder int    `json:"sortOrder"`
 }

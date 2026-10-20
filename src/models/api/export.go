@@ -23,8 +23,8 @@ type ExportProductResponse struct {
 	ScannedAt            time.Time                `json:"scannedAt"`
 	NotifiedAt           time.Time                `json:"notifiedAt"`
 	IsPrivate            bool                     `json:"isPrivate"`
-	Amount               int                      `json:"amount"`
-	Unit                 string                   `json:"unit"`
+	Quantity             int                      `json:"quantity"`
+	PackSize             string                   `json:"packSize"`
 	StorageLocationID    *uint                    `json:"storageLocationId"`
 	StorageLocation      *StorageLocationResponse `json:"storageLocation,omitempty"`
 	PriceOverride        *float64                 `json:"priceOverride,omitempty"`
@@ -37,6 +37,12 @@ type ExportProductResponse struct {
 	CreatedAt            time.Time                `json:"createdAt"`
 	ArchivedAt           *time.Time               `json:"archivedAt,omitempty"`
 	OwnerUsername        string                   `json:"ownerUsername,omitempty"`
+
+	// Amount and Unit carry the shape of a document written before products
+	// were counted in packs. A current export leaves them empty; a restore
+	// reads them from an older document.
+	Amount int    `json:"amount,omitempty"`
+	Unit   string `json:"unit,omitempty"`
 }
 
 // NewExportProductResponse projects a product onto the export shape. An archived
@@ -56,8 +62,8 @@ func NewExportProductResponse(product *dbModel.Product) ExportProductResponse {
 		ScannedAt:            product.ScannedAt,
 		NotifiedAt:           product.NotifiedAt,
 		IsPrivate:            product.IsPrivate,
-		Amount:               product.Amount,
-		Unit:                 product.Unit,
+		Quantity:             product.Quantity,
+		PackSize:             product.PackSize,
 		StorageLocationID:    product.StorageLocationID,
 		PriceOverride:        product.PriceOverride,
 		CO2KgPerKg:           product.CO2KgPerKg,

@@ -157,6 +157,9 @@
     const card = document.createElement("div");
     card.className = "card";
     card.dataset.index = String(index);
+    // The bound a pack count may hold reaches the page from the server, so the
+    // input and the clamp below agree with what the server stores.
+    const maxQuantity = (window.proviantLimits && window.proviantLimits.maxQuantity) || 999;
     card.innerHTML =
       '<div class="card-body py-2">' +
       '<div class="d-flex align-items-start gap-2">' +
@@ -165,8 +168,8 @@
       '<i class="bi bi-x-lg" aria-hidden="true"></i></button>' +
       "</div>" +
       '<div class="d-flex gap-2 mt-2">' +
-      '<input type="number" class="form-control form-control-sm receipt-item-amount" min="1" max="999" aria-label="' + proviant.t("js.receipt.amountLabel") + '">' +
-      '<input type="text" class="form-control form-control-sm receipt-item-unit" value="" aria-label="' + proviant.t("js.receipt.unitLabel") + '" placeholder="' + proviant.t("js.receipt.unitLabel") + '">' +
+      '<input type="number" class="form-control form-control-sm receipt-item-quantity" min="1" max="' + maxQuantity + '" aria-label="' + proviant.t("js.receipt.quantityLabel") + '">' +
+      '<input type="text" class="form-control form-control-sm receipt-item-pack-size" value="" aria-label="' + proviant.t("js.receipt.packSizeLabel") + '" placeholder="' + proviant.t("js.receipt.packSizeLabel") + '">' +
       '<input type="number" class="form-control form-control-sm receipt-item-price" min="0" max="100000" step="0.01" aria-label="' + proviant.t("js.receipt.priceLabel") + '" placeholder="' + proviant.t("js.receipt.priceLabel") + '">' +
       "</div>" +
       '<div class="row g-2 mt-1">' +
@@ -177,8 +180,8 @@
       "</div>";
     fillLocationOptions(card.querySelector(".receipt-item-location"));
     card.querySelector(".receipt-item-name").value = item.name || "";
-    card.querySelector(".receipt-item-amount").value = item.amount || 1;
-    card.querySelector(".receipt-item-unit").value = item.unit || "";
+    card.querySelector(".receipt-item-quantity").value = item.quantity || 1;
+    card.querySelector(".receipt-item-pack-size").value = item.packSize || "";
     card.querySelector(".receipt-item-price").value = item.price != null ? item.price : "";
     return card;
   }
@@ -223,25 +226,30 @@
     document.querySelectorAll("#receiptItems .card").forEach(function (card) {
       const rawName = card.querySelector(".receipt-item-name").value.trim();
       if (!rawName) { invalid++; return; }
-      // Mirror the server clamps (util.ReceiptItemMaxNameLength / ReceiptItemMaxAmount)
-      // so the value the user confirms is the value that gets stored.
+      // Mirror the server clamps (util.ReceiptItemMaxNameLength /
+      // util.MaxProductQuantity / util.MaxPackSizeLength) so the value the
+      // user confirms is the value that gets stored. The bounds reach the page
+      // from the server, so the two cannot drift.
+      const limits = window.proviantLimits || {};
+      const maxQuantity = limits.maxQuantity || 999;
+      const maxPackSizeLength = limits.maxPackSizeLength || 60;
       const name = truncateUtf8Bytes(rawName, 200);
-      const amount = Math.min(999, Math.max(1, Number.parseInt(card.querySelector(".receipt-item-amount").value, 10) || 1));
-      const unit = truncateUtf8Bytes(card.querySelector(".receipt-item-unit").value.trim(), 20);
+      const quantity = Math.min(maxQuantity, Math.max(1, Number.parseInt(card.querySelector(".receipt-item-quantity").value, 10) || 1));
+      const packSize = truncateUtf8Bytes(card.querySelector(".receipt-item-pack-size").value.trim(), maxPackSizeLength);
       const priceRaw = Number.parseFloat(card.querySelector(".receipt-item-price").value);
       const expire = card.querySelector(".receipt-item-expire").value || batchExpire;
       const category = truncateUtf8Bytes(card.querySelector(".receipt-item-category").value.trim() || batchCategory, 100);
       const location = card.querySelector(".receipt-item-location").value || batchLocation;
       const draft = {
         productName: name,
-        amount: amount,
-        unit: unit,
+        quantity: quantity,
+        packSize: packSize,
         expireAt: expire,
         categories: category,
         storageLocationId: location ? Number.parseInt(location, 10) : null,
         isPrivate: false,
       };
-      if (!Number.isNaN(priceRaw) && priceRaw > 0) draft.priceOverride = Math.min(priceRaw, 100000);
+      if (!Number.isNaN(priceRaw) && priceRaw > 0) draft.price = Math.min(priceRaw, 100000);
       items.push(draft);
     });
     return { items: items, invalid: invalid };

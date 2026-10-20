@@ -400,6 +400,15 @@ document.addEventListener('DOMContentLoaded', async function () {
           savings.savedCo2KgThisMonth > 0 ? 'success' : null,
           null,
         ));
+        // The events from before the count model are not in the totals: their
+        // figures were scaled by the net content, not by a count of packs.
+        const legacyEvents = savings.legacyEvents || 0;
+        if (legacyEvents > 0) {
+          const note = document.createElement('div');
+          note.className = 'col-12 text-secondary-custom small mt-1';
+          note.textContent = proviant.tn("js.home.legacySavingsNote", legacyEvents);
+          dashboard.appendChild(note);
+        }
       }
     }
 

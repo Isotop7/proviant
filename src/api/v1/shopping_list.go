@@ -8,13 +8,12 @@ import (
 	"github.com/Isotop7/proviant/errors"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	dbModel "github.com/Isotop7/proviant/models/database"
-	"github.com/Isotop7/proviant/util"
 	"github.com/gin-gonic/gin"
 )
 
 // GetAutoShoppingList returns the products whose stock fell below their minimum amount
 // @Summary      Gets auto shopping list
-// @Description  Returns all products of the caller whose amount is below their minimum stock amount
+// @Description  Returns all products of the caller whose pack count is below their minimum stock amount
 // @Tags         shopping-list
 // @Produce      json
 // @Success      200 {array} apiModel.ProductResponse
@@ -38,7 +37,7 @@ func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext) {
 // @Tags         shopping-list
 // @Accept       json
 // @Produce      json
-// @Param        request body apiModel.CreateShoppingListItemRequest true "Item: productId or name, optional category, quantity, unit, notes"
+// @Param        request body apiModel.CreateShoppingListItemRequest true "Item: productId or name, optional category, quantity, notes"
 // @Success      201 {object} apiModel.ShoppingListItemResponse
 // @Failure      400 {object} api.APIResponse
 // @Failure      500 {object} api.APIResponse
@@ -53,9 +52,6 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	if req.Quantity <= 0 {
 		req.Quantity = 1
 	}
-	// A shopping list row is rendered with util.FormatUnit, which assumes the
-	// base unit, so normalise the pair on the way in.
-	req.Quantity, req.Unit = util.ToBase(req.Quantity, req.Unit)
 
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil {
@@ -85,7 +81,6 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 		Name:        req.Name,
 		Category:    req.Category,
 		Quantity:    req.Quantity,
-		Unit:        req.Unit,
 		Notes:       req.Notes,
 		CreatedBy:   appCtx.UserID,
 	}
@@ -128,12 +123,12 @@ func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext) {
 
 // UpdateShoppingListItem updates a shopping list item of the caller's household
 // @Summary      Updates a shopping list item
-// @Description  Updates name, category, quantity, unit, checked state and notes of a shopping list item
+// @Description  Updates name, category, quantity, checked state and notes of a shopping list item
 // @Tags         shopping-list
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Shopping list item ID"
-// @Param        request body apiModel.UpdateShoppingListItemRequest true "Fields to update: name, category, quantity, unit, checked, notes"
+// @Param        request body apiModel.UpdateShoppingListItemRequest true "Fields to update: name, category, quantity, checked, notes"
 // @Success      200 {object} apiModel.ShoppingListItemResponse
 // @Failure      400 {object} api.APIResponse
 // @Failure      404 {object} api.APIResponse
@@ -171,22 +166,9 @@ func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 	if req.Category != nil {
 		item.Category = *req.Category
 	}
-	// Keep the stored pair in base units whenever either half of it is written,
-	// so util.FormatUnit's base-unit assumption holds on the next render. An
-	// incoming quantity is expressed in the unit it is stored with: the new one
-	// when both halves arrive, the current one when only the quantity does. A
-	// unit-only write must preserve the amount, so it converts instead of
-	// reinterpreting it; a pair that cannot be converted (unknown unit, other
-	// kind) is left untouched rather than silently relabelled.
-	switch {
-	case req.Quantity != nil && req.Unit != nil:
-		item.Quantity, item.Unit = util.ToBase(*req.Quantity, *req.Unit)
-	case req.Quantity != nil:
-		item.Quantity, item.Unit = util.ToBase(*req.Quantity, item.Unit)
-	case req.Unit != nil:
-		if converted, ok := util.Convert(item.Quantity, item.Unit, *req.Unit); ok {
-			item.Quantity, item.Unit = util.ToBase(converted, *req.Unit)
-		}
+	if req.Quantity != nil {
+		// A row always stands for at least one pack.
+		item.Quantity = max(1, *req.Quantity)
 	}
 	if req.Checked != nil {
 		item.Checked = *req.Checked
@@ -325,12 +307,11 @@ func ImportAutoListToShoppingList(ctx *gin.Context, appCtx *AppContext) {
 			ProductID:   &product.ID,
 			Name:        product.ProductName,
 			Category:    product.Categories,
-			Quantity:    product.MinStockAmount - product.Amount,
+			Quantity:    product.MinStockAmount - product.Quantity,
 		}
 		if item.Quantity <= 0 {
 			item.Quantity = 1
 		}
-		item.Unit = product.Unit
 		item.CreatedBy = appCtx.UserID
 
 		if err := appCtx.Repos.ShoppingListItems.Create(item); err != nil {

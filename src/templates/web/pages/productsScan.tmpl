@@ -82,13 +82,13 @@
                 </div>
             </div>
 
-            <label class="form-label fw-medium small">{{ t "scan.amount" }}</label>
+            <label class="form-label fw-medium small">{{ t "scan.quantity" }}</label>
             <div class="d-flex align-items-center gap-2 mb-3">
-                <button type="button" class="btn btn-proviant-secondary" id="btnBatchAmountDec" aria-label="{{ t "scan.amountDecrease" }}">-</button>
-                <span id="batchAmountDisplay" class="fs-5 px-2" aria-live="polite">1</span>
-                <button type="button" class="btn btn-proviant-secondary" id="btnBatchAmountInc" aria-label="{{ t "scan.amountIncrease" }}">+</button>
+                <button type="button" class="btn btn-proviant-secondary" id="btnBatchQuantityDec" aria-label="{{ t "scan.quantityDecrease" }}">-</button>
+                <span id="batchQuantityDisplay" class="fs-5 px-2" aria-live="polite">1</span>
+                <button type="button" class="btn btn-proviant-secondary" id="btnBatchQuantityInc" aria-label="{{ t "scan.quantityIncrease" }}">+</button>
             </div>
-            <input type="hidden" id="batchAmount" value="1">
+            <input type="hidden" id="batchQuantity" value="1">
 
             <label for="batchExpireAt" class="form-label fw-medium small">
                 {{ t "scan.expiryDate" }} <span class="text-danger" aria-hidden="true">*</span>
@@ -149,21 +149,13 @@
             <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="{{ t "scan.instanceSelect" }}"></select>
 
             <form id="formExpireAt" class="needs-validation" novalidate>
-                <label class="form-label fw-medium small">{{ t "scan.amount" }}</label>
+                <label class="form-label fw-medium small">{{ t "scan.quantity" }}</label>
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <button type="button" class="btn btn-proviant-secondary" id="btnAmountDec" aria-label="{{ t "scan.amountDecrease" }}">-</button>
-                    <span id="amountDisplay" class="fs-5 px-2">1</span>
-                    <button type="button" class="btn btn-proviant-secondary" id="btnAmountInc" aria-label="{{ t "scan.amountIncrease" }}">+</button>
+                    <button type="button" class="btn btn-proviant-secondary" id="btnQuantityDec" aria-label="{{ t "scan.quantityDecrease" }}">-</button>
+                    <span id="quantityDisplay" class="fs-5 px-2" aria-live="polite">1</span>
+                    <button type="button" class="btn btn-proviant-secondary" id="btnQuantityInc" aria-label="{{ t "scan.quantityIncrease" }}">+</button>
                 </div>
-                <input type="hidden" id="amount" value="1">
-
-                <label for="unit" class="form-label fw-medium small">{{ t "scan.unit" }}</label>
-                <select class="form-select mb-3" id="unit" aria-label="{{ t "scan.unit" }}">
-                    <option value="">{{ t "scan.noUnitOption" }}</option>
-                    {{ range .UnitOptions }}
-                    <option value="{{ .Value }}">{{ .Label }}</option>
-                    {{ end }}
-                </select>
+                <input type="hidden" id="quantity" value="1">
 
                 <label for="expireAt" class="form-label fw-medium small">
                     {{ t "scan.expiryDate" }} <span class="text-danger" aria-hidden="true">*</span>

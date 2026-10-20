@@ -31,23 +31,25 @@ func TestMealPlanService_GenerateShoppingList(t *testing.T) {
 	weekStart := time.Date(2026, 10, 12, 0, 0, 0, 0, time.UTC)
 	weekEnd := time.Date(2026, 10, 18, 0, 0, 0, 0, time.UTC)
 
-	t.Run("aggregates scaled ingredients, subtracts stock and adds free-text items", func(t *testing.T) {
+	t.Run("asks for one pack per planned meal, subtracts the stock and adds free-text items", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"product_name": "Flour", "amount": 100, "unit": "g"})
+		db.Model(product).Updates(map[string]any{"product_name": "Flour", "quantity": 1})
 		recipe := &dbModel.Recipe{
 			HouseholdID: householdID,
 			Name:        "Bread",
 			Servings:    2,
 			CreatedBy:   userID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Flour", Amount: 250, Unit: "g", SortOrder: 0},
-				{Name: "Salt", Amount: 5, Unit: "g", SortOrder: 1},
+				{ProductID: &product.ID, Name: "Flour", Portion: "250 g", SortOrder: 0},
+				{Name: "Salt", Portion: "5 g", SortOrder: 1},
 			},
 		}
 		if err := db.Create(recipe).Error; err != nil {
 			t.Fatalf("create recipe: %v", err)
 		}
+		// Every planned meal asks for one pack of the ingredient, the same
+		// number a cook of it takes.
 		testutil.CreateTestMealPlanEntry(db, householdID, recipe.ID, weekStart, 2, userID)
 		testutil.CreateTestMealPlanEntry(db, householdID, recipe.ID, weekStart.Add(24*time.Hour), 4, userID)
 
@@ -67,11 +69,11 @@ func TestMealPlanService_GenerateShoppingList(t *testing.T) {
 		for i := range items {
 			byName[items[i].Name] = items[i]
 		}
-		if flour, ok := byName["Flour"]; !ok || flour.Quantity != 650 {
-			t.Errorf("flour item = %+v, want quantity 650 (250 + 500 planned - 100 in stock)", flour)
+		if flour, ok := byName["Flour"]; !ok || flour.Quantity != 1 {
+			t.Errorf("flour item = %+v, want quantity 1 (two packs needed - one pack in stock)", flour)
 		}
-		if salt, ok := byName["Salt"]; !ok || salt.Quantity != 15 {
-			t.Errorf("salt item = %+v, want quantity 15 (5 + 10 planned)", salt)
+		if salt, ok := byName["Salt"]; !ok || salt.Quantity != 2 {
+			t.Errorf("salt item = %+v, want quantity 2 (one pack per planned meal)", salt)
 		}
 	})
 
@@ -84,8 +86,8 @@ func TestMealPlanService_GenerateShoppingList(t *testing.T) {
 			Servings:    2,
 			CreatedBy:   userID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Flour", Amount: 250, Unit: "g", SortOrder: 0},
-				{Name: "Salt", Amount: 5, Unit: "g", SortOrder: 1},
+				{ProductID: &product.ID, Name: "Flour", Portion: "250 g", SortOrder: 0},
+				{Name: "Salt", Portion: "5 g", SortOrder: 1},
 			},
 		}
 		if err := db.Create(recipe).Error; err != nil {
@@ -109,17 +111,17 @@ func TestMealPlanService_GenerateShoppingList(t *testing.T) {
 		}
 	})
 
-	t.Run("keeps the full amount when units do not match", func(t *testing.T) {
+	t.Run("the stock in packs covers the need", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"product_name": "Cream", "amount": 100, "unit": "ml"})
+		db.Model(product).Updates(map[string]any{"product_name": "Cream", "quantity": 2})
 		recipe := &dbModel.Recipe{
 			HouseholdID: householdID,
 			Name:        "Soup",
 			Servings:    2,
 			CreatedBy:   userID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Cream", Amount: 200, Unit: "g", SortOrder: 0},
+				{ProductID: &product.ID, Name: "Cream", Portion: "200 g", SortOrder: 0},
 			},
 		}
 		if err := db.Create(recipe).Error; err != nil {
@@ -131,30 +133,23 @@ func TestMealPlanService_GenerateShoppingList(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GenerateShoppingList() error = %v", err)
 		}
-		if created != 1 {
-			t.Fatalf("created = %d, want 1", created)
-		}
-		items, err := database.NewShoppingListItemRepository(db).ListByHousehold(householdID)
-		if err != nil {
-			t.Fatalf("list shopping items: %v", err)
-		}
-		if items[0].Quantity != 200 || items[0].Unit != "g" {
-			t.Errorf("item = %+v, want quantity 200 in g (no stock subtraction)", items[0])
+		if created != 0 {
+			t.Fatalf("created = %d, want 0 (two packs in stock cover the one planned use)", created)
 		}
 	})
 
-	t.Run("aggregates one product across mixed units", func(t *testing.T) {
+	t.Run("aggregates one product across its ingredients", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"product_name": "Flour", "amount": 100, "unit": "g"})
+		db.Model(product).Updates(map[string]any{"product_name": "Flour", "quantity": 1})
 		recipe := &dbModel.Recipe{
 			HouseholdID: householdID,
 			Name:        "Bread",
 			Servings:    2,
 			CreatedBy:   userID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Flour", Amount: 250, Unit: "g", SortOrder: 0},
-				{ProductID: &product.ID, Name: "Flour", Amount: 1, Unit: "kg", SortOrder: 1},
+				{ProductID: &product.ID, Name: "Flour", Portion: "250 g", SortOrder: 0},
+				{ProductID: &product.ID, Name: "Flour", Portion: "1 kg", SortOrder: 1},
 			},
 		}
 		if err := db.Create(recipe).Error; err != nil {
@@ -173,70 +168,23 @@ func TestMealPlanService_GenerateShoppingList(t *testing.T) {
 		if err != nil {
 			t.Fatalf("list shopping items: %v", err)
 		}
-		if items[0].Quantity != 1150 || items[0].Unit != "g" {
-			t.Errorf("item = %+v, want quantity 1150 in g (250 + 1000 planned - 100 in stock)", items[0])
+		if items[0].Quantity != 1 {
+			t.Errorf("item = %+v, want quantity 1 (two ingredients - one pack in stock)", items[0])
 		}
 	})
 
-	t.Run("keeps a unit-less ingredient separate from a united one", func(t *testing.T) {
+	t.Run("aggregates the ingredients of one product into one need", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"product_name": "Flour", "amount": 100, "unit": "g"})
+		db.Model(product).Updates(map[string]any{"product_name": "Flour", "quantity": 1})
 		recipe := &dbModel.Recipe{
 			HouseholdID: householdID,
 			Name:        "Bread",
 			Servings:    2,
 			CreatedBy:   userID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Flour", Amount: 2, Unit: "", SortOrder: 0},
-				{ProductID: &product.ID, Name: "Flour", Amount: 500, Unit: "g", SortOrder: 1},
-			},
-		}
-		if err := db.Create(recipe).Error; err != nil {
-			t.Fatalf("create recipe: %v", err)
-		}
-		testutil.CreateTestMealPlanEntry(db, householdID, recipe.ID, weekStart, 2, userID)
-
-		created, err := svc.GenerateShoppingList(weekStart, weekEnd, userID)
-		if err != nil {
-			t.Fatalf("GenerateShoppingList() error = %v", err)
-		}
-		if created != 2 {
-			t.Fatalf("created = %d, want 2 (one unit-less, one gram need)", created)
-		}
-		items, err := database.NewShoppingListItemRepository(db).ListByHousehold(householdID)
-		if err != nil {
-			t.Fatalf("list shopping items: %v", err)
-		}
-		var unitless, grams *dbModel.ShoppingListItem
-		for i := range items {
-			if items[i].Unit == "" {
-				unitless = &items[i]
-			} else {
-				grams = &items[i]
-			}
-		}
-		if unitless == nil || unitless.Quantity != 2 {
-			t.Errorf("unit-less item = %+v, want quantity 2 without a unit", unitless)
-		}
-		if grams == nil || grams.Quantity != 400 || grams.Unit != "g" {
-			t.Errorf("gram item = %+v, want 400 g (500 planned - 100 in stock)", grams)
-		}
-	})
-
-	// A product row carrying a non-base unit must not drag the created
-	// shopping list item out of base units: the stock is converted instead.
-	t.Run("converts stock in a non-base unit into the need's base unit", func(t *testing.T) {
-		db, svc, householdID, userID := setup(t)
-		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"product_name": "Flour", "amount": 1, "unit": "kg"})
-		recipe := &dbModel.Recipe{
-			HouseholdID: householdID,
-			Name:        "Bread",
-			Servings:    2,
-			CreatedBy:   userID,
-			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Flour", Amount: 2500, Unit: "g", SortOrder: 0},
+				{ProductID: &product.ID, Name: "Flour", Portion: "2", SortOrder: 0},
+				{ProductID: &product.ID, Name: "Flour", Portion: "500 g", SortOrder: 1},
 			},
 		}
 		if err := db.Create(recipe).Error; err != nil {
@@ -249,28 +197,55 @@ func TestMealPlanService_GenerateShoppingList(t *testing.T) {
 			t.Fatalf("GenerateShoppingList() error = %v", err)
 		}
 		if created != 1 {
-			t.Fatalf("created = %d, want 1", created)
+			t.Fatalf("created = %d, want 1 (one aggregated need)", created)
 		}
 		items, err := database.NewShoppingListItemRepository(db).ListByHousehold(householdID)
 		if err != nil {
 			t.Fatalf("list shopping items: %v", err)
 		}
-		if items[0].Quantity != 1500 || items[0].Unit != "g" {
-			t.Errorf("item = %+v, want 1500 g (2500 planned - 1 kg in stock, stored in base units)", items[0])
+		if items[0].Quantity != 1 {
+			t.Errorf("item = %+v, want quantity 1 (two ingredients - one pack in stock)", items[0])
 		}
 	})
 
-	t.Run("deducts a unit-less product from a unit-less need", func(t *testing.T) {
+	t.Run("subtracts the packs in stock from the need", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"product_name": "Eggs", "amount": 2, "unit": ""})
+		db.Model(product).Updates(map[string]any{"product_name": "Flour", "quantity": 1})
+		recipe := &dbModel.Recipe{
+			HouseholdID: householdID,
+			Name:        "Bread",
+			Servings:    2,
+			CreatedBy:   userID,
+			Ingredients: []dbModel.RecipeIngredient{
+				{ProductID: &product.ID, Name: "Flour", Portion: "2500 g", SortOrder: 0},
+			},
+		}
+		if err := db.Create(recipe).Error; err != nil {
+			t.Fatalf("create recipe: %v", err)
+		}
+		testutil.CreateTestMealPlanEntry(db, householdID, recipe.ID, weekStart, 2, userID)
+
+		created, err := svc.GenerateShoppingList(weekStart, weekEnd, userID)
+		if err != nil {
+			t.Fatalf("GenerateShoppingList() error = %v", err)
+		}
+		if created != 0 {
+			t.Fatalf("created = %d, want 0 (one pack in stock covers the planned use)", created)
+		}
+	})
+
+	t.Run("deducts the product in stock from the need", func(t *testing.T) {
+		db, svc, householdID, userID := setup(t)
+		product := testutil.CreateTestProduct(db, householdID, userID)
+		db.Model(product).Updates(map[string]any{"product_name": "Eggs", "quantity": 2})
 		recipe := &dbModel.Recipe{
 			HouseholdID: householdID,
 			Name:        "Pancakes",
 			Servings:    2,
 			CreatedBy:   userID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Eggs", Amount: 5, Unit: "", SortOrder: 0},
+				{ProductID: &product.ID, Name: "Eggs", Portion: "5", SortOrder: 0},
 			},
 		}
 		if err := db.Create(recipe).Error; err != nil {
@@ -282,29 +257,22 @@ func TestMealPlanService_GenerateShoppingList(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GenerateShoppingList() error = %v", err)
 		}
-		if created != 1 {
-			t.Fatalf("created = %d, want 1", created)
-		}
-		items, err := database.NewShoppingListItemRepository(db).ListByHousehold(householdID)
-		if err != nil {
-			t.Fatalf("list shopping items: %v", err)
-		}
-		if items[0].Quantity != 3 || items[0].Unit != "" {
-			t.Errorf("item = %+v, want quantity 3 without a unit (5 planned - 2 in stock)", items[0])
+		if created != 0 {
+			t.Fatalf("created = %d, want 0 (two packs in stock cover the planned use)", created)
 		}
 	})
 
 	t.Run("needs covered by stock are skipped", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"product_name": "Flour", "amount": 500, "unit": "g"})
+		db.Model(product).Updates(map[string]any{"product_name": "Flour", "quantity": 2})
 		recipe := &dbModel.Recipe{
 			HouseholdID: householdID,
 			Name:        "Bread",
 			Servings:    2,
 			CreatedBy:   userID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Flour", Amount: 250, Unit: "g", SortOrder: 0},
+				{ProductID: &product.ID, Name: "Flour", Portion: "250 g", SortOrder: 0},
 			},
 		}
 		if err := db.Create(recipe).Error; err != nil {

@@ -80,8 +80,8 @@ func TestRestoreFullJSONRoundTrip(t *testing.T) {
 	if err := env.DB.Where("product_name = ?", "Restored Active").First(&restored).Error; err != nil {
 		t.Fatalf("restored active product: %v", err)
 	}
-	if restored.Amount != 2 {
-		t.Errorf("amount = %d, want 2", restored.Amount)
+	if restored.Quantity != 2 {
+		t.Errorf("amount = %d, want 2", restored.Quantity)
 	}
 	if restored.StorageLocationID == nil {
 		t.Fatal("storage location not remapped")

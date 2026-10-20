@@ -110,7 +110,6 @@ func BuildFullExport(
 			MonthlyWasteGoalType:    household.MonthlyWasteGoalType,
 			MonthlyWasteGoalCount:   household.MonthlyWasteGoalCount,
 			MonthlyWasteGoalPercent: household.MonthlyWasteGoalPercent,
-			UnitSystem:              household.UnitSystem,
 		},
 		Members:          exportMembers,
 		StorageLocations: apiModel.NewStorageLocationResponses(locations),
@@ -288,7 +287,7 @@ func RestoreHouseholdBackup(
 	if db == nil {
 		return apiModel.RestoreResult{}, errors.ErrDatabaseContextNotFound
 	}
-	if backup.Version != apiModel.BackupSchemaVersion {
+	if !apiModel.SupportsBackupVersion(backup.Version) {
 		return apiModel.RestoreResult{}, fmt.Errorf("%w: got %d, want %d", errors.ErrBackupUnsupportedVersion, backup.Version, apiModel.BackupSchemaVersion)
 	}
 	if len(backup.Products.Active)+len(backup.Products.Archived) > util.BackupRestoreMaxProducts {
@@ -340,19 +339,12 @@ func RestoreHouseholdBackup(
 		result.LocationsCreated = createdLocations
 
 		if backup.Household != nil {
-			// A backup file is external input: an unsupported unit system is
-			// stored as empty (metric) instead of poisoning the household.
-			unitSystem := backup.Household.UnitSystem
-			if !util.ValidUnitSystem(unitSystem) {
-				unitSystem = ""
-			}
 			updates := map[string]any{
 				"name":                       backup.Household.Name,
 				"description":                backup.Household.Description,
 				"monthly_waste_goal_type":    backup.Household.MonthlyWasteGoalType,
 				"monthly_waste_goal_count":   backup.Household.MonthlyWasteGoalCount,
 				"monthly_waste_goal_percent": backup.Household.MonthlyWasteGoalPercent,
-				"unit_system":                unitSystem,
 			}
 			if err := tx.Model(&dbModel.Household{}).Where(util.QueryId, householdID).Updates(updates).Error; err != nil {
 				return err
@@ -410,7 +402,7 @@ func restoreProductFromRow(
 	if err := validateBackupBarcode(row.Barcode); err != nil {
 		return dbModel.Product{}, err
 	}
-	amount, unit := util.ToBase(row.Amount, row.Unit)
+	quantity, packSize := restoreProductQuantity(row)
 	product := dbModel.Product{
 		Barcode:              row.Barcode,
 		ProductName:          row.ProductName,
@@ -421,8 +413,8 @@ func restoreProductFromRow(
 		ScannedAt:            row.ScannedAt,
 		NotifiedAt:           row.NotifiedAt,
 		IsPrivate:            row.IsPrivate,
-		Amount:               amount,
-		Unit:                 unit,
+		Quantity:             quantity,
+		PackSize:             packSize,
 		PriceOverride:        row.PriceOverride,
 		CO2KgPerKg:           row.CO2KgPerKg,
 		RemovalReason:        row.RemovalReason,
@@ -450,6 +442,16 @@ func restoreProductFromRow(
 	return product, nil
 }
 
+// restoreProductQuantity reads the pack count and pack size of an exported
+// row. A document written before products were counted in packs carries the
+// net content instead, and its measured rows describe one pack of that size.
+func restoreProductQuantity(row *apiModel.ExportProductResponse) (int, string) {
+	if row.Quantity > 0 {
+		return row.Quantity, row.PackSize
+	}
+	return util.PackSizeFromLegacyAmount(row.Amount, row.Unit)
+}
+
 // restoreProductColumns is the explicit column list used by the restore insert.
 // Keeping it alongside restoreProductRowMaps makes a schema change fail loudly
 // instead of silently dropping a field from restored products.
@@ -463,8 +465,8 @@ var restoreProductColumns = []string{
 	"scanned_at",
 	"notified_at",
 	"is_private",
-	"amount",
-	"unit",
+	"quantity",
+	"pack_size",
 	"storage_location_id",
 	"price_override",
 	"co2_kg_per_kg",
@@ -563,8 +565,8 @@ func restoreProductRowMaps(products []dbModel.Product) []map[string]any {
 			"scanned_at":             product.ScannedAt,
 			"notified_at":            product.NotifiedAt,
 			"is_private":             product.IsPrivate,
-			"amount":                 product.Amount,
-			"unit":                   product.Unit,
+			"quantity":               product.Quantity,
+			"pack_size":              product.PackSize,
 			"storage_location_id":    nullable(product.StorageLocationID),
 			"price_override":         nullable(product.PriceOverride),
 			"co2_kg_per_kg":          nullable(product.CO2KgPerKg),

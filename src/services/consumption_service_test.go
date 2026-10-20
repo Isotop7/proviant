@@ -40,7 +40,7 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 
 	t.Run("single sample returns no estimate", func(t *testing.T) {
 		barcode := "1111111111111"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Milk", "L", 1, now.Add(-2*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Milk", 1, now.Add(-2*24*time.Hour))
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Milk")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -55,8 +55,8 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 
 	t.Run("two samples 7 days apart with span >= 7 days produce a 2 L per week rate", func(t *testing.T) {
 		barcode := "2222222222222"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Milk", "L", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Milk", "L", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Milk", 1, now.Add(-14*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Milk", 1, now.Add(-7*24*time.Hour))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Milk")
 		if err != nil {
@@ -64,9 +64,6 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 		}
 		if !rate.HasEstimate {
 			t.Fatalf("HasEstimate = false, want true")
-		}
-		if rate.Unit != "L" {
-			t.Errorf("Unit = %q, want L", rate.Unit)
 		}
 		expectedPerWeek := 2.0
 		if rate.PerWeek < expectedPerWeek-0.01 || rate.PerWeek > expectedPerWeek+0.01 {
@@ -82,8 +79,8 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 
 	t.Run("two samples 14 days apart with span >= 7 days produce a 1 L per week rate", func(t *testing.T) {
 		barcode := "2222222222299"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", "pcs", 1, now.Add(-21*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", "pcs", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", 1, now.Add(-21*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", 1, now.Add(-7*24*time.Hour))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Yogurt")
 		if err != nil {
@@ -103,8 +100,8 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 		// Without the span gate this would produce perWeek ~ 14 (highly
 		// inflated).
 		barcode := "2222222222223"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Eggs", "pcs", 1, now.Add(-1*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Eggs", "pcs", 1, now.Add(-30*time.Minute))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Eggs", 1, now.Add(-1*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Eggs", 1, now.Add(-30*time.Minute))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Eggs")
 		if err != nil {
@@ -122,8 +119,8 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 		// 7 days minus 1 hour = 167 hours. Without the math.Round fix
 		// this truncates to 6 days and silently drops the estimate.
 		barcode := "2222222222224"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Bread", "pcs", 1, now.Add(-(7*24*time.Hour + time.Hour)))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Bread", "pcs", 1, now.Add(-time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Bread", 1, now.Add(-(7*24*time.Hour + time.Hour)))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Bread", 1, now.Add(-time.Hour))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Bread")
 		if err != nil {
@@ -136,8 +133,8 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 
 	t.Run("zero amount counts as 1", func(t *testing.T) {
 		barcode := "3333333333333"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Eggs", "pcs", 0, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Eggs", "pcs", 0, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Eggs", 0, now.Add(-14*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Eggs", 0, now.Add(-7*24*time.Hour))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Eggs")
 		if err != nil {
@@ -151,56 +148,27 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 		}
 	})
 
-	t.Run("dominant unit wins on count, most recent on tie", func(t *testing.T) {
-		// 2x kg (older) and 1x pcs (newer). kg has the higher count
-		// and should win.
+	t.Run("the rate counts the packs of every sample", func(t *testing.T) {
 		barcode := "4444444444444"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Butter", "kg", 1, now.Add(-21*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Butter", "kg", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Butter", "pcs", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Butter", 2, now.Add(-14*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Butter", 1, now.Add(-7*24*time.Hour))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Butter")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if rate.Unit != "kg" {
-			t.Errorf("Unit = %q, want kg (most-frequent)", rate.Unit)
+		if !rate.HasEstimate {
+			t.Fatalf("HasEstimate = false, want true")
 		}
-
-		// Now flip the counts: 1x kg, 2x pcs. pcs should win on count.
-		barcode2 := "4444444444445"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode2, "Butter2", "kg", 1, now.Add(-21*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode2, "Butter2", "pcs", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode2, "Butter2", "pcs", 1, now.Add(-7*24*time.Hour))
-
-		rate2, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode2, "Butter2")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if rate2.Unit != "pcs" {
-			t.Errorf("Unit = %q, want pcs (count 2 vs 1)", rate2.Unit)
-		}
-	})
-
-	t.Run("on a true tie, most recent sample's unit wins", func(t *testing.T) {
-		// 1x kg (older) and 1x pcs (newer) — true tie, pcs should win.
-		barcode := "4444444444446"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "ButterTie", "kg", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "ButterTie", "pcs", 1, now.Add(-7*24*time.Hour))
-
-		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "ButterTie")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if rate.Unit != "pcs" {
-			t.Errorf("Unit = %q, want pcs (more recent on tie)", rate.Unit)
+		if rate.PerWeek < 2.99 || rate.PerWeek > 3.01 {
+			t.Errorf("PerWeek = %f, want ~3.0 (three packs in a week)", rate.PerWeek)
 		}
 	})
 
 	t.Run("empty barcode falls back to name", func(t *testing.T) {
 		name := "Loose Tomatoes"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "", name, "kg", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "", name, "kg", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "", name, 1, now.Add(-14*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "", name, 1, now.Add(-7*24*time.Hour))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, "", name)
 		if err != nil {
@@ -217,8 +185,8 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 	t.Run("90-day window excludes older samples", func(t *testing.T) {
 		barcode := "5555555555555"
 		old := now.AddDate(0, 0, -(util.ConsumptionHistoryWindowDays + 10))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", "pcs", 1, old)
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", "pcs", 1, now.Add(-2*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", 1, old)
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", 1, now.Add(-2*24*time.Hour))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Yogurt")
 		if err != nil {
@@ -237,8 +205,8 @@ func TestConsumptionService_ComputeConsumptionRate(t *testing.T) {
 		// computing the rate for the same barcode must not see them.
 		other := testutil.CreateTestUser(db, household.ID)
 		barcode := "6666666666666"
-		testutil.SeedConsumedProduct(t, db, household.ID, other.ID, true, barcode, "Tea", "pcs", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, other.ID, true, barcode, "Tea", "pcs", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, other.ID, true, barcode, "Tea", 1, now.Add(-14*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, other.ID, true, barcode, "Tea", 1, now.Add(-7*24*time.Hour))
 
 		rate, err := svc.ComputeConsumptionRate(household.ID, user.ID, barcode, "Tea")
 		if err != nil {
@@ -271,12 +239,11 @@ func TestConsumptionService_ComputeRestockSuggestionFromProduct(t *testing.T) {
 
 	t.Run("uses rate when estimate available", func(t *testing.T) {
 		barcode := "6666666666666"
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", "pcs", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", "pcs", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", 1, now.Add(-14*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, barcode, "Yogurt", 1, now.Add(-7*24*time.Hour))
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		product.Barcode = barcode
 		product.ProductName = "Yogurt"
-		product.Unit = "pcs"
 		db.Save(product)
 
 		sug := svc.ComputeRestockSuggestionFromProduct(household.ID, user.ID, product)
@@ -304,8 +271,7 @@ func TestConsumptionService_ComputeRestockSuggestionFromProduct(t *testing.T) {
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		product.Barcode = "7777777777777"
 		product.ProductName = "Flour"
-		product.Unit = "kg"
-		product.Amount = 1
+		product.Quantity = 1
 		product.MinStockAmount = 3
 		db.Save(product)
 
@@ -325,8 +291,7 @@ func TestConsumptionService_ComputeRestockSuggestionFromProduct(t *testing.T) {
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		product.Barcode = "8888888888888"
 		product.ProductName = "Sugar"
-		product.Unit = "kg"
-		product.Amount = 5
+		product.Quantity = 5
 		product.MinStockAmount = 5
 		db.Save(product)
 
@@ -346,8 +311,7 @@ func TestConsumptionService_ComputeRestockSuggestionFromProduct(t *testing.T) {
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		product.Barcode = "9999999999999"
 		product.ProductName = "Salt"
-		product.Unit = "g"
-		product.Amount = 5
+		product.Quantity = 5
 		product.MinStockAmount = 0
 		db.Save(product)
 

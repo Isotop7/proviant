@@ -43,13 +43,13 @@ func TestFormatProductDescription(t *testing.T) {
 		t.Errorf("got %q, want Milk", got)
 	}
 
-	product.Amount = 2
-	product.Unit = "l"
-	if got := formatProductDescription(&product); got != "Milk - 2 l" {
-		t.Errorf("got %q, want 'Milk - 2 l'", got)
+	product.Quantity = 2
+	product.PackSize = "1 l"
+	if got := formatProductDescription(&product); got != "Milk - 2 (1 l)" {
+		t.Errorf("got %q, want 'Milk - 2 (1 l)'", got)
 	}
 
-	product.Unit = ""
+	product.PackSize = ""
 	if got := formatProductDescription(&product); got != "Milk - 2" {
 		t.Errorf("got %q, want 'Milk - 2'", got)
 	}
@@ -64,8 +64,7 @@ func TestGenerateVEVENT(t *testing.T) {
 	expireAt := time.Date(2026, 12, 24, 0, 0, 0, 0, time.UTC)
 	product := dbModel.Product{
 		ProductName: "Milk, fresh; organic",
-		Amount:      1,
-		Unit:        "l",
+		Quantity:    1,
 		ExpireAt:    expireAt,
 	}
 	product.ID = 42
@@ -76,7 +75,7 @@ func TestGenerateVEVENT(t *testing.T) {
 		"UID:42@proviant",
 		"DTSTART;VALUE=DATE:20261224",
 		"SUMMARY:Milk\\, fresh\\; organic",
-		"DESCRIPTION:Milk\\, fresh\\; organic - 1 l",
+		"DESCRIPTION:Milk\\, fresh\\; organic - 1",
 		"BEGIN:VALARM",
 		"TRIGGER:-P1D",
 		"END:VEVENT",

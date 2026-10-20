@@ -11,10 +11,6 @@ type Household struct {
 	AdminID     uint   `gorm:"not null"`
 	Language    string `gorm:"default:''"`
 
-	// UnitSystem selects the display system for converted amounts: "",
-	// "metric" or "imperial". Empty means metric.
-	UnitSystem string `gorm:"default:''"`
-
 	MonthlyWasteGoalType    string   `gorm:"default:''"`   // "", "count", or "percent"
 	MonthlyWasteGoalCount   *int     `gorm:"default:null"` // nil = disabled
 	MonthlyWasteGoalPercent *float64 `gorm:"default:null"` // nil = disabled

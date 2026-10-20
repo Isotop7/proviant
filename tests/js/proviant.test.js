@@ -94,10 +94,10 @@ describe("proviant.js CSRF interceptor", () => {
 });
 
 describe("proviant.js offline queue", () => {
-  it("sends an amount delta straight through", async () => {
+  it("sends an quantity delta straight through", async () => {
     const { proviant, calls } = freshProviant({ online: true });
 
-    const result = await proviant.updateProductAmount(9, 4);
+    const result = await proviant.updateProductQuantity(9, 4);
 
     expect(result.queued).toBeUndefined();
     expect(result.code).toBe(200);
@@ -112,7 +112,7 @@ describe("proviant.js offline queue", () => {
       return { status: 200, json: async () => ({ message: "ok" }) };
     };
 
-    await proviant._sendAmountDelta(9, -1, "mutation-7");
+    await proviant._sendQuantityDelta(9, -1, "mutation-7");
 
     expect(sentBodies[0]).toEqual({ delta: -1, clientMutationId: "mutation-7" });
   });
@@ -123,7 +123,7 @@ describe("proviant.js offline queue", () => {
       throw new TypeError("Failed to fetch");
     };
 
-    const err = await proviant._sendAmountDelta(9, -1, "m-1").then(() => null, (e) => e);
+    const err = await proviant._sendQuantityDelta(9, -1, "m-1").then(() => null, (e) => e);
 
     expect(err.transport).toBe(true);
     expect(err.message).toBe("Failed to fetch");
@@ -144,7 +144,7 @@ describe("proviant.js offline queue", () => {
       },
     });
 
-    const err = await proviant._sendAmountDelta(9, -1, "m-1").then(() => null, (e) => e);
+    const err = await proviant._sendQuantityDelta(9, -1, "m-1").then(() => null, (e) => e);
 
     expect(err.transport).toBeUndefined();
     expect(err.message).toBe("Unexpected token < in JSON");
@@ -162,6 +162,23 @@ describe("proviant.js offline queue", () => {
     await proviant.createProduct("4006381333931", "2030-01-01", 2, null, false, "sync-42");
 
     expect(sentBodies[0]).toMatchObject({ barcode: "4006381333931", clientSyncId: "sync-42" });
+  });
+
+  it("sends the pack count and no unit on a create", async () => {
+    // The stock is counted in packs: the body carries the count, and a unit
+    // would be a field the server no longer knows.
+    const { proviant, realm } = freshProviant({ online: true });
+    const sentBodies = [];
+    realm.fetch = async (url, options) => {
+      sentBodies.push(JSON.parse(options.body));
+      return { status: 201, json: async () => ({}) };
+    };
+
+    await proviant.createProduct("4006381333931", "2030-01-01", 3, null, false, null);
+
+    expect(sentBodies[0]).toMatchObject({ quantity: 3 });
+    expect(sentBodies[0]).not.toHaveProperty("amount");
+    expect(sentBodies[0]).not.toHaveProperty("unit");
   });
 });
 
@@ -285,118 +302,35 @@ describe("proviant.js pure helpers", () => {
     });
   });
 
-  // Display-only mirror of util/units.go FromBase; the amounts are stored in
-  // base units (g / ml / count) and rendered in the household system.
-  describe("formatUnit", () => {
-    it("renders mass in the metric system", () => {
-      expect(proviant.formatUnit(500, "g", "metric")).toBe("500 g");
-      expect(proviant.formatUnit(1500, "g", "metric")).toBe("1.5 kg");
-    });
-
-    it("renders a unit-less amount as its bare quantity", () => {
-      expect(proviant.formatUnit(3, "", "metric")).toBe("3");
-    });
-
-    it("leaves a count unit untouched", () => {
-      expect(proviant.formatUnit(3, "pkg", "metric")).toBe("3 pkg");
-    });
-
-    it("renders mass in the imperial system", () => {
-      expect(proviant.formatUnit(454, "g", "imperial")).toBe("1 lb");
-      expect(proviant.formatUnit(100, "g", "imperial")).toBe("3.5 oz");
-    });
-
-    it("renders volume in the imperial system", () => {
-      expect(proviant.formatUnit(480, "ml", "imperial")).toBe("2 cup");
-      expect(proviant.formatUnit(30, "ml", "imperial")).toBe("2 tbsp");
-    });
-
-    it("passes an unknown unit through", () => {
-      expect(proviant.formatUnit(4, "handful", "metric")).toBe("4 handful");
-    });
-  });
-
-  // A measured amount is one package no matter its size, and a single count
-  // item is one package too, so both read as the localized "1 qty".
+  // Every quantity surface renders the pack count the same way: the count and
+  // the localized pack noun.
   describe("quantityLabel", () => {
-    it("shows a measured amount as one package", () => {
-      expect(proviant.quantityLabel(500, "g", "metric")).toBe("1 qty");
-      expect(proviant.quantityLabel(2000, "ml", "metric")).toBe("1 qty");
+    it("renders the count with the pack noun", () => {
+      expect(proviant.quantityLabel(1)).toBe("1 qty");
+      expect(proviant.quantityLabel(2)).toBe("2 qty");
+      expect(proviant.quantityLabel(6)).toBe("6 qty");
     });
 
-    it("shows a single count item as one package", () => {
-      expect(proviant.quantityLabel(1, "pcs", "metric")).toBe("1 qty");
-      expect(proviant.isPackageQuantity(1, "jar")).toBe(true);
-    });
-
-    it("keeps the unit for several count items", () => {
-      expect(proviant.quantityLabel(6, "pcs", "metric")).toBe("6 pcs");
-      expect(proviant.isPackageQuantity(6, "pcs")).toBe(false);
-    });
-
-    it("leaves a unit-less or unknown amount alone", () => {
-      expect(proviant.quantityLabel(2, "", "metric")).toBe("2");
-      expect(proviant.quantityLabel(4, "handful", "metric")).toBe("4 handful");
-    });
-
-    it("resolves an alias the way the server does", () => {
-      expect(proviant.isPackageQuantity(1, "pc")).toBe(true);
-      expect(proviant.quantityLabel(1, "piece", "metric")).toBe("1 qty");
-      expect(proviant.formatUnit(2000, "Millilitres", "metric")).toBe("2 l");
-    });
-
-    it("drives the stepper label through the same rule", () => {
+    it("renders the count of a label element", () => {
       const { proviant: fresh, realm } = freshProviant();
       const element = realm.document.createElement("span");
-      element.dataset.amount = "1";
-      element.dataset.unit = "pcs";
+      element.dataset.quantity = "1";
 
-      fresh.renderAmountLabel(element);
+      fresh.renderQuantityLabel(element);
       expect(element.textContent).toBe("1 qty");
 
-      element.dataset.amount = "2";
-      fresh.renderAmountLabel(element);
-      expect(element.textContent).toBe("2 pcs");
-    });
-  });
-
-  // The stepper must move by one *displayed* unit, otherwise a "2 kg" label
-  // stays at 2 kg when the server adds a single gram.
-  describe("amountStep", () => {
-    it("uses the displayed unit as the step", () => {
-      expect(proviant.amountStep(2000, "g", "metric")).toBe(1000);
-      expect(proviant.amountStep(500, "g", "metric")).toBe(1);
-      expect(proviant.amountStep(2000, "ml", "metric")).toBe(1000);
-      expect(proviant.amountStep(454, "g", "imperial")).toBe(454);
-      expect(proviant.amountStep(30, "ml", "imperial")).toBe(15);
+      element.dataset.quantity = "2";
+      fresh.renderQuantityLabel(element);
+      expect(element.textContent).toBe("2 qty");
     });
 
-    it("steps a count or unit-less amount by one", () => {
-      expect(proviant.amountStep(3, "pkg", "metric")).toBe(1);
-      expect(proviant.amountStep(3, "", "metric")).toBe(1);
-    });
-  });
+    it("leaves an element without a count alone", () => {
+      const { proviant: fresh, realm } = freshProviant();
+      const element = realm.document.createElement("span");
+      element.textContent = "2 qty";
 
-  // Rescaling the edit-form amount when the picker changes keeps 2000 g from
-  // being saved as 2000 kg, and a conversion that would round returns null so
-  // the caller can refuse the switch instead of altering the quantity.
-  describe("convertUnit", () => {
-    it("rescales between units of one kind", () => {
-      expect(proviant.convertUnit(2000, "g", "kg")).toBe(2);
-      expect(proviant.convertUnit(2, "kg", "g")).toBe(2000);
-      expect(proviant.convertUnit(1, "l", "ml")).toBe(1000);
-      expect(proviant.convertUnit(30, "ml", "tbsp")).toBe(2);
-    });
-
-    it("returns null when the conversion would round", () => {
-      expect(proviant.convertUnit(500, "g", "kg")).toBeNull();
-      expect(proviant.convertUnit(454, "g", "lb")).toBeNull();
-    });
-
-    it("returns null when no conversion is defined", () => {
-      expect(proviant.convertUnit(2000, "g", "")).toBeNull();
-      expect(proviant.convertUnit(2000, "g", "ml")).toBeNull();
-      expect(proviant.convertUnit(1, "pcs", "pkg")).toBeNull();
+      fresh.renderQuantityLabel(element);
+      expect(element.textContent).toBe("2 qty");
     });
   });
 });

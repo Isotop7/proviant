@@ -264,18 +264,16 @@ func TestShoppingListHandler(t *testing.T) {
 	})
 }
 
-// TestShoppingListHandlerMeasuredQuantityShowsOnePackage pins the package
-// display: a measured row is one package, so it leads with "1 qty" and keeps
-// its net contents as secondary text instead of exposing a gram stepper. A
-// single count item is one package too, while a multi-count row keeps its unit.
-func TestShoppingListHandlerMeasuredQuantityShowsOnePackage(t *testing.T) {
+// TestShoppingListHandlerShowsThePackCount pins the shopping list display:
+// every row shows the pack count the same way.
+func TestShoppingListHandlerShowsThePackCount(t *testing.T) {
 	env := newHandlerEnv(t)
 	household, user := seedHouseholdUser(t, env.db)
 
 	items := []dbModel.ShoppingListItem{
-		{HouseholdID: household.ID, Name: "Pasta", Quantity: 500, Unit: "g", CreatedBy: user.ID},
-		{HouseholdID: household.ID, Name: "Eggs", Quantity: 6, Unit: "pcs", CreatedBy: user.ID},
-		{HouseholdID: household.ID, Name: "Yogurt", Quantity: 1, Unit: "pcs", CreatedBy: user.ID},
+		{HouseholdID: household.ID, Name: "Pasta", Quantity: 2, CreatedBy: user.ID},
+		{HouseholdID: household.ID, Name: "Eggs", Quantity: 6, CreatedBy: user.ID},
+		{HouseholdID: household.ID, Name: "Yogurt", Quantity: 1, CreatedBy: user.ID},
 	}
 	for i := range items {
 		if err := env.db.Create(&items[i]).Error; err != nil {
@@ -287,20 +285,26 @@ func TestShoppingListHandlerMeasuredQuantityShowsOnePackage(t *testing.T) {
 	requireStatus(t, w, http.StatusOK)
 
 	body := w.Body.String()
-	if got := elementText(t, body, `class="unit-count"`); got != "1 qty" {
-		t.Errorf("measured row count = %q, want %q", got, "1 qty")
+	if got := elementText(t, body, `id="qty-`+fmtUint(items[0].ID)+`"`); got != "2 qty" {
+		t.Errorf("row = %q, want %q", got, "2 qty")
 	}
-	if got := elementText(t, body, `class="unit-secondary"`); got != "500 g" {
-		t.Errorf("measured row net contents = %q, want %q", got, "500 g")
-	}
-	if strings.Contains(body, `id="qty-`+fmtUint(items[0].ID)+`"`) {
-		t.Errorf("measured row still exposes a quantity stepper")
-	}
-	if got := elementText(t, body, `id="qty-`+fmtUint(items[1].ID)+`"`); got != "6 pcs" {
-		t.Errorf("multi count row = %q, want %q", got, "6 pcs")
+	if got := elementText(t, body, `id="qty-`+fmtUint(items[1].ID)+`"`); got != "6 qty" {
+		t.Errorf("multi count row = %q, want %q", got, "6 qty")
 	}
 	if got := elementText(t, body, `id="qty-`+fmtUint(items[2].ID)+`"`); got != "1 qty" {
 		t.Errorf("single count row = %q, want %q", got, "1 qty")
+	}
+	// The rows carry the same flat stepper the products list uses.
+	if !strings.Contains(body, `class="qty-stepper qty-stepper-flat"`) {
+		t.Errorf("the shopping list rows do not use the products list stepper")
+	}
+	// The add form picks the count with the same stepper the product edit page
+	// uses, not a bare number field.
+	if !strings.Contains(body, `data-item-quantity-step="-1"`) || !strings.Contains(body, `data-item-quantity-step="1"`) {
+		t.Errorf("the add form has no quantity stepper")
+	}
+	if !strings.Contains(body, `<input type="number" id="inputItemQuantity"`) {
+		t.Errorf("the add form has no quantity input")
 	}
 }
 
@@ -371,44 +375,32 @@ func TestProductsEditHandler(t *testing.T) {
 		requireStatus(t, w, http.StatusOK)
 	})
 
-	// A legacy free-text unit is not one of the picker options, so it must be
-	// appended as its own selected option or saving the form would wipe it.
-	t.Run("keeps an unknown legacy unit selectable", func(t *testing.T) {
+	// The quick-info panel mirrors the list: the count of the product.
+	t.Run("shows the pack count", func(t *testing.T) {
 		household, user := seedHouseholdUser(t, env.db)
 		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
-		if err := env.db.Model(product).Update("unit", "handful").Error; err != nil {
-			t.Fatalf("set unit: %v", err)
+		if err := env.db.Model(product).Updates(map[string]any{"quantity": 3}).Error; err != nil {
+			t.Fatalf("set the count: %v", err)
 		}
 		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
 		requireStatus(t, w, http.StatusOK)
-		requireContains(t, w, `<option value="handful" selected>handful</option>`)
+		requireContains(t, w, `class="font-mono fw-semibold">3 qty<`)
 	})
 
-	// The quick-info panel mirrors the list: a measured product is one package,
-	// so it reads "1 qty" with the net contents underneath.
-	t.Run("shows a measured product as one package", func(t *testing.T) {
+	// The pack size is display metadata: it shows next to the count and is
+	// never editable.
+	t.Run("shows the pack size as read-only metadata", func(t *testing.T) {
 		household, user := seedHouseholdUser(t, env.db)
 		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
-		if err := env.db.Model(product).Updates(map[string]any{"amount": 500, "unit": "g"}).Error; err != nil {
-			t.Fatalf("set amount and unit: %v", err)
+		if err := env.db.Model(product).Updates(map[string]any{"quantity": 2, "pack_size": "1 l"}).Error; err != nil {
+			t.Fatalf("set the pack size: %v", err)
 		}
 		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
 		requireStatus(t, w, http.StatusOK)
-		requireContains(t, w, `class="unit-count">1 qty<`)
-		requireContains(t, w, `class="unit-secondary">500 g<`)
-	})
-
-	// A single count item is one package too, so its quick-info reads "1 qty"
-	// instead of "1 pcs".
-	t.Run("shows a single count item as one package", func(t *testing.T) {
-		household, user := seedHouseholdUser(t, env.db)
-		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
-		if err := env.db.Model(product).Updates(map[string]any{"amount": 1, "unit": "pcs"}).Error; err != nil {
-			t.Fatalf("set amount and unit: %v", err)
+		requireContains(t, w, "1 l")
+		if strings.Contains(w.Body.String(), `id="inputUnit"`) {
+			t.Errorf("the edit page still offers a unit picker")
 		}
-		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
-		requireStatus(t, w, http.StatusOK)
-		requireContains(t, w, `class="font-mono fw-semibold">1 qty<`)
 	})
 }
 

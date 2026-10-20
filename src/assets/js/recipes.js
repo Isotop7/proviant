@@ -179,7 +179,10 @@ async function cookMatchedProducts(btn, ids) {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + proviant.t("js.recipes.cooking");
     try {
-        const items = ids.map(function(id) { return { productId: id, amount: 0 }; });
+        // One pack per matched product: the stock is counted in packs, and a
+        // recipe states what a dish needs, not how many packs of it are in
+        // the cupboard.
+        const items = ids.map(function(id) { return { productId: id, quantity: 1 }; });
         const res = await proviant.cookProducts(items);
         if (res.code !== 200) {
             const failedItems = res.errors || [];

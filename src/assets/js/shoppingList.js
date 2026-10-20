@@ -14,6 +14,12 @@
         return;
       }
 
+      var stepBtn = event.target.closest('[data-item-quantity-step]');
+      if (stepBtn) {
+        stepQuantityInput(Number.parseInt(stepBtn.dataset.itemQuantityStep, 10) || 0);
+        return;
+      }
+
       var delBtn = event.target.closest('[data-delete-item]');
       if (delBtn) {
         var delId = delBtn.dataset.deleteItem;
@@ -81,24 +87,26 @@
   function updateItemQuantity(itemId, delta) {
     var qtyEl = document.getElementById('qty-' + itemId);
     if (!qtyEl) return;
-    var currentQty = Number.parseInt(qtyEl.dataset.amount || qtyEl.textContent, 10) || 0;
-    var step = proviant.amountStep(currentQty, qtyEl.dataset.unit, proviant.unitSystem());
-    var newQty = Math.max(1, currentQty + delta * step);
-    qtyEl.dataset.amount = String(newQty);
-    proviant.renderAmountLabel(qtyEl);
+    // The count lives in the data attribute. The text is the rendered label
+    // ("2 Stk.") and must not be parsed: a locale that does not separate the
+    // number from the noun would yield NaN.
+    var currentQty = Number.parseInt(qtyEl.dataset.quantity, 10) || 0;
+    var newQty = Math.max(1, currentQty + delta);
+    qtyEl.dataset.quantity = String(newQty);
+    proviant.renderQuantityLabel(qtyEl);
     fetch('/api/v1/shopping-list/' + itemId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quantity: newQty })
     }).then(function(res) {
       if (!res.ok) {
-        qtyEl.dataset.amount = String(currentQty);
-        proviant.renderAmountLabel(qtyEl);
+        qtyEl.dataset.quantity = String(currentQty);
+        proviant.renderQuantityLabel(qtyEl);
         proviant.showFeedback('error', proviant.t("js.shoppingList.updateFailedTitle"));
       }
     }).catch(function() {
-      qtyEl.dataset.amount = String(currentQty);
-      proviant.renderAmountLabel(qtyEl);
+      qtyEl.dataset.quantity = String(currentQty);
+      proviant.renderQuantityLabel(qtyEl);
     });
   }
 
@@ -169,18 +177,24 @@
     });
   }
 
+  // The add form's stepper moves the count input by one pack, never below one.
+  function stepQuantityInput(delta) {
+    var input = document.getElementById('inputItemQuantity');
+    if (!input) return;
+    var current = Number.parseInt(input.value, 10) || 1;
+    input.value = String(Math.max(1, current + delta));
+  }
+
   function addItem() {
     var nameInput = document.getElementById('inputItemName');
     var qtyInput = document.getElementById('inputItemQuantity');
-    var unitInput = document.getElementById('inputItemUnit');
     if (!nameInput || !nameInput.value.trim()) {
       nameInput.focus();
       return;
     }
     var payload = {
       name: nameInput.value.trim(),
-      quantity: Number.parseInt(qtyInput ? qtyInput.value : '1', 10) || 1,
-      unit: unitInput ? unitInput.value.trim() : ''
+      quantity: Number.parseInt(qtyInput ? qtyInput.value : '1', 10) || 1
     };
     fetch('/api/v1/shopping-list', {
       method: 'POST',
@@ -191,7 +205,6 @@
     }).then(function() {
       nameInput.value = '';
       if (qtyInput) qtyInput.value = '1';
-      if (unitInput) unitInput.value = '';
       nameInput.focus();
       proviant.showFeedback('success', proviant.t("js.shoppingList.itemAddedTitle"));
       setTimeout(function() { location.reload(); }, 300);
@@ -233,6 +246,15 @@
     }
   }
 
+  // The print view is written into a same-origin window, so every value that
+  // reaches the markup has to be escaped: an item name is user input.
+  function escapePrintHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   function printShoppingList() {
     var dataEl = document.getElementById('shoppingListData');
     if (!dataEl) return;
@@ -263,28 +285,32 @@
     html += '.item-row{display:flex;align-items:center}';
     html += '.checkbox{width:18px;height:18px;border:2px solid #221e18;border-radius:3px;margin-right:0.5rem;flex-shrink:0}';
     html += '.name{font-size:1.1rem;flex:1}';
-    html += '.amount{font-size:1rem;color:#4a6fa0;margin-left:0.5rem}';
+    html += '.qty{font-size:1rem;color:#4a6fa0;margin-left:0.5rem}';
+    html += '.pack-size{font-size:0.875rem;color:#666;margin-left:0.35rem}';
     html += '.notes{font-size:0.875rem;color:#888;margin-left:2.25rem;margin-top:0.25rem}';
     html += '</style></head><body>';
     html += '<h1>' + proviant.t("nav.shoppingList") + '</h1>';
     html += '<p class="meta">' + proviant.tn("js.shoppingList.printCount", items.length) + '</p>';
     items.forEach(function(item) {
       var name = item.name || item.Name || '';
-      // Print keeps the stored amount, not the row's "1 qty" label: at the store you need how much to buy.
+      // Print keeps the stored count, not the row's "2 Stk." label: at the store you need how many to buy.
       var qty = item.quantity || item.Quantity || '';
-      var unit = item.unit || item.Unit || '';
+      var packSize = item.packSize || item.PackSize || '';
       var checked = item.checked || item.Checked ? ' checked' : '';
       var notes = item.notes || item.Notes || '';
       html += '<div class="item' + checked + '">';
       html += '<div class="item-row">';
       html += '<div class="checkbox"></div>';
-      html += '<span class="name">' + name + '</span>';
+      html += '<span class="name">' + escapePrintHtml(name) + '</span>';
       if (qty) {
-        html += '<span class="amount">' + qty + (unit ? ' ' + unit : '') + '</span>';
+        html += '<span class="qty">' + escapePrintHtml(qty) + '</span>';
+      }
+      if (packSize) {
+        html += '<span class="pack-size">' + escapePrintHtml(packSize) + '</span>';
       }
       html += '</div>';
       if (notes) {
-        html += '<div class="notes">' + notes + '</div>';
+        html += '<div class="notes">' + escapePrintHtml(notes) + '</div>';
       }
       html += '</div>';
     });

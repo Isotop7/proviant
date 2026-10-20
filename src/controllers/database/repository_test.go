@@ -532,7 +532,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 			ProductName: name,
 			Barcode:     "1234567890123",
 			HouseholdID: householdID,
-			Amount:      amount,
+			Quantity:    amount,
 		}
 		db.Create(&product)
 		return product
@@ -557,8 +557,8 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("product not found after partial consume: %v", err)
 		}
-		if updated.Amount != 3 {
-			t.Errorf("Amount = %d, want 3", updated.Amount)
+		if updated.Quantity != 3 {
+			t.Errorf("Amount = %d, want 3", updated.Quantity)
 		}
 		if updated.DeletedAt.Valid {
 			t.Error("partial consume must not soft-delete the product")
@@ -660,7 +660,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		_, repo, _ := setup(t)
 
-		missing := dbModel.Product{Amount: 1}
+		missing := dbModel.Product{Quantity: 1}
 		missing.ID = 9999
 		consumed, _, err := repo.ConsumeProductPartial(&missing, 1)
 		if err != gorm.ErrRecordNotFound {
@@ -675,7 +675,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		db, repo, user := setup(t)
 		product := createProduct(db, user.HouseholdID, "Raced", 5)
 		// Simulate another request having consumed units before our update runs
-		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("amount", 1)
+		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("quantity", 1)
 
 		stale := product
 
@@ -703,7 +703,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		db, repo, user := setup(t)
 		product := createProduct(db, user.HouseholdID, "Stale clamp", 5)
 		// Another request reduced the stock after the caller's read
-		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("amount", 1)
+		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("quantity", 1)
 
 		stale := product
 
@@ -732,7 +732,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		product := createProduct(db, user.HouseholdID, "Stale partial", 3)
 		// Another request increased the stock after the caller's read, so
 		// the requested amount no longer covers the whole stock
-		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("amount", 5)
+		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("quantity", 5)
 
 		stale := product
 
@@ -748,8 +748,8 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("product not found after partial consume: %v", err)
 		}
-		if updated.Amount != 2 {
-			t.Errorf("Amount = %d, want 2", updated.Amount)
+		if updated.Quantity != 2 {
+			t.Errorf("Amount = %d, want 2", updated.Quantity)
 		}
 		if updated.DeletedAt.Valid {
 			t.Error("fallback partial reduce must not soft-delete the product")

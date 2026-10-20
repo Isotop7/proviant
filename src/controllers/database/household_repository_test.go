@@ -7,7 +7,6 @@ import (
 	"github.com/Isotop7/proviant/models/authentication"
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/testutil"
-	"github.com/Isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
@@ -323,8 +322,8 @@ func TestHouseholdRepository_NameSettingsAndMembers(t *testing.T) {
 	t.Run("UpdateHouseholdSettings as admin", func(t *testing.T) {
 		goalCount := 5
 		goalPercent := 12.5
-		unitSystem := util.UnitSystemImperial
-		if err := repo.UpdateHouseholdSettings(household.ID, admin.ID, "count", &goalCount, &goalPercent, nil, &unitSystem); err != nil {
+		language := "de"
+		if err := repo.UpdateHouseholdSettings(household.ID, admin.ID, "count", &goalCount, &goalPercent, &language); err != nil {
 			t.Fatalf("UpdateHouseholdSettings() error = %v", err)
 		}
 		var updated dbModel.Household
@@ -340,13 +339,13 @@ func TestHouseholdRepository_NameSettingsAndMembers(t *testing.T) {
 		if updated.MonthlyWasteGoalPercent == nil || *updated.MonthlyWasteGoalPercent != 12.5 {
 			t.Errorf("goal percent = %v, want 12.5", updated.MonthlyWasteGoalPercent)
 		}
-		if updated.UnitSystem != util.UnitSystemImperial {
-			t.Errorf("unit system = %q, want %q", updated.UnitSystem, util.UnitSystemImperial)
+		if updated.Language != "de" {
+			t.Errorf("language = %q, want de", updated.Language)
 		}
 	})
 
 	t.Run("UpdateHouseholdSettings by non-admin errors", func(t *testing.T) {
-		if err := repo.UpdateHouseholdSettings(household.ID, member.ID, "count", nil, nil, nil, nil); err != errors.ErrNotHouseholdAdmin {
+		if err := repo.UpdateHouseholdSettings(household.ID, member.ID, "count", nil, nil, nil); err != errors.ErrNotHouseholdAdmin {
 			t.Errorf("error = %v, want %v", err, errors.ErrNotHouseholdAdmin)
 		}
 	})

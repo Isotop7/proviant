@@ -6,7 +6,18 @@ package api
 // changes meaning; additive fields keep the version and are restored as
 // best-effort. The restore endpoint requires this exact value so an old or
 // foreign document cannot silently lose fields the current schema carries.
-const BackupSchemaVersion = 2
+const BackupSchemaVersion = 3
+
+// BackupSchemaVersionNetContent is the version that stored a product's net
+// content instead of a pack count. A document of that version is still
+// accepted: its measured rows describe one pack of that size.
+const BackupSchemaVersionNetContent = 2
+
+// SupportsBackupVersion reports whether the restore endpoint can read a
+// document of the given version.
+func SupportsBackupVersion(version int) bool {
+	return version == BackupSchemaVersion || version == BackupSchemaVersionNetContent
+}
 
 // FullExportHousehold is the household metadata carried in a backup document.
 // The goal fields are included because they are household configuration, not
@@ -18,7 +29,6 @@ type FullExportHousehold struct {
 	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType,omitempty"`
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount,omitempty"`
 	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent,omitempty"`
-	UnitSystem              string   `json:"unitSystem,omitempty"`
 }
 
 // FullExportMember is one household member as far as a backup can carry it.

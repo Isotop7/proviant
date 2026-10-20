@@ -102,10 +102,10 @@ describe("savedRecipes.js click delegation", () => {
     const rows = doc.querySelectorAll("[data-ingredient-row]");
     expect(rows.length).toBe(3);
     expect(rows[0].querySelector("[data-ingredient-name]").value).toBe("flour");
-    expect(rows[0].querySelector("[data-ingredient-amount]").value).toBe("250");
-    expect(rows[0].querySelector("[data-ingredient-unit]").value).toBe("g");
+    expect(rows[0].querySelector("[data-ingredient-portion]").value).toBe("250 g");
     expect(rows[1].querySelector("[data-ingredient-name]").value).toBe("eggs");
-    expect(rows[1].querySelector("[data-ingredient-amount]").value).toBe("2");
+    expect(rows[1].querySelector("[data-ingredient-portion]").value).toBe("2");
     expect(rows[2].querySelector("[data-ingredient-name]").value).toBe("salt");
+    expect(rows[2].querySelector("[data-ingredient-portion]").value).toBe("");
   });
 });

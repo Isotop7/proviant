@@ -14,7 +14,7 @@
   "waste.consumed": "Verbraucht",
   "waste.emptyDesc": "Verbinden Sie sich mit einem Haushalt oder erstellen Sie einen, um Ihre Abfallanalyse zu sehen.",
   "waste.emptyTitle": "Noch kein Haushalt",
-  "waste.methodologyNote": "Die CO₂-Werte basieren auf der Agribalyse-LCA-Datenbank über Open Food Facts ecoscore_data. EUR-Werte verwenden hinterlegte Produktüberschreibungen, andernfalls Kategoriedurchschnitte. Endgültig gelöschte Produkte fallen in den Bereich „Other“.",
+  "waste.methodologyNote": "Die CO₂-Werte basieren auf der Agribalyse-LCA-Datenbank über Open Food Facts ecoscore_data und nehmen das durchschnittliche Packungsgewicht der Produktkategorie an. EUR-Werte verwenden hinterlegte Produktüberschreibungen, andernfalls Kategoriedurchschnitte. Datensätze vor dem Packungsmodell sind nicht enthalten: Ihre Werte wurden mit dem Nettoinhalt des Produkts berechnet. Endgültig gelöschte Produkte fallen in den Bereich „Other“.",
   "waste.month": "Monat",
   "waste.monthlyBreakdown": "Monatliche Aufschlüsselung",
   "waste.monthlyDetails": "Monatliche Details",

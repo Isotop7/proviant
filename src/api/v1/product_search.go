@@ -36,7 +36,7 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 
 	if !validEAN13Checksum(barcodeParam) {
 		appCtx.Logger.Warn().Msgf("Requested barcode '%s' has invalid EAN-13 checksum", barcodeParam)
-		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' is an invalid EAN-13 code", barcodeParam)})
+		ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: fmt.Sprintf("Barcode '%s' has an invalid EAN-13 checksum", barcodeParam)})
 		return
 	}
 
@@ -131,14 +131,22 @@ func validEAN13Format(barcode string) bool {
 	return true
 }
 
+// validEAN13Checksum reports whether the last digit of an EAN-13 is its
+// check digit. The first twelve digits carry the weights one and three,
+// alternating from the first digit, and the check digit itself carries the
+// weight one: the weighted sum of all thirteen digits is a multiple of ten.
 func validEAN13Checksum(barcode string) bool {
 	sum := 0
+	last := len(barcode) - 1
 	for i, c := range barcode {
 		digit := int(c - '0')
-		if i%2 == 0 {
-			sum += digit * 3
-		} else {
+		switch {
+		case i == last:
 			sum += digit
+		case i%2 == 0:
+			sum += digit
+		default:
+			sum += digit * 3
 		}
 	}
 	return sum%10 == 0

@@ -22,8 +22,7 @@ func TestExportProductsCSV(t *testing.T) {
 	product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
 	location := testutil.CreateTestStorageLocation(env.DB, env.Household.ID)
 	product.StorageLocationID = &location.ID
-	product.Amount = 3
-	product.Unit = "pcs"
+	product.Quantity = 3
 	product.Categories = "Dairy"
 	env.DB.Save(product)
 	env.Ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/export/products.csv", nil)
@@ -219,13 +218,13 @@ func TestProductToExportRow(t *testing.T) {
 	product := dbModel.Product{
 		ProductName: "Milk",
 		Barcode:     "1234567890123",
-		Amount:      2,
-		Unit:        "l",
+		Quantity:    2,
+		PackSize:    "1 l",
 		Categories:  "Dairy",
 		ExpireAt:    expireAt,
 	}
 	row := productToExportRow(&product)
-	want := []string{"Milk", "1234567890123", "2", "l", "Dairy", "", "2030-01-02", row[7]}
+	want := []string{"Milk", "1234567890123", "2", "1 l", "Dairy", "", "2030-01-02", row[7]}
 	if len(row) != 8 {
 		t.Fatalf("row = %v, want 8 columns", row)
 	}

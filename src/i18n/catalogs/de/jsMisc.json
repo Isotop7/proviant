@@ -1,5 +1,4 @@
 {
-  "js.savedRecipes.amount": "Menge",
   "js.savedRecipes.cook": "Kochen",
   "js.savedRecipes.cookConfirmBody": "Dadurch werden die mit \"%s\" verknüpften Zutaten aus Ihrem Bestand verbraucht. Dies kann nicht rückgängig gemacht werden.",
   "js.savedRecipes.cookConfirmTitle": "Rezept kochen",
@@ -37,6 +36,8 @@
   "js.savedRecipes.notLoadedTitle": "Rezept nicht geladen",
   "js.savedRecipes.notSavedTitle": "Rezept nicht gespeichert",
   "js.savedRecipes.partiallyCookedTitle": "Teilweise gekocht",
+  "js.savedRecipes.portion": "Anteil, z. B. 200 g",
+  "js.savedRecipes.portionLabel": "Anteil",
   "js.savedRecipes.prefilledBody": "Prüfen Sie die importierten Zutaten und speichern Sie anschließend.",
   "js.savedRecipes.prefilledTitle": "Rezept vorausgefüllt",
   "js.savedRecipes.removeIngredient": "Zutat entfernen",
@@ -47,7 +48,6 @@
   "js.savedRecipes.servings_one": "%s Portion",
   "js.savedRecipes.servings_other": "%s Portionen",
   "js.savedRecipes.thisRecipe": "dieses Rezept",
-  "js.savedRecipes.unit": "Einheit",
   "js.syncSettings.connectedTitle": "Verbunden",
   "js.syncSettings.connectionFailedTitle": "Verbindung fehlgeschlagen",
   "js.syncSettings.connectionSucceeded": "Verbindung mit %s hergestellt.",

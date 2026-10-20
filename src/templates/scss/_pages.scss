@@ -197,16 +197,20 @@
     min-width: 0;
   }
 
+  // The count is a stepper, so it carries the same height as the fields
+  // beside it.
+  .qty-stepper {
+    flex-shrink: 0;
+    height: 36px;
+
+    button,
+    input {
+      height: 36px;
+    }
+  }
+
   #inputItemQuantity {
-    width: 60px;
-  }
-
-  #inputItemUnit {
-    width: 60px;
-  }
-
-  #inputItemCategory {
-    width: 100px;
+    width: 48px;
   }
 
   #btnAddItem {

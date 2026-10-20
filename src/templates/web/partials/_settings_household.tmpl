@@ -137,14 +137,6 @@
                 </select>
                 <div class="form-text">{{ t "household.languageHelp" }}</div>
             </div>
-            <div class="mb-3">
-                <label for="inputHouseholdUnitSystem" class="form-label fw-medium small">{{ t "household.unitSystemLabel" }}</label>
-                <select class="form-select input-width-240" id="inputHouseholdUnitSystem">
-                    <option value="metric" {{ if ne .Household.UnitSystem "imperial" }}selected{{ end }}>{{ t "household.unitSystemMetric" }}</option>
-                    <option value="imperial" {{ if eq .Household.UnitSystem "imperial" }}selected{{ end }}>{{ t "household.unitSystemImperial" }}</option>
-                </select>
-                <div class="form-text">{{ t "household.unitSystemHelp" }}</div>
-            </div>
             <button type="button" class="btn btn-proviant-primary btn-sm" id="btnSaveMonthlyGoal">
                 <i class="bi bi-save me-1"></i>{{ t "household.saveGoal" }}
             </button>

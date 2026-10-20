@@ -61,7 +61,6 @@ func GetConsumptionRate(ctx *gin.Context, appCtx *AppContext) {
 		ProductID:    productID,
 		HasEstimate:  rate.HasEstimate,
 		PerWeek:      rate.PerWeek,
-		Unit:         rate.Unit,
 		SampleCount:  rate.SampleCount,
 		DaysCovered:  rate.DaysCovered,
 		LastConsumed: rate.LastConsumed,
@@ -76,8 +75,8 @@ func GetConsumptionRate(ctx *gin.Context, appCtx *AppContext) {
 // @Description  Returns a suggested quantity to add to the shopping list for a
 // @Description  product. Source is "consumption_rate" when at least 2 consumed
 // @Description  samples spanning at least 7 days exist within the last 90 days,
-// @Description  otherwise "min_stock" (minStockAmount - currentAmount) when
-// @Description  the current amount is below the minimum, or "none".
+// @Description  otherwise "min_stock" (minStockAmount - currentQuantity) when
+// @Description  the current pack count is below the minimum, or "none".
 // @Tags         product
 // @Produce      json
 // @Param        id   path      int  true  "Product ID"
@@ -116,7 +115,6 @@ func GetRestockSuggestion(ctx *gin.Context, appCtx *AppContext) {
 		HasSuggestion:  suggestion.Source != util.ConsumptionSourceNone,
 		HasEstimate:    suggestion.HasEstimate,
 		SuggestedQty:   suggestion.SuggestedQty,
-		Unit:           suggestion.Unit,
 		Source:         suggestion.Source,
 		WeeklyRate:     suggestion.WeeklyRate,
 		SampleCount:    suggestion.SampleCount,

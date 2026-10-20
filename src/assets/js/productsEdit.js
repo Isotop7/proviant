@@ -6,7 +6,7 @@ function getFormElements() {
         inputCategories:   document.getElementById('categoriesHidden'),
         inputCountries:    document.getElementById('countriesHidden'),
         inputExpireAt:     document.getElementById('inputExpireAt'),
-        inputAmount:       document.getElementById('inputAmount'),
+        inputQuantity:     document.getElementById('inputQuantity'),
         labelProductID:    document.getElementById('labelProductID'),
         imgProduct:        document.getElementById('imgProduct'),
         alertEditProduct:  document.getElementById('alertEditProduct'),
@@ -64,9 +64,6 @@ function editProduct() {
     const daysAfterOpening = inputDaysAfterOpening && inputDaysAfterOpening.value !== ''
         ? Number.parseInt(inputDaysAfterOpening.value, 10) : null;
 
-    const inputUnit = document.getElementById('inputUnit');
-    const unit = inputUnit && inputUnit.value ? inputUnit.value : '';
-
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
@@ -74,8 +71,7 @@ function editProduct() {
         "countries": els.inputCountries.value.trim(),
         "imageUrl": els.inputImageURL.value.trim(),
         "expireAt": expireDate ? expireDate.toISOString() : null,
-        "amount": els.inputAmount ? Number.parseInt(els.inputAmount.value) || 0 : 0,
-        "unit": unit,
+        "quantity": els.inputQuantity ? Number.parseInt(els.inputQuantity.value) || 1 : 1,
         "storageLocationId": storageLocationId,
         "notificationLeadDays": notificationLeadDays,
         "minStockAmount": minStockAmount,
@@ -223,13 +219,13 @@ document.addEventListener("click", function (event) {
         }
     }
 
-    // Amount stepper buttons
-    var stepBtn = event.target.closest('[data-amount-step]');
+    // Quantity stepper buttons
+    var stepBtn = event.target.closest('[data-quantity-step]');
     if (stepBtn) {
-        var amountInput = document.getElementById('inputAmount');
-        if (amountInput) {
-            var step = Number.parseInt(stepBtn.dataset.amountStep, 10);
-            amountInput.value = Math.max(0, Number.parseInt(amountInput.value, 10) + step);
+        var quantityInput = document.getElementById('inputQuantity');
+        if (quantityInput) {
+            var step = Number.parseInt(stepBtn.dataset.quantityStep, 10);
+            quantityInput.value = Math.max(1, Number.parseInt(quantityInput.value, 10) + step);
         }
     }
 
@@ -240,35 +236,8 @@ document.addEventListener("click", function (event) {
     }
 });
 
-/* Rescale the amount field when the storage unit changes, so switching g -> kg
-   keeps the same quantity instead of reinterpreting the number (2000 g would
-   otherwise be saved as 2000 kg). The previous unit is tracked on the select.
-   A switch the amount cannot follow exactly — no defined conversion, or one
-   that would round (500 g rescaled to kg saves as 1 kg = 1000 g) — snaps the
-   select back to the previous unit instead of silently corrupting the value. */
-document.addEventListener("change", function (event) {
-    var unitEl = event.target.closest ? event.target.closest("#inputUnit") : null;
-    if (!unitEl) return;
-    var amountInput = document.getElementById("inputAmount");
-    var previous = unitEl.dataset.previousUnit || "";
-    var converted = amountInput && amountInput.value !== ""
-        ? proviant.convertUnit(amountInput.value, previous, unitEl.value)
-        : 0;
-    if (converted === null) {
-        unitEl.value = previous;
-        return;
-    }
-    if (amountInput && amountInput.value !== "") {
-        amountInput.value = String(converted);
-    }
-    unitEl.dataset.previousUnit = unitEl.value;
-});
-
 /* Blur validation for required fields */
 document.addEventListener("DOMContentLoaded", function () {
-    var inputUnit = document.getElementById("inputUnit");
-    if (inputUnit) inputUnit.dataset.previousUnit = inputUnit.value;
-
     var inputProductName = document.getElementById("inputProductName");
     if (inputProductName) {
         inputProductName.addEventListener("blur", function () {
@@ -328,16 +297,16 @@ function handleAddToShoppingList(btn) {
             if (response.code !== 200) {
                 // Fall back to a direct add with default quantity (also
                 // covers the "no suggestion available" case).
-                await proviant.addToShoppingList(productId, 1, '');
+                await proviant.addToShoppingList(productId, 1);
                 return;
             }
             var suggestion = response.message;
             if (suggestion && suggestion.hasSuggestion && suggestion.suggestedQty > 0) {
                 var choice = await openRestockModal(suggestion);
                 if (choice === proviant.CANCEL) return proviant.CANCEL;
-                await proviant.addToShoppingList(productId, choice.qty, choice.unit);
+                await proviant.addToShoppingList(productId, choice.qty);
             } else {
-                await proviant.addToShoppingList(productId, 1, '');
+                await proviant.addToShoppingList(productId, 1);
             }
         },
         proviant.t("js.products.addedToShoppingList"),
@@ -347,47 +316,23 @@ function handleAddToShoppingList(btn) {
     );
 }
 
-// The restock picker is a fixed <select>, so a unit that is not one of its
-// listed options (a legacy free-text unit carried over by the product) would
-// select nothing and be posted back as "". Append it as its own option,
-// replacing the one appended for a previous suggestion so it does not
-// accumulate across openings.
-function selectModalUnit(unitEl, unit) {
-    var value = unit || '';
-    var stale = unitEl.querySelector('option[data-restock-extra]');
-    if (stale) stale.remove();
-    var present = Array.prototype.some.call(unitEl.options, function (option) {
-        return option.value === value;
-    });
-    if (value && !present) {
-        var option = document.createElement('option');
-        option.value = value;
-        option.textContent = value;
-        option.setAttribute('data-restock-extra', '');
-        unitEl.appendChild(option);
-    }
-    unitEl.value = value;
-}
-
-// Returns a Promise that resolves with {qty, unit} on confirm, or with
+// Returns a Promise that resolves with {qty} on confirm, or with
 // proviant.CANCEL when the user dismisses the modal (Cancel, X, backdrop,
 // Escape). runWithButtonBusyState treats CANCEL as a no-op.
 function openRestockModal(suggestion) {
     return new Promise(function (resolve) {
         var modalEl = document.getElementById('restockSuggestionModal');
         if (!modalEl || typeof bootstrap === 'undefined') {
-            resolve({ qty: suggestion.suggestedQty, unit: suggestion.unit || '' });
+            resolve({ qty: suggestion.suggestedQty });
             return;
         }
 
         var qtyEl = document.getElementById('restockQty');
-        var unitEl = document.getElementById('restockUnit');
         var reasonEl = document.getElementById('restockReason');
         var productEl = document.getElementById('restockProductName');
         var confirmBtn = document.getElementById('restockConfirmBtn');
 
         if (qtyEl) qtyEl.value = suggestion.suggestedQty;
-        if (unitEl) selectModalUnit(unitEl, suggestion.unit);
         if (productEl) {
             productEl.textContent = suggestion.productName || suggestion.display || proviant.t("js.products.suggestedQuantity");
         }
@@ -413,10 +358,9 @@ function openRestockModal(suggestion) {
             confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
             newBtn.addEventListener('click', function () {
                 var qty = qtyEl ? Math.max(1, Number.parseInt(qtyEl.value, 10) || 1) : 1;
-                var unit = unitEl ? unitEl.value.trim() : '';
                 var modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
-                finish({ qty: qty, unit: unit });
+                finish({ qty: qty });
             });
         }
 

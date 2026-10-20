@@ -182,6 +182,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 			Categories:  product.Categories,
 			Countries:   product.Countries,
 			ImageURL:    product.ImageURL,
+			PackSize:    product.PackSize,
 			CO2KgPerKg:  product.CO2KgPerKg,
 			StorageHint: product.StorageHint,
 		}
@@ -214,6 +215,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 		Categories:  product.Categories,
 		Countries:   product.Countries,
 		ImageURL:    product.ImageURL,
+		PackSize:    product.PackSize,
 		CO2KgPerKg:  product.CO2KgPerKg,
 		StorageHint: product.StorageHint,
 	}

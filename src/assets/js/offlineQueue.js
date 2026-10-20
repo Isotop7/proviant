@@ -6,6 +6,9 @@
   var DB_NAME = 'proviant-offline';
   var DB_VERSION = 1;
   var LEGACY_QUEUE_KEY = 'proviant_offline_queue';
+  // The legacy prefix and the queued op type "updateAmount" stay as they are:
+  // they are keys of rows already stored in the outbox, and renaming them
+  // would orphan the operations a user queued before the rename.
   var LEGACY_ID_PREFIX = 'legacy-amount-';
   // A queued op the server keeps rejecting would otherwise retry on every page
   // load forever, with its error visible to nobody. Five attempts is well past
@@ -405,12 +408,12 @@
     }
   }
 
-  async function sendAmountDelta(item) {
+  async function sendQuantityDelta(item) {
     // Only proviant.js tags transport failures; a rejected body after an
     // answered response stays a plain error and costs an attempt like any
     // other server answer.
-    var result = await proviant._sendAmountDelta(item.payload.productID, item.payload.delta, item.payload.clientMutationId);
-    // _sendAmountDelta resolves for every JSON error body, so its status is the
+    var result = await proviant._sendQuantityDelta(item.payload.productID, item.payload.delta, item.payload.clientMutationId);
+    // _sendQuantityDelta resolves for every JSON error body, so its status is the
     // only signal that the delta was not applied. Dropping the op on a non-2xx
     // would lose the mutation outright.
     if (result.code === 429) throw throttled(parseRetryAfter(result.retryAfter));
@@ -431,12 +434,12 @@
 
   // Returns { wait } to pause before the next op, { stop } to hand the rest of
   // the drain back to the re-arm, and {} when there is no reason to pause.
-  async function drainAmountDelta(item) {
+  async function drainQuantityDelta(item) {
     item.status = 'syncing';
     item.updatedAt = Date.now();
     await put('outbox', item);
     try {
-      await sendAmountDelta(item);
+      await sendQuantityDelta(item);
       return {};
     } catch (err) {
       if (isAuthRejection(err)) {
@@ -553,7 +556,7 @@
   async function drainDeltas(deltas) {
     var pacing = new ThrottlePacing();
     for (var i = 0; i < deltas.length; i++) {
-      var outcome = await drainAmountDelta(deltas[i]);
+      var outcome = await drainQuantityDelta(deltas[i]);
       if (outcome.stop) return;
       if (!outcome.wait) continue;
       if (!await pacing.awaitRetryAfter(outcome.wait)) return;
@@ -702,27 +705,27 @@
 
   if (typeof proviant.createProduct === 'function') {
     var originalCreateProduct = proviant.createProduct;
-    proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate, clientSyncIdArg, unit) {
+    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate) {
       // The sync id goes out on the online path too. Without it the server-side
       // idempotency check cannot fire, so a response lost after the server
       // committed — which is exactly what the catch below detects — would enqueue
       // a second create for a product that already exists.
       var clientSyncId = generateId();
-      var draft = { barcode: barcode, expireAt: expireAt, amount: amount || 1, unit: unit || '', storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: clientSyncId };
+      var draft = { barcode: barcode, expireAt: expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: clientSyncId };
       if (!navigator.onLine) {
         return enqueueOrReport({ id: clientSyncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: clientSyncId });
       }
       try {
-        return await originalCreateProduct(barcode, expireAt, amount, storageLocationId, isPrivate, clientSyncId, unit);
+        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId);
       } catch (_) {
         return enqueueOrReport({ id: clientSyncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: clientSyncId });
       }
     };
   }
 
-  if (typeof proviant.updateProductAmount === 'function') {
-    var originalUpdateProductAmount = proviant.updateProductAmount;
-    proviant.updateProductAmount = async function (productID, delta) {
+  if (typeof proviant.updateProductQuantity === 'function') {
+    var originalUpdateProductQuantity = proviant.updateProductQuantity;
+    proviant.updateProductQuantity = async function (productID, delta) {
       // The mutation id is generated up front so the online request and any
       // queued replay of it carry the same token: a response lost after the
       // server applied the delta is then a no-op on retry, not a second
@@ -732,7 +735,7 @@
         return enqueueOrReport({ type: 'updateAmount', payload: { productID: productID, delta: delta, clientMutationId: clientMutationId } }, 200);
       }
       try {
-        return await originalUpdateProductAmount(productID, delta, clientMutationId);
+        return await originalUpdateProductQuantity(productID, delta, clientMutationId);
       } catch (_) {
         return enqueueOrReport({ type: 'updateAmount', payload: { productID: productID, delta: delta, clientMutationId: clientMutationId } }, 200);
       }

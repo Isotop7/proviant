@@ -64,10 +64,10 @@ func generateVEVENT(product *database.Product) string {
 
 func formatProductDescription(product *database.Product) string {
 	desc := product.ProductName
-	if product.Amount > 0 {
-		desc = desc + " - " + strconv.Itoa(product.Amount)
-		if product.Unit != "" {
-			desc = desc + " " + product.Unit
+	if product.Quantity > 0 {
+		desc = desc + " - " + strconv.Itoa(product.Quantity)
+		if product.PackSize != "" {
+			desc = desc + " (" + product.PackSize + ")"
 		}
 	}
 	if product.StorageLocation != nil {

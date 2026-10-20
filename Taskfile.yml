@@ -264,6 +264,11 @@ tasks:
     cmds:
       - ./scripts/sonarqube-export.sh --duplications
 
+  seed-products:
+    desc: "Fill the pack size of the demo products from Open Food Facts. Usage: task seed-products [-- --dry-run]"
+    cmds:
+      - python3 scripts/seed-products.py {{if .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
+
   seed:
     desc: "Seed demo products from seed-products.csv into SQLite. Usage: task seed -- <username>"
     dir: src
@@ -280,13 +285,16 @@ tasks:
         db_path, username, csv_path = sys.argv[1], sys.argv[2], sys.argv[3]
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
-        cur.execute("SELECT household_id FROM users WHERE username=? AND deleted_at IS NULL LIMIT 1", (username,))
+        cur.execute("SELECT id, household_id FROM users WHERE username=? AND deleted_at IS NULL LIMIT 1", (username,))
         row = cur.fetchone()
-        if not row or not row[0]:
+        if not row or not row[1]:
             print(f"Error: user '{username}' not found or has no household.", file=sys.stderr)
             sys.exit(1)
-        household_id = row[0]
+        user_id, household_id = row[0], row[1]
         print(f"Seeding as user='{username}' (household_id={household_id})")
+        # The CSV names a storage location; the column stores its id.
+        cur.execute("SELECT id, name FROM storage_locations WHERE household_id=? AND deleted_at IS NULL", (household_id,))
+        locations = {name.strip().lower(): loc_id for loc_id, name in cur.fetchall()}
         now = datetime.datetime.utcnow()
         inserted = 0
         with open(csv_path, newline='') as f:
@@ -300,11 +308,13 @@ tasks:
                 scanned_at = (now + datetime.timedelta(days=scanned_days)).isoformat()
                 archived = p.get('archived', '').strip().lower() == 'true'
                 deleted_at = now.isoformat() if archived else None
+                location_name = (p.get('storage_location') or '').strip()
+                location_id = locations.get(location_name.lower())
                 cur.execute(
-                    "INSERT INTO products (created_at, updated_at, deleted_at, barcode, product_name, categories, countries, image_url, expire_at, scanned_at, notified_at, household_id, amount, unit, storage_location) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?,?,?)",
+                    "INSERT INTO products (created_at, updated_at, deleted_at, barcode, product_name, categories, countries, image_url, expire_at, scanned_at, notified_at, household_id, user_id, quantity, pack_size, storage_location_id) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?,?,?,?)",
                     (now.isoformat(), now.isoformat(), deleted_at,
                      p['barcode'], p['product_name'], p['categories'], p['countries'], p['image_url'],
-                     expire_at, scanned_at, household_id, int(p['amount']), p['unit'], p['storage_location'])
+                     expire_at, scanned_at, household_id, user_id, int(p.get('quantity') or 1), p.get('pack_size', ''), location_id)
                 )
                 label = ' (archived)' if archived else ''
                 print(f"  + {p['product_name']}{label}")

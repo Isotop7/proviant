@@ -121,7 +121,7 @@ func syncIDVisibleTo(existing *dbModel.Product, userID uint) bool {
 
 // CreateProduct creates a new product of a user
 // @Summary      	Creates a new product
-// @Description  	Creates a new product of a user. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.
+// @Description  	Creates a new product of a user. The body carries the pack count and the size of one pack ("1 l"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.
 // @Tags         	product
 // @Accept			json
 // @Produce      	json
@@ -142,7 +142,11 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	product.Amount, product.Unit = util.ToBase(product.Amount, product.Unit)
+	// The pack count is optional on a create, so a count outside the range a
+	// product may hold is stored as the nearest count that is. A patch
+	// refuses such a count instead, because there the client said what it
+	// meant.
+	product.Quantity = util.ClampProductQuantity(product.Quantity)
 
 	var clientSyncID string
 	if product.ClientSyncID != nil {
@@ -198,8 +202,12 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 	if err == nil {
 		apiProduct.ScannedAt = time.Now()
 		apiProduct.ExpireAt = product.ExpireAt
-		apiProduct.Amount = product.Amount
-		apiProduct.Unit = product.Unit
+		apiProduct.Quantity = product.Quantity
+		// The barcode knows the size of a pack, but a client that named one
+		// knows better.
+		if product.PackSize != "" {
+			apiProduct.PackSize = product.PackSize
+		}
 		apiProduct.ClientSyncID = product.ClientSyncID
 		product = apiProduct
 	}
@@ -269,8 +277,7 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 				"productName": product.ProductName,
 				"barcode":     product.Barcode,
 				"expireAt":    product.ExpireAt,
-				"amount":      product.Amount,
-				"unit":        product.Unit,
+				"quantity":    product.Quantity,
 				"householdId": product.HouseholdID,
 			})
 		}
@@ -279,9 +286,18 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 	ctx.JSON(http.StatusCreated, apiModel.NewProductResponse(&product))
 }
 
+// updateMode is how a product patch is written. A merge keeps the stored
+// value of a field the request did not carry, a replace clears it.
+type updateMode bool
+
+const (
+	mergeFields   updateMode = false
+	replaceFields updateMode = true
+)
+
 // UpdateProduct updates a product of a user
 // @Summary      	Updates a product
-// @Description  	Updates a product with new values
+// @Description  	Updates a product with new values. A field the request does not carry keeps its stored value; a pointer field sent as null is cleared. The pack count must be at least 1. The pack size is free text and may be set to an empty string to clear it. The price is the price of one pack, so the savings of the product are that price times the number of packs.
 // @Tags         	product
 // @Accept			json
 // @Produce      	json
@@ -293,6 +309,30 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/{id} [patch]
 func UpdateProduct(ctx *gin.Context, appCtx *AppContext) {
+	updateProduct(ctx, appCtx, mergeFields)
+}
+
+// UpdateProductReplace replaces a product of a user
+// @Summary      	Replaces a product
+// @Description  	Replaces a product with new values. A field the request does not carry is cleared, so the request states the whole product. The pack count must be at least 1. The pack size is free text and may be set to an empty string to clear it. The price is the price of one pack, so the savings of the product are that price times the number of packs.
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   	path	int					true  	"Product ID"
+// @Param			product	body	database.ProductDTOPatch	true	"Product"
+// @Success      	200  {object}  database.ProductDTOPatch
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	404  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/products/{id} [put]
+func UpdateProductReplace(ctx *gin.Context, appCtx *AppContext) {
+	updateProduct(ctx, appCtx, replaceFields)
+}
+
+// updateProduct writes a product patch. A merge keeps the stored value of a
+// field the request did not carry; a replace clears it, so the request states
+// the whole product.
+func updateProduct(ctx *gin.Context, appCtx *AppContext, mode updateMode) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
@@ -302,14 +342,40 @@ func UpdateProduct(ctx *gin.Context, appCtx *AppContext) {
 	if !bindJSON(ctx, appCtx.Logger, &product) {
 		return
 	}
+	if mode == replaceFields {
+		product.MarkAllPresent()
+	}
 
-	product.Amount, product.Unit = util.ToBase(product.Amount, product.Unit)
+	if product.Has("quantity") {
+		switch {
+		case product.Quantity < util.MinProductQuantity:
+			api.RespondError(ctx, http.StatusBadRequest, errors.ErrInvalidProductQuantity)
+			return
+		case product.Quantity > util.MaxProductQuantity:
+			api.RespondError(ctx, http.StatusBadRequest,
+				fmt.Errorf("%w: %d", errors.ErrProductQuantityTooLarge, util.MaxProductQuantity))
+			return
+		}
+	}
 
 	updateErr := appCtx.Repos.Products.UpdateProduct(productID, appCtx.UserID, &product)
 
 	switch updateErr {
 	case nil:
-		ctx.JSON(http.StatusOK, product)
+		stored, readErr := appCtx.Repos.Products.GetProductByID(productID, appCtx.UserID)
+		if readErr != nil {
+			ctx.JSON(http.StatusOK, product)
+			return
+		}
+		response := productResponse(&stored, &product)
+		// A request that carried the pack size decided it, even when it
+		// decided to clear it: the cache must not put it back.
+		if !product.Has("packSize") {
+			if packSize := fillCachedPackSize(appCtx, productID, stored.Barcode, stored.PackSize); packSize != "" {
+				response.PackSize = packSize
+			}
+		}
+		ctx.JSON(http.StatusOK, response)
 		return
 	case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
 		// One body for unknown and foreign ids alike: distinct messages
@@ -334,32 +400,111 @@ func UpdateProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 }
 
-// UpdateProductAmount updates the amount of a product by a given delta.
-// If the resulting amount is <= 0, the product is hard-deleted.
-// @Summary      	Update product amount
-// @Description  	Applies a delta to a product's amount. Hard-deletes the product when amount reaches 0.
+// productResponse answers a patch with the stored product, not the request
+// body: a field the request did not carry keeps its stored value, so echoing
+// the request would report a count of zero for a name-only patch. A product
+// that cannot be read falls back to the request body.
+func productResponse(stored *dbModel.Product, patch *dbModel.ProductDTOPatch) dbModel.ProductDTOPatch {
+	if stored == nil {
+		return *patch
+	}
+	return dbModel.ProductDTOPatch{
+		ID:                   stored.ID,
+		ProductName:          stored.ProductName,
+		Categories:           stored.Categories,
+		Countries:            stored.Countries,
+		ImageURL:             stored.ImageURL,
+		ExpireAt:             stored.ExpireAt,
+		Quantity:             stored.Quantity,
+		PackSize:             stored.PackSize,
+		StorageLocationID:    stored.StorageLocationID,
+		NotificationLeadDays: stored.NotificationLeadDays,
+		MinStockAmount:       stored.MinStockAmount,
+		IsPrivate:            stored.IsPrivate,
+		PriceOverride:        stored.PriceOverride,
+		OpenedAt:             stored.OpenedAt,
+		DaysAfterOpening:     stored.DaysAfterOpening,
+	}
+}
+
+// fillCachedPackSize copies the pack size of the barcode's Open Food Facts
+// cache entry onto a product that does not have one yet. It returns the pack
+// size it stored, so the answer can report it. The lookup reads the cache
+// only: a live request per edit would turn every save into an outbound call,
+// and the pack size is display metadata. The backfill controller owns the
+// live lookups.
+func fillCachedPackSize(appCtx *AppContext, productID uint, barcode, currentPackSize string) string {
+	if currentPackSize != "" || barcode == "" {
+		return ""
+	}
+	cached, cacheErr := appCtx.Repos.Products.GetOpenFoodFactsCacheByBarcode(barcode)
+	if cacheErr != nil || cached.PackSize == "" {
+		return ""
+	}
+	if setErr := appCtx.Repos.Products.SetProductPackSize(productID, cached.PackSize); setErr != nil {
+		appCtx.Logger.Warn().Msgf("Error storing the pack size of product %d: %s", productID, setErr)
+		return ""
+	}
+	return cached.PackSize
+}
+
+// UpdateProductAmount updates the pack count of a product by a given delta.
+//
+// Deprecated: the endpoint moved to /quantity. The old path stays as an alias
+// so a client that has not migrated keeps working.
+//
+// @Summary      	Update product quantity (deprecated alias of /quantity)
+// @Description  	Deprecated alias of PATCH /api/v1/products/{id}/quantity. Applies a delta to a product's pack count. Hard-deletes the product when the count reaches 0.
 // @Tags         	product
 // @Accept			json
 // @Produce      	json
 // @Param        	id   	path	int							true  	"Product ID"
-// @Param        	delta	body	api.ProductAmountDTO		true	"Amount delta"
+// @Param        	delta	body	api.ProductQuantityDTO		true	"Quantity delta"
 // @Success      	200  {object}  api.APIResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	404  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/{id}/amount [patch]
 func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
+	UpdateProductQuantity(ctx, appCtx)
+}
+
+// UpdateProductQuantity updates the pack count of a product by a given delta.
+// If the resulting count is <= 0, the product is hard-deleted.
+// @Summary      	Update product quantity
+// @Description  	Applies a delta to a product's pack count. Hard-deletes the product when the count reaches 0. A delta outside the range a pack count may span is refused, and the count never leaves that range.
+// @Tags         	product
+// @Accept			json
+// @Produce      	json
+// @Param        	id   	path	int							true  	"Product ID"
+// @Param        	delta	body	api.ProductQuantityDTO		true	"Quantity delta"
+// @Success      	200  {object}  api.APIResponse
+// @Failure      	400  {object}  api.APIResponse
+// @Failure      	404  {object}  api.APIResponse
+// @Failure      	500  {object}  api.APIResponse
+// @Router       	/api/v1/products/{id}/quantity [patch]
+func UpdateProductQuantity(ctx *gin.Context, appCtx *AppContext) {
 	productID, ok := parseUintPathParam(ctx, appCtx.Logger, "id")
 	if !ok {
 		return
 	}
 
-	var amountDTO apiModel.ProductAmountDTO
-	if !bindJSON(ctx, appCtx.Logger, &amountDTO) {
+	var quantityDTO apiModel.ProductQuantityDTO
+	if !bindJSON(ctx, appCtx.Logger, &quantityDTO) {
 		return
 	}
-	if amountDTO.ClientMutationID != nil {
-		trimmed := strings.TrimSpace(*amountDTO.ClientMutationID)
+	// A delta larger than the whole range a pack count may span is refused
+	// instead of being applied: it cannot change the count by more than the
+	// count's own range, and a delta that large overflows the column on a
+	// database with a 32-bit integer.
+	if quantityDTO.Delta > util.MaxProductQuantity || quantityDTO.Delta < -util.MaxProductQuantity {
+		appCtx.Logger.Warn().Msgf("Body carries an out-of-range quantity delta: %d", quantityDTO.Delta)
+		api.RespondError(ctx, http.StatusBadRequest,
+			fmt.Errorf("%w: %d", errors.ErrProductQuantityDeltaOutOfRange, quantityDTO.Delta))
+		return
+	}
+	if quantityDTO.ClientMutationID != nil {
+		trimmed := strings.TrimSpace(*quantityDTO.ClientMutationID)
 		if len(trimmed) > util.OfflineSyncIDMaxLength {
 			appCtx.Logger.Warn().Msg("Body carries an over-long clientMutationId")
 			api.RespondError(ctx, http.StatusBadRequest, errors.ErrClientMutationIDTooLong)
@@ -367,7 +512,7 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 		}
 		// Trimmed here so the token stored and the token replayed compare
 		// equal; an all-whitespace id becomes nil and never dedupes.
-		amountDTO.ClientMutationID = &trimmed
+		quantityDTO.ClientMutationID = &trimmed
 	}
 
 	product, err := appCtx.Repos.Products.GetProductByID(productID, appCtx.UserID)
@@ -380,12 +525,12 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 			})
 			return
 		}
-		appCtx.Logger.Error().Msgf("Error fetching product before amount update: %s", err)
+		appCtx.Logger.Error().Msgf("Error fetching product before quantity update: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}
 
-	deleted, applied, updateErr := appCtx.Repos.Products.UpdateProductAmount(productID, appCtx.UserID, amountDTO.Delta, amountDTO.ClientMutationID)
+	deleted, applied, updateErr := appCtx.Repos.Products.UpdateProductQuantity(productID, appCtx.UserID, quantityDTO.Delta, quantityDTO.ClientMutationID)
 
 	switch updateErr {
 	case nil:
@@ -398,7 +543,7 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 				userName = user.DisplayName
 			}
 			go func() {
-				quantity := amountDTO.Delta
+				quantity := quantityDTO.Delta
 				if quantity < 0 {
 					quantity = -quantity
 				}
@@ -406,7 +551,7 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 					HouseholdID: householdID,
 					UserID:      &appCtx.UserID,
 					UserName:    userName,
-					Action:      dbModel.ActivityActionAmountChange,
+					Action:      dbModel.ActivityActionQuantityChange,
 					ProductID:   productID,
 					ProductName: product.ProductName,
 					Quantity:    quantity,
@@ -428,10 +573,10 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 					})
 				}
 			}()
-			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d deleted (amount reached 0)", productID)})
+			ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d deleted (quantity reached 0)", productID)})
 			return
 		}
-		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d amount updated", productID)})
+		ctx.JSON(http.StatusOK, api.APIResponse{Message: fmt.Sprintf("Product %d quantity updated", productID)})
 		return
 	case gorm.ErrRecordNotFound, errors.ErrMismatcherUserID:
 		// One body for unknown and foreign ids alike: distinct messages
@@ -444,7 +589,7 @@ func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext) {
 		})
 		return
 	default:
-		appCtx.Logger.Error().Msgf("Error updating product amount: %s", updateErr)
+		appCtx.Logger.Error().Msgf("Error updating product quantity: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
 		return
 	}

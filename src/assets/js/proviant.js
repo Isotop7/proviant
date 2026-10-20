@@ -1,7 +1,7 @@
 const proviant = {};
 // A top-level `const` in a classic script is a global lexical binding, not a
 // property of window, so offlineQueue.js — which wraps proviant.createProduct,
-// proviant.updateProductAmount and proviant.getProducts — would otherwise find
+// proviant.updateProductQuantity and proviant.getProducts — would otherwise find
 // window.proviant undefined, wrap an empty object of its own and leave every one
 // of those features inert.
 window.proviant = proviant;
@@ -34,174 +34,21 @@ proviant.tn = function (key, n) {
   return proviant.t.apply(null, [lookup, n].concat(Array.prototype.slice.call(arguments, 2)));
 };
 
-// Display-only unit formatting. Amounts are stored in base units (g / ml /
-// count) and rendered in the household's measurement system. The conversion
-// table is injected by the server from util/units.go, so that table stays the
-// single source of the factors; storage and validation stay server-side too.
-const UNIT_CONVERSIONS = {};
-(window.proviantUnitTable || []).forEach(function (unit) {
-  UNIT_CONVERSIONS[unit.symbol] = { symbol: unit.symbol, kind: unit.kind, factor: unit.factor };
-});
-// The alias table is injected alongside the conversion table, so a spelling the
-// server resolves ("pc", "Millilitres") resolves here too instead of falling
-// through as an unknown unit and diverging from the server-rendered label.
-const UNIT_ALIASES = window.proviantUnitAliases || {};
-
-proviant.unitSystem = function () {
-  return window.proviantUnitSystem === "imperial" ? "imperial" : "metric";
+// quantityLabel renders a pack count the way every quantity surface does: the
+// count and the localized pack noun ("2 Stk."). A count never depends on a
+// unit, so the label is the same everywhere.
+proviant.quantityLabel = function (quantity) {
+  return String(quantity) + " " + proviant.t("common.qty");
 };
 
-function formatUnitQuantity(value) {
-  const rounded = Math.round(value * 10) / 10;
-  if (rounded === Math.trunc(rounded)) {
-    return String(Math.trunc(rounded));
-  }
-  return rounded.toFixed(1);
-}
-
-// Mirrors util.normalizeUnitSymbol: trim, lowercase, collapse inner
-// whitespace, strip a trailing period, so "Fl. Oz." resolves like
-// "fl oz".
-function normalizeUnitSymbol(raw) {
-  return String(raw || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/\.$/, "");
-}
-
-function unitConversion(raw) {
-  const normalized = normalizeUnitSymbol(raw);
-  const symbol = Object.prototype.hasOwnProperty.call(UNIT_ALIASES, normalized) ? UNIT_ALIASES[normalized] : normalized;
-  return UNIT_CONVERSIONS[symbol] || null;
-}
-
-// displayUnit picks the unit a person would write for a base amount, mirroring
-// util/units.go FromBase, and returns the rescaled value alongside it.
-proviant.displayUnit = function (amount, unit, system) {
-  const raw = String(unit || "").trim();
-  const value = Number(amount) || 0;
-  if (!raw) {
-    return { value: value, symbol: "" };
-  }
-  const conversion = unitConversion(raw);
-  if (!conversion) {
-    return { value: value, symbol: raw };
-  }
-  const resolved = system === "imperial" ? "imperial" : "metric";
-  if (conversion.kind === "mass") {
-    if (resolved === "imperial") {
-      if (Math.abs(value) >= UNIT_CONVERSIONS.lb.factor) {
-        return { value: value / UNIT_CONVERSIONS.lb.factor, symbol: "lb" };
-      }
-      return { value: value / UNIT_CONVERSIONS.oz.factor, symbol: "oz" };
-    }
-    if (Math.abs(value) >= 1000) {
-      return { value: value / 1000, symbol: "kg" };
-    }
-    return { value: value, symbol: "g" };
-  }
-  if (conversion.kind === "volume") {
-    if (resolved === "imperial") {
-      if (Math.abs(value) >= UNIT_CONVERSIONS.cup.factor) {
-        return { value: value / UNIT_CONVERSIONS.cup.factor, symbol: "cup" };
-      }
-      if (Math.abs(value) >= UNIT_CONVERSIONS.tbsp.factor) {
-        return { value: value / UNIT_CONVERSIONS.tbsp.factor, symbol: "tbsp" };
-      }
-      if (Math.abs(value) >= UNIT_CONVERSIONS.tsp.factor) {
-        return { value: value / UNIT_CONVERSIONS.tsp.factor, symbol: "tsp" };
-      }
-      return { value: value / UNIT_CONVERSIONS["fl oz"].factor, symbol: "fl oz" };
-    }
-    if (Math.abs(value) >= 1000) {
-      return { value: value / 1000, symbol: "l" };
-    }
-    return { value: value, symbol: "ml" };
-  }
-  return { value: value, symbol: conversion.symbol };
+// renderQuantityLabel writes the count of a product or shopping list entry
+// back into its label, reading the count from the data attribute so a
+// stepper update keeps the display in sync.
+proviant.renderQuantityLabel = function (element) {
+  if (!element || element.dataset.quantity === undefined) return;
+  const quantity = Number.parseInt(element.dataset.quantity, 10) || 0;
+  element.textContent = proviant.quantityLabel(quantity);
 };
-
-proviant.formatUnit = function (amount, unit, system) {
-  const displayed = proviant.displayUnit(amount, unit, system);
-  return displayed.symbol
-    ? formatUnitQuantity(displayed.value) + " " + displayed.symbol
-    : formatUnitQuantity(displayed.value);
-};
-
-// isPackageQuantity mirrors util.IsPackageQuantity: a mass or volume amount is
-// one package no matter its size, and a single count item is one package too.
-proviant.isPackageQuantity = function (amount, unit) {
-  const conversion = unitConversion(unit);
-  if (!conversion) {
-    return false;
-  }
-  if (conversion.kind === "mass" || conversion.kind === "volume") {
-    return true;
-  }
-  return conversion.kind === "count" && Number(amount) === 1;
-};
-
-// quantityLabel renders the amount the way the list templates do: one package
-// reads as "1 qty" instead of "500 g" or "1 pcs".
-proviant.quantityLabel = function (amount, unit, system) {
-  if (proviant.isPackageQuantity(amount, unit)) {
-    return proviant.t("common.qtyOne");
-  }
-  return proviant.formatUnit(amount, unit, system);
-};
-
-// amountStep is the number of base units one +/− click moves, so the shown
-// value actually changes: stepping a "2 kg" label by 1 g would leave it reading
-// 2 kg. It is one displayed unit (1000 for kg, 454 for lb), or 1 for a count or
-// unit-less amount.
-proviant.amountStep = function (amount, unit, system) {
-  const conversion = UNIT_CONVERSIONS[proviant.displayUnit(amount, unit, system).symbol];
-  if (!conversion || conversion.factor < 1) {
-    return 1;
-  }
-  return Math.round(conversion.factor);
-};
-
-// convertUnit rescales an amount between two units of one kind when the result
-// is a whole number of the target unit; null when no conversion is defined or
-// the value would have to be rounded, so a caller never saves a silently
-// altered quantity (500 g rescaled to kg would otherwise save as 1 kg).
-proviant.convertUnit = function (amount, fromRaw, toRaw) {
-  const from = unitConversion(fromRaw);
-  const to = unitConversion(toRaw);
-  if (!from || !to || from.kind !== to.kind) {
-    return null;
-  }
-  const value = Number(amount) || 0;
-  if (from.kind === "count") {
-    return from.symbol === to.symbol ? value : null;
-  }
-  if (from.factor === to.factor) {
-    return value;
-  }
-  const converted = value * from.factor / to.factor;
-  if (!Number.isInteger(converted)) {
-    return null;
-  }
-  return converted;
-};
-
-// Render the amount label of a product/shopping card, reading the base amount
-// and unit from data attributes so a stepper update keeps the display unit in
-// sync with the household preference. Elements without a data-amount are left
-// alone: their textContent is a formatted label ("1.5 kg"), not a base amount,
-// so parsing it would corrupt the display on a stale cached page.
-proviant.renderAmountLabel = function (element) {
-  if (!element || element.dataset.amount === undefined) return;
-  const baseAmount = Number.parseInt(element.dataset.amount, 10) || 0;
-  element.textContent = proviant.quantityLabel(baseAmount, element.dataset.unit || "", proviant.unitSystem());
-};
-
-// Re-render every amount label that carries a data-amount once the DOM is
-// ready, so a JS-rendered product/shopping card matches the household's
-// measurement system on first paint without a server round-trip.
-document.addEventListener("DOMContentLoaded", function () {
-  document.querySelectorAll(".unit-amount").forEach(function (element) {
-    proviant.renderAmountLabel(element);
-  });
-});
 
 // Intercept all fetch calls to inject X-CSRF-Token on state-mutating requests.
 (function () {
@@ -335,12 +182,12 @@ proviant.colorExpiry = function (date) {
 };
 
 /* ── Offline edit queue ──────────────────────────────────────────────────────── */
-// The queue itself lives in offlineQueue.js, which wraps updateProductAmount and
+// The queue itself lives in offlineQueue.js, which wraps updateProductQuantity and
 // createProduct at load. Everything here is a plain network call, so this module
 // holds no offline state of its own.
 
-proviant._sendAmountDelta = async function (productID, delta, clientMutationId) {
-  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/amount`;
+proviant._sendQuantityDelta = async function (productID, delta, clientMutationId) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/quantity`;
   let res;
   try {
     res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delta, clientMutationId }) });
@@ -374,14 +221,14 @@ proviant._sendAmountDelta = async function (productID, delta, clientMutationId) 
   };
 };
 
-proviant.updateProductAmount = async function (productID, delta, clientMutationId) {
-  return proviant._sendAmountDelta(productID, delta, clientMutationId);
+proviant.updateProductQuantity = async function (productID, delta, clientMutationId) {
+  return proviant._sendQuantityDelta(productID, delta, clientMutationId);
 };
 
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, amount, storageLocationId, isPrivate = false, clientSyncId, unit = "") {
+proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, amount: amount || 1, unit: unit || "", storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null }) });
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null }) });
   const body = await res.json();
   return { code: res.status, message: body.message };
 };
@@ -441,7 +288,7 @@ proviant.markProductOpened = async function (productID, force = false) {
   return { code: res.status, product: body, conflict: res.status === 409, openedAt: body.openedAt };
 };
 
-proviant.addToShoppingList = async function (productId, quantity, unit) {
+proviant.addToShoppingList = async function (productId, quantity) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/shopping-list`;
   const res = await fetch(url, {
     method: "POST",
@@ -449,7 +296,6 @@ proviant.addToShoppingList = async function (productId, quantity, unit) {
     body: JSON.stringify({
       productId: Number.parseInt(productId, 10),
       quantity: quantity || 1,
-      unit: unit || "",
     }),
   });
   if (!res.ok) {

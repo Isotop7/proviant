@@ -154,8 +154,8 @@ type ProductResponse struct {
 	ScannedAt            time.Time                `json:"scannedAt"`
 	NotifiedAt           time.Time                `json:"notifiedAt"`
 	IsPrivate            bool                     `json:"isPrivate"`
-	Amount               int                      `json:"amount"`
-	Unit                 string                   `json:"unit"`
+	Quantity             int                      `json:"quantity"`
+	PackSize             string                   `json:"packSize"`
 	StorageLocationID    *uint                    `json:"storageLocationId"`
 	StorageLocation      *StorageLocationResponse `json:"storageLocation,omitempty"`
 	PriceOverride        *float64                 `json:"priceOverride,omitempty"`
@@ -187,8 +187,8 @@ func NewProductResponse(product *dbModel.Product) ProductResponse {
 		ScannedAt:            product.ScannedAt,
 		NotifiedAt:           product.NotifiedAt,
 		IsPrivate:            product.IsPrivate,
-		Amount:               product.Amount,
-		Unit:                 product.Unit,
+		Quantity:             product.Quantity,
+		PackSize:             product.PackSize,
 		StorageLocationID:    product.StorageLocationID,
 		PriceOverride:        product.PriceOverride,
 		CO2KgPerKg:           product.CO2KgPerKg,
@@ -261,7 +261,9 @@ type ShoppingListItemResponse struct {
 	Name      string `json:"name"`
 	Category  string `json:"category"`
 	Quantity  int    `json:"quantity"`
-	Unit      string `json:"unit"`
+	// PackSize is the size of one pack of the linked product, empty when the
+	// entry is not linked to a product or the product has no known size.
+	PackSize  string `json:"packSize,omitempty"`
 	Checked   bool   `json:"checked"`
 	Notes     string `json:"notes"`
 	CreatedBy uint   `json:"createdBy"`
@@ -282,7 +284,7 @@ func NewShoppingListItemResponse[T dbModel.ShoppingListItem | *dbModel.ShoppingL
 			Name:      typed.Name,
 			Category:  typed.Category,
 			Quantity:  typed.Quantity,
-			Unit:      typed.Unit,
+			PackSize:  typed.PackSize,
 			Checked:   typed.Checked,
 			Notes:     typed.Notes,
 			CreatedBy: typed.CreatedBy,
@@ -391,6 +393,7 @@ type OpenFoodFactsCacheResponse struct {
 	Categories  string   `json:"categories"`
 	Countries   string   `json:"countries"`
 	ImageURL    string   `json:"imageUrl"`
+	PackSize    string   `json:"packSize,omitempty"`
 	CO2KgPerKg  *float64 `json:"co2KgPerKg,omitempty"`
 	StorageHint string   `json:"storageHint,omitempty"`
 }
@@ -406,6 +409,7 @@ func NewOpenFoodFactsCacheResponse(entry *dbModel.OpenFoodFactsCache) OpenFoodFa
 		Categories:  entry.Categories,
 		Countries:   entry.Countries,
 		ImageURL:    entry.ImageURL,
+		PackSize:    entry.PackSize,
 		CO2KgPerKg:  entry.CO2KgPerKg,
 		StorageHint: entry.StorageHint,
 	}

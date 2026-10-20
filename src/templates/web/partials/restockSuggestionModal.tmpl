@@ -16,18 +16,9 @@
                 <p id="restockProductName" class="fw-semibold mb-2"></p>
                 <p id="restockReason" class="text-secondary-custom small mb-3"></p>
                 <div class="row g-2 align-items-end">
-                    <div class="col-6">
+                    <div class="col-12">
                         <label for="restockQty" class="form-label small mb-1">{{ t "partial.restockSuggestionModal.quantity" }}</label>
                         <input type="number" min="1" step="1" id="restockQty" class="form-control" value="1">
-                    </div>
-                    <div class="col-6">
-                        <label for="restockUnit" class="form-label small mb-1">{{ t "partial.restockSuggestionModal.unit" }}</label>
-                        <select id="restockUnit" class="form-select">
-                            <option value="">{{ t "partial.restockSuggestionModal.unitPlaceholder" }}</option>
-                            {{ range $.UnitOptions }}
-                            <option value="{{ .Value }}">{{ .Label }}</option>
-                            {{ end }}
-                        </select>
                     </div>
                 </div>
             </div>

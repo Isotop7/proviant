@@ -89,7 +89,8 @@ func TestGetDataset_Success(t *testing.T) {
 				"product_name": "Test Product",
 				"categories": "en:test",
 				"countries": "en:Germany",
-				"image_url": "http://example.com/image.jpg"
+				"image_url": "http://example.com/image.jpg",
+				"quantity": "1 l"
 			}
 		}`
 		w.WriteHeader(http.StatusOK)
@@ -103,6 +104,9 @@ func TestGetDataset_Success(t *testing.T) {
 		t.Errorf("GetDataset() error = %v, want nil", err)
 	}
 	assertOFFProductFields(t, &product, "1234567890123", "Test Product", "en:test", "en:Germany", "http://example.com/image.jpg")
+	if product.PackSize != "1 l" {
+		t.Errorf("pack size = %q, want %q", product.PackSize, "1 l")
+	}
 }
 
 func TestGetDataset_Timeout(t *testing.T) {

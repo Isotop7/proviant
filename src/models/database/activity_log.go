@@ -19,12 +19,15 @@ type ActivityLog struct {
 }
 
 const (
-	ActivityActionAdd          = "add"
-	ActivityActionConsume      = "consume"
-	ActivityActionWaste        = "waste"
-	ActivityActionRestore      = "restore"
-	ActivityActionCook         = "cook"
-	ActivityActionAmountChange = "amount_change"
-	ActivityActionStreakReset  = "streak_reset"
-	ActivityActionImport       = "import"
+	ActivityActionAdd     = "add"
+	ActivityActionConsume = "consume"
+	ActivityActionWaste   = "waste"
+	ActivityActionRestore = "restore"
+	ActivityActionCook    = "cook"
+	// ActivityActionQuantityChange adjusts a product's pack count. The
+	// stored token is the legacy "amount_change": the activity feed and the
+	// rows already in the database key on it.
+	ActivityActionQuantityChange = "amount_change"
+	ActivityActionStreakReset    = "streak_reset"
+	ActivityActionImport         = "import"
 )

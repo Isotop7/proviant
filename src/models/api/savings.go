@@ -10,5 +10,9 @@ type SavingsStatsResponse struct {
 	SavedCO2KgLifetime   float64 `json:"savedCo2KgLifetime"`
 	WastedEURLifetime    float64 `json:"wastedEurLifetime"`
 	WastedCO2KgLifetime  float64 `json:"wastedCo2KgLifetime"`
-	CO2Source            string  `json:"co2Source"`
+	// LegacyEvents counts the records written before the count model. Their
+	// figures are left out of the totals above, because they were scaled by the
+	// net content of the product rather than by a count of packs.
+	LegacyEvents int    `json:"legacyEvents"`
+	CO2Source    string `json:"co2Source"`
 }

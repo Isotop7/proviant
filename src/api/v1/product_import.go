@@ -52,7 +52,7 @@ type importRow struct {
 	name     string
 	barcode  string
 	quantity string
-	unit     string
+	packSize string
 	category string
 	location string
 	expiry   string
@@ -70,7 +70,7 @@ func importCell(record []string, columns map[string]int, name string) string {
 
 // ImportProducts imports products from an uploaded CSV file
 // @Summary      Import products from CSV
-// @Description  Creates products from an uploaded CSV file. Insert-only: a barcode that already exists among the household's active products is reported as a row error and never modified. Unknown storage locations are created. Rows without a name are completed from the Open Food Facts cache, and at most a bounded number of them may additionally trigger a live Open Food Facts lookup.
+// @Description  Creates products from an uploaded CSV file. Insert-only: a barcode that already exists among the household's active products is reported as a row error and never modified. Unknown storage locations are created. Rows without a name are completed from the Open Food Facts cache, and at most a bounded number of them may additionally trigger a live Open Food Facts lookup. The quantity column counts the packs of a product and the pack_size column states the size of one pack; a file written before products were counted in packs is rejected.
 // @Tags         import
 // @Accept       multipart/form-data
 // @Produce      json
@@ -263,14 +263,14 @@ func ImportTemplateCSV(ctx *gin.Context, _ *AppContext) {
 
 	writer := csv.NewWriter(ctx.Writer)
 	if err := writer.Write([]string{
-		util.CsvColumnName, util.CsvColumnBarcode, util.CsvColumnQuantity, util.CsvColumnUnit,
+		util.CsvColumnName, util.CsvColumnBarcode, util.CsvColumnQuantity, util.CsvColumnPackSize,
 		util.CsvColumnCategory, util.CsvColumnStorageLocation, util.CsvColumnExpiryDate, util.CsvColumnAddedAt,
 	}); err != nil {
 		return
 	}
 	// The example carries an empty added_at: that column is accepted so an
 	// export can be re-imported unchanged, but GORM owns the creation time.
-	_ = writer.Write([]string{"Milk", "4006381333931", "2", "l", "Dairy", "Fridge", "2026-12-31", ""})
+	_ = writer.Write([]string{"Milk", "4006381333931", "2", "1 l", "Dairy", "Fridge", "2026-12-31", ""})
 	writer.Flush()
 }
 
@@ -294,8 +294,7 @@ func parseImportRow(
 	product = dbModel.Product{
 		ProductName: row.name,
 		Barcode:     row.barcode,
-		Amount:      importDefaultQuantity,
-		Unit:        row.unit,
+		Quantity:    importDefaultQuantity,
 		Categories:  row.category,
 	}
 
@@ -304,17 +303,17 @@ func parseImportRow(
 		if parseErr != nil {
 			return product, fmt.Sprintf("quantity '%s' is not a number", row.quantity)
 		}
-		// Zero is accepted, not rejected. The CSV export writes Amount verbatim
-		// and the model has no minimum, so an exported 0 must re-import instead
-		// of dropping the row. The amount only ever moves by a delta, so a
-		// negative value stays meaningless either way.
+		// A negative count is meaningless, a zero count is not: a product
+		// always holds at least one pack, so zero is clamped rather than
+		// rejected.
 		if quantity < 0 {
 			return product, "quantity must not be negative"
 		}
-		product.Amount = quantity
+		product.Quantity = max(1, quantity)
 	}
 
-	product.Amount, product.Unit = util.ToBase(product.Amount, product.Unit)
+	// The file names the size of one pack; the count is the count of packs.
+	product.PackSize = row.packSize
 
 	if row.expiry != "" {
 		expireAt, dateErr := time.Parse(util.DefaultDateFormatParseStr, row.expiry)
@@ -334,6 +333,14 @@ func parseImportRow(
 			return product, reason
 		}
 		product.ProductName = resolved.productName
+	}
+
+	if product.PackSize == "" {
+		// The file says nothing about the pack size, but the Open Food Facts
+		// cache may know it. The lookup reads the cache only. It runs after the
+		// name resolution above, because that is what fills the resolver's
+		// cache with the size a live lookup returned.
+		product.PackSize = names.packSize(product.Barcode)
 	}
 
 	return product, ""
@@ -392,6 +399,11 @@ func readImportCSV(src io.Reader, logger *zerolog.Logger) ([]importRow, map[stri
 		return nil, nil, errors.ErrImportEmptyFile
 	}
 
+	if hasLegacyCsvHeader(header) {
+		logger.Warn().Msg("Import file uses the pre-count-model column format")
+		return nil, nil, errors.ErrImportLegacyFormat
+	}
+
 	columns := importColumnIndex(header)
 
 	var rows []importRow
@@ -425,7 +437,7 @@ func readImportCSV(src io.Reader, logger *zerolog.Logger) ([]importRow, map[stri
 			name:     importCell(record, columns, util.CsvColumnName),
 			barcode:  importCell(record, columns, util.CsvColumnBarcode),
 			quantity: importCell(record, columns, util.CsvColumnQuantity),
-			unit:     importCell(record, columns, util.CsvColumnUnit),
+			packSize: importCell(record, columns, util.CsvColumnPackSize),
 			category: importCell(record, columns, util.CsvColumnCategory),
 			location: importCell(record, columns, util.CsvColumnStorageLocation),
 			expiry:   importCell(record, columns, util.CsvColumnExpiryDate),
@@ -471,6 +483,22 @@ func (i *importNewlineIndex) lineAt(end int64, counted int) int {
 		counted++
 	}
 	return counted
+}
+
+// hasLegacyCsvHeader reports whether the header belongs to a file written
+// before products were counted in packs. Such a file states a net content
+// where the current format states a pack count, so it is refused rather than
+// read: a net content of 500 would land as 500 packs.
+func hasLegacyCsvHeader(header []string) bool {
+	for _, cell := range header {
+		name := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(cell, "\ufeff")))
+		for _, legacy := range util.CsvLegacyColumnHeaders {
+			if name == legacy {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // importColumnIndex maps the recognised header cells to their field index.
@@ -561,6 +589,7 @@ func (r *locationResolver) resolve(name string) (*uint, string) {
 type offProductFields struct {
 	productName string
 	categories  string
+	packSize    string
 }
 
 // importNameResolver supplies the product name of a row that carries only a
@@ -620,6 +649,7 @@ func newImportNameResolver(
 			resolver.cache[cached[i].Barcode] = offProductFields{
 				productName: name,
 				categories:  strings.TrimSpace(cached[i].Categories),
+				packSize:    cached[i].PackSize,
 			}
 		}
 	}
@@ -656,12 +686,20 @@ func (r *importNameResolver) resolve(barcode string) (offProductFields, string) 
 	fields := offProductFields{
 		productName: strings.TrimSpace(dataset.ProductName),
 		categories:  strings.TrimSpace(dataset.Categories),
+		packSize:    dataset.PackSize,
 	}
 	r.cache[barcode] = fields
 	if fields.productName == "" {
 		return offProductFields{}, fmtImportOffMiss
 	}
 	return fields, ""
+}
+
+// packSize returns the size of one pack the cache knows for a barcode. It
+// never spends a live lookup: the pack size is display metadata, and the
+// import already resolves names on demand.
+func (r *importNameResolver) packSize(barcode string) string {
+	return r.cache[barcode].packSize
 }
 
 // importOffDatasetGetter returns the Open Food Facts controller wired into the

@@ -88,7 +88,6 @@ func ReconcileShoppingListIntegration(
 			Name:     item.Name,
 			Category: item.Category,
 			Quantity: item.Quantity,
-			Unit:     item.Unit,
 			Checked:  item.Checked,
 			Notes:    item.Notes,
 		}

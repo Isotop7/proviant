@@ -1,7 +1,11 @@
 package migrations
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,104 +71,300 @@ func AddNotificationPreferencesMigration(db *gorm.DB) error {
 	return err
 }
 
-// SetDefaultProductAmounts sets amount=1 for all existing products that have amount=0 or NULL.
-// When the amount column is first added via AutoMigrate, existing rows receive NULL (not 0),
-// so both cases must be handled.
-func SetDefaultProductAmounts(logger *zerolog.Logger, db *gorm.DB) error {
-	return db.Exec("UPDATE products SET amount = 1 WHERE amount IS NULL OR amount = 0").Error
+// SetDefaultProductQuantities sets quantity=1 for all existing products that have
+// quantity=0 or NULL. When the quantity column is first added via AutoMigrate,
+// existing rows receive NULL (not 0), so both cases must be handled.
+func SetDefaultProductQuantities(logger *zerolog.Logger, db *gorm.DB) error {
+	return db.Exec("UPDATE products SET quantity = 1 WHERE quantity IS NULL OR quantity = 0").Error
 }
 
-// unitBearing is the projection the unit normalisation scans: only the three
-// columns the conversion needs are read, so a table with wide rows is not fully
-// materialised per batch.
-type unitBearing struct {
-	ID     uint
-	Amount int
-	Unit   string
+// legacyAmountRow is the projection the conversion scans: only the columns
+// the conversion needs are read, so a table with wide rows is not fully
+// materialised per batch. The column names are pinned because they do not
+// follow from the field names. The amount is nullable because a row that
+// predates the column holds NULL there, and a NULL amount must not be read
+// as a net content of zero.
+type legacyAmountRow struct {
+	ID       uint          `gorm:"column:id"`
+	Amount   sql.NullInt64 `gorm:"column:amount"`
+	Unit     string        `gorm:"column:unit"`
+	MinStock int           `gorm:"column:min_stock_amount"`
+	PackSize string        `gorm:"column:pack_size"`
 }
 
-// NormalizeStoredUnits rewrites every product, recipe-ingredient and shopping
-// list amount stored in a non-base unit to the canonical base unit of its kind
-// (mass -> g, volume -> ml), so amounts across a household aggregate without a
-// unit lookup and every label renders correctly. Count and unrecognised units
-// pass through untouched. The conversion is idempotent — a base unit converts
-// to itself — so a second run is a no-op, and soft-deleted rows are included so
-// a restore cannot resurrect a pre-normalisation amount. Only rows whose stored
-// unit is not already a storage unit are scanned: after the first run that is
-// just the rare unrecognised unit, so a recurring startup does not walk the
-// whole table and later edits to the conversion table cannot retroactively
-// rewrite stored amounts.
-func NormalizeStoredUnits(logger *zerolog.Logger, db *gorm.DB) error {
-	products, err := normalizeUnitTable(db, "products", "amount")
-	if err != nil {
-		return fmt.Errorf("normalizing product units: %w", err)
+// netContent reads the stored net content of a row. A row that holds no
+// amount — NULL or zero — was given the default of one by the migration that
+// preceded the count model, so it reads as one here too: a measured row keeps
+// its unit as the size of its pack instead of losing it.
+func (row *legacyAmountRow) netContent() int {
+	if !row.Amount.Valid || row.Amount.Int64 < 1 {
+		return 1
 	}
-	ingredients, err := normalizeUnitTable(db, "recipe_ingredients", "amount")
-	if err != nil {
-		return fmt.Errorf("normalizing recipe ingredient units: %w", err)
+	return int(row.Amount.Int64)
+}
+
+// legacyIngredientRow is the projection the recipe ingredient conversion
+// scans: only the columns the conversion needs are read, so a table with wide
+// rows is not fully materialised per batch. The column names are pinned
+// because they do not follow from the field names. The amount is nullable
+// because a row that predates the column holds NULL there.
+type legacyIngredientRow struct {
+	ID      uint          `gorm:"column:id"`
+	Amount  sql.NullInt64 `gorm:"column:amount"`
+	Unit    string        `gorm:"column:unit"`
+	Portion string        `gorm:"column:portion"`
+}
+
+// ConvertRecipeIngredientsToPortions rewrites the amount and the unit of every
+// recipe ingredient into a single free-text portion. The two fields were the
+// last amount-plus-unit pair in the codebase, and the stock is counted in
+// packs, so a portion is a label the recipe states and never a number the
+// system computes with. Soft-deleted rows are included so a restored recipe
+// comes back with the same portion. The conversion is idempotent: a row that
+// already carries a portion is left alone, and a database that no longer
+// carries the old columns is skipped entirely.
+func ConvertRecipeIngredientsToPortions(logger *zerolog.Logger, db *gorm.DB) error {
+	if !db.Migrator().HasColumn(&database.RecipeIngredient{}, "amount") {
+		return nil
 	}
-	shoppingItems, err := normalizeUnitTable(db, "shopping_list_items", "quantity")
+	rows := make([]legacyIngredientRow, 0)
+	converted := 0
+	columns := "id, amount, unit"
+	if db.Migrator().HasColumn(&database.RecipeIngredient{}, "portion") {
+		columns += ", portion"
+	}
+	err := db.Table("recipe_ingredients").
+		Select(columns).
+		FindInBatches(&rows, 500, func(tx *gorm.DB, _ int) error {
+			rewrites := make(map[uint]string, len(rows))
+			for i := range rows {
+				row := &rows[i]
+				if row.Portion != "" {
+					continue
+				}
+				rewrites[row.ID] = legacyIngredientPortion(row)
+			}
+			for id, portion := range rewrites {
+				if updateErr := tx.Table("recipe_ingredients").
+					Where(util.QueryId, id).
+					Update("portion", portion).Error; updateErr != nil {
+					return updateErr
+				}
+				converted++
+			}
+			return nil
+		}).Error
 	if err != nil {
-		return fmt.Errorf("normalizing shopping list units: %w", err)
+		return err
 	}
 	logger.Info().
-		Int("products", products).
-		Int("recipe_ingredients", ingredients).
-		Int("shopping_list_items", shoppingItems).
-		Msg("Normalized stored amounts to base units")
+		Int("ingredients", converted).
+		Msg("Converted recipe ingredient amounts into portions")
 	return nil
 }
 
-func normalizeUnitTable(db *gorm.DB, table, amountColumn string) (int, error) {
-	updated := 0
-	rows := make([]unitBearing, 0)
-	// A row carrying an empty or storage-unit symbol is already normalised: the
-	// symbol fixes the kind and the amount is on the base scale (or a count, which
-	// never scales), so conversion is the identity. Everything else — a non-base
-	// unit, a misspelled alias, an unrecognised string — may need a rewrite, so
-	// the predicate never skips a row that does. The comparison must be
-	// case-sensitive: MySQL and MariaDB compare with the column's collation,
-	// which is case-insensitive by default, so a plain NOT IN would treat a
-	// legacy "KG" row as already normalised and leave its amount a thousand-fold
-	// off when rendered as a base-unit value.
-	err := db.Table(table).
-		Select("id, "+amountColumn+" AS amount, unit").
-		Where(unitScanPredicate(db.Dialector.Name()), util.StorageUnitSymbols()).
+// legacyIngredientPortion composes the portion of a recipe ingredient from the
+// amount and the unit it was stored as. A row without an amount keeps the unit
+// alone, and a row without a unit keeps the amount alone. A zero amount means
+// the ingredient carried no amount, so the unit alone is the portion.
+func legacyIngredientPortion(row *legacyIngredientRow) string {
+	amount := ""
+	if row.Amount.Valid && row.Amount.Int64 > 0 {
+		amount = strconv.FormatInt(row.Amount.Int64, 10)
+	}
+	unit := strings.TrimSpace(row.Unit)
+	switch {
+	case amount == "":
+		return unit
+	case unit == "":
+		return amount
+	}
+	return amount + " " + unit
+}
+
+// ConvertProductAmountsToQuantities rewrites the stored net content of every
+// product into a count of packs. A product measured in grams or millilitres
+// held the content of its pack, so it becomes one pack whose size is that
+// content; a product counted in items already held a count and keeps it. The
+// minimum stock moves with it: it was a net content next to the amount, so it
+// becomes the number of packs that content is worth. Soft-deleted rows are
+// included so an archived product comes back with the same count. The
+// conversion is idempotent: a row that already carries a pack size is left
+// alone, and a database that no longer carries the amount column is skipped
+// entirely.
+func ConvertProductAmountsToQuantities(logger *zerolog.Logger, db *gorm.DB) error {
+	if !db.Migrator().HasColumn(&database.Product{}, "amount") {
+		return nil
+	}
+	rows := make([]legacyAmountRow, 0)
+	converted := 0
+	columns := "id, amount, unit, min_stock_amount"
+	if db.Migrator().HasColumn(&database.Product{}, "pack_size") {
+		columns += ", pack_size"
+	}
+	err := db.Table("products").
+		Select(columns).
 		FindInBatches(&rows, 500, func(tx *gorm.DB, _ int) error {
 			// The rewrites are collected and applied after the batch scan
 			// finishes: updating the scanned table while its rows are still
 			// open errors on MySQL ("command out of sync") and can deadlock
 			// on PostgreSQL.
-			rewrites := make(map[uint][2]any, len(rows))
+			rewrites := make(map[uint]map[string]any, len(rows))
 			for i := range rows {
-				baseAmount, baseUnit := util.ToBase(rows[i].Amount, rows[i].Unit)
-				if baseAmount == rows[i].Amount && baseUnit == rows[i].Unit {
+				row := &rows[i]
+				if row.PackSize != "" {
 					continue
 				}
-				rewrites[rows[i].ID] = [2]any{baseAmount, baseUnit}
-			}
-			for id, pair := range rewrites {
-				if err := tx.Table(table).
-					Where(util.QueryId, id).
-					Updates(map[string]any{amountColumn: pair[0], "unit": pair[1]}).Error; err != nil {
-					return err
+				netContent := row.netContent()
+				quantity, packSize := util.PackSizeFromLegacyAmount(netContent, row.Unit)
+				rewrites[row.ID] = map[string]any{
+					"quantity":         quantity,
+					"pack_size":        packSize,
+					"min_stock_amount": legacyMinStockPacks(netContent, row.MinStock, row.Unit),
 				}
-				updated++
+			}
+			for id, values := range rewrites {
+				if updateErr := tx.Table("products").
+					Where(util.QueryId, id).
+					Updates(values).Error; updateErr != nil {
+					return updateErr
+				}
+				converted++
 			}
 			return nil
 		}).Error
-	return updated, err
+	if err != nil {
+		return err
+	}
+	logger.Info().
+		Int("products", converted).
+		Msg("Converted product amounts into pack counts")
+	return nil
 }
 
-// unitScanPredicate builds the batch-scan filter for one dialect. The skip
-// must compare bytes, not collations: only SQLite and PostgreSQL compare
-// case-sensitively by default, so on MySQL and MariaDB the storage-unit list
-// has to be matched against a binary cast of the column.
-func unitScanPredicate(dialectorName string) string {
-	if dialectorName == "mysql" {
-		return "unit <> '' AND CAST(unit AS BINARY) NOT IN ?"
+// legacyMinStockPacks converts a minimum stock that was stored next to a net
+// content into a count of packs. A counted product already stored its minimum
+// as a count and keeps it; a measured one stored it as a net content in the
+// same unit as the amount, so it becomes the number of packs that content is
+// worth.
+func legacyMinStockPacks(amount, minStock int, unit string) int {
+	if minStock < 1 {
+		return 0
 	}
-	return "unit <> '' AND unit NOT IN ?"
+	trimmed := strings.TrimSpace(unit)
+	if trimmed == "" || util.IsCountUnit(trimmed) {
+		return minStock
+	}
+	if amount < 1 {
+		return 1
+	}
+	packs := int(math.Round(float64(minStock) / float64(amount)))
+	if packs < 1 {
+		packs = 1
+	}
+	return min(packs, util.MaxProductQuantity)
+}
+
+// MarkLegacySavingsRecords flags the savings records that were written before
+// the count model. Their money and CO2 were scaled by the net content of the
+// product, so they are not comparable with the records after the cutover and
+// are kept out of the aggregates.
+//
+// The cutover row is the marker that makes this a one-time step: it is written
+// when the records are flagged and read on every later boot, so the records
+// written after the cutover are never caught. Only the records that existed
+// when the cutover ran are flagged.
+func MarkLegacySavingsRecords(logger *zerolog.Logger, db *gorm.DB) error {
+	var cutover database.ModelCutover
+	err := db.Where("name = ?", util.CountModelCutover).First(&cutover).Error
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	now := time.Now()
+	result := db.Model(&database.SavingsRecord{}).
+		Where("legacy IS NULL OR legacy = ?", false).
+		Where("created_at <= ?", now).
+		Update("legacy", true)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	cutover = database.ModelCutover{Name: util.CountModelCutover, CutoverAt: now}
+	if err := db.Create(&cutover).Error; err != nil {
+		return err
+	}
+
+	logger.Info().
+		Int64("records", result.RowsAffected).
+		Msg("Marked the savings records written before the count model")
+	return nil
+}
+
+// DropUnitColumns removes the columns that carried units and net contents.
+// GORM AutoMigrate never drops columns, so this must be done explicitly. A
+// database that never had them is left alone, which makes the step
+// idempotent.
+func DropUnitColumns(logger *zerolog.Logger, db *gorm.DB) error {
+	columns := []struct {
+		table  string
+		column string
+	}{
+		{table: "products", column: "amount"},
+		{table: "products", column: "unit"},
+		{table: "shopping_list_items", column: "unit"},
+		{table: "households", column: "unit_system"},
+		{table: "recipe_ingredients", column: "amount"},
+		{table: "recipe_ingredients", column: "unit"},
+	}
+	for _, column := range columns {
+		if err := dropColumn(logger, db, column.table, column.column); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// dropColumn removes one column, tolerating a database that does not have it.
+// SQLite does not support IF EXISTS on DROP COLUMN, so the drop is attempted
+// and any error that reports the column as absent is swallowed. A database
+// that cannot drop a column at all fails the drop, and that failure is
+// reported: the column stays, but the operator has to know.
+func dropColumn(logger *zerolog.Logger, db *gorm.DB, table, column string) error {
+	err := db.Exec(fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s", table, column)).Error
+	if err == nil {
+		return nil
+	}
+	if isMissingColumnError(db.Name(), err) {
+		logger.Debug().Msgf("%s.%s column not present, skipping", table, column)
+		return nil
+	}
+	return err
+}
+
+// isMissingColumnError reports whether the driver complained that the column
+// (or the table) does not exist. A broken statement must not be mistaken for
+// an absent column, so the match is limited to the wording each driver uses
+// for a missing object.
+func isMissingColumnError(dialectorName string, err error) bool {
+	errStr := err.Error()
+	switch dialectorName {
+	case "sqlite":
+		return strings.Contains(errStr, "no such column") || strings.Contains(errStr, "no such table")
+	case "mysql":
+		return strings.Contains(errStr, "Unknown column") || strings.Contains(errStr, "Can't DROP")
+	case "postgres":
+		return strings.Contains(errStr, "does not exist") || strings.Contains(errStr, "undefined column")
+	}
+	return strings.Contains(errStr, "no such column") ||
+		strings.Contains(errStr, "no such table") ||
+		strings.Contains(errStr, "Unknown column") ||
+		strings.Contains(errStr, "Can't DROP") ||
+		strings.Contains(errStr, "does not exist") ||
+		strings.Contains(errStr, "undefined column")
 }
 
 // DropLegacyStorageLocationColumn removes the old free-text storage_location column from products.
@@ -174,13 +374,8 @@ func unitScanPredicate(dialectorName string) string {
 func DropLegacyStorageLocationColumn(logger *zerolog.Logger, db *gorm.DB) error {
 	err := db.Exec(`ALTER TABLE products DROP COLUMN storage_location`).Error
 	if err != nil {
-		errStr := err.Error()
-		if strings.Contains(errStr, "no such column") ||
-			strings.Contains(errStr, "no such table") ||
-			strings.Contains(errStr, "Unknown column") ||
-			strings.Contains(errStr, "Can't DROP") ||
-			strings.Contains(errStr, "syntax error") {
-			logger.Debug().Msg("storage_location column not present or not droppable, skipping")
+		if isMissingColumnError(db.Name(), err) {
+			logger.Debug().Msg("storage_location column not present, skipping")
 			return nil
 		}
 		return err
@@ -363,6 +558,28 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 	// Restore the opened-shelf-life bound that the SQL prunes assume
 	logger.Debug().Msg("Backfill clamp days_after_opening to the validated maximum")
 	if err := BackfillClampDaysAfterOpening(logger, db); err != nil {
+		return err
+	}
+
+	// Turn the stored net contents into pack counts before the columns that
+	// carried them are dropped
+	logger.Debug().Msg("Convert product amounts into pack counts")
+	if err := ConvertProductAmountsToQuantities(logger, db); err != nil {
+		return err
+	}
+
+	logger.Debug().Msg("Mark the savings records written before the count model")
+	if err := MarkLegacySavingsRecords(logger, db); err != nil {
+		return err
+	}
+
+	logger.Debug().Msg("Convert recipe ingredient amounts into portions")
+	if err := ConvertRecipeIngredientsToPortions(logger, db); err != nil {
+		return err
+	}
+
+	logger.Debug().Msg("Drop unit and net content columns")
+	if err := DropUnitColumns(logger, db); err != nil {
 		return err
 	}
 	return nil

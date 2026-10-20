@@ -1429,7 +1429,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the monthly waste goal, language and display unit system of the caller's household",
+                "description": "Returns the monthly waste goal and the language of the caller's household",
                 "produces": [
                     "application/json"
                 ],
@@ -1464,7 +1464,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates the monthly waste goal, language and display unit system of the caller's household (admin only)",
+                "description": "Updates the monthly waste goal and language of the caller's household (admin only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1862,7 +1862,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Aggregates the ingredients of all meals planned within the date range and creates shopping list entries for the missing amounts (stock on hand subtracted when units match)",
+                "description": "Aggregates the ingredients of all meals planned within the date range and creates shopping list entries for the missing packs (the pack count on hand subtracted from the packs the plan needs)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2499,7 +2499,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Creates a new product of a user. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.",
+                "description": "Creates a new product of a user. The body carries the pack count and the size of one pack (\"1 l\"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2592,7 +2592,7 @@ const docTemplate = `{
         },
         "/api/v1/products/bulk": {
             "post": {
-                "description": "Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason.",
+                "description": "Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2847,7 +2847,7 @@ const docTemplate = `{
         },
         "/api/v1/products/cook": {
             "post": {
-                "description": "Consumes the given products by reducing their amounts. An amount of 0 or one that reaches or exceeds the current amount fully consumes (archives) the product.",
+                "description": "Consumes the given products by reducing their pack counts. A count of 0 or one that reaches or exceeds the current count fully consumes (archives) the product.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3104,7 +3104,7 @@ const docTemplate = `{
         },
         "/api/v1/products/import": {
             "post": {
-                "description": "Creates products from an uploaded CSV file. Insert-only: a barcode that already exists among the household's active products is reported as a row error and never modified. Unknown storage locations are created. Rows without a name are completed from the Open Food Facts cache, and at most a bounded number of them may additionally trigger a live Open Food Facts lookup.",
+                "description": "Creates products from an uploaded CSV file. Insert-only: a barcode that already exists among the household's active products is reported as a row error and never modified. Unknown storage locations are created. Rows without a name are completed from the Open Food Facts cache, and at most a bounded number of them may additionally trigger a live Open Food Facts lookup. The quantity column counts the packs of a product and the pack_size column states the size of one pack; a file written before products were counted in packs is rejected.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -3338,7 +3338,7 @@ const docTemplate = `{
         },
         "/api/v1/products/scan-receipt": {
             "post": {
-                "description": "Upload a receipt photo; returns extracted product drafts (name, amount, unit, price). An empty items list means the scan succeeded but nothing was recognized.",
+                "description": "Upload a receipt photo; returns extracted product drafts (name, quantity, packSize, price). The quantity is the number of packs the line stands for and the packSize the size of one pack as the receipt words it. An empty items list means the scan succeeded but nothing was recognized.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -3619,6 +3619,63 @@ const docTemplate = `{
                     }
                 }
             },
+            "put": {
+                "description": "Replaces a product with new values. A field the request does not carry is cleared, so the request states the whole product. The pack count must be at least 1. The pack size is free text and may be set to an empty string to clear it. The price is the price of one pack, so the savings of the product are that price times the number of packs.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Replaces a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Product",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/database.ProductDTOPatch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.ProductDTOPatch"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "description": "Deletes a product of a user",
                 "consumes": [
@@ -3668,7 +3725,7 @@ const docTemplate = `{
                 }
             },
             "patch": {
-                "description": "Updates a product with new values",
+                "description": "Updates a product with new values. A field the request does not carry keeps its stored value; a pointer field sent as null is cleared. The pack count must be at least 1. The pack size is free text and may be set to an empty string to clear it. The price is the price of one pack, so the savings of the product are that price times the number of packs.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3727,7 +3784,7 @@ const docTemplate = `{
         },
         "/api/v1/products/{id}/amount": {
             "patch": {
-                "description": "Applies a delta to a product's amount. Hard-deletes the product when amount reaches 0.",
+                "description": "Deprecated alias of PATCH /api/v1/products/{id}/quantity. Applies a delta to a product's pack count. Hard-deletes the product when the count reaches 0.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3737,7 +3794,7 @@ const docTemplate = `{
                 "tags": [
                     "product"
                 ],
-                "summary": "Update product amount",
+                "summary": "Update product quantity (deprecated alias of /quantity)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -3747,12 +3804,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Amount delta",
+                        "description": "Quantity delta",
                         "name": "delta",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/api.ProductAmountDTO"
+                            "$ref": "#/definitions/api.ProductQuantityDTO"
                         }
                     }
                 ],
@@ -4001,9 +4058,68 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/products/{id}/quantity": {
+            "patch": {
+                "description": "Applies a delta to a product's pack count. Hard-deletes the product when the count reaches 0. A delta outside the range a pack count may span is refused, and the count never leaves that range.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Update product quantity",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Quantity delta",
+                        "name": "delta",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductQuantityDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/{id}/restock-suggestion": {
             "get": {
-                "description": "Returns a suggested quantity to add to the shopping list for a\nproduct. Source is \"consumption_rate\" when at least 2 consumed\nsamples spanning at least 7 days exist within the last 90 days,\notherwise \"min_stock\" (minStockAmount - currentAmount) when\nthe current amount is below the minimum, or \"none\".",
+                "description": "Returns a suggested quantity to add to the shopping list for a\nproduct. Source is \"consumption_rate\" when at least 2 consumed\nsamples spanning at least 7 days exist within the last 90 days,\notherwise \"min_stock\" (minStockAmount - currentQuantity) when\nthe current pack count is below the minimum, or \"none\".",
                 "produces": [
                     "application/json"
                 ],
@@ -4442,7 +4558,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Consumes the recipe's linked products by their scaled amounts. Unlinked ingredients and unit mismatches are reported as errors and skipped; an amount reaching the current stock fully consumes (archives) the product.",
+                "description": "Consumes a pack of every product the recipe links; a cook for more servings than the recipe states takes more packs. Unlinked ingredients are reported as errors and skipped; a pack count that reaches the current stock fully consumes (archives) the product.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4462,7 +4578,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Servings to cook (0 = recipe servings)",
+                        "description": "Servings to cook (scales the pack count)",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -4577,7 +4693,7 @@ const docTemplate = `{
                 "summary": "Creates a shopping list item",
                 "parameters": [
                     {
-                        "description": "Item: productId or name, optional category, quantity, unit, notes",
+                        "description": "Item: productId or name, optional category, quantity, notes",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -4615,7 +4731,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all products of the caller whose amount is below their minimum stock amount",
+                "description": "Returns all products of the caller whose pack count is below their minimum stock amount",
                 "produces": [
                     "application/json"
                 ],
@@ -4724,7 +4840,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates name, category, quantity, unit, checked state and notes of a shopping list item",
+                "description": "Updates name, category, quantity, checked state and notes of a shopping list item",
                 "consumes": [
                     "application/json"
                 ],
@@ -4744,7 +4860,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Fields to update: name, category, quantity, unit, checked, notes",
+                        "description": "Fields to update: name, category, quantity, checked, notes",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -6830,6 +6946,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
+                    "description": "Amount and Unit carry the net content of one pack, as a draft written\nbefore products were counted in packs carried it. A queued draft from\nbefore that change still carries it. A draft that carries only these is\nread as one pack of that net content.",
                     "type": "integer"
                 },
                 "barcode": {
@@ -6839,18 +6956,33 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expireAt": {
+                    "description": "ExpireAt is the expiry date the receipt carries, as an RFC 3339 date.",
                     "type": "string"
                 },
                 "isPrivate": {
                     "type": "boolean"
                 },
+                "packSize": {
+                    "description": "PackSize is the size of one pack as text (\"1 l\"), the display metadata\nthe receipt read off the line.",
+                    "type": "string"
+                },
+                "price": {
+                    "description": "Price is the price of the whole line, as the receipt prints it. The\nprice of one pack is the line price divided by the count.",
+                    "type": "number"
+                },
                 "priceOverride": {
+                    "description": "PriceOverride is the price of one pack, as a draft written before\nproducts were counted in packs carried it. A draft that carries only\nthis field is read as the price of one pack; Price wins when both are\npresent.",
                     "type": "number"
                 },
                 "productName": {
                     "type": "string"
                 },
+                "quantity": {
+                    "description": "Quantity is the number of packs the product stands for.",
+                    "type": "integer"
+                },
                 "storageLocationId": {
+                    "description": "StorageLocationID is the location the product is stored in.",
                     "type": "integer"
                 },
                 "unit": {
@@ -6881,9 +7013,6 @@ const docTemplate = `{
                 },
                 "sampleCount": {
                     "type": "integer"
-                },
-                "unit": {
-                    "type": "string"
                 }
             }
         },
@@ -6893,12 +7022,12 @@ const docTemplate = `{
                 "productId"
             ],
             "properties": {
-                "amount": {
-                    "type": "integer",
-                    "minimum": 0
-                },
                 "productId": {
                     "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 0
                 }
             }
         },
@@ -7044,9 +7173,6 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "integer"
-                },
-                "unit": {
-                    "type": "string"
                 }
             }
         },
@@ -7170,6 +7296,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
+                    "description": "Amount and Unit carry the shape of a document written before products\nwere counted in packs. A current export leaves them empty; a restore\nreads them from an older document.",
                     "type": "integer"
                 },
                 "archivedAt": {
@@ -7220,11 +7347,17 @@ const docTemplate = `{
                 "ownerUsername": {
                     "type": "string"
                 },
+                "packSize": {
+                    "type": "string"
+                },
                 "priceOverride": {
                     "type": "number"
                 },
                 "productName": {
                     "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
                 },
                 "removalReason": {
                     "type": "string"
@@ -7262,9 +7395,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
-                    "type": "string"
-                },
-                "unitSystem": {
                     "type": "string"
                 }
             }
@@ -7423,9 +7553,6 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "monthlyWasteGoalType": {
-                    "type": "string"
-                },
-                "unitSystem": {
                     "type": "string"
                 }
             }
@@ -7615,6 +7742,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
+                    "description": "Amount and Unit carry the net content of one pack, as a draft written\nbefore products were counted in packs carried it. A queued draft from\nbefore that change still carries it. A draft that carries only these is\nread as one pack of that net content.",
                     "type": "integer"
                 },
                 "barcode": {
@@ -7627,18 +7755,33 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expireAt": {
+                    "description": "ExpireAt is the expiry date the receipt carries, as an RFC 3339 date.",
                     "type": "string"
                 },
                 "isPrivate": {
                     "type": "boolean"
                 },
+                "packSize": {
+                    "description": "PackSize is the size of one pack as text (\"1 l\"), the display metadata\nthe receipt read off the line.",
+                    "type": "string"
+                },
+                "price": {
+                    "description": "Price is the price of the whole line, as the receipt prints it. The\nprice of one pack is the line price divided by the count.",
+                    "type": "number"
+                },
                 "priceOverride": {
+                    "description": "PriceOverride is the price of one pack, as a draft written before\nproducts were counted in packs carried it. A draft that carries only\nthis field is read as the price of one pack; Price wins when both are\npresent.",
                     "type": "number"
                 },
                 "productName": {
                     "type": "string"
                 },
+                "quantity": {
+                    "description": "Quantity is the number of packs the product stands for.",
+                    "type": "integer"
+                },
                 "storageLocationId": {
+                    "description": "StorageLocationID is the location the product is stored in.",
                     "type": "integer"
                 },
                 "unit": {
@@ -7727,6 +7870,9 @@ const docTemplate = `{
                 "imageUrl": {
                     "type": "string"
                 },
+                "packSize": {
+                    "type": "string"
+                },
                 "productName": {
                     "type": "string"
                 },
@@ -7735,7 +7881,7 @@ const docTemplate = `{
                 }
             }
         },
-        "api.ProductAmountDTO": {
+        "api.ProductQuantityDTO": {
             "type": "object",
             "required": [
                 "delta"
@@ -7753,9 +7899,6 @@ const docTemplate = `{
         "api.ProductResponse": {
             "type": "object",
             "properties": {
-                "amount": {
-                    "type": "integer"
-                },
                 "barcode": {
                     "type": "string"
                 },
@@ -7799,11 +7942,17 @@ const docTemplate = `{
                 "openedAt": {
                     "type": "string"
                 },
+                "packSize": {
+                    "type": "string"
+                },
                 "priceOverride": {
                     "type": "number"
                 },
                 "productName": {
                     "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
                 },
                 "removalReason": {
                     "type": "string"
@@ -7816,9 +7965,6 @@ const docTemplate = `{
                 },
                 "storageLocationId": {
                     "type": "integer"
-                },
-                "unit": {
-                    "type": "string"
                 }
             }
         },
@@ -7886,17 +8032,17 @@ const docTemplate = `{
         "api.ReceiptItem": {
             "type": "object",
             "properties": {
-                "amount": {
-                    "type": "integer"
-                },
                 "name": {
+                    "type": "string"
+                },
+                "packSize": {
                     "type": "string"
                 },
                 "price": {
                     "type": "number"
                 },
-                "unit": {
-                    "type": "string"
+                "quantity": {
+                    "type": "integer"
                 }
             }
         },
@@ -7917,36 +8063,32 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
-                "amount": {
-                    "type": "integer",
-                    "minimum": 0
-                },
                 "name": {
                     "type": "string",
                     "maxLength": 255
+                },
+                "portion": {
+                    "type": "string",
+                    "maxLength": 40
                 },
                 "productId": {
                     "type": "integer"
                 },
                 "sortOrder": {
                     "type": "integer"
-                },
-                "unit": {
-                    "type": "string",
-                    "maxLength": 20
                 }
             }
         },
         "api.RecipeIngredientResponse": {
             "type": "object",
             "properties": {
-                "amount": {
-                    "type": "integer"
-                },
                 "id": {
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "portion": {
                     "type": "string"
                 },
                 "productId": {
@@ -7954,9 +8096,6 @@ const docTemplate = `{
                 },
                 "sortOrder": {
                     "type": "integer"
-                },
-                "unit": {
-                    "type": "string"
                 }
             }
         },
@@ -8072,9 +8211,6 @@ const docTemplate = `{
                 "suggestedQty": {
                     "type": "integer"
                 },
-                "unit": {
-                    "type": "string"
-                },
                 "weeklyRate": {
                     "type": "number"
                 }
@@ -8105,6 +8241,10 @@ const docTemplate = `{
             "properties": {
                 "co2Source": {
                     "type": "string"
+                },
+                "legacyEvents": {
+                    "description": "LegacyEvents counts the records written before the count model. Their\nfigures are left out of the totals above, because they were scaled by the\nnet content of the product rather than by a count of packs.",
+                    "type": "integer"
                 },
                 "savedCo2KgLifetime": {
                     "type": "number"
@@ -8153,14 +8293,15 @@ const docTemplate = `{
                 "notes": {
                     "type": "string"
                 },
+                "packSize": {
+                    "description": "PackSize is the size of one pack of the linked product, empty when the\nentry is not linked to a product or the product has no known size.",
+                    "type": "string"
+                },
                 "productId": {
                     "type": "integer"
                 },
                 "quantity": {
                     "type": "integer"
-                },
-                "unit": {
-                    "type": "string"
                 }
             }
         },
@@ -8282,9 +8423,6 @@ const docTemplate = `{
                 },
                 "monthlyWasteGoalType": {
                     "type": "string"
-                },
-                "unitSystem": {
-                    "type": "string"
                 }
             }
         },
@@ -8393,9 +8531,6 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "integer"
-                },
-                "unit": {
-                    "type": "string"
                 }
             }
         },
@@ -8665,9 +8800,6 @@ const docTemplate = `{
         "database.Product": {
             "type": "object",
             "properties": {
-                "amount": {
-                    "type": "integer"
-                },
                 "barcode": {
                     "type": "string"
                 },
@@ -8716,11 +8848,17 @@ const docTemplate = `{
                 "openedAt": {
                     "type": "string"
                 },
+                "packSize": {
+                    "type": "string"
+                },
                 "priceOverride": {
                     "type": "number"
                 },
                 "productName": {
                     "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
                 },
                 "removalReason": {
                     "type": "string"
@@ -8733,9 +8871,6 @@ const docTemplate = `{
                 },
                 "storageLocationId": {
                     "type": "integer"
-                },
-                "unit": {
-                    "type": "string"
                 },
                 "updatedAt": {
                     "type": "string"
@@ -8770,9 +8905,6 @@ const docTemplate = `{
                 "ID": {
                     "type": "integer"
                 },
-                "amount": {
-                    "type": "integer"
-                },
                 "categories": {
                     "type": "string"
                 },
@@ -8800,17 +8932,20 @@ const docTemplate = `{
                 "openedAt": {
                     "type": "string"
                 },
+                "packSize": {
+                    "type": "string"
+                },
                 "priceOverride": {
                     "type": "number"
                 },
                 "productName": {
                     "type": "string"
                 },
-                "storageLocationId": {
+                "quantity": {
                     "type": "integer"
                 },
-                "unit": {
-                    "type": "string"
+                "storageLocationId": {
+                    "type": "integer"
                 }
             }
         },

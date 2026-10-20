@@ -140,26 +140,16 @@
                 </div>
               </div>
               <div class="col-md-6">
-                <label class="form-label">{{ t "products.amount" }}</label>
+                <label class="form-label" for="inputQuantity">{{ t "products.quantity" }}</label>
                 <div class="qty-stepper">
-                  <button type="button" data-amount-step="-1">-</button>
-                  <input type="number" id="inputAmount" value="{{ .Product.Amount }}" min="0">
-                  <button type="button" data-amount-step="1">+</button>
+                  <button type="button" data-quantity-step="-1">-</button>
+                  <input type="number" id="inputQuantity" value="{{ .Product.Quantity }}" min="1">
+                  <button type="button" data-quantity-step="1">+</button>
                 </div>
+                {{ if .Product.PackSize }}
+                <div class="form-text">{{ t "products.packSizeHint" .Product.PackSize }}</div>
+                {{ end }}
               </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="inputUnit">{{ t "products.unit" }}</label>
-              <select class="form-select" id="inputUnit">
-                <option value="">{{ t "products.noUnitOption" }}</option>
-                {{ range .UnitOptions }}
-                <option value="{{ .Value }}" {{ if eq $.Product.Unit .Value }}selected{{ end }}>{{ .Label }}</option>
-                {{ end }}
-                {{ if and $.Product.Unit (not (unitIsKnown $.Product.Unit)) }}
-                <option value="{{ $.Product.Unit }}" selected>{{ $.Product.Unit }}</option>
-                {{ end }}
-              </select>
-              <div class="form-text">{{ t "products.unitHelp" }}</div>
             </div>
             <div class="mb-3 mt-3">
               <label class="form-label">{{ t "products.storageLocation" }}</label>
@@ -301,16 +291,15 @@
               </span>
             </div>
             <div class="product-info-row product-info-row-sep">
-              <span class="text-fg-3">{{ t "products.amount" }}</span>
-              {{ if isMeasuredUnit .Product.Unit }}
-              <span class="qty-measured">
-                <span class="unit-count">{{ quantityLabel .Product.Amount .Product.Unit $.UnitSystem }}</span>
-                <span class="unit-secondary">{{ unitDisplay .Product.Amount .Product.Unit $.UnitSystem }}</span>
-              </span>
-              {{ else }}
-              <span class="font-mono fw-semibold">{{ quantityLabel .Product.Amount .Product.Unit $.UnitSystem }}</span>
-              {{ end }}
+              <span class="text-fg-3">{{ t "products.quantity" }}</span>
+              <span class="font-mono fw-semibold">{{ quantityLabel .Product.Quantity }}</span>
             </div>
+            {{ if .Product.PackSize }}
+            <div class="product-info-row product-info-row-sep">
+              <span class="text-fg-3">{{ t "products.packSize" }}</span>
+              <span class="font-mono fw-semibold">{{ .Product.PackSize }}</span>
+            </div>
+            {{ end }}
             <div class="product-info-row product-info-row-sep">
               <span class="text-fg-3">{{ t "products.expiryDate" }}</span>
               <span class="font-mono fw-semibold">{{ .Product.ExpireAt | humanDate }}</span>

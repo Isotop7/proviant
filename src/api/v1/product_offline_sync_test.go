@@ -40,7 +40,7 @@ func TestSyncOfflineProductsIdempotent(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	user := newOfflineSyncUser(t, db)
 
-	body := `{"items":[{"clientSyncId":"sync-1","productName":"Milk","amount":2,"expireAt":"2099-01-01"}]}`
+	body := `{"items":[{"clientSyncId":"sync-1","productName":"Milk","quantity":2,"expireAt":"2099-01-01"}]}`
 
 	makeCtx := func() (*gin.Context, *httptest.ResponseRecorder, *AppContext) {
 		ctx, w := testutil.SetupGinContext(db)
@@ -311,6 +311,44 @@ func TestSyncOfflineProductsItemOutcomes(t *testing.T) {
 			t.Errorf("client sync id lookups = %d, want 1 — only the pre-check, not a second one after the failure", lookups)
 		}
 	})
+}
+
+// A draft queued before products were counted in packs carries the net
+// content of one pack. It must not replay as a single pack of nothing.
+func TestSyncOfflineProductsReadsALegacyDraft(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := testutil.SetupTestDB(t)
+	user := newOfflineSyncUser(t, db)
+
+	body := `{"items":[` +
+		`{"clientSyncId":"legacy-count","productName":"Eggs","amount":6,"unit":"pcs"},` +
+		`{"clientSyncId":"legacy-measured","productName":"Milk","amount":500,"unit":"g"}` +
+		`]}`
+	ctx, w := testutil.SetupGinContext(db)
+	testutil.MockJWTClaims(ctx, user.ID)
+	ctx.Request = newRawJSONRequest(body)
+	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(db, nil))
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	ctx.Set(util.ContextKeyNotificationController, (*controllers.NotificationController)(nil))
+	SyncOfflineProducts(ctx, SetupTestAppContext(ctx, user.ID))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+	}
+	var eggs dbModel.Product
+	if err := db.First(&eggs, "product_name = ?", "Eggs").Error; err != nil {
+		t.Fatalf("stored product: %v", err)
+	}
+	if eggs.Quantity != 6 || eggs.PackSize != "" {
+		t.Errorf("eggs = %d packs of %q, want 6 packs", eggs.Quantity, eggs.PackSize)
+	}
+	var milk dbModel.Product
+	if err := db.First(&milk, "product_name = ?", "Milk").Error; err != nil {
+		t.Fatalf("stored product: %v", err)
+	}
+	if milk.Quantity != 1 || milk.PackSize != "500 g" {
+		t.Errorf("milk = %d packs of %q, want 1 pack of 500 g", milk.Quantity, milk.PackSize)
+	}
 }
 
 // A sync id held by another member's private product must not resolve as

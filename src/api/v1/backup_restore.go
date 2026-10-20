@@ -85,7 +85,7 @@ func RestoreFullJSON(ctx *gin.Context, appCtx *AppContext) {
 		api.RespondError(ctx, http.StatusBadRequest, errors.ErrBackupInvalidDocument)
 		return
 	}
-	if backup.Version != apiModel.BackupSchemaVersion {
+	if !apiModel.SupportsBackupVersion(backup.Version) {
 		api.RespondError(ctx, http.StatusBadRequest, errors.ErrBackupUnsupportedVersion)
 		return
 	}

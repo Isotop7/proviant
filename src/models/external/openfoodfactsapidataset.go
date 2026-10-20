@@ -13,7 +13,7 @@ import (
 var (
 	// Query parameters for OpenFoodFacts API
 	// This drastically minimizes the response from API calls and should match the properties from external.OpenFoodFactsAPIDataset
-	OpenFoodFactsAPIDatasetDefinition = "product_name,categories,countries,generic_name,image_url,ecoscore_data,conservation_conditions"
+	OpenFoodFactsAPIDatasetDefinition = "product_name,categories,countries,generic_name,image_url,quantity,ecoscore_data,conservation_conditions"
 )
 
 // OpenFoodFactsAPIDataset represents the data model of a json respons from the OpenFoodFacts API
@@ -27,6 +27,7 @@ type OpenFoodFactsAPIDataset struct {
 		Countries              string       `json:"countries"`
 		GenericName            string       `json:"generic_name"`
 		ImageURL               string       `json:"image_url"`
+		Quantity               string       `json:"quantity"`
 		EcoscoreData           EcoscoreData `json:"ecoscore_data"`
 		ConservationConditions string       `json:"conservation_conditions"`
 	} `json:"product"`
@@ -101,6 +102,7 @@ type EcoscoreData struct {
 type OpenFoodFactsDumpProduct struct {
 	Code                   FlexibleString `json:"code"`
 	ProductName            string         `json:"product_name"`
+	Quantity               string         `json:"quantity"`
 	Categories             string         `json:"categories"`
 	Countries              string         `json:"countries"`
 	ImageURL               string         `json:"image_url"`

@@ -51,7 +51,7 @@ func TestShoppingListSyncService(t *testing.T) {
 		t.Fatalf("create integration: %v", err)
 	}
 
-	item1 := &dbModel.ShoppingListItem{HouseholdID: household.ID, Name: "Milk", Quantity: 2, Unit: "L", CreatedBy: user.ID}
+	item1 := &dbModel.ShoppingListItem{HouseholdID: household.ID, Name: "Milk", Quantity: 2, CreatedBy: user.ID}
 	item2 := &dbModel.ShoppingListItem{HouseholdID: household.ID, Name: "Apples", Quantity: 6, CreatedBy: user.ID}
 	_ = repos.ShoppingListItems.Create(item1)
 	_ = repos.ShoppingListItems.Create(item2)

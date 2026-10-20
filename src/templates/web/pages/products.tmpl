@@ -312,7 +312,7 @@
                 <i class="bi bi-{{ expiryStatusIcon .ExpireAt }}"></i>
                 {{ expiryStatusLabel .ExpireAt }}
             </span>
-            {{ if and (gt .MinStockAmount 0) (lt .Amount .MinStockAmount) }}
+            {{ if and (gt .MinStockAmount 0) (lt .Quantity .MinStockAmount) }}
             <span class="badge-status badge-lowstock">
                 <i class="bi bi-exclamation-triangle-fill"></i>
                 {{ t "products.lowStock" }}
@@ -332,19 +332,17 @@
             {{ if .StorageLocation }}{{ .StorageLocation.Name }}{{ else }}—{{ end }}
         </div>
         <div class="col-qty">
-            {{ if isMeasuredUnit .Unit }}
-            <span class="qty-static qty-measured">
-                <span class="unit-count">{{ quantityLabel .Amount .Unit $.UnitSystem }}</span>
-                <span class="unit-secondary">{{ unitDisplay .Amount .Unit $.UnitSystem }}</span>
-            </span>
-            {{ else if eq $.StatusFilter "archived" }}
-            <span class="qty-static">{{ quantityLabel .Amount .Unit $.UnitSystem }}</span>
+            {{ if eq $.StatusFilter "archived" }}
+            <span class="qty-static">{{ quantityLabel .Quantity }}</span>
             {{ else }}
-            <div class="qty-stepper">
+            <div class="qty-stepper qty-stepper-flat">
                 <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.decreaseQuantity" .ProductName }}">−</button>
-                <span id="qty-{{ .Model.ID }}" class="unit-amount" data-amount="{{ .Amount }}" data-unit="{{ .Unit }}">{{ quantityLabel .Amount .Unit $.UnitSystem }}</span>
+                <span id="qty-{{ .Model.ID }}" class="qty-amount" data-quantity="{{ .Quantity }}">{{ quantityLabel .Quantity }}</span>
                 <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.increaseQuantity" .ProductName }}">+</button>
             </div>
+            {{ end }}
+            {{ with .PackSize }}
+            <span class="pack-size">{{ . }}</span>
             {{ end }}
         </div>
         <div class="col-actions">
@@ -566,20 +564,13 @@
                     <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="{{ t "products.selectInstance" }}"></select>
 
                     <form id="formExpireAt" class="needs-validation" novalidate>
-                        <label class="form-label">{{ t "products.amount" }}</label>
+                        <label class="form-label">{{ t "products.quantity" }}</label>
                         <div class="d-flex align-items-center gap-2 mb-3">
-                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountDec" aria-label="{{ t "products.amountDecrease" }}">−</button>
-                            <span id="amountDisplay" class="fs-5 px-2">1</span>
-                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountInc" aria-label="{{ t "products.amountIncrease" }}">+</button>
+                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnQuantityDec" aria-label="{{ t "products.quantityDecrease" }}">−</button>
+                            <span id="quantityDisplay" class="fs-5 px-2" aria-live="polite">1</span>
+                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnQuantityInc" aria-label="{{ t "products.quantityIncrease" }}">+</button>
                         </div>
-                        <input type="hidden" id="amount" value="1">
-                        <label for="unit" class="form-label">{{ t "products.unit" }}</label>
-                        <select class="form-select mb-3" id="unit" aria-label="{{ t "products.unit" }}">
-                            <option value="">{{ t "products.noUnitOption" }}</option>
-                            {{ range .UnitOptions }}
-                            <option value="{{ .Value }}">{{ .Label }}</option>
-                            {{ end }}
-                        </select>
+                        <input type="hidden" id="quantity" value="1">
                         <label for="expireAt" class="form-label">
                             {{ t "products.expiryDateField" }} <span class="text-danger" aria-hidden="true">*</span>
                         </label>
@@ -716,7 +707,7 @@
     </div>
 </div>
 
-<!-- Cook modal: per-product amount inputs for partial consumption -->
+<!-- Cook modal: per-product count inputs for the packs used -->
 <div class="modal fade" id="cookModal" tabindex="-1" aria-labelledby="cookModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

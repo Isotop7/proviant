@@ -4,6 +4,13 @@ Agent coding guidelines for Proviant codebase.
 
 **Keep accurate.** Cite symbols not line numbers (`AutoMigrate` in `proviant.go`, not "line 188") — they rot. Cite durable code + docs not issue numbers — `#123` closes, means nothing later; state rule. Exception: underivable exact facts — pinned digests, advisory IDs, version strings — live in script they govern, not here.
 
+## Search order (mandatory)
+
+1. Architecture, relationships, "what calls this", blast radius, onboarding: if `graphify-out/graph.json` exists, run `graphify query "<question>"` first (`graphify path` / `graphify explain` for specific nodes). Never grep for this.
+2. Finding an implementation or a name you don't know: call `tools.semble.search` through `execute`, then read the returned file and lines. `tools.semble.find_related` finds similar code elsewhere.
+3. `grep` only for exhaustive literal occurrences (rename, config key, flag) or after 1–2 failed. `glob` only for path patterns.
+4. After changing code, run `graphify update .` (see the graphify section for the full rules).
+
 ## Workflow
 
 1. Locate code with search before reading; read a full file only when the located excerpt lacks context.

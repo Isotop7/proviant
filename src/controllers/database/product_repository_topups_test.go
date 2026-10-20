@@ -98,15 +98,15 @@ func TestProductRepository_TopUps(t *testing.T) {
 		}
 	})
 
-	t.Run("UpdateProductAmount changes amount", func(t *testing.T) {
-		soon.Amount = 5
+	t.Run("UpdateProductQuantity changes amount", func(t *testing.T) {
+		soon.Quantity = 5
 		if err := db.Save(soon).Error; err != nil {
 			t.Fatalf("failed to save product: %v", err)
 		}
 
-		empty, _, err := repo.UpdateProductAmount(soon.ID, user.ID, -3, nil)
+		empty, _, err := repo.UpdateProductQuantity(soon.ID, user.ID, -3, nil)
 		if err != nil {
-			t.Fatalf("UpdateProductAmount() error = %v", err)
+			t.Fatalf("UpdateProductQuantity() error = %v", err)
 		}
 		if empty {
 			t.Errorf("empty = %v, want false after partial consume", empty)
@@ -115,22 +115,22 @@ func TestProductRepository_TopUps(t *testing.T) {
 		if err := db.First(&updated, soon.ID).Error; err != nil {
 			t.Fatalf("failed to reload product: %v", err)
 		}
-		if updated.Amount != 2 {
-			t.Errorf("amount = %d, want 2", updated.Amount)
+		if updated.Quantity != 2 {
+			t.Errorf("amount = %d, want 2", updated.Quantity)
 		}
 
-		empty, _, err = repo.UpdateProductAmount(soon.ID, user.ID, 2, nil)
+		empty, _, err = repo.UpdateProductQuantity(soon.ID, user.ID, 2, nil)
 		if err != nil {
-			t.Fatalf("UpdateProductAmount() error = %v", err)
+			t.Fatalf("UpdateProductQuantity() error = %v", err)
 		}
 		if empty {
 			t.Errorf("empty = %v, want false after positive delta", empty)
 		}
 	})
 
-	t.Run("UpdateProductAmount with invalid id errors", func(t *testing.T) {
-		if _, _, err := repo.UpdateProductAmount(0, user.ID, 1, nil); err == nil {
-			t.Error("UpdateProductAmount(0) error = nil, want error")
+	t.Run("UpdateProductQuantity with invalid id errors", func(t *testing.T) {
+		if _, _, err := repo.UpdateProductQuantity(0, user.ID, 1, nil); err == nil {
+			t.Error("UpdateProductQuantity(0) error = nil, want error")
 		}
 	})
 
@@ -207,22 +207,22 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 }
 
-// UpdateProductAmount reads the product for its household and nothing else, so
+// UpdateProductQuantity reads the product for its household and nothing else, so
 // the guard refusing a foreign row is the only thing standing between a member
 // of one household and another's stock.
-func TestProductRepository_UpdateProductAmountHouseholdGuard(t *testing.T) {
+func TestProductRepository_UpdateProductQuantityHouseholdGuard(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewProductRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 	product := testutil.CreateTestProduct(db, household.ID, user.ID)
-	product.Amount = 5
+	product.Quantity = 5
 	if err := db.Save(product).Error; err != nil {
 		t.Fatalf("save product: %v", err)
 	}
 
 	outsider := testutil.CreateTestUser(db, 0)
-	if _, _, err := repo.UpdateProductAmount(product.ID, outsider.ID, 1, nil); err != provErrors.ErrMismatcherUserID {
+	if _, _, err := repo.UpdateProductQuantity(product.ID, outsider.ID, 1, nil); err != provErrors.ErrMismatcherUserID {
 		t.Errorf("error = %v, want %v", err, provErrors.ErrMismatcherUserID)
 	}
 
@@ -230,19 +230,19 @@ func TestProductRepository_UpdateProductAmountHouseholdGuard(t *testing.T) {
 	if err := db.First(&unchanged, product.ID).Error; err != nil {
 		t.Fatalf("reload product: %v", err)
 	}
-	if unchanged.Amount != 5 {
-		t.Errorf("amount = %d, want 5 — a refused update must not move the amount", unchanged.Amount)
+	if unchanged.Quantity != 5 {
+		t.Errorf("amount = %d, want 5 — a refused update must not move the amount", unchanged.Quantity)
 	}
 
-	if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, nil); err != nil {
+	if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err != nil {
 		t.Fatalf("owner's update error = %v, want none", err)
 	}
 	var updated dbModel.Product
 	if err := db.First(&updated, product.ID).Error; err != nil {
 		t.Fatalf("reload product: %v", err)
 	}
-	if updated.Amount != 6 {
-		t.Errorf("amount = %d, want 6 — the owner's own delta must still apply", updated.Amount)
+	if updated.Quantity != 6 {
+		t.Errorf("amount = %d, want 6 — the owner's own delta must still apply", updated.Quantity)
 	}
 }
 

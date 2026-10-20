@@ -40,8 +40,11 @@
 <div class="shopping-list-add-form mb-3" id="addItemForm">
     <div class="add-item-form-inner">
         <input type="text" class="form-control" id="inputItemName" placeholder="{{ t "shoppingList.itemName" }}" aria-label="{{ t "shoppingList.itemName" }}">
-        <input type="number" class="form-control" id="inputItemQuantity" value="1" min="1" placeholder="{{ t "shoppingList.qty" }}" aria-label="{{ t "shoppingList.quantity" }}">
-        <input type="text" class="form-control" id="inputItemUnit" placeholder="{{ t "shoppingList.unit" }}" aria-label="{{ t "shoppingList.unit" }}">
+        <div class="qty-stepper">
+            <button type="button" data-item-quantity-step="-1" aria-label="{{ t "shoppingList.decreaseQuantityLabel" }}">−</button>
+            <input type="number" id="inputItemQuantity" value="1" min="1" placeholder="{{ t "shoppingList.qty" }}" aria-label="{{ t "shoppingList.quantity" }}">
+            <button type="button" data-item-quantity-step="1" aria-label="{{ t "shoppingList.increaseQuantityLabel" }}">+</button>
+        </div>
         <button type="button" class="btn btn-proviant-primary" id="btnAddItem" aria-label="{{ t "shoppingList.addItem" }}">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
         </button>
@@ -67,21 +70,17 @@
         <div class="sl-product-col">
             <div class="sl-item-content">
                 <span class="sl-item-name{{ if $item.Checked }} text-decoration-line-through text-secondary-custom{{ end }}">{{ $item.Name }}</span>
+                {{ with $item.PackSize }}
+                <span class="pack-size">{{ . }}</span>
+                {{ end }}
             </div>
         </div>
         <div class="sl-qty-col">
-            {{ if isMeasuredUnit $item.Unit }}
-            <span class="qty-measured">
-                <span class="unit-count">{{ quantityLabel $item.Quantity $item.Unit $.UnitSystem }}</span>
-                <span class="unit-secondary">{{ unitDisplay $item.Quantity $item.Unit $.UnitSystem }}</span>
-            </span>
-            {{ else }}
-            <div class="qty-stepper">
+            <div class="qty-stepper qty-stepper-flat">
                 <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.decreaseQuantity" $item.Name }}">−</button>
-                <span id="qty-{{ $item.ID }}" class="unit-amount" data-amount="{{ $item.Quantity }}" data-unit="{{ $item.Unit }}">{{ quantityLabel $item.Quantity $item.Unit $.UnitSystem }}</span>
+                <span id="qty-{{ $item.ID }}" class="qty-amount" data-quantity="{{ $item.Quantity }}">{{ quantityLabel $item.Quantity }}</span>
                 <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.increaseQuantity" $item.Name }}">+</button>
             </div>
-            {{ end }}
         </div>
         <div class="sl-actions-col">
             <button type="button" class="btn-icon text-secondary-custom" data-notes-toggle="{{ $item.ID }}" title="{{ t "shoppingList.notes" }}" aria-label="{{ t "shoppingList.toggleNotes" $item.Name }}">

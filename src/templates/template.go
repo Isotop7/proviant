@@ -309,23 +309,12 @@ func effectiveExpireAt(p *dbModel.Product) time.Time {
 	return p.EffectiveExpireAt()
 }
 
-// unitIsKnown reports whether a raw unit string resolves to a conversion-table
-// entry, so a template select can keep an unrecognised legacy unit selectable
-// instead of silently dropping it on save.
-func unitIsKnown(raw string) bool {
-	_, ok := util.ParseUnit(raw)
-	return ok
-}
-
-// QuantityLabel renders the amount the way every quantity surface does: a whole
-// package reads as the localized "1 qty", anything else as the formatted amount.
-// It carries the language because only the label needs it, and it lives here so
-// the web handler and the templates share one composition of the display rule.
-func QuantityLabel(lang string, amount int, unit, system string) string {
-	if util.IsPackageQuantity(amount, unit) {
-		return i18n.T(lang, "common.qtyOne")
-	}
-	return util.FormatUnit(amount, unit, system)
+// QuantityLabel renders a pack count the way every quantity surface does: the
+// count and the localized pack noun ("2 Stk."). It carries the language
+// because only the label needs it, and it lives here so the web handler and
+// the templates share one composition of the display rule.
+func QuantityLabel(lang string, quantity int) string {
+	return fmt.Sprintf("%d %s", quantity, i18n.T(lang, "common.qty"))
 }
 
 func flagReplace(source string) template.HTML {
@@ -360,11 +349,8 @@ func templateFunctions(lang string) template.FuncMap {
 		"flagReplace":          flagReplace,
 		"derefUint":            derefUint,
 		"effectiveExpireAt":    effectiveExpireAt,
-		"unitDisplay":          util.FormatUnit,
-		"unitIsKnown":          unitIsKnown,
-		"isMeasuredUnit":       util.IsMeasuredUnit,
-		"quantityLabel": func(amount int, unit, system string) string {
-			return QuantityLabel(lang, amount, unit, system)
+		"quantityLabel": func(quantity int) string {
+			return QuantityLabel(lang, quantity)
 		},
 	}
 	for name, fn := range i18n.FuncMap(lang) {
@@ -459,12 +445,10 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 		}
 	}
 	data["OfflineSyncMaxBodyBytes"] = maxSyncBodyBytes
-	unitSystemValue, _ := ctx.Get(util.ContextKeyUnitSystem)
-	data["UnitSystem"] = util.UnitSystemFromContextValue(unitSystemValue)
-	data["UnitOptions"] = util.UnitOptions()
-	data["UnitOptionsJSON"] = template.JS(util.UnitOptionsJSON())
-	data["UnitConversionJSON"] = template.JS(util.UnitConversionJSON())
-	data["UnitAliasJSON"] = template.JS(util.UnitAliasJSON())
+	// The bounds a product may hold reach the client with every page, so the
+	// receipt review clamps to the same values the server enforces.
+	data["MaxProductQuantity"] = util.MaxProductQuantity
+	data["MaxPackSizeLength"] = util.MaxPackSizeLength
 	if title, ok := data["Title"].(string); ok && title != "" {
 		key := "pageTitle." + strings.ReplaceAll(title, " ", "")
 		if i18n.Has(lang, key) {

@@ -22,6 +22,7 @@ var testModels = []any{
 	&dbModel.WebhookDeliveryLog{},
 	&dbModel.RecipeCache{},
 	&dbModel.SavingsRecord{},
+	&dbModel.ModelCutover{},
 	&dbModel.WasteStreak{},
 	&dbModel.OnboardingState{},
 	&dbModel.HouseholdInvitation{},

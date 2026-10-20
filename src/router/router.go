@@ -398,7 +398,14 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductMemberAPI := protectedProductAPI.Group("")
 	protectedProductMemberAPI.Use(RequireHouseholdRole(authentication.RoleAdmin, authentication.RoleMember))
 	protectedProductMemberAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateProduct))
-	protectedProductMemberAPI.PATCH("/:id/amount", v1.WrapHandler(v1.UpdateProductAmount))
+	// PATCH merges the fields the request carries, PUT replaces the whole
+	// product. A client that has not migrated sends a full body and expects
+	// the absent fields to be cleared, so the old contract keeps a verb.
+	protectedProductMemberAPI.PUT("/:id", v1.WrapHandler(v1.UpdateProductReplace))
+	protectedProductMemberAPI.PATCH("/:id/quantity", v1.WrapHandler(v1.UpdateProductQuantity))
+	// The endpoint moved from /amount to /quantity. The old path stays as an
+	// alias so a client that has not migrated keeps working.
+	protectedProductMemberAPI.PATCH("/:id/amount", v1.WrapHandler(v1.UpdateProductAmount)) //nolint:staticcheck // the alias is the point of the deprecated handler
 	protectedProductMemberAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteProduct))
 	protectedProductMemberAPI.POST("/:id/restore", v1.WrapHandler(v1.RestoreProduct))
 	protectedProductMemberAPI.POST("/:id/expire", v1.WrapHandler(v1.SetExpireAt))

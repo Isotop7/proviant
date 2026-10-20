@@ -32,7 +32,7 @@ func TestSyncIDLengthBounds(t *testing.T) {
 		}
 	})
 
-	t.Run("UpdateProductAmount rejects an over-long clientMutationId", func(t *testing.T) {
+	t.Run("UpdateProductQuantity rejects an over-long clientMutationId", func(t *testing.T) {
 		env := setupHandlerTest(t)
 		product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
 		env.Ctx.Params = []gin.Param{{Key: "id", Value: fmt.Sprint(product.ID)}}
@@ -40,7 +40,7 @@ func TestSyncIDLengthBounds(t *testing.T) {
 			`{"delta":1,"clientMutationId":%q}`, oversized,
 		))
 
-		UpdateProductAmount(env.Ctx, env.AppCtx)
+		UpdateProductQuantity(env.Ctx, env.AppCtx)
 
 		if env.W.Code != http.StatusBadRequest {
 			t.Errorf("status = %d, want 400; body = %s", env.W.Code, env.W.Body.String())

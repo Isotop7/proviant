@@ -23,12 +23,14 @@
   "shoppingList.belowThresholdCount_one": "%d product below stock threshold",
   "shoppingList.belowThresholdCount_other": "%d products below stock threshold",
   "shoppingList.decreaseQuantity": "Decrease quantity of %s",
+  "shoppingList.decreaseQuantityLabel": "Decrease quantity",
   "shoppingList.deleteItemLabel": "Delete %s",
   "shoppingList.emptyDesc": "Add items manually or import from low-stock products.",
   "shoppingList.emptyTitle": "Your shopping list is empty",
   "shoppingList.importAll": "Import all",
   "shoppingList.importBannerDesc": "These products are below their minimum stock threshold. Import them to your shopping list.",
   "shoppingList.increaseQuantity": "Increase quantity of %s",
+  "shoppingList.increaseQuantityLabel": "Increase quantity",
   "shoppingList.itemColumn": "Item",
   "shoppingList.itemCount": "%d items in your list",
   "shoppingList.itemCount_one": "%d item in your list",
@@ -40,6 +42,5 @@
   "shoppingList.qty": "Qty",
   "shoppingList.quantity": "Quantity",
   "shoppingList.selectAllItems": "Select all items",
-  "shoppingList.toggleNotes": "Toggle notes for %s",
-  "shoppingList.unit": "Unit"
+  "shoppingList.toggleNotes": "Toggle notes for %s"
 }

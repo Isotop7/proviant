@@ -52,8 +52,8 @@ func TestBulkCreateProducts(t *testing.T) {
 		ctx, w, appCtx, locationID := newBulkTestSetup(t)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "Milk", Amount: 2, Unit: "l", ExpireAt: "2030-01-02", PriceOverride: pricePtr(2.49)},
-				{ProductName: "Bread", Amount: 1, StorageLocationID: &locationID},
+				{ProductName: "Milk", Quantity: 2, PackSize: "1 l", ExpireAt: "2030-01-02", Price: pricePtr(2.49)},
+				{ProductName: "Bread", Quantity: 1, StorageLocationID: &locationID},
 			},
 		})
 
@@ -81,13 +81,89 @@ func TestBulkCreateProducts(t *testing.T) {
 		}
 	})
 
+	// The receipt prints the price of the whole line; the product carries the
+	// price of one pack.
+	t.Run("the line price becomes the price of one pack", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{
+				{ProductName: "Milk", Quantity: 2, Price: pricePtr(2.49)},
+			},
+		})
+
+		BulkCreateProducts(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+		}
+		var stored dbModel.Product
+		if err := appCtx.DB.First(&stored, "product_name = ?", "Milk").Error; err != nil {
+			t.Fatalf("stored product: %v", err)
+		}
+		if stored.PriceOverride == nil || *stored.PriceOverride < 1.244 || *stored.PriceOverride > 1.246 {
+			t.Errorf("price = %v, want 1.245 (the line price of 2.49 for two packs)", stored.PriceOverride)
+		}
+	})
+
+	t.Run("the deprecated per-pack override stays the price of one pack", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{
+				{ProductName: "Milk", Quantity: 3, PriceOverride: pricePtr(1.50)},
+			},
+		})
+
+		BulkCreateProducts(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+		}
+		var stored dbModel.Product
+		if err := appCtx.DB.First(&stored, "product_name = ?", "Milk").Error; err != nil {
+			t.Fatalf("stored product: %v", err)
+		}
+		if stored.PriceOverride == nil || *stored.PriceOverride != 1.50 {
+			t.Errorf("price = %v, want 1.50 (the override was already a per-pack price)", stored.PriceOverride)
+		}
+	})
+
+	t.Run("a draft written before packs are counted becomes one pack of that size", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{
+				{ProductName: "Milk", Amount: 500, Unit: "g"},
+				{ProductName: "Eggs", Amount: 6, Unit: "pcs"},
+			},
+		})
+
+		BulkCreateProducts(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+		}
+		var milk dbModel.Product
+		if err := appCtx.DB.First(&milk, "product_name = ?", "Milk").Error; err != nil {
+			t.Fatalf("stored product: %v", err)
+		}
+		if milk.Quantity != 1 || milk.PackSize != "500 g" {
+			t.Errorf("milk = %d packs of %q, want 1 pack of 500 g", milk.Quantity, milk.PackSize)
+		}
+		var eggs dbModel.Product
+		if err := appCtx.DB.First(&eggs, "product_name = ?", "Eggs").Error; err != nil {
+			t.Fatalf("stored product: %v", err)
+		}
+		if eggs.Quantity != 6 || eggs.PackSize != "" {
+			t.Errorf("eggs = %d packs of %q, want 6 packs", eggs.Quantity, eggs.PackSize)
+		}
+	})
+
 	t.Run("partial success: invalid item does not block valid ones", func(t *testing.T) {
 		ctx, w, appCtx, _ := newBulkTestSetup(t)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "", Amount: 1},
-				{ProductName: "Milk", Amount: 1, ExpireAt: "not-a-date"},
-				{ProductName: "Bread", Amount: 1},
+				{ProductName: "", Quantity: 1},
+				{ProductName: "Milk", Quantity: 1, ExpireAt: "not-a-date"},
+				{ProductName: "Bread", Quantity: 1},
 			},
 		})
 
@@ -135,9 +211,9 @@ func TestBulkCreateProducts(t *testing.T) {
 		valid := 4.99
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "Milk", PriceOverride: &negative},
-				{ProductName: "Caviar", PriceOverride: &tooHigh},
-				{ProductName: "Bread", PriceOverride: &valid},
+				{ProductName: "Milk", Price: &negative},
+				{ProductName: "Caviar", Price: &tooHigh},
+				{ProductName: "Bread", Price: &valid},
 			},
 		})
 
@@ -210,15 +286,15 @@ func TestBulkCreateProducts(t *testing.T) {
 		}
 	})
 
-	t.Run("oversized barcode, unit and categories are clamped", func(t *testing.T) {
+	t.Run("oversized barcode, pack size and categories are clamped", func(t *testing.T) {
 		ctx, w, appCtx, _ := newBulkTestSetup(t)
-		longUnit := strings.Repeat("u", util.ReceiptItemMaxUnitLength+10)
+		longPackSize := strings.Repeat("u", util.MaxPackSizeLength+10)
 		longCategories := strings.Repeat("c", util.ReceiptItemMaxCategoriesLength+10)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{{
 				ProductName: "Milk",
 				Barcode:     strings.Repeat("9", 40),
-				Unit:        longUnit,
+				PackSize:    longPackSize,
 				Categories:  longCategories,
 			}},
 		})
@@ -235,8 +311,8 @@ func TestBulkCreateProducts(t *testing.T) {
 		if len(stored.Barcode) != util.CsvImportMaxBarcodeLength {
 			t.Errorf("barcode length = %d, want %d", len(stored.Barcode), util.CsvImportMaxBarcodeLength)
 		}
-		if stored.Unit != longUnit[:util.ReceiptItemMaxUnitLength] {
-			t.Errorf("unit = %q, want clamped to %d bytes", stored.Unit, util.ReceiptItemMaxUnitLength)
+		if stored.PackSize != longPackSize[:util.MaxPackSizeLength] {
+			t.Errorf("pack size = %q, want clamped to %d bytes", stored.PackSize, util.MaxPackSizeLength)
 		}
 		if stored.Categories != longCategories[:util.ReceiptItemMaxCategoriesLength] {
 			t.Errorf("categories = %q, want clamped to %d bytes", stored.Categories, util.ReceiptItemMaxCategoriesLength)
@@ -248,7 +324,7 @@ func TestBulkCreateProducts(t *testing.T) {
 		// "ä" is 2 UTF-8 bytes; a byte-boundary cut must not split it.
 		multibyte := strings.Repeat("ä", 15)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
-			Items: []apiModel.BulkProductDraft{{ProductName: "Milk", Unit: multibyte}},
+			Items: []apiModel.BulkProductDraft{{ProductName: "Milk", PackSize: multibyte}},
 		})
 
 		BulkCreateProducts(ctx, appCtx)
@@ -257,11 +333,11 @@ func TestBulkCreateProducts(t *testing.T) {
 		if err := appCtx.DB.First(&stored, "product_name = ?", "Milk").Error; err != nil {
 			t.Fatalf("stored product: %v", err)
 		}
-		if !utf8.ValidString(stored.Unit) {
-			t.Errorf("unit = %q is not valid UTF-8", stored.Unit)
+		if !utf8.ValidString(stored.PackSize) {
+			t.Errorf("pack size = %q is not valid UTF-8", stored.PackSize)
 		}
-		if len(stored.Unit) > util.ReceiptItemMaxUnitLength {
-			t.Errorf("unit length = %d, want <= %d", len(stored.Unit), util.ReceiptItemMaxUnitLength)
+		if len(stored.PackSize) > util.MaxPackSizeLength {
+			t.Errorf("pack size length = %d, want <= %d", len(stored.PackSize), util.MaxPackSizeLength)
 		}
 	})
 }

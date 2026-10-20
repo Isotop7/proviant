@@ -1,13 +1,14 @@
 package v1
 
 import (
-	apperrors "github.com/Isotop7/proviant/errors"
-	"github.com/Isotop7/proviant/i18n"
-	"github.com/Isotop7/proviant/models/database"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+
+	apperrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/i18n"
+	"github.com/Isotop7/proviant/models/database"
 
 	"github.com/Isotop7/proviant/api"
 	"github.com/Isotop7/proviant/controllers"

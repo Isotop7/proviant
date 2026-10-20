@@ -90,47 +90,40 @@ func TestRestoreHouseholdBackupRejectsUnsupportedVersion(t *testing.T) {
 	}
 }
 
-// TestRestoreProductFromRowNormalizesUnits covers a backup written before
-// amounts were stored in base units: the restore path must convert, because the
-// startup migration does not run again for rows inserted mid-session.
-func TestRestoreProductFromRowNormalizesUnits(t *testing.T) {
-	row := apiModel.ExportProductResponse{ProductName: "Flour", Barcode: "1234567890123", Amount: 2, Unit: "kg"}
+// TestRestoreProductFromRowReadsCounts covers the restore of a current
+// document: the pack count and the pack size are carried over as they are.
+func TestRestoreProductFromRowReadsCounts(t *testing.T) {
+	row := apiModel.ExportProductResponse{ProductName: "Flour", Barcode: "1234567890123", Quantity: 2, PackSize: "1 kg"}
 
 	product, err := restoreProductFromRow(&row, false, 1, map[string]uint{}, 1, map[string]uint{})
 	if err != nil {
 		t.Fatalf("restoreProductFromRow: %v", err)
 	}
-	if product.Amount != 2000 || product.Unit != "g" {
-		t.Errorf("amount/unit = %d %q, want 2000 g", product.Amount, product.Unit)
+	if product.Quantity != 2 || product.PackSize != "1 kg" {
+		t.Errorf("count/pack size = %d %q, want 2 \"1 kg\"", product.Quantity, product.PackSize)
 	}
 }
 
-// TestRestoreHouseholdBackupStoresOnlyValidUnitSystem covers a backup carrying
-// an unsupported unit system: the value is external input and must not reach
-// the household row verbatim.
-func TestRestoreHouseholdBackupStoresOnlyValidUnitSystem(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	user := testutil.CreateTestUser(db, 0)
-	household := testutil.CreateTestHousehold(db, user.ID)
-	user.HouseholdID = household.ID
-	if err := db.Save(user).Error; err != nil {
-		t.Fatalf("save user: %v", err)
+// TestRestoreProductFromRowReadsLegacyAmounts covers a backup written before
+// products were counted in packs: its measured rows describe one pack of that
+// size, its counted rows keep their count.
+func TestRestoreProductFromRowReadsLegacyAmounts(t *testing.T) {
+	measured := apiModel.ExportProductResponse{ProductName: "Flour", Barcode: "1234567890123", Amount: 2000, Unit: "g"}
+	product, err := restoreProductFromRow(&measured, false, 1, map[string]uint{}, 1, map[string]uint{})
+	if err != nil {
+		t.Fatalf("restoreProductFromRow: %v", err)
+	}
+	if product.Quantity != 1 || product.PackSize != "2000 g" {
+		t.Errorf("count/pack size = %d %q, want 1 \"2000 g\"", product.Quantity, product.PackSize)
 	}
 
-	backup := apiModel.FullExportResponse{
-		Version:   apiModel.BackupSchemaVersion,
-		Household: &apiModel.FullExportHousehold{Name: household.Name, UnitSystem: "bogus"},
+	counted := apiModel.ExportProductResponse{ProductName: "Eggs", Barcode: "1234567890124", Amount: 12, Unit: "pcs"}
+	product, err = restoreProductFromRow(&counted, false, 1, map[string]uint{}, 1, map[string]uint{})
+	if err != nil {
+		t.Fatalf("restoreProductFromRow: %v", err)
 	}
-	if _, err := RestoreHouseholdBackup(db, household.ID, user.ID, &backup); err != nil {
-		t.Fatalf("RestoreHouseholdBackup: %v", err)
-	}
-
-	var stored dbModel.Household
-	if err := db.First(&stored, household.ID).Error; err != nil {
-		t.Fatalf("load household: %v", err)
-	}
-	if stored.UnitSystem != "" {
-		t.Errorf("unit system = %q, want empty (metric fallback)", stored.UnitSystem)
+	if product.Quantity != 12 || product.PackSize != "" {
+		t.Errorf("count/pack size = %d %q, want 12 and no pack size", product.Quantity, product.PackSize)
 	}
 }
 

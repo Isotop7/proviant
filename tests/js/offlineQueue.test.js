@@ -9,11 +9,11 @@ function mountBadge(realm) {
   return badge;
 }
 
-describe("offlineQueue.js amount deltas", () => {
-  it("queues an amount delta instead of sending it while offline", async () => {
+describe("offlineQueue.js quantity deltas", () => {
+  it("queues an quantity delta instead of sending it while offline", async () => {
     const { proviant, calls } = await loadOutbox({ online: false });
 
-    const result = await proviant.updateProductAmount(9, -2);
+    const result = await proviant.updateProductQuantity(9, -2);
 
     expect(result.queued).toBe(true);
     expect(calls).toHaveLength(0);
@@ -26,7 +26,7 @@ describe("offlineQueue.js amount deltas", () => {
   it("sends the delta straight through while online", async () => {
     const { proviant, calls } = await loadOutbox({ online: true });
 
-    const result = await proviant.updateProductAmount(9, 2);
+    const result = await proviant.updateProductQuantity(9, 2);
 
     expect(result.queued).toBeUndefined();
     expect(result.code).toBe(200);
@@ -45,7 +45,7 @@ describe("offlineQueue.js amount deltas", () => {
       },
     });
 
-    const result = await proviant.updateProductAmount(9, -1);
+    const result = await proviant.updateProductQuantity(9, -1);
 
     expect(result.queued).toBe(true);
     expect(calls).toHaveLength(1);
@@ -74,7 +74,7 @@ describe("offlineQueue.js amount deltas", () => {
   });
 
   it("keeps the delta queued when the server answers with an error status", async () => {
-    // _sendAmountDelta resolves for every JSON error body, so an unexamined
+    // _sendQuantityDelta resolves for every JSON error body, so an unexamined
     // status here silently dropped the mutation on the floor.
     const { proviant, calls } = await loadOutbox({
       online: true,
@@ -137,7 +137,7 @@ describe("offlineQueue.js amount deltas", () => {
     // as an unhandled promise with no feedback at all.
     const { proviant } = await loadOutbox({ online: false, withIndexedDB: false });
 
-    const delta = await proviant.updateProductAmount(9, -1);
+    const delta = await proviant.updateProductQuantity(9, -1);
 
     expect(delta).toMatchObject({ code: 503, queued: false });
     expect(delta.message).toContain("Offline storage is unavailable");
@@ -347,7 +347,7 @@ describe("offlineQueue.js product creates", () => {
     expect(queued[0].retryCount).toBe(3);
   });
 
-  it("parks an amount delta the server refuses", async () => {
+  it("parks an quantity delta the server refuses", async () => {
     const { proviant } = await loadOutbox({
       online: true,
       responder: (call) =>
@@ -425,7 +425,7 @@ describe("offlineQueue.js request pacing", () => {
         "window.setTimeout = function (fn, ms) { window.__timerDelays.push(ms); return __origSetTimeout(fn, ms); };",
     });
 
-    await proviant.updateProductAmount(9, -1);
+    await proviant.updateProductQuantity(9, -1);
 
     expect(await proviant.offline.pendingItems()).toHaveLength(1);
     expect(realm.__timerDelays).toContain(30000);
@@ -439,7 +439,7 @@ describe("offlineQueue.js request pacing", () => {
         "window.setTimeout = function (fn, ms) { window.__timerDelays.push(ms); return __origSetTimeout(fn, ms); };",
     });
 
-    await proviant.updateProductAmount(9, -1);
+    await proviant.updateProductQuantity(9, -1);
 
     expect(await proviant.offline.pendingItems()).toHaveLength(1);
     expect(realm.__timerDelays).toEqual([]);
@@ -482,7 +482,7 @@ describe("offlineQueue.js request pacing", () => {
     expect(await proviant.offline.pendingItems()).toHaveLength(0);
   });
 
-  it("keeps a refused amount delta pending instead of burning an attempt", async () => {
+  it("keeps a refused quantity delta pending instead of burning an attempt", async () => {
     // Every PATCH is refused, not just the first: the startup drain at 1.5s and
     // the re-armed drain otherwise succeed on a second attempt and empty the
     // outbox before this assertion runs.

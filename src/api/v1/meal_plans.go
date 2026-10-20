@@ -256,7 +256,7 @@ func DeleteMealPlanEntry(ctx *gin.Context, appCtx *AppContext) {
 
 // GenerateMealPlanShoppingList turns planned meals into shopping list entries
 // @Summary      Generates shopping list from meal plan
-// @Description  Aggregates the ingredients of all meals planned within the date range and creates shopping list entries for the missing amounts (stock on hand subtracted when units match)
+// @Description  Aggregates the ingredients of all meals planned within the date range and creates shopping list entries for the missing packs (the pack count on hand subtracted from the packs the plan needs)
 // @Tags         mealplans
 // @Accept       json
 // @Produce      json

@@ -159,6 +159,36 @@
   color: var(--fg-3);
 }
 
+// ── Add-meal form ──────────────────────────────────────────────────────────
+
+@media (max-width: 767.98px) {
+  .add-meal-form .add-item-form-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+
+    #inputMealDate,
+    #inputMealRecipe {
+      grid-column: 1 / -1;
+      width: 100%;
+      height: 44px;
+      font-size: 14px;
+    }
+
+    #inputMealServings {
+      width: 100%;
+      height: 44px;
+      font-size: 14px;
+    }
+
+    #btnAddMeal {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+    }
+  }
+}
+
 // ── Drag and drop affordances ──────────────────────────────────────────────
 
 .mp-entry[draggable="true"] {

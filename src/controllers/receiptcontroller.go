@@ -37,9 +37,10 @@ const receiptStreamMaxContentBytes = 1 << 20
 // localized ones.
 const receiptPrompt = "You are reading a photo of a grocery receipt. Extract every product line item. " +
 	"Return ONLY a JSON object, no markdown fences, no commentary: " +
-	`{"items":[{"name":string,"amount":integer,"unit":string,"price":number}]}. ` +
+	`{"items":[{"name":string,"quantity":integer,"packSize":string,"price":number}]}. ` +
 	"Rules: name is the product description without quantities or prices; " +
-	"amount is the purchased quantity as integer (default 1); unit is a short unit like pcs, kg, g, l, ml or empty; " +
+	"quantity is the number of packs the line stands for (default 1); " +
+	"packSize is the size of one pack as the receipt words it (\"500 g\", \"1 l\"), empty when the line counts items; " +
 	"price is the line total in the receipt currency, omit it when unreadable. " +
 	"Ignore totals, taxes, payment details and non-product lines. " +
 	"If nothing on the image is a product line item, return {\"items\":[]}. " +
@@ -467,13 +468,18 @@ func truncateUTF8(s string, max int) string {
 	return s[:used]
 }
 
-// tolerantReceiptItem mirrors ReceiptItem but accepts non-integer amounts and
-// omittable prices, as small vision models routinely produce them.
+// tolerantReceiptItem mirrors ReceiptItem but accepts non-integer counts and
+// omittable prices, as small vision models routinely produce them. Quantity
+// and PackSize are the shape the prompt asks for; Amount and Unit are the
+// shape a model that ignores the prompt still answers, and are read as the
+// net content of one pack.
 type tolerantReceiptItem struct {
-	Name   string   `json:"name"`
-	Amount float64  `json:"amount"`
-	Unit   string   `json:"unit"`
-	Price  *float64 `json:"price"`
+	Name     string   `json:"name"`
+	Quantity *float64 `json:"quantity"`
+	PackSize string   `json:"packSize"`
+	Price    *float64 `json:"price"`
+	Amount   float64  `json:"amount"`
+	Unit     string   `json:"unit"`
 }
 
 type tolerantReceiptPayload struct {
@@ -550,18 +556,8 @@ func buildReceiptItems(parsed []tolerantReceiptItem) []apiModel.ReceiptItem {
 		if len(name) > util.ReceiptItemMaxNameLength {
 			name = truncateUTF8(name, util.ReceiptItemMaxNameLength)
 		}
-		amount := int(math.Round(item.Amount))
-		if amount < 1 {
-			amount = 1
-		}
-		if amount > util.ReceiptItemMaxAmount {
-			amount = util.ReceiptItemMaxAmount
-		}
-		unit := strings.TrimSpace(item.Unit)
-		if len(unit) > util.ReceiptItemMaxUnitLength {
-			unit = truncateUTF8(unit, util.ReceiptItemMaxUnitLength)
-		}
-		cleaned := apiModel.ReceiptItem{Name: name, Amount: amount, Unit: unit}
+		quantity, packSize := receiptItemQuantityAndPackSize(item)
+		cleaned := apiModel.ReceiptItem{Name: name, Quantity: quantity, PackSize: packSize}
 		if item.Price != nil && *item.Price > 0 && *item.Price <= util.ReceiptItemMaxPrice {
 			price := *item.Price
 			cleaned.Price = &price
@@ -569,6 +565,24 @@ func buildReceiptItems(parsed []tolerantReceiptItem) []apiModel.ReceiptItem {
 		items = append(items, cleaned)
 	}
 	return items
+}
+
+// receiptItemQuantityAndPackSize reads the pack count and the pack size of a
+// scanned line. A model that answers the prompt gives both directly; a model
+// that still answers the legacy shape gives the net content of one pack,
+// which is converted here.
+func receiptItemQuantityAndPackSize(item tolerantReceiptItem) (int, string) {
+	if item.Quantity != nil {
+		return util.ClampProductQuantity(int(math.Round(*item.Quantity))), util.PackSizeLabel(item.PackSize)
+	}
+	amount := util.ClampProductQuantity(int(math.Round(item.Amount)))
+	// A measured line describes one pack of that size, a counted line
+	// already counts the packs it bought.
+	quantity, packSize := util.PackSizeFromLegacyAmount(amount, strings.TrimSpace(item.Unit))
+	if item.PackSize != "" {
+		packSize = item.PackSize
+	}
+	return util.ClampProductQuantity(quantity), util.PackSizeLabel(packSize)
 }
 
 // salvageReceiptItems recovers individually parseable items from a malformed

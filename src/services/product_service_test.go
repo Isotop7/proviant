@@ -90,14 +90,14 @@ func TestProductService_CookProducts(t *testing.T) {
 		db, svc, ids := setup(t)
 
 		partialProduct := testutil.CreateTestProduct(db, ids.householdID, ids.userID)
-		db.Model(partialProduct).Update("amount", 4)
+		db.Model(partialProduct).Update("quantity", 4)
 		fullProduct := testutil.CreateTestProduct(db, ids.householdID, ids.userID)
-		db.Model(fullProduct).Update("amount", 1)
+		db.Model(fullProduct).Update("quantity", 1)
 
 		items := []apiModel.CookItemAPIModel{
-			{ProductID: partialProduct.ID, Amount: 2},
-			{ProductID: fullProduct.ID, Amount: 0},
-			{ProductID: 9999, Amount: 1},
+			{ProductID: partialProduct.ID, Quantity: 2},
+			{ProductID: fullProduct.ID, Quantity: 0},
+			{ProductID: 9999, Quantity: 1},
 		}
 		consumed, partial, errs, internalErr := svc.CookProducts(items, ids.userID)
 
@@ -118,8 +118,8 @@ func TestProductService_CookProducts(t *testing.T) {
 		if err := db.First(&stillActive, partialProduct.ID).Error; err != nil {
 			t.Fatalf("partial product not found: %v", err)
 		}
-		if stillActive.Amount != 2 {
-			t.Errorf("partial product Amount = %d, want 2", stillActive.Amount)
+		if stillActive.Quantity != 2 {
+			t.Errorf("partial product Amount = %d, want 2", stillActive.Quantity)
 		}
 
 		var archived dbModel.Product
@@ -131,7 +131,9 @@ func TestProductService_CookProducts(t *testing.T) {
 		}
 
 		logs := waitForActivityLogs(t, db, ids.householdID, 2)
-		waitForSavingsEvents(t, db, ids.householdID, 1)
+		// Every pack that leaves the stock is accounted for, so the partial
+		// cook (two packs) and the full cook (one pack) both write a record.
+		waitForSavingsEvents(t, db, ids.householdID, 2)
 		for _, log := range logs {
 			if log.Action != dbModel.ActivityActionCook {
 				t.Errorf("activity log Action = %q, want %q", log.Action, dbModel.ActivityActionCook)
@@ -150,9 +152,9 @@ func TestProductService_CookProducts(t *testing.T) {
 		db, svc, ids := setup(t)
 
 		product := testutil.CreateTestProduct(db, ids.householdID, ids.userID)
-		db.Model(product).Update("amount", 3)
+		db.Model(product).Update("quantity", 3)
 
-		consumed, partial, errs, internalErr := svc.CookProducts([]apiModel.CookItemAPIModel{{ProductID: product.ID, Amount: 3}}, ids.userID)
+		consumed, partial, errs, internalErr := svc.CookProducts([]apiModel.CookItemAPIModel{{ProductID: product.ID, Quantity: 3}}, ids.userID)
 
 		if internalErr != nil {
 			t.Errorf("internalErr = %v, want nil", internalErr)
@@ -168,11 +170,11 @@ func TestProductService_CookProducts(t *testing.T) {
 		db, svc, ids := setup(t)
 
 		product := testutil.CreateTestProduct(db, ids.householdID, ids.userID)
-		db.Model(product).Update("amount", 5)
+		db.Model(product).Update("quantity", 5)
 
 		items := []apiModel.CookItemAPIModel{
-			{ProductID: product.ID, Amount: 2},
-			{ProductID: product.ID, Amount: 1},
+			{ProductID: product.ID, Quantity: 2},
+			{ProductID: product.ID, Quantity: 1},
 		}
 		consumed, partial, errs, internalErr := svc.CookProducts(items, ids.userID)
 
@@ -187,8 +189,8 @@ func TestProductService_CookProducts(t *testing.T) {
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("product not found: %v", err)
 		}
-		if updated.Amount != 2 {
-			t.Errorf("Amount = %d, want 2 (3 consumed from merged entry)", updated.Amount)
+		if updated.Quantity != 2 {
+			t.Errorf("Amount = %d, want 2 (3 consumed from merged entry)", updated.Quantity)
 		}
 
 		logs := waitForActivityLogs(t, db, ids.householdID, 1)
@@ -204,11 +206,11 @@ func TestProductService_CookProducts(t *testing.T) {
 		db, svc, ids := setup(t)
 
 		product := testutil.CreateTestProduct(db, ids.householdID, ids.userID)
-		db.Model(product).Update("amount", 5)
+		db.Model(product).Update("quantity", 5)
 
 		_, _, errs, internalErr := svc.CookProducts([]apiModel.CookItemAPIModel{
-			{ProductID: product.ID, Amount: 1},
-			{ProductID: 9999, Amount: 1},
+			{ProductID: product.ID, Quantity: 1},
+			{ProductID: 9999, Quantity: 1},
 		}, ids.userID)
 
 		if internalErr != nil {
@@ -229,7 +231,7 @@ func TestProductService_CookProducts(t *testing.T) {
 		product := testutil.CreateTestProduct(db, ids.householdID, ids.userID)
 
 		consumed, partial, errs, internalErr := svc.CookProducts([]apiModel.CookItemAPIModel{
-			{ProductID: product.ID, Amount: 1},
+			{ProductID: product.ID, Quantity: 1},
 		}, 99999)
 
 		if internalErr == nil {

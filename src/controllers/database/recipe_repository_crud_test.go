@@ -20,8 +20,8 @@ func TestRecipeRepository_CreateAndGetByID(t *testing.T) {
 			Instructions: "Mix and fry.",
 			Servings:     4,
 			Ingredients: []dbModel.RecipeIngredient{
-				{Name: "Eggs", Amount: 2, Unit: "pcs", SortOrder: 1},
-				{Name: "Flour", Amount: 250, Unit: "g", SortOrder: 0},
+				{Name: "Eggs", Portion: "2 pcs", SortOrder: 1},
+				{Name: "Flour", Portion: "250 g", SortOrder: 0},
 			},
 		}
 		if err := repo.Create(recipe); err != nil {
@@ -84,7 +84,7 @@ func TestRecipeRepository_Update(t *testing.T) {
 		recipe := testutil.CreateTestRecipe(db, 1)
 		recipe.Name = "Updated"
 		recipe.Ingredients = []dbModel.RecipeIngredient{
-			{Name: "Sugar", Amount: 50, Unit: "g", SortOrder: 0},
+			{Name: "Sugar", Portion: "50 g", SortOrder: 0},
 		}
 		if err := repo.Update(recipe); err != nil {
 			t.Fatalf("Update() error = %v", err)

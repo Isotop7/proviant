@@ -13,7 +13,6 @@ import (
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/testutil"
 	repomocks "github.com/Isotop7/proviant/testutil/mocks"
-	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -223,10 +222,10 @@ func TestUpdateHouseholdSettingsHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("valid unit system persists", func(t *testing.T) {
+	t.Run("valid language persists", func(t *testing.T) {
 		env := setupHandlerTest(t)
-		unitSystem := util.UnitSystemImperial
-		testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{UnitSystem: &unitSystem})
+		language := "de"
+		testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{Language: &language})
 
 		UpdateHouseholdSettings(env.Ctx, env.AppCtx)
 
@@ -237,15 +236,15 @@ func TestUpdateHouseholdSettingsHandler(t *testing.T) {
 		if err := env.DB.First(&stored, env.Household.ID).Error; err != nil {
 			t.Fatalf("load household: %v", err)
 		}
-		if stored.UnitSystem != util.UnitSystemImperial {
-			t.Errorf("stored unit system = %q, want %q", stored.UnitSystem, util.UnitSystemImperial)
+		if stored.Language != "de" {
+			t.Errorf("stored language = %q, want de", stored.Language)
 		}
 	})
 
-	t.Run("invalid unit system returns 400", func(t *testing.T) {
+	t.Run("invalid language returns 400", func(t *testing.T) {
 		env := setupHandlerTest(t)
-		unitSystem := "us"
-		testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{UnitSystem: &unitSystem})
+		language := "xx"
+		testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{Language: &language})
 
 		UpdateHouseholdSettings(env.Ctx, env.AppCtx)
 

@@ -86,7 +86,7 @@
 
 .list-header {
   display: grid;
-  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
+  grid-template-columns: 32px 1fr 120px 140px 90px 88px 50px;
   gap: 10px;
   padding: 8px 16px;
   background: var(--bg-subtle);
@@ -103,7 +103,7 @@
 
 .list-row {
   display: grid;
-  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
+  grid-template-columns: 32px 1fr 120px 140px 90px 88px 50px;
   gap: 10px;
   align-items: center;
   padding: 9px 16px;
@@ -205,6 +205,7 @@
 
   input {
     width: 50px;
+    height: 26px;
     font-family: var(--font-mono);
     font-size: 12px;
     font-weight: 600;
@@ -224,27 +225,55 @@
   color: var(--fg);
 }
 
-// A measured product row is one package: the count leads and the net contents
-// follow as secondary metadata, so the list reads "1 qty" over "500 g".
-.qty-measured {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  line-height: 1.2;
+.qty-stepper-flat {
+  gap: 2px;
+  background: none;
+  border: 0;
+  border-radius: 0;
 
-  .unit-count {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--fg);
-  }
-
-  .unit-secondary {
-    font-family: var(--font-mono);
-    font-size: 10px;
+  button {
+    width: 20px;
+    height: 26px;
     color: var(--fg-3);
+    background: transparent;
+
+    &:hover {
+      color: var(--accent);
+      background: var(--bg-subtle);
+    }
   }
+
+  span {
+    width: auto;
+    min-width: 24px;
+    white-space: nowrap;
+  }
+
+  [id^="qty-"] {
+    display: inline-flex;
+    padding: 0;
+    border-radius: 0;
+  }
+}
+
+// The pack size is secondary metadata next to a name or a count: it says what
+// one pack holds ("1 l") without competing with the count itself.
+.pack-size {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+
+// The count leads and the pack size follows under it, so the cell reads
+// "2 Stk." over "500 g".
+.col-qty {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: flex-end;
+  justify-content: center;
+  line-height: 1.2;
 }
 
 .filter-pill {
@@ -472,7 +501,7 @@
 @media (max-width: 767.98px) {
   .list-header,
   .list-row {
-    grid-template-columns: 12px 1fr 60px 48px 20px;
+    grid-template-columns: 12px 1fr 48px 88px 20px;
     overflow: hidden;
   }
 
@@ -489,9 +518,20 @@
     display: none;
   }
 
+  @media (max-width: 359.98px) {
+    .list-header,
+    .list-row {
+      grid-template-columns: 12px 1fr 88px 20px;
+    }
+
+    .col-expiry {
+      display: none;
+    }
+  }
+
   .col-qty {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: flex-end;
     text-align: right;
   }
@@ -548,7 +588,7 @@
     right: 0;
     bottom: calc(60px + env(safe-area-inset-bottom, 0) + 6px);
     left: 0;
-    z-index: 10000; // above bottom nav (9999)
+    z-index: 1037; // above bottom nav (1035), below offcanvas backdrop (1040)
     display: none;
     padding: 10px 12px;
     background: var(--surface);
@@ -571,14 +611,13 @@
 }
 
 /* Amount update feedback — green background flash (pill shape) */
-[id^="amount-"],
 [id^="qty-"] {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
   transition: background .4s ease;
 }
-.amount-updated {
+.qty-updated {
   color: var(--status-fresh) !important;
   background: var(--status-fresh-subtle) !important;
 }

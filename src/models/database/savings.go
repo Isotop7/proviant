@@ -25,5 +25,12 @@ type SavingsRecord struct {
 	EventType   string  `gorm:"not null;index" json:"eventType"` // "consumed" or "wasted"
 	PriceEUR    float64 `gorm:"not null"       json:"priceEur"`
 	CO2Kg       float64 `gorm:"not null"       json:"co2Kg"`
-	Amount      int     `gorm:"not null;default:1" json:"amount"`
+	// Amount is the number of packs the event covered. A record written before
+	// the count model holds a net content instead, which is why such a record
+	// is marked as legacy.
+	Amount int `gorm:"not null;default:1" json:"amount"`
+	// Legacy marks a record written before the count model, when the amount
+	// was a net content and the money and CO2 were scaled by it. Such a
+	// record is not comparable with the ones after the cutover.
+	Legacy bool `gorm:"default:false" json:"legacy,omitempty"`
 }

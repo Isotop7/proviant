@@ -8,7 +8,7 @@ type BulkProductsAPIModel struct {
 // CookItemAPIModel is one product entry of a cook request
 type CookItemAPIModel struct {
 	ProductID uint `json:"productId" binding:"required"`
-	Amount    int  `json:"amount" binding:"gte=0"`
+	Quantity  int  `json:"quantity" binding:"gte=0"`
 }
 
 // CookProductsAPIModel represents a cook request
@@ -31,8 +31,8 @@ type OnboardingStateResponse struct {
 	OnboardingCompleted bool `json:"onboardingCompleted"`
 }
 
-// ProductAmountDTO is the request body for updating a product's amount
-type ProductAmountDTO struct {
+// ProductQuantityDTO is the request body for updating a product's pack count
+type ProductQuantityDTO struct {
 	Delta            int     `json:"delta" binding:"required,min=-1000"`
 	ClientMutationID *string `json:"clientMutationId,omitempty"`
 }

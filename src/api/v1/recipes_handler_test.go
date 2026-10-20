@@ -20,8 +20,8 @@ func createRecipeRequest() map[string]any {
 		"instructions": "Mix and fry.",
 		"servings":     4,
 		"ingredients": []map[string]any{
-			{"name": "Flour", "amount": 250, "unit": "g", "sortOrder": 0},
-			{"name": "Eggs", "amount": 2, "unit": "pcs", "sortOrder": 1},
+			{"name": "Flour", "quantity": 250, "unit": "g", "sortOrder": 0},
+			{"name": "Eggs", "quantity": 2, "unit": "pcs", "sortOrder": 1},
 		},
 	}
 }
@@ -125,7 +125,7 @@ func TestUpdateRecipe(t *testing.T) {
 		testutil.CreateTestRequest(env.Ctx, map[string]any{
 			"name": "Renamed",
 			"ingredients": []map[string]any{
-				{"name": "Sugar", "amount": 50, "unit": "g", "sortOrder": 0},
+				{"name": "Sugar", "quantity": 50, "unit": "g", "sortOrder": 0},
 			},
 		})
 		env.Ctx.Params = gin.Params{{Key: "id", Value: itoa(recipe.ID)}}
@@ -183,11 +183,10 @@ func TestDeleteRecipe(t *testing.T) {
 }
 
 func TestCookRecipe(t *testing.T) {
-	seedCookRecipe := func(t *testing.T, env *handlerTestEnv, unit string) (*dbModel.Product, *dbModel.Recipe) {
+	seedCookRecipe := func(t *testing.T, env *handlerTestEnv, portion string) (*dbModel.Product, *dbModel.Recipe) {
 		t.Helper()
 		product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
-		product.Amount = 5
-		product.Unit = unit
+		product.Quantity = 5
 		if err := env.DB.Save(product).Error; err != nil {
 			t.Fatalf("save product: %v", err)
 		}
@@ -197,7 +196,7 @@ func TestCookRecipe(t *testing.T) {
 			Servings:    2,
 			CreatedBy:   env.User.ID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: product.ProductName, Amount: 2, Unit: unit, SortOrder: 0},
+				{ProductID: &product.ID, Name: product.ProductName, Portion: portion, SortOrder: 0},
 			},
 		}
 		if err := env.DB.Create(recipe).Error; err != nil {
@@ -208,7 +207,7 @@ func TestCookRecipe(t *testing.T) {
 
 	t.Run("consumes linked ingredients", func(t *testing.T) {
 		env := setupHandlerTest(t)
-		product, recipe := seedCookRecipe(t, env, "g")
+		product, recipe := seedCookRecipe(t, env, "2 g")
 		testutil.CreateTestRequest(env.Ctx, map[string]any{"servings": 0})
 		env.Ctx.Params = gin.Params{{Key: "id", Value: itoa(recipe.ID)}}
 
@@ -228,16 +227,16 @@ func TestCookRecipe(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		if reloaded.Amount != 3 {
-			t.Errorf("product amount = %d, want 3", reloaded.Amount)
+		if reloaded.Quantity != 4 {
+			t.Errorf("product count = %d, want 4 (five packs - one cooked)", reloaded.Quantity)
 		}
 	})
 
-	t.Run("unit mismatch is reported and nothing is consumed", func(t *testing.T) {
+	t.Run("the ingredient portion never blocks the cook", func(t *testing.T) {
 		env := setupHandlerTest(t)
-		_, recipe := seedCookRecipe(t, env, "g")
+		product, recipe := seedCookRecipe(t, env, "2 g")
 		ingredient := recipe.Ingredients[0]
-		ingredient.Unit = "ml"
+		ingredient.Portion = "2 kg"
 		if err := env.DB.Save(&ingredient).Error; err != nil {
 			t.Fatalf("save ingredient: %v", err)
 		}
@@ -246,15 +245,22 @@ func TestCookRecipe(t *testing.T) {
 
 		CookRecipe(env.Ctx, env.AppCtx)
 
-		if env.W.Code != http.StatusBadRequest {
-			t.Fatalf("status = %d, want 400; body = %s", env.W.Code, env.W.Body.String())
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 		}
 		var res apiModel.CookResponse
 		if err := json.Unmarshal(env.W.Body.Bytes(), &res); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		if len(res.Errors) != 1 {
-			t.Errorf("errors = %v, want one gap error", res.Errors)
+		if len(res.Errors) != 0 {
+			t.Errorf("errors = %v, want none", res.Errors)
+		}
+		reloaded, err := env.AppCtx.Repos.Products.GetProductByID(product.ID, env.User.ID)
+		if err != nil {
+			t.Fatalf("reload product: %v", err)
+		}
+		if reloaded.Quantity != 4 {
+			t.Errorf("product count = %d, want 4 (five packs - one cooked)", reloaded.Quantity)
 		}
 	})
 

@@ -59,7 +59,7 @@ func TestCsvImportColumnAliases(t *testing.T) {
 		CsvColumnName:            true,
 		CsvColumnBarcode:         true,
 		CsvColumnQuantity:        true,
-		CsvColumnUnit:            true,
+		CsvColumnPackSize:        true,
 		CsvColumnCategory:        true,
 		CsvColumnStorageLocation: true,
 		CsvColumnExpiryDate:      true,
@@ -79,6 +79,17 @@ func TestCsvImportColumnAliases(t *testing.T) {
 			got, ok := CsvImportColumnAliases[col]
 			if !ok || got != col {
 				t.Errorf("canonical column %q maps to %q (present=%v), want itself", col, got, ok)
+			}
+		})
+	}
+
+	// A header of the pre-count-model format must not be aliased: its
+	// quantity column held a net content, and reading it as a pack count
+	// would turn a net content of 500 into 500 packs.
+	for _, legacy := range CsvLegacyColumnHeaders {
+		t.Run("legacy/"+legacy, func(t *testing.T) {
+			if target, ok := CsvImportColumnAliases[legacy]; ok {
+				t.Errorf("legacy column %q is aliased to %q, want no alias", legacy, target)
 			}
 		})
 	}
@@ -138,8 +149,9 @@ func TestLimitsArePositive(t *testing.T) {
 		{"ReceiptScanDefaultTimeout", ReceiptScanDefaultTimeout},
 		{"ReceiptItemMaxNameLength", ReceiptItemMaxNameLength},
 		{"ReceiptItemMaxCategoriesLength", ReceiptItemMaxCategoriesLength},
-		{"ReceiptItemMaxUnitLength", ReceiptItemMaxUnitLength},
-		{"ReceiptItemMaxAmount", ReceiptItemMaxAmount},
+		{"MaxPackSizeLength", MaxPackSizeLength},
+		{"MinProductQuantity", MinProductQuantity},
+		{"MaxProductQuantity", MaxProductQuantity},
 		{"DefaultMaxUploadSizeMB", DefaultMaxUploadSizeMB},
 		{"ConsumptionHistoryWindowDays", ConsumptionHistoryWindowDays},
 		{"ConsumptionMinSamples", ConsumptionMinSamples},

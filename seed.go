@@ -9,6 +9,7 @@ import (
 
 	"github.com/Isotop7/proviant/models/authentication"
 	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
@@ -123,36 +124,36 @@ func seedDemoData(db *gorm.DB) {
 	}
 
 	products := []dbModel.Product{
-		{Model: gorm.Model{ID: 1}, ProductName: "Milk", Barcode: "8710398018520", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 2), ScannedAt: now.AddDate(0, 0, -5), Amount: 1, Unit: "L", Categories: "en:dairy-products,en:milk", MinStockAmount: 3},
-		{Model: gorm.Model{ID: 2}, ProductName: "Yogurt", Barcode: "8710398501466", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 5), ScannedAt: now.AddDate(0, 0, -3), Amount: 4, Unit: "pcs", Categories: "en:dairy-products,en:yoghurts"},
-		{Model: gorm.Model{ID: 3}, ProductName: "Eggs", Barcode: "8710385123457", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 10), ScannedAt: now.AddDate(0, 0, -7), Amount: 12, Unit: "pcs", Categories: "en:eggs", MinStockAmount: 24},
-		{Model: gorm.Model{ID: 4}, ProductName: "Butter", Barcode: "8710398512349", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 14), ScannedAt: now.AddDate(0, 0, -2), Amount: 1, Unit: "pkg", Categories: "en:dairy-products"},
-		{Model: gorm.Model{ID: 5}, ProductName: "Chicken Breast", Barcode: "8710385123464", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 0, 1), ScannedAt: now.AddDate(0, 0, -3), Amount: 500, Unit: "g", Categories: "en:meats,en:poultry"},
-		{Model: gorm.Model{ID: 6}, ProductName: "Ground Beef", Barcode: "8710385123471", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 0, 3), ScannedAt: now.AddDate(0, 0, -5), Amount: 400, Unit: "g", Categories: "en:meats,en:beef"},
-		{Model: gorm.Model{ID: 7}, ProductName: "Salmon Fillet", Barcode: "8710385123488", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 0, -1), ScannedAt: now.AddDate(0, 0, -7), Amount: 300, Unit: "g", Categories: "en:fish"},
-		{Model: gorm.Model{ID: 8}, ProductName: "Frozen Pizza", Barcode: "8076809513753", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 1, 0), ScannedAt: now.AddDate(0, 0, -14), Amount: 2, Unit: "pcs", Categories: "en:frozen-foods"},
-		{Model: gorm.Model{ID: 9}, ProductName: "Ice Cream", Barcode: "8076800195875", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 1, 15), ScannedAt: now.AddDate(0, 0, -30), Amount: 1, Unit: "L", Categories: "en:desserts"},
-		{Model: gorm.Model{ID: 10}, ProductName: "Pasta", Barcode: "8076800195905", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(1, 0, 0), ScannedAt: now.AddDate(0, 0, -60), Amount: 3, Unit: "pkg", Categories: "en:pasta", MinStockAmount: 6},
-		{Model: gorm.Model{ID: 11}, ProductName: "Rice", Barcode: "8410065012345", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 6, 0), ScannedAt: now.AddDate(0, 0, -90), Amount: 2, Unit: "kg", Categories: "en:cereals,en:rice"},
-		{Model: gorm.Model{ID: 12}, ProductName: "Tomato Sauce", Barcode: "8410065012352", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 2, 0), ScannedAt: now.AddDate(0, 0, -20), Amount: 2, Unit: "jars", Categories: "en:sauces"},
-		{Model: gorm.Model{ID: 13}, ProductName: "Olive Oil", Barcode: "8410065012369", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(1, 0, 0), ScannedAt: now.AddDate(0, 0, -45), Amount: 1, Unit: "L", Categories: "en:oils"},
-		{Model: gorm.Model{ID: 14}, ProductName: "Bread", Barcode: "3228027000016", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 0, 1), ScannedAt: now.AddDate(0, 0, -2), Amount: 1, Unit: "loaf", Categories: "en:breads"},
-		{Model: gorm.Model{ID: 15}, ProductName: "Cheese", Barcode: "3228027000023", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 7), ScannedAt: now.AddDate(0, 0, -4), Amount: 200, Unit: "g", Categories: "en:dairy-products,en:cheese"},
-		{Model: gorm.Model{ID: 16}, ProductName: "Apple Juice", Barcode: "5449000000996", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 1, 0), ScannedAt: now.AddDate(0, 0, -10), Amount: 2, Unit: "L", Categories: "en:soft-drinks"},
-		{Model: gorm.Model{ID: 17}, ProductName: "Potatoes", Barcode: "5449000001238", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 0, 20), ScannedAt: now.AddDate(0, 0, -15), Amount: 1, Unit: "kg", Categories: "en:vegetables,en:potatoes", MinStockAmount: 4},
-		{Model: gorm.Model{ID: 18}, ProductName: "Onions", Barcode: "5449000001245", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 0, 30), ScannedAt: now.AddDate(0, 0, -20), Amount: 500, Unit: "g", Categories: "en:vegetables"},
-		{Model: gorm.Model{ID: 19}, ProductName: "Garlic", Barcode: "5449000001252", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 1, 0), ScannedAt: now.AddDate(0, 0, -25), Amount: 3, Unit: "pcs", Categories: "en:vegetables"},
-		{Model: gorm.Model{ID: 20}, ProductName: "Spinach", Barcode: "5449000001269", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 4), ScannedAt: now.AddDate(0, 0, -1), Amount: 200, Unit: "g", Categories: "en:vegetables,en:leafy-greens"},
-		{Model: gorm.Model{ID: 21}, ProductName: "Ham", Barcode: "8410065012376", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 3), ScannedAt: now.AddDate(0, 0, -2), Amount: 100, Unit: "g", Categories: "en:meats,en:cured-meats"},
-		{Model: gorm.Model{ID: 22}, ProductName: "Orange Juice", Barcode: "5449000001276", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 6), ScannedAt: now.AddDate(0, 0, -5), Amount: 1, Unit: "L", Categories: "en:soft-drinks"},
-		{Model: gorm.Model{ID: 23}, ProductName: "Cereal", Barcode: "5000159484695", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 3, 0), ScannedAt: now.AddDate(0, 0, -40), Amount: 1, Unit: "box", Categories: "en:cereals"},
-		{Model: gorm.Model{ID: 24}, ProductName: "Peanut Butter", Barcode: "5000159484701", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 4, 0), ScannedAt: now.AddDate(0, 0, -35), Amount: 1, Unit: "jar", Categories: "en:spreads"},
-		{Model: gorm.Model{ID: 25}, ProductName: "Honey", Barcode: "5000159484718", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 6, 0), ScannedAt: now.AddDate(0, 0, -50), Amount: 1, Unit: "jar", Categories: "en:spreads"},
-		{Model: gorm.Model{ID: 26}, ProductName: "Coffee", Barcode: "5000159484725", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 2, 0), ScannedAt: now.AddDate(0, 0, -30), Amount: 200, Unit: "g", Categories: "en:beverages,en:coffee"},
-		{Model: gorm.Model{ID: 27}, ProductName: "Tea", Barcode: "5000159484732", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 6, 0), ScannedAt: now.AddDate(0, 0, -55), Amount: 50, Unit: "bags", Categories: "en:beverages,en:tea"},
-		{Model: gorm.Model{ID: 28}, ProductName: "Sugar", Barcode: "5000159484749", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 12, 0), ScannedAt: now.AddDate(0, 0, -100), Amount: 1, Unit: "kg", Categories: "en:sweeteners"},
-		{Model: gorm.Model{ID: 29}, ProductName: "Flour", Barcode: "5000159484756", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 6, 0), ScannedAt: now.AddDate(0, 0, -70), Amount: 1, Unit: "kg", Categories: "en:cereals,en:flours"},
-		{Model: gorm.Model{ID: 30}, ProductName: "Tofu", Barcode: "5000159484763", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 2), ScannedAt: now.AddDate(0, 0, -3), Amount: 400, Unit: "g", Categories: "en:plant-based-foods"},
+		{Model: gorm.Model{ID: 1}, ProductName: "Milk", Barcode: "8710398018526", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 2), ScannedAt: now.AddDate(0, 0, -5), Quantity: 1, PackSize: "1 L", Categories: "en:dairy-products,en:milk", MinStockAmount: 3},
+		{Model: gorm.Model{ID: 2}, ProductName: "Yogurt", Barcode: "8710398501462", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 5), ScannedAt: now.AddDate(0, 0, -3), Quantity: 4, Categories: "en:dairy-products,en:yoghurts"},
+		{Model: gorm.Model{ID: 3}, ProductName: "Eggs", Barcode: "8710385123455", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 10), ScannedAt: now.AddDate(0, 0, -7), Quantity: 12, Categories: "en:eggs", MinStockAmount: 24},
+		{Model: gorm.Model{ID: 4}, ProductName: "Butter", Barcode: "8710398512345", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 14), ScannedAt: now.AddDate(0, 0, -2), Quantity: 1, Categories: "en:dairy-products"},
+		{Model: gorm.Model{ID: 5}, ProductName: "Chicken Breast", Barcode: "8710385123462", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 0, 1), ScannedAt: now.AddDate(0, 0, -3), Quantity: 1, PackSize: "500 g", Categories: "en:meats,en:poultry"},
+		{Model: gorm.Model{ID: 6}, ProductName: "Ground Beef", Barcode: "8710385123479", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 0, 3), ScannedAt: now.AddDate(0, 0, -5), Quantity: 1, PackSize: "400 g", Categories: "en:meats,en:beef"},
+		{Model: gorm.Model{ID: 7}, ProductName: "Salmon Fillet", Barcode: "8710385123486", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 0, -1), ScannedAt: now.AddDate(0, 0, -7), Quantity: 1, PackSize: "300 g", Categories: "en:fish"},
+		{Model: gorm.Model{ID: 8}, ProductName: "Frozen Pizza", Barcode: "8076809513753", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 1, 0), ScannedAt: now.AddDate(0, 0, -14), Quantity: 2, Categories: "en:frozen-foods"},
+		{Model: gorm.Model{ID: 9}, ProductName: "Ice Cream", Barcode: "8076800195873", HouseholdID: 1, StorageLocationID: uintPtr(2), ExpireAt: now.AddDate(0, 1, 15), ScannedAt: now.AddDate(0, 0, -30), Quantity: 1, PackSize: "1 L", Categories: "en:desserts"},
+		{Model: gorm.Model{ID: 10}, ProductName: "Pasta", Barcode: "8076800195903", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(1, 0, 0), ScannedAt: now.AddDate(0, 0, -60), Quantity: 3, Categories: "en:pasta", MinStockAmount: 6},
+		{Model: gorm.Model{ID: 11}, ProductName: "Rice", Barcode: "8410065012344", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 6, 0), ScannedAt: now.AddDate(0, 0, -90), Quantity: 1, PackSize: "2 kg", Categories: "en:cereals,en:rice"},
+		{Model: gorm.Model{ID: 12}, ProductName: "Tomato Sauce", Barcode: "8410065012351", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 2, 0), ScannedAt: now.AddDate(0, 0, -20), Quantity: 2, Categories: "en:sauces"},
+		{Model: gorm.Model{ID: 13}, ProductName: "Olive Oil", Barcode: "8410065012368", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(1, 0, 0), ScannedAt: now.AddDate(0, 0, -45), Quantity: 1, PackSize: "1 L", Categories: "en:oils"},
+		{Model: gorm.Model{ID: 14}, ProductName: "Bread", Barcode: "3228027000019", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 0, 1), ScannedAt: now.AddDate(0, 0, -2), Quantity: 1, Categories: "en:breads"},
+		{Model: gorm.Model{ID: 15}, ProductName: "Cheese", Barcode: "3228027000026", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 7), ScannedAt: now.AddDate(0, 0, -4), Quantity: 1, PackSize: "200 g", Categories: "en:dairy-products,en:cheese"},
+		{Model: gorm.Model{ID: 16}, ProductName: "Apple Juice", Barcode: "5449000000996", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 1, 0), ScannedAt: now.AddDate(0, 0, -10), Quantity: 1, PackSize: "2 L", Categories: "en:soft-drinks"},
+		{Model: gorm.Model{ID: 17}, ProductName: "Potatoes", Barcode: "5449000001238", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 0, 20), ScannedAt: now.AddDate(0, 0, -15), Quantity: 1, PackSize: "1 kg", Categories: "en:vegetables,en:potatoes", MinStockAmount: 4},
+		{Model: gorm.Model{ID: 18}, ProductName: "Onions", Barcode: "5449000001245", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 0, 30), ScannedAt: now.AddDate(0, 0, -20), Quantity: 1, PackSize: "500 g", Categories: "en:vegetables"},
+		{Model: gorm.Model{ID: 19}, ProductName: "Garlic", Barcode: "5449000001252", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 1, 0), ScannedAt: now.AddDate(0, 0, -25), Quantity: 3, Categories: "en:vegetables"},
+		{Model: gorm.Model{ID: 20}, ProductName: "Spinach", Barcode: "5449000001269", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 4), ScannedAt: now.AddDate(0, 0, -1), Quantity: 1, PackSize: "200 g", Categories: "en:vegetables,en:leafy-greens"},
+		{Model: gorm.Model{ID: 21}, ProductName: "Ham", Barcode: "8410065012375", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 3), ScannedAt: now.AddDate(0, 0, -2), Quantity: 1, PackSize: "100 g", Categories: "en:meats,en:cured-meats"},
+		{Model: gorm.Model{ID: 22}, ProductName: "Orange Juice", Barcode: "5449000001276", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 6), ScannedAt: now.AddDate(0, 0, -5), Quantity: 1, PackSize: "1 L", Categories: "en:soft-drinks"},
+		{Model: gorm.Model{ID: 23}, ProductName: "Cereal", Barcode: "5000159484695", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 3, 0), ScannedAt: now.AddDate(0, 0, -40), Quantity: 1, Categories: "en:cereals"},
+		{Model: gorm.Model{ID: 24}, ProductName: "Peanut Butter", Barcode: "5000159484701", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 4, 0), ScannedAt: now.AddDate(0, 0, -35), Quantity: 1, Categories: "en:spreads"},
+		{Model: gorm.Model{ID: 25}, ProductName: "Honey", Barcode: "5000159484718", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 6, 0), ScannedAt: now.AddDate(0, 0, -50), Quantity: 1, Categories: "en:spreads"},
+		{Model: gorm.Model{ID: 26}, ProductName: "Coffee", Barcode: "5000159484725", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 2, 0), ScannedAt: now.AddDate(0, 0, -30), Quantity: 1, PackSize: "200 g", Categories: "en:beverages,en:coffee"},
+		{Model: gorm.Model{ID: 27}, ProductName: "Tea", Barcode: "5000159484732", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 6, 0), ScannedAt: now.AddDate(0, 0, -55), Quantity: 50, Categories: "en:beverages,en:tea"},
+		{Model: gorm.Model{ID: 28}, ProductName: "Sugar", Barcode: "5000159484749", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 12, 0), ScannedAt: now.AddDate(0, 0, -100), Quantity: 1, PackSize: "1 kg", Categories: "en:sweeteners"},
+		{Model: gorm.Model{ID: 29}, ProductName: "Flour", Barcode: "5000159484756", HouseholdID: 1, StorageLocationID: uintPtr(3), ExpireAt: now.AddDate(0, 6, 0), ScannedAt: now.AddDate(0, 0, -70), Quantity: 1, PackSize: "1 kg", Categories: "en:cereals,en:flours"},
+		{Model: gorm.Model{ID: 30}, ProductName: "Tofu", Barcode: "5000159484763", HouseholdID: 1, StorageLocationID: uintPtr(1), ExpireAt: now.AddDate(0, 0, 2), ScannedAt: now.AddDate(0, 0, -3), Quantity: 1, PackSize: "400 g", Categories: "en:plant-based-foods"},
 	}
 	for _, product := range products {
 		if err := db.Create(&product).Error; err != nil {
@@ -248,6 +249,7 @@ func seedConsumptionHistory(db *gorm.DB, now time.Time, catalog []dbModel.Produc
 		if event.wasted {
 			reason = dbModel.RemovalReasonWasted
 		}
+		eventQuantity, eventPackSize := util.PackSizeFromLegacyAmount(event.amount, event.unit)
 
 		product := dbModel.Product{
 			Model: gorm.Model{
@@ -263,8 +265,8 @@ func seedConsumptionHistory(db *gorm.DB, now time.Time, catalog []dbModel.Produc
 			StorageLocationID: uintPtr(event.location),
 			ExpireAt:          at,
 			ScannedAt:         at.AddDate(0, 0, -21),
-			Amount:            event.amount,
-			Unit:              event.unit,
+			Quantity:          eventQuantity,
+			PackSize:          eventPackSize,
 			RemovalReason:     reason,
 		}
 		if err := db.Create(&product).Error; err != nil {
@@ -285,7 +287,7 @@ func seedConsumptionHistory(db *gorm.DB, now time.Time, catalog []dbModel.Produc
 			EventType:   reason,
 			PriceEUR:    event.priceEUR,
 			CO2Kg:       event.co2Kg,
-			Amount:      event.amount,
+			Amount:      eventQuantity,
 		}
 		if err := db.Create(&record).Error; err != nil {
 			panic(err)
@@ -297,12 +299,12 @@ func seedConsumptionHistory(db *gorm.DB, now time.Time, catalog []dbModel.Produc
 // the strikethrough styling is visible, plus a note on one item.
 func seedShoppingList(db *gorm.DB, now time.Time) {
 	items := []dbModel.ShoppingListItem{
-		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -2)}, HouseholdID: 1, Name: "Oat milk", Category: "Dairy", Quantity: 2, Unit: "L", CreatedBy: 1},
-		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -2)}, HouseholdID: 1, Name: "Free-range eggs", Category: "Dairy", Quantity: 12, Unit: "pcs", CreatedBy: 2},
-		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -1)}, HouseholdID: 1, Name: "Penne pasta", Category: "Pantry", Quantity: 2, Unit: "pkg", CreatedBy: 1},
-		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -1)}, HouseholdID: 1, Name: "Tomatoes", Category: "Produce", Quantity: 500, Unit: "g", Notes: "Vine-ripened if available", CreatedBy: 3},
-		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -1)}, HouseholdID: 1, Name: "Coffee beans", Category: "Pantry", Quantity: 500, Unit: "g", Checked: true, CreatedBy: 1},
-		{Model: gorm.Model{CreatedAt: now}, HouseholdID: 1, Name: "Dishwasher tablets", Category: "Household", Quantity: 1, Unit: "box", CreatedBy: 2},
+		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -2)}, HouseholdID: 1, ProductID: uintPtr(1), Name: "Oat milk", Category: "Dairy", Quantity: 2, CreatedBy: 1},
+		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -2)}, HouseholdID: 1, ProductID: uintPtr(3), Name: "Free-range eggs", Category: "Dairy", Quantity: 12, CreatedBy: 2},
+		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -1)}, HouseholdID: 1, ProductID: uintPtr(10), Name: "Penne pasta", Category: "Pantry", Quantity: 2, CreatedBy: 1},
+		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -1)}, HouseholdID: 1, Name: "Tomatoes", Category: "Produce", Quantity: 2, Notes: "Vine-ripened if available", CreatedBy: 3},
+		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -1)}, HouseholdID: 1, ProductID: uintPtr(26), Name: "Coffee beans", Category: "Pantry", Quantity: 1, Checked: true, CreatedBy: 1},
+		{Model: gorm.Model{CreatedAt: now}, HouseholdID: 1, Name: "Dishwasher tablets", Category: "Household", Quantity: 1, CreatedBy: 2},
 	}
 	for i := range items {
 		if err := db.Create(&items[i]).Error; err != nil {
@@ -336,8 +338,8 @@ func seedActivityAndStreak(db *gorm.DB, now time.Time) {
 		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -3)}, HouseholdID: 1, UserID: uintPtr(3), UserName: "Bob Johnson", Action: dbModel.ActivityActionWaste, ProductID: 20, ProductName: "Spinach", Quantity: 1, Timestamp: now.AddDate(0, 0, -3)},
 		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -5)}, HouseholdID: 1, UserID: uintPtr(1), UserName: "Demo User", Action: dbModel.ActivityActionCook, ProductID: 10, ProductName: "Pasta", Quantity: 3, Timestamp: now.AddDate(0, 0, -5)},
 		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -6)}, HouseholdID: 1, UserID: uintPtr(2), UserName: "Alice Smith", Action: dbModel.ActivityActionWaste, ProductID: 7, ProductName: "Salmon Fillet", Quantity: 1, Timestamp: now.AddDate(0, 0, -6)},
-		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -8)}, HouseholdID: 1, UserID: uintPtr(1), UserName: "Demo User", Action: dbModel.ActivityActionAmountChange, ProductID: 26, ProductName: "Coffee", Quantity: 200, Timestamp: now.AddDate(0, 0, -8)},
-		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -11)}, HouseholdID: 1, UserID: uintPtr(3), UserName: "Bob Johnson", Action: dbModel.ActivityActionConsume, ProductID: 18, ProductName: "Onions", Quantity: 500, Timestamp: now.AddDate(0, 0, -11)},
+		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -8)}, HouseholdID: 1, UserID: uintPtr(1), UserName: "Demo User", Action: dbModel.ActivityActionQuantityChange, ProductID: 26, ProductName: "Coffee", Quantity: 1, Timestamp: now.AddDate(0, 0, -8)},
+		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -11)}, HouseholdID: 1, UserID: uintPtr(3), UserName: "Bob Johnson", Action: dbModel.ActivityActionConsume, ProductID: 18, ProductName: "Onions", Quantity: 1, Timestamp: now.AddDate(0, 0, -11)},
 		{Model: gorm.Model{CreatedAt: now.AddDate(0, 0, -14)}, HouseholdID: 1, UserID: uintPtr(1), UserName: "Demo User", Action: dbModel.ActivityActionRestore, ProductID: 17, ProductName: "Potatoes", Quantity: 1, Timestamp: now.AddDate(0, 0, -14)},
 	}
 	for i := range activity {

@@ -1,13 +1,11 @@
 package services
 
 import (
-	"math"
 	"strings"
 	"time"
 
 	"github.com/Isotop7/proviant/controllers/database"
 	dbModel "github.com/Isotop7/proviant/models/database"
-	"github.com/Isotop7/proviant/util"
 	"github.com/rs/zerolog"
 )
 
@@ -24,39 +22,29 @@ func NewMealPlanService(repos *database.RepositoryContainer, logger *zerolog.Log
 type ingredientKey struct {
 	productID uint
 	name      string
-	unit      string
 }
 
 type ingredientNeed struct {
 	key       ingredientKey
 	productID *uint
 	name      string
-	unit      string
-	amount    int
+	quantity  int
 }
 
-// ingredientAggregationKey keys a need by product (or name) and the base unit
-// the amount was normalised to. Two spellings of one unit ("kg", "kilogram")
-// reach the same key, so their amounts still aggregate; a unit-less legacy row
-// keeps its own need because "2 eggs" cannot be added to "500 g of flour".
-func ingredientAggregationKey(ingredient *dbModel.RecipeIngredient, baseUnit string) ingredientKey {
+// ingredientAggregationKey keys a need by product, or by name for an
+// ingredient that is not linked to stock.
+func ingredientAggregationKey(ingredient *dbModel.RecipeIngredient) ingredientKey {
 	if ingredient.ProductID != nil {
-		return ingredientKey{productID: *ingredient.ProductID, unit: baseUnit}
+		return ingredientKey{productID: *ingredient.ProductID}
 	}
-	return ingredientKey{name: strings.ToLower(ingredient.Name), unit: baseUnit}
-}
-
-func addAmounts(total, addition int) int {
-	if total > math.MaxInt-addition {
-		return math.MaxInt
-	}
-	return total + addition
+	return ingredientKey{name: strings.ToLower(ingredient.Name)}
 }
 
 // GenerateShoppingList aggregates the ingredients of every meal planned within
-// [from, to] and creates shopping list entries for what is still missing:
-// product-linked needs are reduced by the stock on hand when the units match,
-// and needs already on the list are skipped. Returns the number of created entries.
+// [from, to] and creates shopping list entries for what is still missing. A
+// need counts packs, not portions: every planned use of an ingredient asks
+// for the packs the scaled servings need, and the stock on hand is subtracted
+// in packs. Needs already on the list are skipped. Returns the number of created entries.
 func (s *MealPlanService) GenerateShoppingList(from, to time.Time, userID uint) (int, error) {
 	householdID, err := s.repos.Users.GetUserHouseholdByID(userID)
 	if err != nil {
@@ -86,17 +74,16 @@ func (s *MealPlanService) GenerateShoppingList(from, to time.Time, userID uint) 
 		}
 		for j := range recipe.Ingredients {
 			ingredient := &recipe.Ingredients[j]
-			baseAmount, baseUnit := util.ToBase(
-				scaleIngredientAmount(ingredient.Amount, entry.Servings, recipe.Servings),
-				ingredient.Unit)
-			key := ingredientAggregationKey(ingredient, baseUnit)
+			key := ingredientAggregationKey(ingredient)
 			need, known := needs[key]
 			if !known {
-				need = &ingredientNeed{key: key, productID: ingredient.ProductID, name: ingredient.Name, unit: baseUnit}
+				need = &ingredientNeed{key: key, productID: ingredient.ProductID, name: ingredient.Name}
 				needs[key] = need
 				order = append(order, key)
 			}
-			need.amount = addAmounts(need.amount, baseAmount)
+			// A planned meal asks for one pack of the ingredient, the same
+			// number a cook of it takes.
+			need.quantity++
 		}
 	}
 
@@ -117,7 +104,7 @@ func (s *MealPlanService) GenerateShoppingList(from, to time.Time, userID uint) 
 	created := 0
 	for _, key := range order {
 		need := needs[key]
-		if need.amount <= 0 {
+		if need.quantity <= 0 {
 			continue
 		}
 		category := ""
@@ -131,16 +118,8 @@ func (s *MealPlanService) GenerateShoppingList(from, to time.Time, userID uint) 
 			} else {
 				need.name = product.ProductName
 				category = product.Categories
-				// Stock is converted into the need's base unit instead of the
-				// need being rebased onto the product's unit: a shopping list
-				// row must stay in a storage unit for util.FormatUnit's
-				// base-unit assumption to hold.
-				if strings.EqualFold(product.Unit, need.unit) {
-					need.amount -= product.Amount
-				} else if converted, ok := util.Convert(product.Amount, product.Unit, need.unit); ok {
-					need.amount -= converted
-				}
-				if need.amount <= 0 {
+				need.quantity -= product.Quantity
+				if need.quantity <= 0 {
 					continue
 				}
 			}
@@ -153,8 +132,7 @@ func (s *MealPlanService) GenerateShoppingList(from, to time.Time, userID uint) 
 			ProductID:   need.productID,
 			Name:        need.name,
 			Category:    category,
-			Quantity:    need.amount,
-			Unit:        need.unit,
+			Quantity:    need.quantity,
 			CreatedBy:   userID,
 		}
 		if createErr := s.repos.ShoppingListItems.Create(item); createErr != nil {

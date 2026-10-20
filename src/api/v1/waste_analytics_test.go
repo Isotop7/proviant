@@ -70,7 +70,7 @@ func TestGetWasteAnalytics(t *testing.T) {
 
 		prod := dbModel.Product{
 			ProductName: "Yogurt", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID,
-			ExpireAt: time.Now(), Amount: 1,
+			ExpireAt: time.Now(), Quantity: 1,
 		}
 		db.Create(&prod)
 		db.Create(&dbModel.SavingsRecord{
@@ -151,9 +151,9 @@ func TestGetWasteAnalytics(t *testing.T) {
 		db.Save(&admin)
 
 		// Dairy: 1 wasted 5 EUR; Bakery: 2 wasted at 0.5 EUR each (total 1 EUR).
-		dairy := dbModel.Product{ProductName: "Cheese", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Amount: 1}
+		dairy := dbModel.Product{ProductName: "Cheese", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Quantity: 1}
 		db.Create(&dairy)
-		bakery := dbModel.Product{ProductName: "Bread", Categories: "en:bakery", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Amount: 1}
+		bakery := dbModel.Product{ProductName: "Bread", Categories: "en:bakery", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Quantity: 1}
 		db.Create(&bakery)
 		db.Create(&dbModel.ProductCategoryPrice{CategoryKey: "dairy", DisplayName: "Dairy", AvgPriceEUR: 1, CO2KgPerKg: 1, WeightGrams: 100})
 		db.Create(&dbModel.ProductCategoryPrice{CategoryKey: "bakery", DisplayName: "Bakery", AvgPriceEUR: 1, CO2KgPerKg: 1, WeightGrams: 100})
@@ -241,11 +241,11 @@ func TestGetWasteAnalytics(t *testing.T) {
 		admin.HouseholdID = hh.ID
 		db.Save(&admin)
 
-		dairy := dbModel.Product{ProductName: "Yogurt", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Amount: 1}
+		dairy := dbModel.Product{ProductName: "Yogurt", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Quantity: 1}
 		db.Create(&dairy)
-		cheese := dbModel.Product{ProductName: "Cheese", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Amount: 1}
+		cheese := dbModel.Product{ProductName: "Cheese", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Quantity: 1}
 		db.Create(&cheese)
-		milk := dbModel.Product{ProductName: "Milk", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Amount: 1}
+		milk := dbModel.Product{ProductName: "Milk", Categories: "en:dairy", HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Quantity: 1}
 		db.Create(&milk)
 		db.Create(&dbModel.ProductCategoryPrice{CategoryKey: "dairy", DisplayName: "Dairy", AvgPriceEUR: 1, CO2KgPerKg: 1, WeightGrams: 100})
 
@@ -322,7 +322,7 @@ func TestGetWasteAnalytics(t *testing.T) {
 		db.Create(&dbModel.ProductCategoryPrice{CategoryKey: "snacks", DisplayName: "Snacks", AvgPriceEUR: 1, CO2KgPerKg: 1, WeightGrams: 100})
 
 		mkProd := func(name, cat string) dbModel.Product {
-			p := dbModel.Product{ProductName: name, Categories: "en:" + cat, HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Amount: 1}
+			p := dbModel.Product{ProductName: name, Categories: "en:" + cat, HouseholdID: hh.ID, UserID: admin.ID, ExpireAt: time.Now(), Quantity: 1}
 			db.Create(&p)
 			return p
 		}

@@ -318,3 +318,327 @@ func TestBackfillClampDaysAfterOpening(t *testing.T) {
 		t.Errorf("after re-run over-bound DaysAfterOpening = %v, want %d", got, database.MaxDaysAfterOpening)
 	}
 }
+
+// TestConvertProductAmountsToQuantities pins the conversion of the stored net
+// contents into pack counts: a measured product becomes one pack whose size is
+// its content, a counted product keeps its count, and a minimum stock that was
+// a net content becomes the number of packs it is worth.
+func TestConvertProductAmountsToQuantities(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	if err := testutil.MigrateAllModels(db); err != nil {
+		t.Fatalf("Failed to migrate database: %v", err)
+	}
+	// The columns the count model replaced are recreated so the conversion
+	// has something to read.
+	for _, column := range []string{"amount INTEGER", "unit TEXT"} {
+		if execErr := db.Exec("ALTER TABLE products ADD COLUMN " + column).Error; execErr != nil {
+			t.Fatalf("Failed to add the legacy column %s: %v", column, execErr)
+		}
+	}
+
+	seed := []struct {
+		barcode      string
+		unit         string
+		amount       int
+		minStock     int
+		wantCount    int
+		wantPackSize string
+		wantMinStock int
+	}{
+		{barcode: "2000000000001", unit: "g", amount: 1000, minStock: 1500, wantCount: 1, wantPackSize: "1000 g", wantMinStock: 2},
+		{barcode: "2000000000002", unit: "ml", amount: 1000, minStock: 1000, wantCount: 1, wantPackSize: "1000 ml", wantMinStock: 1},
+		{barcode: "2000000000003", unit: "pcs", amount: 6, minStock: 4, wantCount: 6, wantPackSize: "", wantMinStock: 4},
+		{barcode: "2000000000004", unit: "", amount: 3, minStock: 0, wantCount: 3, wantPackSize: "", wantMinStock: 0},
+		{barcode: "2000000000005", unit: "g", amount: 900, minStock: 0, wantCount: 1, wantPackSize: "900 g", wantMinStock: 0},
+		{barcode: "2000000000006", unit: "kg", amount: 2, minStock: 6, wantCount: 1, wantPackSize: "2 kg", wantMinStock: 3},
+		// The free-text units the old demo data used count items too, so they
+		// keep their count and their minimum stock.
+		{barcode: "2000000000007", unit: "bags", amount: 50, minStock: 100, wantCount: 50, wantPackSize: "", wantMinStock: 100},
+		{barcode: "2000000000008", unit: "loaf", amount: 1, minStock: 2, wantCount: 1, wantPackSize: "", wantMinStock: 2},
+	}
+	now := time.Now()
+	for _, row := range seed {
+		insert := db.Exec(
+			"INSERT INTO products (created_at, updated_at, barcode, product_name, household_id, user_id, amount, unit, min_stock_amount, quantity) VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?, 0)",
+			now, now, row.barcode, "legacy", row.amount, row.unit, row.minStock)
+		if insert.Error != nil {
+			t.Fatalf("Failed to seed product %s: %v", row.barcode, insert.Error)
+		}
+	}
+
+	logger := zerolog.Nop()
+	if convertErr := ConvertProductAmountsToQuantities(&logger, db); convertErr != nil {
+		t.Fatalf("ConvertProductAmountsToQuantities() error = %v", convertErr)
+	}
+
+	for _, row := range seed {
+		var count int
+		if readErr := db.Raw("SELECT quantity FROM products WHERE barcode = ?", row.barcode).Scan(&count).Error; readErr != nil {
+			t.Fatalf("Failed to read the count of %s: %v", row.barcode, readErr)
+		}
+		if count != row.wantCount {
+			t.Errorf("count of %s = %d, want %d", row.barcode, count, row.wantCount)
+		}
+		var packSize string
+		if readErr := db.Raw("SELECT pack_size FROM products WHERE barcode = ?", row.barcode).Scan(&packSize).Error; readErr != nil {
+			t.Fatalf("Failed to read the pack size of %s: %v", row.barcode, readErr)
+		}
+		if packSize != row.wantPackSize {
+			t.Errorf("pack size of %s = %q, want %q", row.barcode, packSize, row.wantPackSize)
+		}
+		var minStock int
+		if readErr := db.Raw("SELECT min_stock_amount FROM products WHERE barcode = ?", row.barcode).Scan(&minStock).Error; readErr != nil {
+			t.Fatalf("Failed to read the minimum stock of %s: %v", row.barcode, readErr)
+		}
+		if minStock != row.wantMinStock {
+			t.Errorf("minimum stock of %s = %d, want %d", row.barcode, minStock, row.wantMinStock)
+		}
+	}
+
+	// A second conversion must not change anything: a row that already carries
+	// a pack size is left alone.
+	if convertErr := ConvertProductAmountsToQuantities(&logger, db); convertErr != nil {
+		t.Fatalf("ConvertProductAmountsToQuantities() second run error = %v", convertErr)
+	}
+	for _, row := range seed {
+		var count int
+		if readErr := db.Raw("SELECT quantity FROM products WHERE barcode = ?", row.barcode).Scan(&count).Error; readErr != nil {
+			t.Fatalf("Failed to read the count of %s: %v", row.barcode, readErr)
+		}
+		if count != row.wantCount {
+			t.Errorf("count of %s after the second run = %d, want %d", row.barcode, count, row.wantCount)
+		}
+		var packSize string
+		if readErr := db.Raw("SELECT pack_size FROM products WHERE barcode = ?", row.barcode).Scan(&packSize).Error; readErr != nil {
+			t.Fatalf("Failed to read the pack size of %s: %v", row.barcode, readErr)
+		}
+		if packSize != row.wantPackSize {
+			t.Errorf("pack size of %s after the second run = %q, want %q", row.barcode, packSize, row.wantPackSize)
+		}
+	}
+
+	// The columns the count model replaced are dropped afterwards, and the
+	// drop is idempotent: a database that never had them is left alone.
+	if dropErr := DropUnitColumns(&logger, db); dropErr != nil {
+		t.Fatalf("DropUnitColumns() error = %v", dropErr)
+	}
+	for _, column := range []string{"amount", "unit"} {
+		if db.Migrator().HasColumn(&database.Product{}, column) {
+			t.Errorf("products.%s was not dropped", column)
+		}
+	}
+	if !db.Migrator().HasColumn(&database.Product{}, "pack_size") {
+		t.Error("products.pack_size was dropped but carries the pack size")
+	}
+	if dropErr := DropUnitColumns(&logger, db); dropErr != nil {
+		t.Fatalf("DropUnitColumns() second run error = %v", dropErr)
+	}
+}
+
+// TestRunBreakingDatabaseMigrationsOnALegacyDatabase runs the whole chain on a
+// database that still carries the columns the count model replaced, and pins
+// the state it leaves behind: the product holds a pack count and a pack size,
+// the recipe ingredient holds a portion, and the old columns are gone.
+func TestRunBreakingDatabaseMigrationsOnALegacyDatabase(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	if err := testutil.MigrateAllModels(db); err != nil {
+		t.Fatalf("Failed to migrate database: %v", err)
+	}
+	for _, column := range []string{"amount INTEGER", "unit TEXT"} {
+		if execErr := db.Exec("ALTER TABLE products ADD COLUMN " + column).Error; execErr != nil {
+			t.Fatalf("Failed to add the legacy product column %s: %v", column, execErr)
+		}
+		if execErr := db.Exec("ALTER TABLE recipe_ingredients ADD COLUMN " + column).Error; execErr != nil {
+			t.Fatalf("Failed to add the legacy ingredient column %s: %v", column, execErr)
+		}
+	}
+
+	now := time.Now()
+	seed := db.Exec(
+		"INSERT INTO products (created_at, updated_at, barcode, product_name, household_id, user_id, amount, unit, min_stock_amount, quantity) VALUES (?, ?, '3000000000001', 'Flour', 1, 1, 1000, 'g', 0, 0)",
+		now, now)
+	if seed.Error != nil {
+		t.Fatalf("Failed to seed the legacy product: %v", seed.Error)
+	}
+	ingredient := db.Exec(
+		"INSERT INTO recipe_ingredients (created_at, updated_at, recipe_id, name, amount, unit, portion) VALUES (?, ?, 1, 'Flour', 250, 'g', '')",
+		now, now)
+	if ingredient.Error != nil {
+		t.Fatalf("Failed to seed the legacy ingredient: %v", ingredient.Error)
+	}
+
+	logger := zerolog.Nop()
+	if migrateErr := RunBreakingDatabaseMigrations(&logger, db); migrateErr != nil {
+		t.Fatalf("RunBreakingDatabaseMigrations() error = %v", migrateErr)
+	}
+
+	var quantity int
+	var packSize string
+	if readErr := db.Raw("SELECT quantity, pack_size FROM products WHERE barcode = ?", "3000000000001").Row().Scan(&quantity, &packSize); readErr != nil {
+		t.Fatalf("Failed to read the converted product: %v", readErr)
+	}
+	if quantity != 1 {
+		t.Errorf("count = %d, want 1", quantity)
+	}
+	if packSize != "1000 g" {
+		t.Errorf("pack size = %q, want %q", packSize, "1000 g")
+	}
+
+	var portion string
+	if readErr := db.Raw("SELECT portion FROM recipe_ingredients WHERE name = ?", "Flour").Row().Scan(&portion); readErr != nil {
+		t.Fatalf("Failed to read the converted ingredient: %v", readErr)
+	}
+	if portion != "250 g" {
+		t.Errorf("portion = %q, want %q", portion, "250 g")
+	}
+
+	for _, column := range []string{"amount", "unit"} {
+		if db.Migrator().HasColumn(&database.Product{}, column) {
+			t.Errorf("products.%s was not dropped", column)
+		}
+		if db.Migrator().HasColumn(&database.RecipeIngredient{}, column) {
+			t.Errorf("recipe_ingredients.%s was not dropped", column)
+		}
+	}
+}
+
+// TestConvertRecipeIngredientsToPortions pins the conversion of the amount and
+// the unit of a recipe ingredient into a single free-text portion.
+func TestConvertRecipeIngredientsToPortions(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	if err := testutil.MigrateAllModels(db); err != nil {
+		t.Fatalf("Failed to migrate database: %v", err)
+	}
+	// The columns the portion replaced are recreated so the conversion has
+	// something to read.
+	for _, column := range []string{"amount INTEGER", "unit TEXT"} {
+		if execErr := db.Exec("ALTER TABLE recipe_ingredients ADD COLUMN " + column).Error; execErr != nil {
+			t.Fatalf("Failed to add the legacy column %s: %v", column, execErr)
+		}
+	}
+
+	seed := []struct {
+		name        string
+		amount      int
+		unit        string
+		wantPortion string
+	}{
+		{name: "Flour", amount: 250, unit: "g", wantPortion: "250 g"},
+		{name: "Eggs", amount: 2, unit: "pcs", wantPortion: "2 pcs"},
+		{name: "Salt", amount: 1, unit: "", wantPortion: "1"},
+		{name: "Pepper", amount: 0, unit: "pinch", wantPortion: "pinch"},
+	}
+	now := time.Now()
+	for i, row := range seed {
+		insert := db.Exec(
+			"INSERT INTO recipe_ingredients (created_at, updated_at, recipe_id, name, amount, unit, portion) VALUES (?, ?, 1, ?, ?, ?, '')",
+			now, now, row.name, row.amount, row.unit)
+		if insert.Error != nil {
+			t.Fatalf("Failed to seed ingredient %s: %v", row.name, insert.Error)
+		}
+		_ = i
+	}
+
+	logger := zerolog.Nop()
+	if convertErr := ConvertRecipeIngredientsToPortions(&logger, db); convertErr != nil {
+		t.Fatalf("ConvertRecipeIngredientsToPortions() error = %v", convertErr)
+	}
+
+	for _, row := range seed {
+		var portion string
+		if readErr := db.Raw("SELECT portion FROM recipe_ingredients WHERE name = ?", row.name).Scan(&portion).Error; readErr != nil {
+			t.Fatalf("Failed to read the portion of %s: %v", row.name, readErr)
+		}
+		if portion != row.wantPortion {
+			t.Errorf("portion of %s = %q, want %q", row.name, portion, row.wantPortion)
+		}
+	}
+
+	// A second conversion must not change anything: a row that already carries
+	// a portion is left alone.
+	if convertErr := ConvertRecipeIngredientsToPortions(&logger, db); convertErr != nil {
+		t.Fatalf("ConvertRecipeIngredientsToPortions() second run error = %v", convertErr)
+	}
+	for _, row := range seed {
+		var portion string
+		if readErr := db.Raw("SELECT portion FROM recipe_ingredients WHERE name = ?", row.name).Scan(&portion).Error; readErr != nil {
+			t.Fatalf("Failed to read the portion of %s: %v", row.name, readErr)
+		}
+		if portion != row.wantPortion {
+			t.Errorf("portion of %s after the second run = %q, want %q", row.name, portion, row.wantPortion)
+		}
+	}
+
+	// The columns the portion replaced are dropped afterwards, and the drop is
+	// idempotent.
+	if dropErr := DropUnitColumns(&logger, db); dropErr != nil {
+		t.Fatalf("DropUnitColumns() error = %v", dropErr)
+	}
+	for _, column := range []string{"amount", "unit"} {
+		if db.Migrator().HasColumn(&database.RecipeIngredient{}, column) {
+			t.Errorf("recipe_ingredients.%s was not dropped", column)
+		}
+	}
+	if !db.Migrator().HasColumn(&database.RecipeIngredient{}, "portion") {
+		t.Error("recipe_ingredients.portion was dropped but carries the portion")
+	}
+	if dropErr := DropUnitColumns(&logger, db); dropErr != nil {
+		t.Fatalf("DropUnitColumns() second run error = %v", dropErr)
+	}
+}
+
+// A row that predates the amount column holds NULL there. The migration that
+// preceded the count model gave such a row the default of one, so the
+// conversion has to read it as one too: a measured row keeps its unit as the
+// size of its pack instead of losing it.
+func TestConvertProductAmountsToQuantitiesReadsANullAmountAsOne(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	if err := testutil.MigrateAllModels(db); err != nil {
+		t.Fatalf("Failed to migrate database: %v", err)
+	}
+	for _, column := range []string{"amount INTEGER", "unit TEXT"} {
+		if execErr := db.Exec("ALTER TABLE products ADD COLUMN " + column).Error; execErr != nil {
+			t.Fatalf("Failed to add the legacy column %s: %v", column, execErr)
+		}
+	}
+
+	now := time.Now()
+	insert := db.Exec(
+		"INSERT INTO products (created_at, updated_at, barcode, product_name, household_id, user_id, amount, unit, min_stock_amount, quantity) VALUES (?, ?, ?, ?, 1, 1, NULL, ?, 0, 0)",
+		now, now, "2000000000009", "legacy", "g")
+	if insert.Error != nil {
+		t.Fatalf("Failed to seed product: %v", insert.Error)
+	}
+
+	logger := zerolog.Nop()
+	if convertErr := ConvertProductAmountsToQuantities(&logger, db); convertErr != nil {
+		t.Fatalf("ConvertProductAmountsToQuantities() error = %v", convertErr)
+	}
+
+	var count int
+	if readErr := db.Raw("SELECT quantity FROM products WHERE barcode = ?", "2000000000009").Scan(&count).Error; readErr != nil {
+		t.Fatalf("Failed to read the count: %v", readErr)
+	}
+	if count != 1 {
+		t.Errorf("count = %d, want 1", count)
+	}
+	var packSize string
+	if readErr := db.Raw("SELECT pack_size FROM products WHERE barcode = ?", "2000000000009").Scan(&packSize).Error; readErr != nil {
+		t.Fatalf("Failed to read the pack size: %v", readErr)
+	}
+	if packSize != "1 g" {
+		t.Errorf("pack size = %q, want 1 g (the unit is kept)", packSize)
+	}
+}

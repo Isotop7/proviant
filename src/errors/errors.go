@@ -55,8 +55,17 @@ var (
 	// ErrUnsupportedLanguage is thrown when a language has no message catalog
 	ErrUnsupportedLanguage = errors.New("unsupported language")
 
-	// ErrInvalidUnitSystem is thrown when a household unit system is not '', 'metric' or 'imperial'
-	ErrInvalidUnitSystem = errors.New("unitSystem must be '', 'metric' or 'imperial'")
+	// ErrInvalidProductQuantity is thrown when a product is patched with a pack
+	// count of zero: a product always holds at least one pack.
+	ErrInvalidProductQuantity = errors.New("quantity must be at least 1")
+
+	// ErrProductQuantityTooLarge is thrown when a product is patched with a
+	// pack count above util.MaxProductQuantity.
+	ErrProductQuantityTooLarge = errors.New("quantity is above the maximum pack count")
+
+	// ErrProductQuantityDeltaOutOfRange is thrown when a quantity delta is
+	// larger than the range a pack count may span.
+	ErrProductQuantityDeltaOutOfRange = errors.New("quantity delta is out of range")
 
 	// ErrInvalidUserIDWrapper is used to interpolate a invalid user id
 	ErrInvalidUserIDWrapper            = "User with id '%d' not found"
@@ -603,6 +612,11 @@ var (
 
 	// ErrImportNoBarcodeColumn is thrown when the CSV header has no barcode column
 	ErrImportNoBarcodeColumn = errors.New("CSV header must contain a barcode column")
+
+	// ErrImportLegacyFormat is thrown when the CSV carries the pre-count-model
+	// headers, whose quantity column held a net content instead of a count of
+	// packs.
+	ErrImportLegacyFormat = errors.New("this file was written before products were counted in packs — re-export it, or use 'quantity' for the number of packs and 'pack_size' for the size of one pack")
 
 	// ErrImportTooManyRows is thrown when the CSV exceeds util.CsvImportMaxRows
 	ErrImportTooManyRows = errors.New("CSV contains too many rows")

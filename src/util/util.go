@@ -24,7 +24,6 @@ const (
 	ContextKeyCSRFToken              = "csrfToken"
 	ContextKeyHouseholdID            = "householdID"
 	ContextKeyLanguage               = "language"
-	ContextKeyUnitSystem             = "unitSystem"
 
 	// Database query wrappers
 	QueryId                     = "id = ?"
@@ -72,10 +71,12 @@ const (
 
 	// CSV import column names. The canonical set mirrors the export header
 	// (see api/v1/export.go) so export → import round-trips by construction.
+	// The quantity column counts the packs of a product and the pack_size
+	// column states the size of one pack.
 	CsvColumnName            = "name"
 	CsvColumnBarcode         = "barcode"
 	CsvColumnQuantity        = "quantity"
-	CsvColumnUnit            = "unit"
+	CsvColumnPackSize        = "pack_size"
 	CsvColumnCategory        = "category"
 	CsvColumnStorageLocation = "storage_location"
 	CsvColumnExpiryDate      = "expiry_date"
@@ -191,9 +192,16 @@ const (
 	// a bulk-created product. Receipt scans emit short comma lists; the cap
 	// exists so a direct API client cannot push an unbounded string to the DB.
 	ReceiptItemMaxCategoriesLength = 100
-	ReceiptItemMaxUnitLength       = 20
-	ReceiptItemMaxAmount           = 999
 	ReceiptItemMaxPrice            = 100000.0
+
+	// MinProductQuantity is the smallest pack count a product may hold: a
+	// product always holds at least one pack.
+	MinProductQuantity = 1
+	// MaxProductQuantity bounds the pack count of a product, on every path
+	// that writes one: a create, a patch, a bulk create and a receipt scan
+	// all read the same bound, so a count cannot enter the database from one
+	// path that another path would have refused.
+	MaxProductQuantity = 999
 
 	// OfflineSyncIDMaxLength bounds both the client sync id that makes a queued
 	// create idempotent and the client mutation id that makes a queued amount
@@ -318,20 +326,27 @@ const (
 	OffDumpStateFullImportETag         = "full_import_etag"
 	OffDumpStateFullImportLastModified = "full_import_last_modified"
 	OffDumpStateFullImportRecords      = "full_import_records"
+
+	// CountModelCutover names the cutover to the count model, the change that
+	// replaced the amount and the unit of a product by a count of packs. It
+	// marks the savings records written before that change.
+	CountModelCutover = "count_model"
 )
 
 // CsvImportColumnAliases maps an accepted alternative column header to its
-// canonical name. The issue's proposed column list used `amount`,
-// `product_name` and `categories`; rather than a second contract, those become
-// aliases of the export header's names. `added_at` is listed so it is
-// recognised (and then ignored — GORM owns CreatedAt) instead of silently
-// treated as an unknown column.
+// canonical name. The issue's proposed column list used `product_name` and
+// `categories`; rather than a second contract, those become aliases of the
+// export header's names. `added_at` is listed so it is recognised (and then
+// ignored — GORM owns CreatedAt) instead of silently treated as an unknown
+// column. A header of the pre-count-model format is not aliased: it is
+// rejected by the importer, because its quantity column held a net content
+// and would land as a pack count.
 var CsvImportColumnAliases = map[string]string{
 	"product_name":           CsvColumnName,
 	CsvColumnName:            CsvColumnName,
-	"amount":                 CsvColumnQuantity,
 	CsvColumnQuantity:        CsvColumnQuantity,
-	CsvColumnUnit:            CsvColumnUnit,
+	CsvColumnPackSize:        CsvColumnPackSize,
+	"packsize":               CsvColumnPackSize,
 	"categories":             CsvColumnCategory,
 	CsvColumnCategory:        CsvColumnCategory,
 	"location":               CsvColumnStorageLocation,
@@ -343,6 +358,12 @@ var CsvImportColumnAliases = map[string]string{
 	CsvColumnBarcode:         CsvColumnBarcode,
 	CsvColumnAddedAt:         CsvColumnAddedAt,
 }
+
+// CsvLegacyColumnHeaders are the headers of a file written before products
+// were counted in packs. Such a file states a net content where the current
+// format states a pack count, so the importer refuses it instead of reading a
+// net content of 500 as 500 packs.
+var CsvLegacyColumnHeaders = []string{"unit", "amount"}
 
 // OffDumpSQLiteFilename resolves the SQLite dump store for a configured
 // dumpDatabase. A bare name lives beside the main database as data/<name>.db;

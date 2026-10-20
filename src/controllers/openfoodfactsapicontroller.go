@@ -16,6 +16,7 @@ import (
 	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/models/external"
+	"github.com/Isotop7/proviant/util"
 	"github.com/rs/zerolog"
 )
 
@@ -136,6 +137,7 @@ func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (dat
 				Categories:  dataset.Product.Categories,
 				Countries:   dataset.Product.Countries,
 				ImageURL:    dataset.Product.ImageURL,
+				PackSize:    util.PackSizeLabel(dataset.Product.Quantity),
 				CO2KgPerKg:  co2,
 				StorageHint: dataset.Product.ConservationConditions,
 			}, nil

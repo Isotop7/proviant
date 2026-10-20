@@ -956,6 +956,7 @@ func offDumpProductToProduct(product *external.OpenFoodFactsDumpProduct) databas
 		Categories:  product.Categories,
 		Countries:   product.Countries,
 		ImageURL:    product.ImageURL,
+		PackSize:    util.PackSizeLabel(product.Quantity),
 		CO2KgPerKg:  co2,
 		StorageHint: product.ConservationConditions,
 	}

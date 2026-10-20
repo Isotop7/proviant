@@ -262,11 +262,9 @@ func TestProductsHandlerOmitsPagerOnASinglePage(t *testing.T) {
 }
 
 // TestProductsHandlerShowsOnePackageForMeasuredProducts pins the package display
-// on the list view: a mass or volume row is one package, so it leads with
-// "1 qty" and shows its net contents as secondary text. A single count item is
-// one package too, so it reads "1 qty" while keeping its stepper; a multi-count
-// row keeps its unit.
-func TestProductsHandlerShowsOnePackageForMeasuredProducts(t *testing.T) {
+// on the list view: every row shows the pack count the same way, and the pack
+// size stays out of the list.
+func TestProductsHandlerShowsThePackCount(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := testutil.SetupTestDB(t)
@@ -275,24 +273,22 @@ func TestProductsHandlerShowsOnePackageForMeasuredProducts(t *testing.T) {
 
 	pasta := testutil.CreateTestProduct(db, household.ID, user.ID)
 	pasta.ProductName = "Pasta"
-	pasta.Amount = 500
-	pasta.Unit = "g"
+	pasta.Quantity = 2
+	pasta.PackSize = "500 g"
 	if err := db.Save(pasta).Error; err != nil {
 		t.Fatalf("failed to save product: %v", err)
 	}
 
 	eggs := testutil.CreateTestProduct(db, household.ID, user.ID)
 	eggs.ProductName = "Eggs"
-	eggs.Amount = 6
-	eggs.Unit = "pcs"
+	eggs.Quantity = 6
 	if err := db.Save(eggs).Error; err != nil {
 		t.Fatalf("failed to save product: %v", err)
 	}
 
 	yogurt := testutil.CreateTestProduct(db, household.ID, user.ID)
 	yogurt.ProductName = "Yogurt"
-	yogurt.Amount = 1
-	yogurt.Unit = "pcs"
+	yogurt.Quantity = 1
 	if err := db.Save(yogurt).Error; err != nil {
 		t.Fatalf("failed to save product: %v", err)
 	}
@@ -313,27 +309,26 @@ func TestProductsHandlerShowsOnePackageForMeasuredProducts(t *testing.T) {
 		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	if got := elementText(t, body, `class="unit-count"`); got != "1 qty" {
-		t.Errorf("measured row count = %q, want %q", got, "1 qty")
+	if got := elementText(t, body, `id="qty-`+fmtUint(pasta.ID)+`"`); got != "2 qty" {
+		t.Errorf("row = %q, want %q", got, "2 qty")
 	}
-	if got := elementText(t, body, `class="unit-secondary"`); got != "500 g" {
-		t.Errorf("measured row net contents = %q, want %q", got, "500 g")
-	}
-	if strings.Contains(body, `id="qty-`+fmtUint(pasta.ID)+`"`) {
-		t.Errorf("measured product still exposes a quantity stepper")
-	}
-	if got := elementText(t, body, `id="qty-`+fmtUint(eggs.ID)+`"`); got != "6 pcs" {
-		t.Errorf("multi count row = %q, want %q", got, "6 pcs")
+	if got := elementText(t, body, `id="qty-`+fmtUint(eggs.ID)+`"`); got != "6 qty" {
+		t.Errorf("multi count row = %q, want %q", got, "6 qty")
 	}
 	if got := elementText(t, body, `id="qty-`+fmtUint(yogurt.ID)+`"`); got != "1 qty" {
 		t.Errorf("single count row = %q, want %q", got, "1 qty")
 	}
+	// The pack size is the only size information a product carries, so the
+	// list shows it next to the count.
+	if !strings.Contains(body, "500 g") {
+		t.Errorf("list view does not show the pack size")
+	}
 }
 
 // The grid card is invoked with the product as its root, so it cannot read the
-// page's unit system or language; render it to pin that the handler-computed
-// package label reaches the card.
-func TestProductsGridShowsOnePackageForMeasuredProducts(t *testing.T) {
+// page's language; render it to pin that the handler-computed count label
+// reaches the card.
+func TestProductsGridShowsThePackCount(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := testutil.SetupTestDB(t)
@@ -342,16 +337,15 @@ func TestProductsGridShowsOnePackageForMeasuredProducts(t *testing.T) {
 
 	pasta := testutil.CreateTestProduct(db, household.ID, user.ID)
 	pasta.ProductName = "Pasta"
-	pasta.Amount = 500
-	pasta.Unit = "g"
+	pasta.Quantity = 2
+	pasta.PackSize = "500 g"
 	if err := db.Save(pasta).Error; err != nil {
 		t.Fatalf("failed to save product: %v", err)
 	}
 
 	yogurt := testutil.CreateTestProduct(db, household.ID, user.ID)
 	yogurt.ProductName = "Yogurt"
-	yogurt.Amount = 1
-	yogurt.Unit = "pcs"
+	yogurt.Quantity = 1
 	if err := db.Save(yogurt).Error; err != nil {
 		t.Fatalf("failed to save product: %v", err)
 	}
@@ -372,14 +366,16 @@ func TestProductsGridShowsOnePackageForMeasuredProducts(t *testing.T) {
 		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	if strings.Contains(body, `id="amount-`+fmtUint(pasta.ID)+`"`) {
-		t.Errorf("measured card still exposes a quantity stepper")
+	if got := elementText(t, body, `id="qty-`+fmtUint(pasta.ID)+`"`); got != "2 qty" {
+		t.Errorf("card = %q, want %q", got, "2 qty")
 	}
-	if got := elementText(t, body, `class="unit-count"`); got != "1 qty" {
-		t.Errorf("measured card count = %q, want %q", got, "1 qty")
+	if got := elementText(t, body, `id="qty-`+fmtUint(yogurt.ID)+`"`); got != "1 qty" {
+		t.Errorf("card = %q, want %q", got, "1 qty")
 	}
-	if got := elementText(t, body, `id="amount-`+fmtUint(yogurt.ID)+`"`); got != "1 qty" {
-		t.Errorf("single count card = %q, want %q", got, "1 qty")
+	// The pack size is the only size information a product carries, so the
+	// card shows it next to the count.
+	if !strings.Contains(body, "500 g") {
+		t.Errorf("grid view does not show the pack size")
 	}
 }
 

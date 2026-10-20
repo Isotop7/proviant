@@ -205,10 +205,10 @@ func TestProductRepository_GetWasteThisMonth(t *testing.T) {
 	}
 
 	// Consumed this month: not waste.
-	testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "1111111111111", "Consumed", "pcs", 1, now)
+	testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "1111111111111", "Consumed", 1, now)
 
 	// Wasted but deleted last month: not this month.
-	testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "2222222222222", "OldWaste", "pcs", 1, monthStart.Add(-time.Hour))
+	testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "2222222222222", "OldWaste", 1, monthStart.Add(-time.Hour))
 	var oldWaste dbModel.Product
 	if err := db.Unscoped().Where("barcode = ?", "2222222222222").First(&oldWaste).Error; err != nil {
 		t.Fatalf("reload old waste: %v", err)
@@ -355,26 +355,26 @@ func TestProductRepository_GetSubThresholdProducts(t *testing.T) {
 	owner := testutil.CreateTestUser(db, household.ID)
 
 	below := testutil.CreateTestProduct(db, household.ID, user.ID)
-	below.Amount = 1
+	below.Quantity = 1
 	below.MinStockAmount = 5
 	if err := db.Save(below).Error; err != nil {
 		t.Fatalf("save product: %v", err)
 	}
 	atThreshold := testutil.CreateTestProduct(db, household.ID, user.ID)
-	atThreshold.Amount = 5
+	atThreshold.Quantity = 5
 	atThreshold.MinStockAmount = 5
 	if err := db.Save(atThreshold).Error; err != nil {
 		t.Fatalf("save product: %v", err)
 	}
 	noThreshold := testutil.CreateTestProduct(db, household.ID, user.ID)
-	noThreshold.Amount = 0
+	noThreshold.Quantity = 0
 	noThreshold.MinStockAmount = 0
 	if err := db.Save(noThreshold).Error; err != nil {
 		t.Fatalf("save product: %v", err)
 	}
 	privateBelow := testutil.CreateTestProduct(db, household.ID, owner.ID)
 	privateBelow.IsPrivate = true
-	privateBelow.Amount = 1
+	privateBelow.Quantity = 1
 	privateBelow.MinStockAmount = 5
 	if err := db.Save(privateBelow).Error; err != nil {
 		t.Fatalf("save product: %v", err)

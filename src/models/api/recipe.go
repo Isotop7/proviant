@@ -25,11 +25,13 @@ type RecipeSuggestionResponse struct {
 }
 
 // RecipeIngredientInput is one ingredient row of a recipe create/update request.
+// The portion is the amount the recipe calls for, as free text ("200 g"), and
+// is display metadata: cooking a recipe consumes a pack of every product it
+// links, so it never decides what leaves the stock.
 type RecipeIngredientInput struct {
 	ProductID *uint  `json:"productId"`
 	Name      string `json:"name" binding:"required,max=255"`
-	Amount    int    `json:"amount" binding:"min=0"`
-	Unit      string `json:"unit" binding:"max=20"`
+	Portion   string `json:"portion" binding:"max=40"`
 	SortOrder int    `json:"sortOrder"`
 }
 
@@ -38,8 +40,7 @@ type RecipeIngredientResponse struct {
 	ID        uint   `json:"id"`
 	ProductID *uint  `json:"productId"`
 	Name      string `json:"name"`
-	Amount    int    `json:"amount"`
-	Unit      string `json:"unit"`
+	Portion   string `json:"portion"`
 	SortOrder int    `json:"sortOrder"`
 }
 
@@ -66,7 +67,10 @@ type UpdateRecipeRequest struct {
 }
 
 // CookRecipeRequest is the request body for POST /api/v1/recipes/{id}/cook.
-// Servings scales the recipe amounts; zero cooks the recipe's own serving count.
+// Servings states how many people the dish is cooked for. The stock is
+// counted in packs, so the requested servings scale the pack count: a cook
+// for twice the recipe's own servings takes two packs of every product the
+// recipe links.
 type CookRecipeRequest struct {
 	Servings int `json:"servings" binding:"min=0"`
 }
@@ -105,8 +109,7 @@ func NewRecipeResponse(recipe *dbModel.Recipe) RecipeResponse {
 			ID:        recipe.Ingredients[i].ID,
 			ProductID: recipe.Ingredients[i].ProductID,
 			Name:      recipe.Ingredients[i].Name,
-			Amount:    recipe.Ingredients[i].Amount,
-			Unit:      recipe.Ingredients[i].Unit,
+			Portion:   recipe.Ingredients[i].Portion,
 			SortOrder: recipe.Ingredients[i].SortOrder,
 		}
 	}

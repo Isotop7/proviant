@@ -107,7 +107,9 @@ type ProductRepositoryInterface interface {
 	GetProductBySyncID(userID uint, clientSyncID string) (database.Product, error)
 	CreateProductsBulk(userID uint, rows []ImportedProduct) ([]string, error)
 	UpdateProduct(productID uint, userID uint, product *database.ProductDTOPatch) error
-	UpdateProductAmount(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error)
+	UpdateProductQuantity(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error)
+	ListProductsWithoutPackSize(afterID uint, limit int) ([]database.Product, error)
+	SetProductPackSize(productID uint, packSize string) error
 	DeleteProduct(productID uint, userID uint, archiveOnly bool) error
 	RestoreProduct(productID, userID uint) error
 	BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -146,7 +148,7 @@ type ProductRepositoryInterface interface {
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
 	GetSubThresholdProducts(userID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
-	ConsumeProductPartial(product *database.Product, amount int) (int, bool, error)
+	ConsumeProductPartial(product *database.Product, quantity int) (int, bool, error)
 	WasteProduct(productID, userID uint) error
 	MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -488,7 +490,7 @@ func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Pro
 }
 
 // GetProductIdentity returns a product's identity (household + barcode +
-// name + amount + unit + min stock + private flag + owner) without the
+// name + pack count + min stock + private flag + owner) without the
 // StorageLocation preload. It exists for hot read paths that only need
 // those fields and would otherwise pay for a useless JOIN.
 func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database.Product, error) {
@@ -498,7 +500,7 @@ func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database
 
 	var product database.Product
 	getError := r.DB.Select(
-		"id, barcode, product_name, household_id, user_id, is_private, amount, unit, min_stock_amount",
+		"id, barcode, product_name, household_id, user_id, is_private, quantity, min_stock_amount",
 	).First(&product, productID)
 	if getError.Error != nil {
 		return database.Product{}, getError.Error
@@ -517,6 +519,35 @@ func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database
 		return database.Product{}, errors.ErrMismatcherUserID
 	}
 	return product, nil
+}
+
+// ListProductsWithoutPackSize returns the active products that have a barcode
+// but no pack size yet, starting after the given id. The backfill walks the
+// table with that cursor so a barcode the data source does not know cannot
+// hold the queue in place: the rows it cannot resolve are retried only after
+// a full pass.
+func (r *ProductRepository) ListProductsWithoutPackSize(afterID uint, limit int) ([]database.Product, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	var products []database.Product
+	result := r.DB.Select("id, barcode").
+		Where("(pack_size IS NULL OR pack_size = '') AND barcode <> ''").
+		Where("id > ?", afterID).
+		Where(util.WhereDeletedIsNull).
+		Order("id").
+		Limit(limit).
+		Find(&products)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return products, nil
+}
+
+// SetProductPackSize stores the size of one pack of a product.
+func (r *ProductRepository) SetProductPackSize(productID uint, packSize string) error {
+	return r.DB.Model(&database.Product{}).Where("id = ?", productID).
+		Update("pack_size", util.PackSizeLabel(packSize)).Error
 }
 
 // GetArchivedProductByID returns the product behind productID together with
@@ -684,6 +715,11 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 
 	product.HouseholdID = user.HouseholdID
 	product.UserID = userID
+	// The pack size is free text that several write paths fill, so it is
+	// normalised in one place: every path stores the same collapsed, capped
+	// label.
+	product.PackSize = util.PackSizeLabel(product.PackSize)
+	product.Quantity = util.ClampProductQuantity(product.Quantity)
 	createErr := r.DB.Create(&product)
 	return createErr.Error
 }
@@ -751,6 +787,8 @@ func (r *ProductRepository) CreateProductsBulk(userID uint, rows []ImportedProdu
 		for i := range rows {
 			rows[i].Product.HouseholdID = user.HouseholdID
 			rows[i].Product.UserID = userID
+			rows[i].Product.PackSize = util.PackSizeLabel(rows[i].Product.PackSize)
+			rows[i].Product.Quantity = util.ClampProductQuantity(rows[i].Product.Quantity)
 			products[i] = rows[i].Product
 			if locationID, ok := createdIDs[strings.ToLower(rows[i].NewLocationName)]; ok {
 				products[i].StorageLocationID = &locationID
@@ -843,20 +881,48 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 		dbProduct.UserID = userID
 	}
 
-	dbProduct.ProductName = product.ProductName
-	dbProduct.Categories = product.Categories
-	dbProduct.Countries = product.Countries
-	dbProduct.ImageURL = product.ImageURL
-	dbProduct.ExpireAt = product.ExpireAt
-	dbProduct.Amount = product.Amount
-	dbProduct.Unit = product.Unit
-	dbProduct.StorageLocationID = product.StorageLocationID
-	dbProduct.NotificationLeadDays = product.NotificationLeadDays
-	dbProduct.MinStockAmount = product.MinStockAmount
-	dbProduct.IsPrivate = product.IsPrivate
-	dbProduct.PriceOverride = product.PriceOverride
-	dbProduct.OpenedAt = product.OpenedAt
-	dbProduct.DaysAfterOpening = product.DaysAfterOpening
+	if product.Has("productName") {
+		dbProduct.ProductName = product.ProductName
+	}
+	if product.Has("categories") {
+		dbProduct.Categories = product.Categories
+	}
+	if product.Has("countries") {
+		dbProduct.Countries = product.Countries
+	}
+	if product.Has("imageUrl") {
+		dbProduct.ImageURL = product.ImageURL
+	}
+	if product.Has("expireAt") {
+		dbProduct.ExpireAt = product.ExpireAt
+	}
+	if product.Has("quantity") {
+		dbProduct.Quantity = product.Quantity
+	}
+	if product.Has("packSize") {
+		dbProduct.PackSize = util.PackSizeLabel(product.PackSize)
+	}
+	if product.Has("storageLocationId") {
+		dbProduct.StorageLocationID = product.StorageLocationID
+	}
+	if product.Has("notificationLeadDays") {
+		dbProduct.NotificationLeadDays = product.NotificationLeadDays
+	}
+	if product.Has("minStockAmount") {
+		dbProduct.MinStockAmount = product.MinStockAmount
+	}
+	if product.Has("isPrivate") {
+		dbProduct.IsPrivate = product.IsPrivate
+	}
+	if product.Has("priceOverride") {
+		dbProduct.PriceOverride = product.PriceOverride
+	}
+	if product.Has("openedAt") {
+		dbProduct.OpenedAt = product.OpenedAt
+	}
+	if product.Has("daysAfterOpening") {
+		dbProduct.DaysAfterOpening = product.DaysAfterOpening
+	}
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error
@@ -892,18 +958,20 @@ var errMutationAlreadyClaimed = stderrors.New("client mutation id already applie
 // it swallows a duplicate, and treating that as a replay would drop a real delta.
 var errMutationClaimRefused = stderrors.New("client mutation id was not claimable and no claim exists")
 
-// UpdateProductAmount applies delta to the product and reports it as
+// UpdateProductQuantity applies delta to the product and reports it as
 // (deleted, applied, err). applied is false when the mutation id was already
 // applied, so callers can skip side effects a replay must not repeat twice.
 // Claims outlive this call and expire through the claim sweep in proviant.go,
 // which is the only thing that bounds the table: pruning per product here would
 // never run for a product whose last mutation was its only claim.
-func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error) {
+// The count stays inside the range a product may hold: the delta is clamped
+// there, so no path can write a count the create and the patch would refuse.
+func (r *ProductRepository) UpdateProductQuantity(productID uint, userID uint, delta int, mutationID *string) (bool, applied bool, err error) {
 	if productID == 0 {
 		return false, false, gorm.ErrNotImplemented
 	}
 
-	// One column: the amount moves through the statement below, so the row is
+	// One column: the count moves through the statement below, so the row is
 	// read here only to answer "is this the caller's product".
 	var dbProduct database.Product
 	getError := r.DB.Unscoped().Select("household_id").First(&dbProduct, productID)
@@ -925,7 +993,7 @@ func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, del
 		mutationID = nil
 	}
 
-	// The claim and the amount share one transaction: a failure between
+	// The claim and the count share one transaction: a failure between
 	// the two statements would leave the delta claimed and unapplied, and
 	// every retry of it would be deduped into silence.
 	// A conflict is only believed once the claim row behind it exists:
@@ -948,7 +1016,14 @@ func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, del
 		}
 		return tx.Unscoped().Model(&database.Product{}).Where("id = ?", productID).
 			Updates(map[string]any{
-				"amount": gorm.Expr("CASE WHEN amount + ? < 0 THEN 0 ELSE amount + ? END", delta, delta),
+				// The count stays inside the range a product may hold: a delta
+				// that would push it below zero lands on zero, one that would
+				// push it past the maximum lands on the maximum. The bounds are
+				// spelled as a CASE and not as MIN or LEAST because no scalar
+				// minimum is portable across SQLite, MySQL and PostgreSQL.
+				"quantity": gorm.Expr(
+					"CASE WHEN quantity + ? < 0 THEN 0 WHEN quantity + ? > ? THEN ? ELSE quantity + ? END",
+					delta, delta, util.MaxProductQuantity, util.MaxProductQuantity, delta),
 			}).Error
 	})
 	if stderrors.Is(moveErr, errMutationAlreadyClaimed) {
@@ -965,17 +1040,17 @@ func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, del
 		}
 		return false, false, readErr
 	}
-	if current.Amount > 0 {
+	if current.Quantity > 0 {
 		return false, true, nil
 	}
 
 	// The guard belongs in the DELETE as well as in the read above: an
 	// increment landing between that read and this statement would otherwise be
-	// lost along with the row, leaving it archived with a positive amount. Only a
+	// lost along with the row, leaving it archived with a positive count. Only a
 	// row still at zero is eligible, so a concurrent increment cancels the delete
 	// instead of being discarded.
 	deleteResult := r.DB.Unscoped().
-		Where("id = ? AND amount <= 0", productID).
+		Where("id = ? AND quantity <= 0", productID).
 		Delete(&database.Product{})
 	if deleteResult.Error != nil {
 		return true, true, deleteResult.Error
@@ -984,7 +1059,7 @@ func (r *ProductRepository) UpdateProductAmount(productID uint, userID uint, del
 		return true, true, nil
 	}
 	// The guard refused the row, which means one of two things. A concurrent
-	// increment raised the amount and the product survives. Or a concurrent call
+	// increment raised the count and the product survives. Or a concurrent call
 	// already hard-deleted the row, in which case this delta was part of the same
 	// zeroing and the product really is gone — reading back tells them apart.
 	var survivor database.Product
@@ -1915,7 +1990,7 @@ func (row *productIdentityRow) effectiveExpireAt() time.Time {
 //
 // The signature covers ProductName and Categories but deliberately not
 // updated_at. Every write bumps updated_at — quantity changes go through
-// Update("amount", ...) and Save, so scanning, cooking or editing a single
+// Update("quantity", ...) and Save, so scanning, cooking or editing a single
 // product moved it — which made the cache key change on essentially every
 // request in an actively used household and turned each one into a full
 // provider fan-out. Those writes cannot change what a recipe matched, so they
@@ -1977,7 +2052,7 @@ func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Pro
 	var products []database.Product
 	err = r.DB.Preload("StorageLocation").
 		Scopes(r.privacyScope(userID)).
-		Where("household_id = ? AND deleted_at IS NULL AND amount < min_stock_amount AND min_stock_amount > 0", householdID).
+		Where("household_id = ? AND deleted_at IS NULL AND quantity < min_stock_amount AND min_stock_amount > 0", householdID).
 		Find(&products).Error
 	if err != nil {
 		return []database.Product{}, err
@@ -2065,17 +2140,17 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 	})
 }
 
-// ConsumeProductPartial reduces an active product's amount by the given
-// amount, based on the product state read by the caller. A partial reduce
+// ConsumeProductPartial reduces an active product's pack count by the given
+// count, based on the product state read by the caller. A partial reduce
 // is a single guarded UPDATE on the still-active row scoped to the product's
-// household. A full consume (amount of 0 or negative, or one that covers the
-// whole stock) re-reads the current amount inside a transaction before
+// household. A full consume (count of 0 or negative, or one that covers the
+// whole stock) re-reads the current count inside a transaction before
 // deciding, so a stale caller read never archives more than actually exists:
-// if the concurrent reduction still leaves more than the requested amount,
+// if the concurrent reduction still leaves more than the requested count,
 // it falls back to a partial reduce, otherwise it soft-deletes with
-// RemovalReasonConsumed and returns the current amount. fullyConsumed
+// RemovalReasonConsumed and returns the current count. fullyConsumed
 // reports whether the product was archived. The guarded writes compare data
-// values only (amount, removal_reason, deleted_at) — never updated_at: a
+// values only (quantity, removal_reason, deleted_at) — never updated_at: a
 // timestamp that was not round-tripped through the GORM driver (NULL on
 // legacy rows, or text written by raw SQL) never matches the bound form and
 // fails every guarded write with ErrProductConcurrentModification. The
@@ -2086,31 +2161,31 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 // the transaction)
 // the transaction is retried once with a fresh read; only a second failure
 // surfaces ErrProductConcurrentModification instead of silently applying.
-func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amount int) (consumed int, fullyConsumed bool, err error) {
+func (r *ProductRepository) ConsumeProductPartial(product *database.Product, quantity int) (consumed int, fullyConsumed bool, err error) {
 	// Fast path: the caller's read shows enough stock for a plain reduce.
-	// The guarded UPDATE re-validates the amount, so a concurrent change
+	// The guarded UPDATE re-validates the count, so a concurrent change
 	// surfaces as ErrProductConcurrentModification.
-	if amount > 0 && amount < product.Amount {
+	if quantity > 0 && quantity < product.Quantity {
 		result := r.DB.Model(&database.Product{}).
 			Where("id = ?", product.ID).
 			Where("household_id = ?", product.HouseholdID).
 			Where(util.WhereDeletedIsNull).
 			Where(util.WhereRemovalReasonUnclaimed).
-			Where("amount > ?", amount).
-			Update("amount", gorm.Expr("amount - ?", amount))
+			Where("quantity > ?", quantity).
+			Update("quantity", gorm.Expr("quantity - ?", quantity))
 		if result.Error != nil {
 			return 0, false, result.Error
 		}
 		if result.RowsAffected > 0 {
-			return amount, false, nil
+			return quantity, false, nil
 		}
 		// RowsAffected == 0 means a concurrent change dropped the stock
-		// below the requested amount. Fall through to the transactional
+		// below the requested count. Fall through to the transactional
 		// path, which re-reads and resolves full vs partial consume.
 	}
 
 	// Full-consume path: the caller's read may be stale, so re-check the
-	// current amount before deciding between full consume and partial
+	// current count before deciding between full consume and partial
 	// reduce. A guarded precondition failure rolls back and is retried
 	// once with fresh reads before giving up.
 	var txErr error
@@ -2123,24 +2198,24 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amo
 			if getErr := tx.Where("id = ? AND household_id = ?", product.ID, product.HouseholdID).First(&current).Error; getErr != nil {
 				return getErr
 			}
-			if amount > 0 && amount < current.Amount {
+			if quantity > 0 && quantity < current.Quantity {
 				result := tx.Model(&database.Product{}).
 					Where("id = ?", current.ID).
 					Where("household_id = ?", current.HouseholdID).
 					Where(util.WhereDeletedIsNull).
 					Where(util.WhereRemovalReasonUnclaimed).
-					Where("amount > ?", amount).
-					Update("amount", gorm.Expr("amount - ?", amount))
+					Where("quantity > ?", quantity).
+					Update("quantity", gorm.Expr("quantity - ?", quantity))
 				if result.Error != nil {
 					return result.Error
 				}
 				if result.RowsAffected == 0 {
 					return errors.ErrProductConcurrentModification
 				}
-				consumed = amount
+				consumed = quantity
 				return nil
 			}
-			consumed = current.Amount
+			consumed = current.Quantity
 			fullyConsumed = true
 			// The unclaimed-row precondition is the double-apply guard: only
 			// one request may claim the row, so concurrent full consumes
@@ -2150,7 +2225,7 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, amo
 				Where("household_id = ?", current.HouseholdID).
 				Where(util.WhereDeletedIsNull).
 				Where(util.WhereRemovalReasonUnclaimed).
-				Where("amount = ?", current.Amount).
+				Where("quantity = ?", current.Quantity).
 				Update("removal_reason", database.RemovalReasonConsumed)
 			if result.Error != nil {
 				return result.Error
@@ -2270,7 +2345,7 @@ func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode
 	}
 
 	query := r.DB.Unscoped().
-		Select("id, product_name, barcode, unit, amount, deleted_at, is_private, user_id, removal_reason").
+		Select("id, product_name, barcode, quantity, deleted_at, is_private, user_id, removal_reason").
 		Where(util.WhereDeletedIsNotNull).
 		Where(util.QueryHouseholdId, householdID).
 		Where("deleted_at >= ?", since).

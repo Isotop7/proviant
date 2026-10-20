@@ -16,12 +16,11 @@ const el = Object.freeze({
     instanceDropdown: document.getElementById('instanceDropdown'),
     barcodeLookupLoading: document.getElementById('barcodeLookupLoading'),
     barcodeReaderWrapper: document.getElementById('barcode-reader-wrapper'),
-    amount: document.getElementById('amount'),
-    amountDisplay: document.getElementById('amountDisplay'),
-    unit: document.getElementById('unit'),
+    quantity: document.getElementById('quantity'),
+    quantityDisplay: document.getElementById('quantityDisplay'),
     modalStorageLocation: document.getElementById('modalStorageLocation'),
-    btnAmountDec: document.getElementById('btnAmountDec'),
-    btnAmountInc: document.getElementById('btnAmountInc'),
+    btnQuantityDec: document.getElementById('btnQuantityDec'),
+    btnQuantityInc: document.getElementById('btnQuantityInc'),
     btnExpireAdd3: document.getElementById('btnExpireAdd3'),
     btnExpireAdd7: document.getElementById('btnExpireAdd7'),
     btnExpireAdd1m: document.getElementById('btnExpireAdd1m'),
@@ -32,8 +31,8 @@ const el = Object.freeze({
     batchStorageLocation: document.getElementById('batchStorageLocation'),
     batchProductName: document.getElementById('batchProductName'),
     batchProductBarcode: document.getElementById('batchProductBarcode'),
-    batchAmount: document.getElementById('batchAmount'),
-    batchAmountDisplay: document.getElementById('batchAmountDisplay'),
+    batchQuantity: document.getElementById('batchQuantity'),
+    batchQuantityDisplay: document.getElementById('batchQuantityDisplay'),
     batchExpireAt: document.getElementById('batchExpireAt'),
 });
 const html5QrCode = new Html5Qrcode('barcode-reader',
@@ -446,8 +445,8 @@ function openBatchConfirmPanel(barcode) {
     batchPendingName = '';
     if (el.batchProductName) el.batchProductName.textContent = proviant.t("js.scan.lookingUp");
     if (el.batchProductBarcode) el.batchProductBarcode.textContent = barcode;
-    if (el.batchAmount) el.batchAmount.value = 1;
-    if (el.batchAmountDisplay) el.batchAmountDisplay.textContent = '1';
+    if (el.batchQuantity) el.batchQuantity.value = 1;
+    if (el.batchQuantityDisplay) el.batchQuantityDisplay.textContent = '1';
     if (el.batchExpireAt) {
         el.batchExpireAt.value = formatInputDate(new Date());
         el.batchExpireAt.classList.remove('is-invalid');
@@ -497,7 +496,7 @@ function shiftBatchExpiry(days, months) {
 
 function handleBatchAdd() {
     if (batchSubmitting) return;
-    if (!batchAwaitingConfirm || !el.batchExpireAt || !el.batchAmount) return;
+    if (!batchAwaitingConfirm || !el.batchExpireAt || !el.batchQuantity) return;
     if (!el.batchExpireAt.value) {
         el.batchExpireAt.classList.add('is-invalid');
         return;
@@ -509,7 +508,7 @@ function handleBatchAdd() {
         barcode: batchPendingBarcode,
         productName: batchPendingName,
         expireAt: expireDate.toISOString(),
-        amount: Number.parseInt(el.batchAmount.value, 10) || 1,
+        quantity: Number.parseInt(el.batchQuantity.value, 10) || 1,
         storageLocationId: batchLocationId
     });
     saveBatchQueue();
@@ -681,19 +680,17 @@ function handleBtnAddProduct() {
         return;
     }
     const expireAt = el.inputExpireAt.valueAsDate.toISOString();
-    const amountEl = el.amount;
-    const amount = amountEl ? Number.parseInt(amountEl.value, 10) || 1 : 1;
+    const qtyEl = el.quantity;
+    const quantity = qtyEl ? Number.parseInt(qtyEl.value, 10) || 1 : 1;
     const locationEl = el.modalStorageLocation;
     const storageLocationId = locationEl && locationEl.value ? Number.parseInt(locationEl.value, 10) : null;
-    const unitEl = el.unit;
-    const unit = unitEl ? unitEl.value : '';
 
     const btn = el.btnAddProduct;
     if (!btn) return;
     btn.classList.add('loading');
     btn.disabled = true;
 
-    proviant.createProduct(barcode, expireAt, amount, storageLocationId, false, null, unit).then((response) => {
+    proviant.createProduct(barcode, expireAt, quantity, storageLocationId, false, null).then((response) => {
         btn.classList.remove('loading');
         btn.disabled = false;
         switch (response.code) {
@@ -850,10 +847,10 @@ document.addEventListener('click', function (event) {
         return;
     }
 
-    if (target.closest('#btnAmountDec')) {
+    if (target.closest('#btnQuantityDec')) {
         event.preventDefault();
-        const hiddenInput = el.amount;
-        const display = el.amountDisplay;
+        const hiddenInput = el.quantity;
+        const display = el.quantityDisplay;
         if (hiddenInput && display) {
             const newVal = Math.max(1, Number.parseInt(hiddenInput.value, 10) - 1);
             hiddenInput.value = newVal;
@@ -862,10 +859,10 @@ document.addEventListener('click', function (event) {
         return;
     }
 
-    if (target.closest('#btnAmountInc')) {
+    if (target.closest('#btnQuantityInc')) {
         event.preventDefault();
-        const hiddenInput = el.amount;
-        const display = el.amountDisplay;
+        const hiddenInput = el.quantity;
+        const display = el.quantityDisplay;
         if (hiddenInput && display) {
             const newVal = Number.parseInt(hiddenInput.value, 10) + 1;
             hiddenInput.value = newVal;
@@ -911,10 +908,10 @@ document.addEventListener('click', function (event) {
         return;
     }
 
-    if (target.closest('#btnBatchAmountDec')) {
+    if (target.closest('#btnBatchQuantityDec')) {
         event.preventDefault();
-        const hiddenInput = el.batchAmount;
-        const display = el.batchAmountDisplay;
+        const hiddenInput = el.batchQuantity;
+        const display = el.batchQuantityDisplay;
         if (hiddenInput && display) {
             const newVal = Math.max(1, Number.parseInt(hiddenInput.value, 10) - 1);
             hiddenInput.value = newVal;
@@ -923,10 +920,10 @@ document.addEventListener('click', function (event) {
         return;
     }
 
-    if (target.closest('#btnBatchAmountInc')) {
+    if (target.closest('#btnBatchQuantityInc')) {
         event.preventDefault();
-        const hiddenInput = el.batchAmount;
-        const display = el.batchAmountDisplay;
+        const hiddenInput = el.batchQuantity;
+        const display = el.batchQuantityDisplay;
         if (hiddenInput && display) {
             const newVal = Number.parseInt(hiddenInput.value, 10) + 1;
             hiddenInput.value = newVal;

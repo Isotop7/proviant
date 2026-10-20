@@ -66,21 +66,30 @@ function escapeRecipeHtml(text) {
     return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// SUGGESTION_UNITS are the tokens that end the portion of a suggested
+// ingredient text ("200 g flour"). The list only tells the parser where the
+// name starts; the portion itself is kept as free text.
 const SUGGESTION_UNITS = ["g", "kg", "mg", "l", "ml", "el", "tl", "tbsp", "tsp", "cup", "cups", "oz", "lb", "pkg", "pack", "pinch", "pcs", "pc", "piece", "pieces", "bunch", "slice", "slices", "clove", "cloves", "can", "cans", "tin", "bag", "bags", "bottle", "bottles", "handful"];
 
+// parseSuggestionIngredient splits a suggested ingredient text into the
+// portion and the name. The portion keeps the wording of the suggestion, so
+// nothing about it is converted or rounded.
 function parseSuggestionIngredient(raw) {
     const text = (raw || "").trim();
     const amountMatch = text.match(/^(\d+(?:[.,]\d+)?)\s+/);
     if (!amountMatch) {
-        return { name: text, amount: 0, unit: "", productId: null };
+        return { name: text, portion: "", productId: null };
     }
     const rest = text.slice(amountMatch[0].length);
     const unitMatch = rest.match(/^([A-Za-zäöüß]+)\s+/);
-    const amount = Math.round(Number.parseFloat(amountMatch[1].replace(",", "."))) || 0;
     if (unitMatch && SUGGESTION_UNITS.indexOf(unitMatch[1].toLowerCase()) !== -1) {
-        return { name: rest.slice(unitMatch[0].length).trim().replace(/^of\s+/i, ""), amount: amount, unit: unitMatch[1].toLowerCase(), productId: null };
+        return {
+            name: rest.slice(unitMatch[0].length).trim().replace(/^of\s+/i, ""),
+            portion: amountMatch[1] + " " + unitMatch[1].toLowerCase(),
+            productId: null,
+        };
     }
-    return { name: rest.trim(), amount: amount, unit: "", productId: null };
+    return { name: rest.trim(), portion: amountMatch[1], productId: null };
 }
 
 async function openEditorFromSuggestion(suggestion) {
@@ -113,24 +122,6 @@ async function loadProductOptions() {
     return productOptions;
 }
 
-// unitSelectOptions builds the ingredient unit picker from the server-injected
-// unit list (window.proviantUnits), so a free-text unit can no longer be typed
-// and the saved value always matches the server's conversion table. A unit that
-// came in from parsed suggestion text but is not in the list (e.g. "cups") is
-// kept as its own option rather than silently dropped.
-function unitSelectOptions(selected) {
-    const units = Array.isArray(window.proviantUnits) ? window.proviantUnits : [];
-    const value = selected ? String(selected) : "";
-    const options = units.map(function (unit) {
-        const isSelected = unit === value ? " selected" : "";
-        return `<option value="${escapeRecipeHtml(unit)}"${isSelected}>${escapeRecipeHtml(unit)}</option>`;
-    });
-    if (value && units.indexOf(value) === -1) {
-        options.unshift(`<option value="${escapeRecipeHtml(value)}" selected>${escapeRecipeHtml(value)}</option>`);
-    }
-    return `<option value="">${proviant.t("js.savedRecipes.unit")}</option>` + options.join("");
-}
-
 function ingredientRowHtml(ingredient, products) {
     const options = products.map(function (product) {
         const selected = ingredient && ingredient.productId === product.id ? " selected" : "";
@@ -147,13 +138,8 @@ function ingredientRowHtml(ingredient, products) {
             <div class="col-6 col-md-3">
                 <input type="text" class="form-control form-control-sm" data-ingredient-name maxlength="255" placeholder="${proviant.t("js.savedRecipes.namePlaceholder")}" aria-label="${proviant.t("js.savedRecipes.ingredientName")}" value="${escapeRecipeHtml(ingredient ? ingredient.name : "")}">
             </div>
-            <div class="col-3 col-md-2">
-                <input type="number" class="form-control form-control-sm" data-ingredient-amount min="0" placeholder="${proviant.t("js.savedRecipes.amount")}" aria-label="${proviant.t("js.savedRecipes.amount")}" value="${ingredient ? ingredient.amount : ""}">
-            </div>
-            <div class="col-3 col-md-2">
-                <select class="form-select form-select-sm" data-ingredient-unit aria-label="${proviant.t("js.savedRecipes.unit")}">
-                    ${unitSelectOptions(ingredient ? ingredient.unit : "")}
-                </select>
+            <div class="col-6 col-md-4">
+                <input type="text" class="form-control form-control-sm" data-ingredient-portion maxlength="40" placeholder="${proviant.t("js.savedRecipes.portion")}" aria-label="${proviant.t("js.savedRecipes.portionLabel")}" value="${escapeRecipeHtml(ingredient ? ingredient.portion : "")}">
             </div>
             <div class="col-12 col-md-1 d-flex align-items-center">
                 <button type="button" class="btn-icon text-danger" data-ingredient-remove aria-label="${proviant.t("js.savedRecipes.removeIngredient")}">
@@ -213,12 +199,10 @@ function collectRecipePayload() {
     const editor = document.getElementById("recipeEditor");
     const ingredients = Array.from(document.querySelectorAll("#ingredientRows [data-ingredient-row]")).map(function (row, index) {
         const productRaw = row.querySelector("[data-ingredient-product]").value;
-        const amount = Number.parseInt(row.querySelector("[data-ingredient-amount]").value, 10);
         return {
             productId: productRaw ? Number.parseInt(productRaw, 10) : null,
             name: row.querySelector("[data-ingredient-name]").value.trim(),
-            amount: Number.isFinite(amount) && amount > 0 ? amount : 0,
-            unit: row.querySelector("[data-ingredient-unit]").value.trim(),
+            portion: row.querySelector("[data-ingredient-portion]").value.trim(),
             sortOrder: index,
         };
     }).filter(function (ingredient) {

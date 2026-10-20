@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -86,6 +87,64 @@ func TestProductDTOPatch(t *testing.T) {
 		}
 		if dto.ExpireAt != now {
 			t.Errorf("ExpireAt mismatch")
+		}
+	})
+}
+
+// The patch remembers which fields a request carried, so an omitted field can
+// be told apart from one sent as null. A key that only differs in case still
+// fills the field — the decoder matches case-insensitively — so it has to
+// count as carried too.
+func TestProductDTOPatchReportsTheCarriedFields(t *testing.T) {
+	t.Run("a field the body does not carry is absent", func(t *testing.T) {
+		var patch ProductDTOPatch
+		if err := json.Unmarshal([]byte(`{"productName":"Oat Milk"}`), &patch); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if patch.Has("productName") != true {
+			t.Error("Has(productName) = false, want true")
+		}
+		if patch.Has("quantity") != false {
+			t.Error("Has(quantity) = true, want false")
+		}
+		if patch.Has("packSize") != false {
+			t.Error("Has(packSize) = true, want false")
+		}
+	})
+
+	t.Run("a field sent as null is carried", func(t *testing.T) {
+		var patch ProductDTOPatch
+		if err := json.Unmarshal([]byte(`{"packSize":null}`), &patch); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if !patch.Has("packSize") {
+			t.Error("Has(packSize) = false, want true")
+		}
+	})
+
+	t.Run("a key that only differs in case is carried", func(t *testing.T) {
+		var patch ProductDTOPatch
+		if err := json.Unmarshal([]byte(`{"Quantity":7,"PACKSIZE":"1 l"}`), &patch); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if patch.Quantity != 7 {
+			t.Errorf("Quantity = %d, want 7 (the decoder fills the field)", patch.Quantity)
+		}
+		if patch.PackSize != "1 l" {
+			t.Errorf("PackSize = %q, want 1 l", patch.PackSize)
+		}
+		if !patch.Has("quantity") {
+			t.Error("Has(quantity) = false, want true")
+		}
+		if !patch.Has("packSize") {
+			t.Error("Has(packSize) = false, want true")
+		}
+	})
+
+	t.Run("a patch that was not decoded reports every field as carried", func(t *testing.T) {
+		patch := ProductDTOPatch{Quantity: 3}
+		if !patch.Has("quantity") {
+			t.Error("Has(quantity) = false, want true")
 		}
 	})
 }

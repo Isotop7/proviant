@@ -422,6 +422,7 @@ func main() {
 		&dbModel.WasteStreak{},
 		&dbModel.ProductCategoryPrice{},
 		&dbModel.SavingsRecord{},
+		&dbModel.ModelCutover{},
 		&dbModel.ExpiryScan{},
 		&dbModel.AuditLog{},
 		&dbModel.ActivityLog{},
@@ -444,14 +445,9 @@ func main() {
 		panic(breakingMigrationsError)
 	}
 
-	// Backfill default amount for existing products
-	if amountMigrationError := migrations.SetDefaultProductAmounts(logger, dbHandle); amountMigrationError != nil {
+	// Backfill default quantity for existing products
+	if amountMigrationError := migrations.SetDefaultProductQuantities(logger, dbHandle); amountMigrationError != nil {
 		panic(amountMigrationError)
-	}
-
-	// Normalize stored product, recipe and shopping list amounts to base units
-	if unitMigrationError := migrations.NormalizeStoredUnits(logger, dbHandle); unitMigrationError != nil {
-		panic(unitMigrationError)
 	}
 
 	// Seed ProductCategoryPrice reference data for savings calculator
@@ -514,6 +510,9 @@ func main() {
 
 	backupController := controllers.NewBackupController(logger, &proviantConfiguration.Backup, dbHandle)
 	backupController.Dispatch()
+
+	packSizeController := controllers.NewPackSizeController(dbHandle, offacntrl, logger)
+	packSizeController.Dispatch()
 
 	// Start background cleanup of expired revoked tokens
 	go startRevokedTokenCleanup(logger, dbHandle)
