@@ -1,32 +1,37 @@
 // ── Shopping list & waste pages ────────────────────────────────────────────
 
-// Shopping list styles — matches product list layout
-.sl-list-header {
-  display: grid;
-  grid-template-columns: 32px 1fr 80px 60px;
-  gap: 10px;
-  padding: 8px 16px;
-  background: var(--surface-warm);
-  border-bottom: 1px solid var(--border);
-
-  > div {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--meta);
-    text-transform: uppercase;
-    letter-spacing: .06em;
-  }
+// The shopping list follows the design system's list pattern: a card with
+// a header row and a list group whose items carry the leading, body and
+// trailing slots.
+.shopping-list {
+  overflow: hidden;
 }
 
-.sl-list-row {
+.shopping-list__header,
+.shopping-list__item {
   display: grid;
-  grid-template-columns: 32px 1fr 80px 60px;
-  gap: 10px;
+  grid-template-columns: 32px 1fr 140px;
+  gap: var(--space-2);
   align-items: center;
-  padding: 9px 16px;
-  cursor: default;
+}
+
+.shopping-list__header {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.shopping-list__item {
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 0;
   border-bottom: 1px solid var(--border);
-  transition: background 120ms;
+  border-radius: 0;
+  transition: background-color var(--motion-fast) var(--ease-out);
 
   &:hover {
     background: var(--surface-warm);
@@ -35,60 +40,37 @@
   &.checked {
     opacity: .6;
 
-    .sl-item-name {
+    .list-group-item__title {
       color: var(--meta);
       text-decoration: line-through;
     }
   }
 }
 
-.sl-category-header {
-  padding: 8px 16px 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--meta);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  background: var(--surface-warm);
-  border-bottom: 1px solid var(--border);
-}
-
-.sl-product-col {
+.shopping-list__cell--trailing {
   display: flex;
+  gap: var(--space-2);
   align-items: center;
-  min-width: 0;
-
-  .sl-item-content {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .sl-item-name {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--fg);
-  }
+  justify-content: space-between;
 }
 
-.sl-qty-col {
+.shopping-list__actions {
   display: flex;
+  gap: var(--space-1);
   align-items: center;
 }
 
-.sl-actions-col {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  justify-content: center;
-}
-
-.sl-notes-row {
+.shopping-list__notes {
   display: none;
-  padding: 8px 16px 8px 52px;
+  grid-column: 1 / -1;
+  padding-bottom: var(--space-2);
 
   &.expanded {
     display: block;
+  }
+
+  input {
+    max-width: 320px;
   }
 
   input.notes-saved {
@@ -146,36 +128,6 @@
   letter-spacing: .06em;
   background: var(--surface-warm);
   border-bottom: 1px solid var(--border);
-}
-
-.shopping-list-item {
-  .item-name {
-    font-weight: 500;
-    color: var(--fg);
-  }
-
-  .item-notes {
-    display: block;
-    margin-top: 2px;
-  }
-
-  &.checked {
-    opacity: .6;
-
-    .item-name {
-      color: var(--meta);
-      text-decoration: line-through;
-    }
-  }
-}
-
-.shopping-list-item-notes-row {
-  display: none;
-  padding: 0 16px 8px 52px;
-
-  &.expanded {
-    display: block;
-  }
 }
 
 .add-item-form-inner {

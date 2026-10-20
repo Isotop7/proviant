@@ -358,7 +358,18 @@
     "auth": "auth (eigene Grid-Klasse für Split-Screen)",
     "auth__brand": "auth__brand",
     "auth__form": "auth__form",
-    "toast-stack": "toast-stack (vertikaler Stapel-Container)"
+    "toast-stack": "toast-stack (vertikaler Stapel-Container)",
+    "list-group-item__leading": "list-group-item__leading (Avatar oder Checkbox)",
+    "list-group-item__body": "list-group-item__body (Titel und Meta-Zeile)",
+    "list-group-item__title": "list-group-item__title",
+    "list-group-item__meta": "list-group-item__meta",
+    "list-group-item__trailing": "list-group-item__trailing (Chip oder Aktionen)",
+    "bento": "bento (Sechs-Spalten-Raster für das Dashboard)",
+    "bento__items": "bento__items (display: contents, ein Container im Raster)",
+    "bento__cell": "bento__cell",
+    "bento__cell--2": "bento__cell--2 (zwei Spalten)",
+    "bento__cell--3": "bento__cell--3 (drei Spalten)",
+    "bento__cell--6": "bento__cell--6 (die volle Breite)"
   },
   "notImplemented": {
     "_comment": "Aus dem Spec übernommene Bausteine, die bewusst NICHT gebaut werden. Grund und Beleg stehen in deviations.md.",

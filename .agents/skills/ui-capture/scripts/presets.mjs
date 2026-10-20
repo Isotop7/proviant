@@ -24,7 +24,7 @@ export const PRESETS = {
   },
   'mealplan': { path: '/web/mealplan', login: true, ready: '#mealPlanGrid .mp-week' },
   'waste': { path: '/web/waste-analytics', login: true, ready: '#waste-status:has-text("Waste analytics loaded")' },
-  'shopping-list': { path: '/web/shopping-list', login: true, ready: '#shoppingListContainer .sl-list-row' },
+  'shopping-list': { path: '/web/shopping-list', login: true, ready: '#shoppingListContainer .shopping-list__item' },
   'settings': { path: '/web/user/settings', login: true, ready: 'h1:has-text("User Settings")' },
   'user': { path: '/web/user', login: true, ready: 'h3:has-text("User")' },
   'onboarding': { path: '/web/onboarding', login: true, ready: '#step1' },

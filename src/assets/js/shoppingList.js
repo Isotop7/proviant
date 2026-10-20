@@ -238,7 +238,7 @@
   function updateItemCount() {
     var container = document.getElementById('shoppingListContainer');
     if (!container) return;
-    var rows = container.querySelectorAll('.shopping-list-item');
+    var rows = container.querySelectorAll('.shopping-list__item');
     var total = rows.length;
     var subtitle = document.querySelector('.page-header-subtitle');
     if (subtitle) {

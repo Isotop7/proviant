@@ -44,9 +44,9 @@ function clearEmptyChart(canvasId) {
   }
 }
 
-function renderTile(title, hero, variant, heroClass) {
+function renderTile(title, hero, variant, heroClass, span) {
   const col = document.createElement('div');
-  col.className = 'col';
+  col.className = 'bento__cell bento__cell--' + (span || 2);
   // A solid fill is reserved for the expired state — the design system's
   // bento sheet fills exactly one card. Every other variant colours the
   // value, which is what the status text variants exist for.
@@ -224,25 +224,29 @@ document.addEventListener('DOMContentLoaded', async function () {
         {
           title: proviant.t("js.home.activeProducts"),
           hero: s.totalActive,
+          span: 3,
         },
         {
           title: proviant.t("js.home.expiredNotConsumed"),
           hero: `${s.wastePercent.toFixed(1)}%`,
           variant: s.wasteCount > 0 ? 'danger' : null,
+          span: 3,
         },
         {
           title: proviant.t("js.home.totalConsumed"),
           hero: s.totalArchived,
+          span: 2,
         },
         {
           title: proviant.t("js.home.lastAddedProduct"),
           hero: s.lastInsertedProduct || '—',
           heroClass: 'kpi__value text-truncate',
+          span: 2,
         },
       ];
 
-      tiles.forEach(({ title, hero, variant, heroClass }) => {
-        dashboard.appendChild(renderTile(title, hero, variant, heroClass));
+      tiles.forEach(({ title, hero, variant, heroClass, span }) => {
+        dashboard.appendChild(renderTile(title, hero, variant, heroClass, span));
       });
 
       // Streak tile
@@ -251,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       const longestStreak = streak ? streak.longestStreak : 0;
       const streakHero = proviant.tn("js.home.streakDays", currentStreak);
       const streakHeroClass = currentStreak > 0 ? 'kpi__value' : 'kpi__value text-body-secondary';
-      const streakCol = renderTile('<i class="bi bi-fire"></i> ' + proviant.t("js.home.wasteFreeStreak"), streakHero, null, streakHeroClass);
+      const streakCol = renderTile('<i class="bi bi-fire"></i> ' + proviant.t("js.home.wasteFreeStreak"), streakHero, null, streakHeroClass, 2);
       const streakTile = streakCol.querySelector('.kpi');
       if (streakTile) {
         if (longestStreak > 0) {
@@ -391,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           </div>`;
 
         const activityRow = document.createElement('div');
-        activityRow.className = 'col-12';
+        activityRow.className = 'bento__cell bento__cell--6';
         activityRow.appendChild(activityCol);
         dashboard.appendChild(activityRow);
       }
@@ -416,7 +420,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const legacyEvents = savings.legacyEvents || 0;
         if (legacyEvents > 0) {
           const note = document.createElement('div');
-          note.className = 'col-12 text-body-secondary small mt-1';
+          note.className = 'bento__cell bento__cell--6 text-body-secondary small mt-1';
           note.textContent = proviant.tn("js.home.legacySavingsNote", legacyEvents);
           dashboard.appendChild(note);
         }

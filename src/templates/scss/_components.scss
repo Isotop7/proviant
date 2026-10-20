@@ -416,6 +416,41 @@
   .toast__icon { color: var(--info); }
 }
 
+// The list item's own slots — Bootstrap's .list-group has no equivalent.
+// Leading carries the avatar or the checkbox, the body the title and the meta
+// line, the trailing the chip or the actions.
+.list-group-item__leading {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.list-group-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.list-group-item__title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+.list-group-item__meta {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.list-group-item__trailing {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: flex-end;
+}
+
 // Sidebar nav
 .app__sidebar {
   position: fixed;

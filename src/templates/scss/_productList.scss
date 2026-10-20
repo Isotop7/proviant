@@ -566,7 +566,7 @@
   }
 
   // Add bottom padding to content so it doesn't get covered by mobile bulk bar + bottom nav
-  #content-wrapper {
+  .app__content {
     padding-bottom: calc(130px + env(safe-area-inset-bottom, 0));
   }
 

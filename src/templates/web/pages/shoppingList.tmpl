@@ -51,49 +51,48 @@
 </div>
 
 {{ if .Items }}
-<div id="shoppingListContainer">
-    <div class="sl-list-header">
-        <div class="sl-checkbox-col">
+<div id="shoppingListContainer" class="card shopping-list">
+    <div class="card-header shopping-list__header">
+        <div class="shopping-list__cell shopping-list__cell--check">
             <input type="checkbox" id="selectAll" class="list-checkbox" aria-label="{{ t "shoppingList.selectAllItems" }}">
         </div>
-        <div class="sl-product-col">{{ t "shoppingList.itemColumn" }}</div>
-        <div class="sl-qty-col">{{ t "shoppingList.qty" }}</div>
-        <div class="sl-actions-col"></div>
+        <div class="shopping-list__cell shopping-list__cell--name">{{ t "shoppingList.itemColumn" }}</div>
+        <div class="shopping-list__cell shopping-list__cell--trailing">{{ t "shoppingList.qty" }}</div>
     </div>
 
+    <div class="list-group list-group-flush">
     {{ range $item := .ItemsSorted }}
-    <div class="sl-list-row{{ if $item.Checked }} checked{{ end }}" data-id="{{ $item.ID }}" id="item-{{ $item.ID }}">
-        <div class="sl-checkbox-col">
+    <div class="list-group-item shopping-list__item{{ if $item.Checked }} checked{{ end }}" data-id="{{ $item.ID }}" id="item-{{ $item.ID }}">
+        <div class="list-group-item__leading shopping-list__cell shopping-list__cell--check">
             <input type="checkbox" class="item-checkbox list-checkbox"{{ if $item.Checked }} checked{{ end }} data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.markAsDone" $item.Name }}">
         </div>
-        <div class="sl-product-col">
-            <div class="sl-item-content">
-                <span class="sl-item-name{{ if $item.Checked }} text-decoration-line-through text-body-secondary{{ end }}">{{ $item.Name }}</span>
-                {{ with $item.PackSize }}
-                <span class="pack-size">{{ . }}</span>
-                {{ end }}
-            </div>
+        <div class="list-group-item__body shopping-list__cell shopping-list__cell--name">
+            <div class="list-group-item__title{{ if $item.Checked }} text-decoration-line-through text-body-secondary{{ end }}">{{ $item.Name }}</div>
+            {{ with $item.PackSize }}
+            <div class="list-group-item__meta">{{ . }}</div>
+            {{ end }}
         </div>
-        <div class="sl-qty-col">
+        <div class="list-group-item__trailing shopping-list__cell shopping-list__cell--trailing">
             <div class="qty-stepper qty-stepper-flat">
                 <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.decreaseQuantity" $item.Name }}">−</button>
                 <span id="qty-{{ $item.ID }}" class="qty-amount" data-quantity="{{ $item.Quantity }}">{{ quantityLabel $item.Quantity }}</span>
                 <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.increaseQuantity" $item.Name }}">+</button>
             </div>
+            <div class="shopping-list__actions">
+                <button type="button" class="btn-icon text-body-secondary" data-notes-toggle="{{ $item.ID }}" title="{{ t "shoppingList.notes" }}" aria-label="{{ t "shoppingList.toggleNotes" $item.Name }}">
+                    <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="btn-icon text-danger" data-delete-item="{{ $item.ID }}" title="{{ t "common.delete" }}" aria-label="{{ t "shoppingList.deleteItemLabel" $item.Name }}">
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
-        <div class="sl-actions-col">
-            <button type="button" class="btn-icon text-body-secondary" data-notes-toggle="{{ $item.ID }}" title="{{ t "shoppingList.notes" }}" aria-label="{{ t "shoppingList.toggleNotes" $item.Name }}">
-                <i class="bi bi-chat-left-text" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="btn-icon text-danger" data-delete-item="{{ $item.ID }}" title="{{ t "common.delete" }}" aria-label="{{ t "shoppingList.deleteItemLabel" $item.Name }}">
-                <i class="bi bi-trash3" aria-hidden="true"></i>
-            </button>
+        <div class="shopping-list__notes" id="notes-{{ $item.ID }}">
+            <input type="text" class="form-control form-control-sm" placeholder="{{ t "shoppingList.addNotes" }}" value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
         </div>
-    </div>
-    <div class="sl-notes-row" id="notes-{{ $item.ID }}">
-        <input type="text" class="form-control form-control-sm" placeholder="{{ t "shoppingList.addNotes" }}" value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
     </div>
     {{ end }}
+    </div>
 </div>
 {{ else }}
 <div class="empty">
