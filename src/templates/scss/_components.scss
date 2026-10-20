@@ -69,13 +69,13 @@
 }
 
 .btn-danger {
-  --bs-btn-color: #fff;
+  --bs-btn-color: var(--status-expired-on);
   --bs-btn-bg: var(--status-expired);
   --bs-btn-border-color: var(--status-expired);
-  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-color: var(--status-expired-on);
   --bs-btn-hover-bg: var(--status-expired-hover);
   --bs-btn-hover-border-color: var(--status-expired-hover);
-  --bs-btn-active-color: #fff;
+  --bs-btn-active-color: var(--status-expired-on);
   --bs-btn-active-bg: var(--status-expired-hover);
   --bs-btn-active-border-color: var(--status-expired-hover);
   --bs-btn-disabled-color: var(--muted);

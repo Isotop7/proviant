@@ -10,8 +10,8 @@
   a { color: var(--accent); text-decoration: none; }
   a:hover { color: var(--accent-hover); }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-family: var(--font-body); font-weight: 600; border: none; cursor: pointer; border-radius: var(--radius-pill); transition: background var(--motion-base), border-color var(--motion-base), color var(--motion-base); white-space: nowrap; text-decoration: none; }
-  .btn-primary { background: var(--accent); color: #fff; padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-button); }
-  .btn-primary:hover { background: var(--accent-hover); color: #fff; }
+  .btn-primary { background: var(--accent); color: var(--accent-on); padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-button); }
+  .btn-primary:hover { background: var(--accent-hover); color: var(--accent-on); }
   .btn-primary:active { background: var(--accent-active); }
   .btn-secondary { background: var(--bg); color: var(--fg); padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); border: 1.5px solid var(--border-strong); }
   .btn-secondary:hover { background: var(--surface-warm); border-color: var(--muted); color: var(--fg); }
@@ -29,7 +29,7 @@
 nav.topnav { height: 56px; background: color-mix(in oklab, var(--surface) 85%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 0 var(--space-5); position: sticky; top: 0; z-index: 100; gap: var(--space-4); }
   nav.topnav .logo { font-weight: 700; font-size: var(--text-base); color: var(--fg); letter-spacing: var(--tracking-tight); display: flex; align-items: center; gap: var(--space-2); text-decoration: none; }
   nav.topnav .logo:hover { color: var(--fg); }
-  nav.topnav .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  nav.topnav .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--accent-on); flex-shrink: 0; }
   nav.topnav .nav-links { display: flex; align-items: center; gap: var(--space-1); }
   nav.topnav .nav-link { font-size: var(--text-sm); font-weight: 500; color: var(--fg-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); transition: background var(--motion-base), color var(--motion-base); }
   nav.topnav .nav-link:hover { background: var(--surface-warm); color: var(--fg); }
@@ -47,18 +47,18 @@ nav.topnav { height: 56px; background: color-mix(in oklab, var(--surface) 85%, t
 
   .accent-gradient { background: var(--accent-soft); border: 1px solid var(--accent-border); border-radius: var(--radius-lg); padding: var(--space-5); }
 
-  .notif-center { position: absolute; top: calc(100% + 8px); right: 0; width: 320px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--elev-overlay); z-index: 200; display: none; overflow: hidden; }
+  .notif-center { position: absolute; top: calc(100% + 8px); right: 0; width: 320px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--elev-overlay); z-index: 200; display: none; overflow: hidden; }
   .notif-center.open { display: block; }
   .notif-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
   .notif-item { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); transition: background var(--motion-base); }
   .notif-item:hover { background: var(--surface-warm); }
   .notif-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
 
-  .chip { display: inline-flex; align-items: center; gap: var(--space-1); padding: 6px 12px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--bg); color: var(--fg-2); transition: all var(--motion-base); }
+  .chip { display: inline-flex; align-items: center; gap: var(--space-1); padding: 6px 12px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--fg-2); transition: all var(--motion-base); }
   .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-  .chip.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .chip.active { border-color: var(--accent); background: var(--accent); color: var(--accent-on); }
 
-  .recipe-card { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--elev-flat); overflow: hidden; cursor: pointer; transition: box-shadow var(--motion-base), border-color var(--motion-base); }
+  .recipe-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--elev-flat); overflow: hidden; cursor: pointer; transition: box-shadow var(--motion-base), border-color var(--motion-base); }
   .recipe-card:hover { box-shadow: var(--elev-raised); }
   .recipe-img { width: 100%; aspect-ratio: 4/3; background: var(--surface-warm); display: flex; align-items: center; justify-content: center; color: var(--muted); position: relative; }
   .recipe-body { padding: var(--space-4); }
@@ -105,7 +105,6 @@ nav.topnav { height: 56px; background: color-mix(in oklab, var(--surface) 85%, t
 }
 [data-theme="dark"] nav.topnav,
 [data-theme="dark"] nav.bottomtab { background: color-mix(in oklab, var(--bg) 85%, transparent); }
-[data-theme="dark"] .recipe-card { background: var(--bg); }
 [data-theme="dark"] .recipe-tag.critical { background: oklch(30% .06 45deg); color: var(--status-critical); }
 [data-theme="dark"] .recipe-tag.expired { background: oklch(28% .06 25deg); color: var(--status-expired); }
 [data-theme="dark"] .recipe-tag.soon { background: oklch(30% .06 80deg); color: var(--status-soon); }

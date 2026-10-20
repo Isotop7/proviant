@@ -17,7 +17,7 @@
   nav.topnav { height: 56px; background: color-mix(in oklab, var(--surface) 85%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 0 var(--space-5); position: sticky; top: 0; z-index: 100; gap: var(--space-4); }
   nav.topnav .logo { font-weight: 700; font-size: var(--text-base); color: var(--fg); letter-spacing: var(--tracking-tight); display: flex; align-items: center; gap: var(--space-2); text-decoration: none; }
   nav.topnav .logo:hover { color: var(--fg); }
-  nav.topnav .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  nav.topnav .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--accent-on); flex-shrink: 0; }
   nav.topnav .nav-links { display: flex; align-items: center; gap: var(--space-1); }
   nav.topnav .nav-link { font-size: var(--text-sm); font-weight: 500; color: var(--fg-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); transition: background var(--motion-base), color var(--motion-base); }
   nav.topnav .nav-link:hover { background: var(--surface-warm); color: var(--fg); }
@@ -26,7 +26,7 @@
   @media (max-width: 1180px) { nav.topnav .nav-links.hide-mobile { display: none !important; } }
   nav.topnav .nav-actions { display: flex; align-items: center; gap: var(--space-1); }
 
-  .notif-center { position: absolute; top: calc(100% + 8px); right: 0; width: 320px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--elev-overlay); z-index: 200; display: none; overflow: hidden; }
+  .notif-center { position: absolute; top: calc(100% + 8px); right: 0; width: 320px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--elev-overlay); z-index: 200; display: none; overflow: hidden; }
   .notif-center.open { display: block; }
   .notif-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
   .notif-item { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); transition: background var(--motion-base); }
@@ -49,7 +49,7 @@
 
   .accent-gradient { background: var(--accent-soft); border: 1px solid var(--accent-border); border-radius: var(--radius-lg); }
 
-  .form-section { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; margin-bottom: var(--space-5); }
+  .form-section { background: var(--surface); border-radius: var(--radius-md); border: 1px solid var(--border); overflow: hidden; margin-bottom: var(--space-5); }
   .form-section-header { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: var(--space-3); }
   .form-section-header i { color: var(--accent); font-size: 18px; }
   .form-section-header h3 { font-size: var(--text-sm); font-weight: 700; color: var(--fg); }
@@ -72,7 +72,7 @@
   .receipt-preview { width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: var(--space-4); overflow: hidden; }
   .receipt-preview img { width: 100%; display: block; }
 
-  .receipt-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: var(--space-2); }
+  .receipt-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: var(--space-2); }
   .receipt-item:last-child { margin-bottom: 0; }
   .receipt-item-icon { width: 40px; height: 40px; background: var(--accent-soft); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .receipt-item-icon i { font-size: 18px; color: var(--accent); }
@@ -82,9 +82,9 @@
   .receipt-item-price { font-family: var(--font-mono); font-weight: 600; font-size: var(--text-sm); color: var(--fg); flex-shrink: 0; }
 
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-family: var(--font-body); font-weight: 600; border: none; cursor: pointer; border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: var(--tracking-button); transition: background var(--motion-base), border-color var(--motion-base), color var(--motion-base); white-space: nowrap; text-decoration: none; }
-  .btn-primary { background: var(--accent); color: #fff; padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); }
-  .btn-primary:hover { background: var(--accent-hover); color: #fff; }
-  .btn-primary:active { background: var(--accent-active); color: #fff; }
+  .btn-primary { background: var(--accent); color: var(--accent-on); padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); }
+  .btn-primary:hover { background: var(--accent-hover); color: var(--accent-on); }
+  .btn-primary:active { background: var(--accent-active); color: var(--accent-on); }
   .btn-secondary { background: var(--surface-warm); color: var(--fg); padding: 0 var(--space-5); height: 44px; font-size: var(--text-sm); border: 1.5px solid var(--border-strong); }
   .btn-secondary:hover { background: var(--surface-warm); border-color: var(--muted); color: var(--fg); }
 
