@@ -1,19 +1,20 @@
 // ── Components ─────────────────────────────────────────────────────────────
 
 // Buttons — the design system's geometry: pill, 600, 0.04 em tracking,
-// 40 px (48 hero, 32 compact). The label stays in sentence case.
+// 44 px (48 hero, 32 compact), the label in capitals.
 .btn {
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--text-base);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   line-height: 1.4;
   text-align: center;
+  text-transform: uppercase;
   letter-spacing: var(--tracking-button);
   border-radius: var(--radius-pill);
   transition: background-color var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out);
@@ -55,17 +56,18 @@
 
 .btn-outline-secondary {
   --bs-btn-color: var(--fg);
-  --bs-btn-bg: var(--surface);
-  --bs-btn-border-color: var(--border);
+  --bs-btn-bg: var(--bg);
+  --bs-btn-border-color: var(--border-strong);
   --bs-btn-hover-color: var(--fg);
   --bs-btn-hover-bg: var(--surface-warm);
-  --bs-btn-hover-border-color: var(--border-strong);
+  --bs-btn-hover-border-color: var(--muted);
   --bs-btn-active-color: var(--fg);
   --bs-btn-active-bg: var(--surface-warm);
-  --bs-btn-active-border-color: var(--border-strong);
+  --bs-btn-active-border-color: var(--muted);
   --bs-btn-disabled-color: var(--muted);
   --bs-btn-disabled-bg: var(--border);
   --bs-btn-disabled-border-color: var(--border);
+  border-width: 1.5px;
 }
 
 .btn-danger {
@@ -85,13 +87,15 @@
 
 // The ghost variant: transparent, the ink only.
 .btn-link {
-  --bs-btn-color: var(--fg);
+  --bs-btn-color: var(--fg-2);
   --bs-btn-hover-color: var(--fg);
   --bs-btn-active-color: var(--fg);
-  --bs-btn-hover-bg: var(--accent-soft);
-  --bs-btn-active-bg: var(--accent-soft);
+  --bs-btn-hover-bg: var(--surface-warm);
+  --bs-btn-active-bg: var(--surface-warm);
   --bs-btn-disabled-color: var(--muted);
   --bs-btn-focus-shadow-rgb: 0, 0, 0;
+  min-height: 36px;
+  padding: 0 var(--space-3);
   text-decoration: none;
 }
 
@@ -616,15 +620,14 @@
   letter-spacing: var(--tracking-tight);
 }
 
-// The dashboard's cards follow the screen sheets: the page colour with a
-// hairline border, not a white panel on a crème page. The accent card and
-// the filled status card are the only filled ones.
+// The dashboard's cards follow the screen sheets: the hero radius and a
+// flat rest, the accent card and the filled status card are the only
+// filled ones.
 //
 // The tiles live in .bento__items (display: contents): they are grid items
 // of .bento, but their DOM parent is the wrapper.
 .bento__items .kpi,
 .bento .card:not(.card-accent) {
-  background: var(--bg);
   border-color: var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--elev-flat);
