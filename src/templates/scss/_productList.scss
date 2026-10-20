@@ -296,13 +296,10 @@
     background: var(--surface-warm);
   }
 
+  // The selected pill carries the accent; the status variants recolour it.
   &.active {
     font-weight: 600;
-    border-width: 1.5px;
-  }
-
-  &.active.status-all {
-    color: var(--accent);
+    color: var(--accent-text);
     background: var(--accent-soft);
     border-color: var(--accent-border);
   }
@@ -605,7 +602,6 @@
 
     .btn-bulk {
       padding: 8px 14px; // larger touch target
-      font-size: 12px;
     }
   }
 }

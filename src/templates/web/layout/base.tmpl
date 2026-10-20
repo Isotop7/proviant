@@ -59,6 +59,9 @@
 
         <!-- Mobile only: the rest of the utility cluster -->
         <div class="mobile-top-more d-lg-none">
+          <a class="btn-icon d-lg-none" href="/web/user/settings" aria-label="{{ t "nav.settings" }}" title="{{ t "nav.settings" }}">
+            <i class="bi bi-gear-wide-connected" aria-hidden="true"></i>
+          </a>
           <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
             <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
           </button>
@@ -67,9 +70,6 @@
               <i class="bi bi-circle-half me-2" id="themeToggleIconMobile" aria-hidden="true"></i>{{ t "common.toggleTheme" }}
             </button>
             <div class="dropdown-divider"></div>
-            <a href="/web/user/settings" class="dropdown-item">
-              <i class="bi bi-gear-wide-connected me-2" aria-hidden="true"></i>{{ t "common.settings" }}
-            </a>
             <a href="/web" data-logout class="dropdown-item dropdown-item-danger">
               <i class="bi bi-escape me-2" aria-hidden="true"></i>{{ t "common.logout" }}
             </a>
@@ -87,6 +87,58 @@
       <a href="https://github.com/Isotop7/proviant" target="_blank" rel="noopener">{{ t "nav.viewSource" }}</a>
       <span class="app__footer-version">{{ .Version }}</span>
     </footer>
+  </div>
+  <!-- Mobile bottom navigation — the link row of the topnav is gone below 1024 px -->
+  <nav class="bottom-nav" aria-label="{{ t "a11y.mobileNavigation" }}">
+    <a href="/web" class="bottom-nav-item {{ if eq .Title "Home" }}active{{ end }}"
+       {{ if eq .Title "Home" }}aria-current="page"{{ end }}>
+      <i class="bi bi-speedometer2" aria-hidden="true"></i><span>{{ t "nav.dashboard" }}</span>
+    </a>
+    <a href="/web/products" class="bottom-nav-item {{ if eq .Title "Products" }}active{{ end }}"
+       {{ if eq .Title "Products" }}aria-current="page"{{ end }}>
+      <i class="bi bi-box-seam" aria-hidden="true"></i><span>{{ t "nav.products" }}</span>
+    </a>
+    <a href="/web/products/scan" class="bottom-nav-scan {{ if eq .Title "Scan Product" }}active{{ end }}"
+       {{ if eq .Title "Scan Product" }}aria-current="page"{{ end }}>
+      <i class="bi bi-upc-scan" aria-hidden="true"></i>
+    </a>
+    <a href="/web/shopping-list" class="bottom-nav-item {{ if eq .Title "Shopping List" }}active{{ end }}"
+       {{ if eq .Title "Shopping List" }}aria-current="page"{{ end }}>
+      <i class="bi bi-cart3" aria-hidden="true"></i><span>{{ t "nav.shopping" }}</span>
+    </a>
+    <button type="button"
+            class="bottom-nav-item {{ if or (eq .Title "Recipes") (eq .Title "Meal Plan") (eq .Title "Waste Analytics") }}active{{ end }}"
+            data-bs-toggle="offcanvas" data-bs-target="#mobileNavOffcanvas"
+            aria-controls="mobileNavOffcanvas">
+      <i class="bi bi-grid" aria-hidden="true"></i><span>{{ t "nav.more" }}</span>
+    </button>
+  </nav>
+  <!-- Mobile more sheet — destinations that do not fit the bottom bar -->
+  <div class="offcanvas offcanvas-bottom mobile-nav-offcanvas" tabindex="-1" id="mobileNavOffcanvas"
+       aria-labelledby="mobileNavOffcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="mobileNavOffcanvasLabel">{{ t "nav.more" }}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{{ t "a11y.close" }}"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+      <div class="list-group list-group-flush">
+        <a href="/web/recipes"
+           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-3 {{ if eq .Title "Recipes" }}active{{ end }}"
+           {{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>
+          <i class="bi bi-journal-richtext" aria-hidden="true"></i><span>{{ t "nav.recipes" }}</span>
+        </a>
+        <a href="/web/mealplan"
+           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-3 {{ if eq .Title "Meal Plan" }}active{{ end }}"
+           {{ if eq .Title "Meal Plan" }}aria-current="page"{{ end }}>
+          <i class="bi bi-calendar-week" aria-hidden="true"></i><span>{{ t "nav.mealPlan" }}</span>
+        </a>
+        <a href="/web/waste-analytics"
+           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-3 {{ if eq .Title "Waste Analytics" }}active{{ end }}"
+           {{ if eq .Title "Waste Analytics" }}aria-current="page"{{ end }}>
+          <i class="bi bi-bar-chart-line" aria-hidden="true"></i><span>{{ t "nav.wasteAnalytics" }}</span>
+        </a>
+      </div>
+    </div>
   </div>
   <!-- Shared confirm modal — destructive actions requiring user decision -->
   <div id="proviantConfirmModal" class="modal fade" tabindex="-1"

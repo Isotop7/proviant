@@ -62,20 +62,21 @@
                     {{ if eq $s "all" }}{{ t "common.all" }}{{ else if eq $s "expired" }}{{ t "status.expired" }}{{ else if eq $s "critical" }}{{ t "status.critical" }}{{ else if eq $s "soon" }}{{ t "status.soon" }}{{ else if eq $s "fresh" }}{{ t "status.fresh" }}{{ else if eq $s "archived" }}{{ t "products.consumed" }}{{ else }}{{ t "status.noDate" }}{{ end }}
                 </a>
                 {{ end }}
-
-                <div class="filter-separator"></div>
-
-                {{ range $l := .StorageLocations }}
-                <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
-                   class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
-                    {{ $l.Name }}
-                </a>
-                {{ end }}
-                {{ if .StorageLocations }}
-                <a href="?{{ queryWith .Params "locationId" "" }}"
-                   class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">{{ t "common.all" }}</a>
-                {{ end }}
             </div>
+        </div>
+
+        <!-- The locations are a second axis: they get their own row -->
+        <div id="toolbarLocations" class="d-none d-md-flex gap-1 align-items-center flex-shrink-0">
+            {{ if .StorageLocations }}
+            <a href="?{{ queryWith .Params "locationId" "" }}"
+               class="filter-pill {{ if eq .LocationFilter "" }}active{{ end }}">{{ t "partial.searchBar.allLocations" }}</a>
+            {{ range $l := .StorageLocations }}
+            <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
+               class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
+                {{ $l.Name }}
+            </a>
+            {{ end }}
+            {{ end }}
         </div>
 
         <!-- Right side: reset + advanced filters | bulk actions + mobile filter dropdown -->
@@ -428,13 +429,13 @@
     <div class="mb-3">
       <label class="form-label fw-semibold small">{{ t "products.storageLocation" }}</label>
       <div class="d-flex flex-wrap gap-2">
+        <a href="?{{ queryWith .Params "locationId" "" }}" class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">{{ t "partial.searchBar.allLocations" }}</a>
         {{ range $l := .StorageLocations }}
         <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
            class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
           {{ $l.Name }}
         </a>
         {{ end }}
-        <a href="?{{ queryWith .Params "locationId" "" }}" class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">{{ t "common.all" }}</a>
       </div>
     </div>
     {{ end }}
