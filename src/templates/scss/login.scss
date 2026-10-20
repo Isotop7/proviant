@@ -34,7 +34,7 @@
     width: 340px;
     height: 340px;
     content: "";
-    background: rgba(255, 255, 255, .07);
+    background: color-mix(in oklab, var(--accent-on) 7%, transparent);
     border-radius: 50%;
   }
 
@@ -45,7 +45,7 @@
     width: 220px;
     height: 220px;
     content: "";
-    background: rgba(255, 255, 255, .05);
+    background: color-mix(in oklab, var(--accent-on) 5%, transparent);
     border-radius: 50%;
   }
 }
@@ -56,7 +56,7 @@
   bottom: 160px;
   width: 120px;
   height: 120px;
-  background: rgba(255, 255, 255, .06);
+  background: color-mix(in oklab, var(--accent-on) 6%, transparent);
   border-radius: 50%;
 }
 
@@ -80,16 +80,16 @@
   height: 44px;
   font-size: 20px;
   font-weight: 700;
-  color: #fff;
+  color: var(--accent-on);
   letter-spacing: -.5px;
-  border: 1px solid rgba(255, 255, 255, .25);
+  border: 1px solid color-mix(in oklab, var(--accent-on) 25%, transparent);
   border-radius: 12px;
 }
 
 .brand-logo-name {
   font-size: 22px;
   font-weight: 700;
-  color: #fff;
+  color: var(--accent-on);
   letter-spacing: -.5px;
 }
 
@@ -98,7 +98,7 @@
   font-size: 32px;
   font-weight: 700;
   line-height: 1.15;
-  color: #fff;
+  color: var(--accent-on);
   letter-spacing: -.8px;
 }
 
@@ -106,7 +106,7 @@
   max-width: 320px;
   font-size: 15px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, .72);
+  color: color-mix(in oklab, var(--accent-on) 72%, transparent);
 }
 
 .brand-features {
@@ -131,8 +131,8 @@
   width: 36px;
   height: 36px;
   font-size: 16px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, .18);
+  color: var(--accent-on);
+  border: 1px solid color-mix(in oklab, var(--accent-on) 18%, transparent);
   border-radius: 10px;
 }
 
@@ -140,7 +140,7 @@
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
-  color: rgba(255, 255, 255, .85);
+  color: color-mix(in oklab, var(--accent-on) 85%, transparent);
   text-decoration: none;
 }
 
@@ -148,7 +148,7 @@
   position: relative;
   z-index: 1;
   font-size: 11px;
-  color: rgba(255, 255, 255, .45);
+  color: color-mix(in oklab, var(--accent-on) 45%, transparent);
   letter-spacing: .2px;
 }
 
@@ -178,8 +178,8 @@
   font-size: 13px;
   line-height: 1.5;
   color: var(--fg-2);
-  background: var(--accent-subtle);
-  border: 1px solid oklch(78% .08 162deg);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
   border-radius: 10px;
 
   i {
@@ -198,16 +198,16 @@
 .auth-tabs {
   display: flex;
   margin-bottom: 32px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border);
 }
 
 .auth-tab {
   padding: 10px 20px;
   margin-bottom: -1px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 500;
-  color: var(--fg-3);
+  color: var(--meta);
   text-decoration: none;
   letter-spacing: -.1px;
   cursor: pointer;
@@ -273,7 +273,7 @@
   top: 50%;
   left: 12px;
   font-size: 15px;
-  color: var(--fg-3);
+  color: var(--meta);
   pointer-events: none;
   transition: color 150ms ease;
   transform: translateY(-50%);
@@ -287,7 +287,7 @@
   width: 100%;
   height: 44px;
   padding: 0 12px 0 38px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
   background: var(--surface);
@@ -297,17 +297,17 @@
   transition: border-color 150ms ease, box-shadow 150ms ease;
 
   &::placeholder {
-    color: var(--fg-3);
+    color: var(--meta);
   }
 
   &:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .12);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 12%, transparent);
   }
 
   &.error {
     border-color: var(--status-expired);
-    box-shadow: 0 0 0 3px oklch(55% .2 25deg / .1);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--status-expired) 10%, transparent);
   }
 }
 
@@ -328,7 +328,7 @@
   align-items: center;
   padding: 0;
   font-size: 15px;
-  color: var(--fg-3);
+  color: var(--meta);
   cursor: pointer;
   background: none;
   border: none;
@@ -375,7 +375,7 @@
     gap: 5px;
     align-items: center;
     font-size: 11px;
-    color: var(--fg-3);
+    color: var(--meta);
     transition: color 150ms;
 
     i {
@@ -416,7 +416,7 @@
   width: 100%;
   height: 44px;
   margin-top: 8px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
   color: white;
@@ -430,7 +430,7 @@
 
   &:hover:not(:disabled) {
     background: var(--accent-hover);
-    box-shadow: 0 3px 10px oklch(50% .12 162deg / .35), 0 1px 0 rgba(0, 0, 0, .12);
+    box-shadow: 0 3px 10px color-mix(in oklab, var(--accent) 35%, transparent), 0 1px 0 rgba(0, 0, 0, .12);
     transform: translateY(-1px);
   }
 
@@ -450,7 +450,7 @@
   margin-top: 16px;
   font-size: 11px;
   line-height: 1.6;
-  color: var(--fg-3);
+  color: var(--meta);
   text-align: center;
 
   a {

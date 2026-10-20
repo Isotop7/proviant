@@ -278,14 +278,14 @@
     if (!items.length) return;
 
     var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + proviant.t("nav.shoppingList") + '</title><style>';
-    html += 'body{font-family:system-ui,sans-serif;padding:1rem;color:#221e18}';
+    html += 'body{font-family:system-ui,sans-serif;padding:1rem;color:#2A2A2A}';
     html += 'h1{margin:0 0 0.5rem;font-size:1.5rem}';
-    html += '.meta{margin-bottom:1rem;font-size:0.875rem;color:#666}';
-    html += '.item{display:flex;flex-direction:column;padding:0.5rem 0;border-bottom:1px solid #dad6d0}';
+    html += '.meta{margin-bottom:1rem;font-size:0.875rem;color:#6B6B6B}';
+    html += '.item{display:flex;flex-direction:column;padding:0.5rem 0;border-bottom:1px solid #E5DFD3}';
     html += '.item-row{display:flex;align-items:center}';
-    html += '.checkbox{width:18px;height:18px;border:2px solid #221e18;border-radius:3px;margin-right:0.5rem;flex-shrink:0}';
+    html += '.checkbox{width:18px;height:18px;border:2px solid #2A2A2A;border-radius:3px;margin-right:0.5rem;flex-shrink:0}';
     html += '.name{font-size:1.1rem;flex:1}';
-    html += '.qty{font-size:1rem;color:#4a6fa0;margin-left:0.5rem}';
+    html += '.qty{font-size:1rem;color:#35604E;margin-left:0.5rem}';
     html += '.pack-size{font-size:0.875rem;color:#666;margin-left:0.35rem}';
     html += '.notes{font-size:0.875rem;color:#888;margin-left:2.25rem;margin-top:0.25rem}';
     html += '</style></head><body>';

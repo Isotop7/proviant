@@ -131,7 +131,7 @@ const darkSrc = fs.readFileSync(DARK_SCSS, 'utf8');
 const lightVars = parseVariables(lightSrc);
 const darkVars = parseVariables(darkSrc);
 const lightBody = extractRuntimeBody(lightSrc, lightVars, '_tokens.scss');
-const darkBody = extractRuntimeBody(darkSrc, darkVars, '_tokens.dark.scss');
+const darkBody = extractRuntimeBody(darkSrc, darkVars, '_tokens-dark.scss');
 const lightProps = extractCustomProperties(lightBody);
 const darkProps = extractCustomProperties(darkBody);
 
@@ -322,6 +322,17 @@ function checkSpecSheets() {
 
 // ── Check 6 (phase 2): the compiled app CSS carries the canonical tokens ────
 
+// The compiled CSS is minified, so compare normalised values: no whitespace,
+// no quotes around font names, no trailing zeros in decimals (sass writes
+// `.08` for `0.08` and `1.2` for `1.20`).
+const normalise = (value) =>
+  value
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/["']/g, '')
+    .replace(/(\.\d*?)0+(?![0-9])/g, '$1')
+    .replace(/(^|[,(:])0\./g, '$1.');
+
 function checkCompiledCss() {
   const cssPath = path.join(ROOT, 'src', 'assets', 'css', 'main.css');
   if (!fs.existsSync(cssPath)) {
@@ -329,10 +340,34 @@ function checkCompiledCss() {
     return;
   }
   const css = fs.readFileSync(cssPath, 'utf8');
+
+  // Every declaration in the file, in source order.
+  const declarations = [];
+  for (const m of css.matchAll(/(--[\w-]+)\s*:\s*([^;}]+)/g)) {
+    declarations.push([m[1], normalise(m[2])]);
+  }
+
+  const firstSeen = new Map();
+  for (const [name, value] of declarations) {
+    if (!firstSeen.has(name)) firstSeen.set(name, value);
+  }
+
   for (const [name, value] of lightProps) {
-    const pattern = new RegExp(`${name.replace(/[-]/g, '\\-')}\\s*:\\s*${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*;`);
-    if (!pattern.test(css)) {
-      fail('compiled-css', `${name} is not compiled into main.css with the value ${value}`);
+    const seen = firstSeen.get(name);
+    if (seen === undefined) {
+      fail('compiled-css', `${name} is not compiled into main.css`);
+      continue;
+    }
+    if (seen !== normalise(value)) {
+      fail('compiled-css', `${name} compiles to ${seen}, the canonical value is ${normalise(value)}`);
+    }
+  }
+
+  // The dark theme must contribute its own values somewhere.
+  for (const [name, value] of darkProps) {
+    const wanted = normalise(value);
+    if (!declarations.some(([, seen]) => seen === wanted)) {
+      fail('compiled-css', `the dark value of ${name} (${wanted}) is not compiled into main.css`);
     }
   }
 }
@@ -388,7 +423,10 @@ function checkLegacyClasses() {
 // ── Check 8 (phase 3): no hardcoded colours in JS ──────────────────────────
 
 function checkHardcodedColorsInJs() {
-  const files = sourceFiles(['src/assets/js'], ['.js']).filter((f) => !/bootstrap\.bundle|chart\.umd|html5-qrcode/.test(f));
+  // sw.js renders a standalone offline fallback document. It cannot read the
+  // custom properties, so its own colours are exempt — like the notification
+  // mail templates, which are outside the app UI entirely.
+  const files = sourceFiles(['src/assets/js'], ['.js']).filter((f) => !/bootstrap\.bundle|chart\.umd|html5-qrcode|\/sw\.js$/.test(f));
   for (const file of files) {
     const src = fs.readFileSync(file, 'utf8');
     const rel = path.relative(ROOT, file);
@@ -405,7 +443,9 @@ function checkHardcodedColorsInJs() {
 
 function checkJsTokenReferences() {
   const known = new Set([...lightProps.keys(), ...darkProps.keys()]);
-  const files = [...sourceFiles(['src/assets/js'], ['.js']), ...sourceFiles(['tests/js'], ['.js'])];
+  // Vendor bundles are not ours to tokenise.
+  const files = [...sourceFiles(['src/assets/js'], ['.js']), ...sourceFiles(['tests/js'], ['.js'])]
+    .filter((f) => !/bootstrap\.bundle|chart\.umd|html5-qrcode/.test(f));
   for (const file of files) {
     const src = fs.readFileSync(file, 'utf8');
     const rel = path.relative(ROOT, file);

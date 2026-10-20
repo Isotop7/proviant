@@ -11,30 +11,45 @@ $offcanvas-box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175);
 @import "./fonts";
 
 // Customize some defaults
-$font-family-base: vendsans, system-ui, sans-serif;
-$font-family-monospace: dmmono, monospace;
-$card-cap-bg: #f0ece6; // --bg-subtle warm off-white
-$card-bg: #fff; // --surface pure white
-$list-group-border-width: 2px;
-$line-height-base: 1.6;
+//
+// The colour values come from the design system: design-system/_tokens.scss is
+// the single source. Bootstrap gets its compile-time colours from the same
+// variables the CSS custom properties are built from, so the Bootstrap layer
+// and the custom layer can no longer disagree.
+@import "./tokens";
 
-// Colors map to the Proviant design tokens: $primary ← --accent, $secondary ← --brand-slate, $success ← --status-fresh, $warning ← --status-critical, $danger ← --status-expired, $dark ← --fg.
-$primary: #2d7858; // --accent: brand teal-green
-$secondary: #4a6fa0; // --brand-slate: slate-blue
-$info: #7bc67e; // leaf green (decorative)
-$light: #f0ece6; // --bg-subtle: warm off-white
-$dark: #221e18; // --fg: warm near-black
+$font-family-base: $font-body;
+$font-family-monospace: $font-mono;
+$line-height-base: 1.55;
+
+$card-cap-bg: $surface-warm;
+$card-bg: $surface;
+$list-group-border-width: 2px;
+
+$border-radius: $radius-md;
+$border-radius-sm: $radius-sm;
+$border-radius-lg: $radius-lg;
+$border-radius-pill: $radius-pill;
+
+// Colors map to the Proviant design tokens: $primary ← --accent, $success ←
+// --status-fresh, $warning ← --status-soon, $danger ← --status-expired,
+// $dark ← --fg. There is no second accent — $secondary is a neutral.
+$primary: $accent;
+$secondary: $fg-2;
+// $info, $success and $danger are already set by the design tokens.
+$light: $surface-warm;
+$dark: $fg;
 $gray: #9e9990; // warm neutral gray
-$success: #3a7a52; // --status-fresh: sage green
-$warning: #d47c28; // --status-critical: orange
-$danger: #c44020; // --status-expired: red-orange
-$link-color: #4a6fa0; // --brand-slate for links
+$success: $status-fresh;
+$warning: $warn;
+$danger: $status-expired;
+$link-color: $accent-text;
 
 // Body
-$body-bg: #f7f4ef; // --bg oklch(0.98 0.012 75): warm parchment
-$body-color: #221e18; // --fg oklch(0.18 0.022 70): warm near-black
-$border-color: #dad6d0; // --border oklch(0.88 0.010 75): warm neutral gray
-$shadow-color: rgba(34, 30, 24, .1);
+$body-bg: $bg;
+$body-color: $fg;
+$border-color: $border;
+$shadow-color: rgba(80, 60, 30, .1);
 
 // Required
 @import "bootstrap/scss/variables";
@@ -83,7 +98,6 @@ $bootstrap-icons-font-dir: "../fonts";
 
 // Proviant design system — tokens + component CSS
 
-@import "./tokens";
 @import "./base";
 @import "./components";
 @import "./theme";

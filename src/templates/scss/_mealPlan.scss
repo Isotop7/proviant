@@ -15,14 +15,14 @@
 }
 
 .mp-day-past {
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   filter: grayscale(.35);
-  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  box-shadow: inset 0 0 0 1px var(--border);
   opacity: .5;
 }
 
 .mp-day-past .mp-day-header span {
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 // ── Week bands that group the monthly range ───────────────────────────────
@@ -34,7 +34,7 @@
   padding: .5rem;
   margin-bottom: .5rem;
   background: var(--surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   animation: mp-week-fade .25s ease-out;
 }
@@ -57,7 +57,7 @@
 }
 
 .mp-week-alt {
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
 }
 
 .mp-week-header {
@@ -92,7 +92,7 @@
   min-height: 6.5rem;
   padding: .5rem;
   background: var(--surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
 
@@ -115,13 +115,13 @@
 }
 
 .mp-day-weekend {
-  background: var(--surface-raised);
+  background: var(--surface);
 }
 
 .mp-day-past.mp-day-weekend {
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   filter: grayscale(.35);
-  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  box-shadow: inset 0 0 0 1px var(--border);
   opacity: .5;
 }
 
@@ -130,8 +130,8 @@
   flex-direction: column;
   gap: .375rem;
   padding: .5rem;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-subtle);
+  background: var(--surface-warm);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
 
@@ -156,7 +156,7 @@
 .mp-entry-empty {
   font-size: .75rem;
   font-style: italic;
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 // ── Add-meal form ──────────────────────────────────────────────────────────
@@ -200,7 +200,7 @@
 }
 
 .mp-day.mp-drop-target {
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   border-color: var(--accent);
   box-shadow: inset 0 0 0 2px var(--accent);
 }

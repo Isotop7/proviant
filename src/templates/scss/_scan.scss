@@ -9,7 +9,7 @@
   text-decoration: none;
   background: var(--accent);
   border-radius: 16px;
-  box-shadow: 0 8px 24px oklch(50% .12 162deg / .3);
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--accent) 30%, transparent);
   transition: opacity 120ms;
 
   &:hover {
@@ -94,7 +94,7 @@
   }
   .scan-page-sub {
     font-size: 13px;
-    color: var(--fg-3);
+    color: var(--meta);
   }
 }
 
@@ -182,7 +182,7 @@
   align-items: center;
   margin: 14px 0;
   font-size: 12px;
-  color: var(--fg-3);
+  color: var(--meta);
 
   &::before,
   &::after {
@@ -208,7 +208,7 @@
 
 .batch-thumb-icon {
   font-size: 22px;
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 .batch-tally {
@@ -225,7 +225,7 @@
   padding: 12px 16px;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -4px 16px oklch(0% 0 0deg / 8%);
+  box-shadow: 0 -4px 16px color-mix(in oklab, #000 8%, transparent);
 }
 
 .batch-tally-info {

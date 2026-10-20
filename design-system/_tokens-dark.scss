@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// design-system/_tokens.dark.scss
+// design-system/_tokens-dark.scss
 //
 // CANONICAL SOURCE for the proviant design tokens (dark theme).
 //
@@ -46,6 +46,14 @@ $status-soon-text:     #E0C377;
 $status-critical-text: #E8A98A;
 $status-expired-text:  #D79090;
 $status-neutral-text:  #A89F92;
+
+// Tinte auf einer soliden Statusflaeche: der Akzent ist im Dark Theme hell,
+// also traegt die Flaeche dunkle Tinte.
+$status-fresh-on:    #1E1A14;
+$status-soon-on:     #1E1A14;
+$status-critical-on: #1E1A14;
+$status-expired-on:  #1E1A14;
+$status-neutral-on:  #1E1A14;
 
 // ── Semantische Aliase ─────────────────────────────────────────────────────
 $success: #59A388;
@@ -102,6 +110,12 @@ $focus-ring:   0 0 0 3px var(--accent-soft);
   --status-expired-text:  #{$status-expired-text};
   --status-neutral-text:  #{$status-neutral-text};
 
+  --status-fresh-on:    #{$status-fresh-on};
+  --status-soon-on:     #{$status-soon-on};
+  --status-critical-on: #{$status-critical-on};
+  --status-expired-on:  #{$status-expired-on};
+  --status-neutral-on:  #{$status-neutral-on};
+
   // Semantische Aliase
   --success: #{$success};
   --warn:    #{$warn};
@@ -118,7 +132,7 @@ $focus-ring:   0 0 0 3px var(--accent-soft);
 }
 
 [data-bs-theme="dark"] {
-  @include proviant-dark-tokens;
+  @include proviant-dark-tokens();
 }
 
 // Ohne JavaScript folgt das Theme der Systemeinstellung. theme.js setzt
@@ -126,6 +140,6 @@ $focus-ring:   0 0 0 3px var(--accent-soft);
 // Einstellung fehlt.
 @media (prefers-color-scheme: dark) {
   :root:not([data-bs-theme="light"]) {
-    @include proviant-dark-tokens;
+    @include proviant-dark-tokens();
   }
 }

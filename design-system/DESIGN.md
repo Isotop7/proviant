@@ -83,6 +83,25 @@ diese Trennung fällt die Beschriftung auf dem 18-%-Tint unter 4.5:1 —
 - `--danger` `#A24A4A` (Aliase zu `--status-expired`).
 - `--info` `#5A7A8A` — Hinweise (z. B. "neues Rezept verfügbar"), gedeckt.
 
+### Abgeleitete Slots
+
+Keine eigenen Farbwerte, sondern Ableitungen aus den Slots darüber. Sie stehen
+als Ausdruck in der Quelle, nicht als Farbe — dadurch ziehen sie mit, wenn
+`--surface` im Dark Theme wechselt:
+
+```
+--status-*-subtle:  color-mix(in oklab, var(--status-*) 18%, var(--surface));
+--status-*-border:  color-mix(in oklab, var(--status-*) 32%, var(--surface));
+--status-*-hover:   color-mix(in oklab, var(--status-*), black 8%);
+--accent-hover:     color-mix(in oklab, var(--accent), black 6%);
+--accent-active:    color-mix(in oklab, var(--accent), black 12%);
+--accent-border:    color-mix(in oklab, var(--accent) 45%, var(--surface));
+--status-*-on:      Text auf einer vollen Statusfläche (hell: Weiß, dunkel: Tinte)
+```
+
+Der Akzent-Rahmen mischt den Akzent mit der **Fläche** statt mit Weiß: im
+hellen Theme hellt er auf, im dunklen dunkelt er ab.
+
 ### Was die Palette nicht enthält
 
 - Kein Indigo, kein Violett, keine "Trust"-Gradients.
@@ -449,7 +468,7 @@ Auth ist die prominenteste Fläche. Hier darf das System spürbar werden:
 Stand 2026-10.
 
 **Die Token-Werte leben in `design-system/_tokens.scss`** (hell) und
-`design-system/_tokens.dark.scss` (dunkt). Diese beiden Dateien sind die
+`design-system/_tokens-dark.scss` (dunkt). Diese beiden Dateien sind die
 einzige Quelle. `tokens.css`, `tokens.dark.css` und `tokens.json` sind
 **generierte Artefakte** und werden von `task design-tokens` daraus
 projiziert; `scripts/design-tokens.mjs --check` meldet veraltete
@@ -458,7 +477,7 @@ Manifest-Zählwerte und schweigt nicht bei Drift.
 
 Veränderungen laufen damit immer in dieser Reihenfolge:
 
-1. `_tokens.scss` / `_tokens.dark.scss` anpassen
+1. `_tokens.scss` / `_tokens-dark.scss` anpassen
 2. `task design-tokens` — erzeugt `tokens.css`, `tokens.dark.css`, `tokens.json`
 3. `task design-check` — misst die neuen Werte
 4. erst danach die Komponenten ändern
@@ -480,7 +499,7 @@ Dark Mode ist opt-in: `<html data-bs-theme="dark">`, gesetzt von
 Paint in ein explizites `light` oder `dark` aufgelöst; ohne JavaScript
 greift `prefers-color-scheme: dark`.
 
-- Tokens: `design-system/_tokens.dark.scss` (siehe `_tokens.scss` für die Struktur).
+- Tokens: `design-system/_tokens-dark.scss` (siehe `_tokens.scss` für die Struktur).
 - Selbst-gehostete Fonts (VendSans / DMMono) bleiben unverändert;
   `font-display: swap` beibehalten.
 - Komponenten erben Dark-Mode automatisch über CSS-Variablen — keine

@@ -2,7 +2,7 @@
  * design-system/tokens.dark.css
  *
  * GENERATED FILE — do not edit.
- * Source: design-system/_tokens.dark.scss  (regenerate with `task design-tokens`)
+ * Source: design-system/_tokens-dark.scss  (regenerate with `task design-tokens`)
  *
  * Opt-in via <html data-bs-theme="dark">, mit Fallback auf
  * prefers-color-scheme: dark. theme.js setzt data-bs-theme immer explizit.
@@ -44,6 +44,12 @@
   --status-critical-text: #E8A98A;
   --status-expired-text:  #D79090;
   --status-neutral-text:  #A89F92;
+
+  --status-fresh-on:    #1E1A14;
+  --status-soon-on:     #1E1A14;
+  --status-critical-on: #1E1A14;
+  --status-expired-on:  #1E1A14;
+  --status-neutral-on:  #1E1A14;
 
   /* Semantische Aliase */
   --success: #59A388;
@@ -97,6 +103,12 @@
   --status-critical-text: #E8A98A;
   --status-expired-text:  #D79090;
   --status-neutral-text:  #A89F92;
+
+  --status-fresh-on:    #1E1A14;
+  --status-soon-on:     #1E1A14;
+  --status-critical-on: #1E1A14;
+  --status-expired-on:  #1E1A14;
+  --status-neutral-on:  #1E1A14;
 
   /* Semantische Aliase */
   --success: #59A388;

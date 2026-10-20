@@ -47,25 +47,33 @@ function clearEmptyChart(canvasId) {
 function renderTile(title, hero, variant, heroClass) {
   const col = document.createElement('div');
   col.className = 'col';
-  const variantColorMap  = { danger: 'var(--status-expired)', warning: 'var(--status-soon)', success: 'var(--status-fresh)' };
-  const variantShadowMap = { danger: 'oklch(0.55 0.20 25)', warning: 'oklch(0.72 0.16 80)', success: 'oklch(0.50 0.12 162)' };
+  // A solid fill is reserved for the expired state — the design system's
+  // bento sheet fills exactly one card. Every other variant colours the
+  // value, which is what the status text variants exist for.
+  const fillMap = { danger: 'var(--status-expired)' };
+  const inkMap  = { danger: 'var(--status-expired-on)' };
+  const textMap = {
+    danger: 'var(--status-expired-text)',
+    warning: 'var(--status-soon-text)',
+    success: 'var(--status-fresh-text)',
+  };
 
-  // Accent-fill tile for non-zero urgent/warning values
-  if (variant && variantColorMap[variant] && !heroClass && Number.parseFloat(hero) > 0) {
-    const fill   = variantColorMap[variant];
-    const shadow = variantShadowMap[variant];
+  // Accent-fill tile for non-zero urgent values
+  if (variant && fillMap[variant] && !heroClass && Number.parseFloat(hero) > 0) {
+    const fill = fillMap[variant];
+    const ink  = inkMap[variant];
     col.innerHTML = `
-      <div class="metric-tile h-100" style="background:${fill};box-shadow:0 6px 18px ${shadow}55;border-color:transparent;position:relative;overflow:hidden;">
-        <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:rgba(255,255,255,0.08);pointer-events:none;"></div>
+      <div class="metric-tile h-100" style="background:${fill};box-shadow:0 6px 18px color-mix(in oklab, ${fill} 33%, transparent);border-color:transparent;position:relative;overflow:hidden;">
+        <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:color-mix(in oklab, ${ink} 8%, transparent);pointer-events:none;"></div>
         <div style="position:relative;">
-          <div class="metric-label" style="color:rgba(255,255,255,0.70);">${title}</div>
-          <div class="metric-value" style="color:white;" title="${hero}">${hero}</div>
+          <div class="metric-label" style="color:color-mix(in oklab, ${ink} 88%, transparent);">${title}</div>
+          <div class="metric-value" style="color:${ink};" title="${hero}">${hero}</div>
         </div>
       </div>`;
     return col;
   }
 
-  const heroColor = (variant && variantColorMap[variant]) ? variantColorMap[variant] : 'var(--fg)';
+  const heroColor = (variant && textMap[variant]) ? textMap[variant] : 'var(--fg)';
   const heroStyle = heroClass ? '' : `style="color:${heroColor}"`;
   const heroInnerClass = heroClass || 'metric-value';
   col.innerHTML = `
@@ -97,11 +105,11 @@ function renderListTile(title, items, days) {
   col.innerHTML = `
     <div class="card h-100" style="overflow:hidden;">
       <div class="card-header d-flex align-items-center gap-2 fw-bold">
-        <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
           <i class="bi bi-clock-history" style="font-size:12px;color:var(--accent);"></i>
         </div>
         <span class="flex-grow-1">${title}</span>
-        <i class="bi bi-info-circle tile-threshold-info" style="font-size:14px;cursor:default;color:var(--fg-3);font-weight:normal;"></i>
+        <i class="bi bi-info-circle tile-threshold-info" style="font-size:14px;cursor:default;color:var(--meta);font-weight:normal;"></i>
       </div>
       <div class="tile-scroll-body">
         <ul class="list-group list-group-flush">${listHtml}</ul>
@@ -148,12 +156,15 @@ function renderCharts(s) {
         labels: Object.keys(s.categories),
         datasets: [{
           data: Object.values(s.categories),
+          // The design system has no categorical palette: the category
+          // breakdown borrows the status language. Six slots, cycled by
+          // Chart.js when a household has more categories than that.
           backgroundColor: [
-            cssVar('--status-fresh'),
-            cssVar('--brand-slate'),
-            cssVar('--color-info'),
+            cssVar('--accent'),
+            cssVar('--status-critical'),
+            cssVar('--info'),
             cssVar('--status-soon'),
-            cssVar('--status-nodate'),
+            cssVar('--status-neutral'),
             cssVar('--status-expired'),
           ],
         }],
@@ -245,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (streakTile) {
         if (longestStreak > 0) {
           const sub = document.createElement('div');
-          sub.style.cssText = 'font-size:var(--text-xs);color:var(--fg-3);margin-top:var(--space-1)';
+          sub.style.cssText = 'font-size:var(--text-xs);color:var(--meta);margin-top:var(--space-1)';
           sub.textContent = proviant.tn("js.home.bestStreak", longestStreak);
           streakTile.appendChild(sub);
         }
@@ -258,7 +269,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           const span = Math.max(1, nextMilestone - prevMilestone);
           const milestonePct = Math.min(100, Math.round((intoMilestone / span) * 100));
           const prog = document.createElement('div');
-          prog.style.cssText = 'margin-top:var(--space-2);font-size:var(--text-xs);color:var(--fg-3);';
+          prog.style.cssText = 'margin-top:var(--space-2);font-size:var(--text-xs);color:var(--meta);';
           prog.innerHTML = `
             <div class="d-flex justify-content-between mb-1">
               <span>${proviant.t("js.home.nextMilestone", nextMilestone)}</span>
@@ -369,7 +380,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         activityCol.innerHTML = `
           <div class="card h-100" style="overflow:hidden;">
             <div class="card-header d-flex align-items-center gap-2 fw-bold">
-              <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
+              <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
                 <i class="bi bi-activity" style="font-size:12px;color:var(--accent);"></i>
               </div>
               <span class="flex-grow-1">${proviant.t("js.home.recentActivity")}</span>

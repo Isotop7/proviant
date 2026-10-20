@@ -47,6 +47,32 @@
   --status-expired-text:  #8C3A3A;
   --status-neutral-text:  #5F5F5F;
 
+  /* Abgeleitete Slots (siehe „Abgeleitete Slots" oben) */
+  --status-fresh-subtle:    color-mix(in oklab, var(--status-fresh) 18%, var(--surface));
+  --status-fresh-border:    color-mix(in oklab, var(--status-fresh) 32%, var(--surface));
+  --status-fresh-hover:     color-mix(in oklab, var(--status-fresh), black 8%);
+  --status-soon-subtle:     color-mix(in oklab, var(--status-soon) 18%, var(--surface));
+  --status-soon-border:     color-mix(in oklab, var(--status-soon) 32%, var(--surface));
+  --status-soon-hover:      color-mix(in oklab, var(--status-soon), black 8%);
+  --status-critical-subtle: color-mix(in oklab, var(--status-critical) 18%, var(--surface));
+  --status-critical-border: color-mix(in oklab, var(--status-critical) 32%, var(--surface));
+  --status-critical-hover:  color-mix(in oklab, var(--status-critical), black 8%);
+  --status-expired-subtle:  color-mix(in oklab, var(--status-expired) 18%, var(--surface));
+  --status-expired-border:  color-mix(in oklab, var(--status-expired) 32%, var(--surface));
+  --status-expired-hover:   color-mix(in oklab, var(--status-expired), black 8%);
+  --status-neutral-subtle:  color-mix(in oklab, var(--status-neutral) 18%, var(--surface));
+  --status-neutral-border:  color-mix(in oklab, var(--status-neutral) 32%, var(--surface));
+  --status-neutral-hover:   color-mix(in oklab, var(--status-neutral), black 8%);
+  --status-fresh-on:    #FFFFFF;
+  --status-soon-on:     #FFFFFF;
+  --status-critical-on: #FFFFFF;
+  --status-expired-on:  #FFFFFF;
+  --status-neutral-on:  #FFFFFF;
+
+  --accent-hover:           color-mix(in oklab, var(--accent), black 6%);
+  --accent-active:          color-mix(in oklab, var(--accent), black 12%);
+  --accent-border:          color-mix(in oklab, var(--accent) 45%, var(--surface));
+
   /* Semantische Aliase */
   --success: #418069;
   --warn:    #C2A24A;

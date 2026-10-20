@@ -149,6 +149,43 @@ $field-height:             40px;
 $field-height-hero:        48px;
 $field-height-compact:     32px;
 
+// ── Abgeleitete Slots ──────────────────────────────────────────────────────
+// Keine eigenen Farbwerte, sondern Ableitungen aus den Slots darüber. Sie
+// rechnen sich zur Compile-Zeit als Ausdruck, nicht als Farbe — dadurch
+// ziehen sie automatisch mit, wenn `--surface` im Dark Theme wechselt.
+//
+//   subtle  Chip-Hintergrund   18 % Status, 82 % Fläche
+//   border  Chip-Rahmen         32 % Status, 68 % Fläche
+//   hover   Hover auf gefülltem Status 8 % abgedunkelt
+//
+// Der Akzent-Rahmen mischt den Akzent mit der Fläche statt mit Weiß, damit
+// er im hellen Theme aufhellt und im dunklen Theme abdunkelt.
+$status-fresh-subtle:   color-mix(in oklab, var(--status-fresh) 18%, var(--surface));
+$status-fresh-border:   color-mix(in oklab, var(--status-fresh) 32%, var(--surface));
+$status-fresh-hover:    color-mix(in oklab, var(--status-fresh), black 8%);
+$status-soon-subtle:    color-mix(in oklab, var(--status-soon) 18%, var(--surface));
+$status-soon-border:    color-mix(in oklab, var(--status-soon) 32%, var(--surface));
+$status-soon-hover:     color-mix(in oklab, var(--status-soon), black 8%);
+$status-critical-subtle: color-mix(in oklab, var(--status-critical) 18%, var(--surface));
+$status-critical-border: color-mix(in oklab, var(--status-critical) 32%, var(--surface));
+$status-critical-hover:  color-mix(in oklab, var(--status-critical), black 8%);
+$status-expired-subtle: color-mix(in oklab, var(--status-expired) 18%, var(--surface));
+$status-expired-border: color-mix(in oklab, var(--status-expired) 32%, var(--surface));
+$status-expired-hover:  color-mix(in oklab, var(--status-expired), black 8%);
+$status-neutral-subtle: color-mix(in oklab, var(--status-neutral) 18%, var(--surface));
+$status-neutral-border: color-mix(in oklab, var(--status-neutral) 32%, var(--surface));
+$status-neutral-hover:  color-mix(in oklab, var(--status-neutral), black 8%);
+// Tinte auf einer soliden Statusflaeche. Im hellen Theme weiss, im dunkten
+// Theme Tinte auf dem hellen Statusfarbwert.
+$status-fresh-on: #FFFFFF;
+$status-soon-on: #FFFFFF;
+$status-critical-on: #FFFFFF;
+$status-expired-on: #FFFFFF;
+$status-neutral-on: #FFFFFF;
+$accent-hover:          color-mix(in oklab, var(--accent), black 6%);
+$accent-active:         color-mix(in oklab, var(--accent), black 12%);
+$accent-border:         color-mix(in oklab, var(--accent) 45%, var(--surface));
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Runtime custom properties
 // ─────────────────────────────────────────────────────────────────────────────
@@ -189,6 +226,32 @@ $field-height-compact:     32px;
   --status-critical-text: #{$status-critical-text};
   --status-expired-text:  #{$status-expired-text};
   --status-neutral-text:  #{$status-neutral-text};
+
+  // Abgeleitete Slots (siehe „Abgeleitete Slots" oben)
+  --status-fresh-subtle:    #{$status-fresh-subtle};
+  --status-fresh-border:    #{$status-fresh-border};
+  --status-fresh-hover:     #{$status-fresh-hover};
+  --status-soon-subtle:     #{$status-soon-subtle};
+  --status-soon-border:     #{$status-soon-border};
+  --status-soon-hover:      #{$status-soon-hover};
+  --status-critical-subtle: #{$status-critical-subtle};
+  --status-critical-border: #{$status-critical-border};
+  --status-critical-hover:  #{$status-critical-hover};
+  --status-expired-subtle:  #{$status-expired-subtle};
+  --status-expired-border:  #{$status-expired-border};
+  --status-expired-hover:   #{$status-expired-hover};
+  --status-neutral-subtle:  #{$status-neutral-subtle};
+  --status-neutral-border:  #{$status-neutral-border};
+  --status-neutral-hover:   #{$status-neutral-hover};
+  --status-fresh-on:    #{$status-fresh-on};
+  --status-soon-on:     #{$status-soon-on};
+  --status-critical-on: #{$status-critical-on};
+  --status-expired-on:  #{$status-expired-on};
+  --status-neutral-on:  #{$status-neutral-on};
+
+  --accent-hover:           #{$accent-hover};
+  --accent-active:          #{$accent-active};
+  --accent-border:          #{$accent-border};
 
   // Semantische Aliase
   --success: #{$success};

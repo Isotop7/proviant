@@ -12,18 +12,20 @@ let lastStats = null;
 function renderTile(title, hero, variant, heroClass) {
   const col = document.createElement('div');
   col.className = 'col';
-  const variantColorMap  = { danger: 'var(--status-expired)', warning: 'var(--status-soon)', success: 'var(--status-fresh)' };
-  const variantShadowMap = { danger: 'oklch(0.55 0.20 25)', warning: 'oklch(0.72 0.16 80)', success: 'oklch(0.50 0.12 162)' };
+  // A solid fill is reserved for the expired state — the design system's
+  // bento sheet fills exactly one card.
+  const fillMap = { danger: 'var(--status-expired)' };
+  const inkMap  = { danger: 'var(--status-expired-on)' };
 
-  if (variant && variantColorMap[variant] && !heroClass && Number.parseFloat(hero) > 0) {
-    const fill   = variantColorMap[variant];
-    const shadow = variantShadowMap[variant];
+  if (variant && fillMap[variant] && !heroClass && Number.parseFloat(hero) > 0) {
+    const fill = fillMap[variant];
+    const ink  = inkMap[variant];
     col.innerHTML = `
-      <div class="metric-tile h-100" style="background:${fill};box-shadow:0 6px 18px ${shadow}55;border-color:transparent;position:relative;overflow:hidden;">
-        <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:rgba(255,255,255,0.08);pointer-events:none;"></div>
+      <div class="metric-tile h-100" style="background:${fill};box-shadow:0 6px 18px color-mix(in oklab, ${fill} 33%, transparent);border-color:transparent;position:relative;overflow:hidden;">
+        <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:color-mix(in oklab, ${ink} 8%, transparent);pointer-events:none;"></div>
         <div style="position:relative;">
-          <div class="metric-label" style="color:rgba(255,255,255,0.70);">${title}</div>
-          <div class="metric-value" style="color:white;" title="${hero}">${hero}</div>
+          <div class="metric-label" style="color:color-mix(in oklab, ${ink} 88%, transparent);">${title}</div>
+          <div class="metric-value" style="color:${ink};" title="${hero}">${hero}</div>
         </div>
       </div>`;
     return col;

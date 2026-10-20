@@ -5,7 +5,7 @@
 // Projects the canonical design-token source into its artifacts.
 //
 //   design-system/_tokens.scss       (canonical, light)
-//   design-system/_tokens.dark.scss  (canonical, dark)
+//   design-system/_tokens-dark.scss  (canonical, dark)
 //         │
 //         ├──> design-system/tokens.css       (plain CSS, light :root)
 //         ├──> design-system/tokens.dark.css  (plain CSS, dark selector)
@@ -29,7 +29,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DESIGN = path.join(ROOT, 'design-system');
 
 const LIGHT_SCSS = path.join(DESIGN, '_tokens.scss');
-const DARK_SCSS = path.join(DESIGN, '_tokens.dark.scss');
+const DARK_SCSS = path.join(DESIGN, '_tokens-dark.scss');
 const OUT_CSS = path.join(DESIGN, 'tokens.css');
 const OUT_DARK_CSS = path.join(DESIGN, 'tokens.dark.css');
 const OUT_JSON = path.join(DESIGN, 'tokens.json');
@@ -217,7 +217,7 @@ const BANNER_DARK = `/* ──────────────────�
  * design-system/tokens.dark.css
  *
  * GENERATED FILE — do not edit.
- * Source: design-system/_tokens.dark.scss  (regenerate with \`task design-tokens\`)
+ * Source: design-system/_tokens-dark.scss  (regenerate with \`task design-tokens\`)
  *
  * Opt-in via <html data-bs-theme="dark">, mit Fallback auf
  * prefers-color-scheme: dark. theme.js setzt data-bs-theme immer explizit.
@@ -234,7 +234,7 @@ function main() {
   if (lightVars.size === 0) fail('no variables parsed from _tokens.scss');
 
   const lightBody = extractRuntimeBody(lightSrc, lightVars, '_tokens.scss');
-  const darkBody = extractRuntimeBody(darkSrc, darkVars, '_tokens.dark.scss');
+  const darkBody = extractRuntimeBody(darkSrc, darkVars, '_tokens-dark.scss');
 
   const lightProps = extractCustomProperties(lightBody);
   const darkProps = extractCustomProperties(darkBody);

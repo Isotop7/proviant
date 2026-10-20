@@ -33,6 +33,9 @@ sichtbar ist — einen messbaren Beleg (Kontrastwert, Route, Endpoint).
 | 16 | Die Auth-Flow-Seiten behalten das einspaltige Layout | `acceptInvite`, `verifyEmail`, `onboarding` und `unsubscribe` sind Flow-Seiten, nicht die Anmeldefläche. Das geteilte Brand-Panel gilt für die Anmeldung. |
 | 17 | `--fg-inverse`, `--card-min`, `--text-disabled` bleiben | App-eigene Slots ohne Spec-Gegenstück. |
 | 18 | `.modal--demo` bleibt Spec-Sheet-only | Die App nutzt echte Bootstrap-Modals. Die Klasse existiert nur, damit die Sheets ein sichtbares Modal zeigen. |
+| 19 | Das Kategorien-Diagramm nutzt `--info` als sechste Farbe | Das Design-System kennt keine kategoriale Palette: das Diagramm leiht sich die Statussprache. Vier Statusfarben plus Akzent ergeben fünf unterscheidbare Farben, die Haushalte mit mehr Kategorien brauchen eine sechste. Die Spec erlaubt sie für Diagramme nicht ausdrücklich. |
+| 20 | Das Badge `opened` nutzt die Neutralfamilie statt Violett | Der Spec verbietet Violett, und "geöffnet" ist kein Ablaufzustand. Grau ist die neutrale Aussage; die dringenden Zustände bleiben farbig. |
+| 21 | Neue Slots `--status-*-on` (Tinte auf voller Statusfläche) | Eine gefüllte Fläche braucht eine eigene Tinte: im hellen Theme Weiß, im dunklen Theme Tinte auf dem hellen Statuswert. Ohne sie trägt die Kachel in einem der beiden Themes unlesbaren Text. |
 
 ## Geprüfte Werte
 

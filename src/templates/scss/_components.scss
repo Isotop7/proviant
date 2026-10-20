@@ -22,19 +22,19 @@
 }
 
 .btn-proviant-primary {
-  color: var(--accent-fg);
+  color: var(--accent-on);
   background: var(--accent);
   border: none;
-  box-shadow: 0 4px 12px oklch(50% .12 162deg / .35);
-  transition: background var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 35%, transparent);
+  transition: background var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out);
 
   &:hover {
-    color: var(--accent-fg);
+    color: var(--accent-on);
     background: var(--accent-hover);
-    box-shadow: 0 4px 16px oklch(50% .12 162deg / .5);
+    box-shadow: 0 4px 16px color-mix(in oklab, var(--accent) 50%, transparent);
   }
   &:active {
-    color: var(--accent-fg);
+    color: var(--accent-on);
     background: var(--accent-active);
   }
   &:disabled {
@@ -63,7 +63,7 @@
   gap: 5px;
   align-items: center;
   padding: 5px 10px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 11px;
   color: var(--fg-2);
   cursor: pointer;
@@ -72,14 +72,14 @@
   border-radius: 7px;
 
   &.danger {
-    color: var(--status-expired);
+    color: var(--status-expired-text);
     background: var(--status-expired-subtle);
     border-color: var(--status-expired-border);
   }
 
   &.active {
     color: var(--accent);
-    background: var(--accent-subtle);
+    background: var(--accent-soft);
     border-color: var(--accent-border);
   }
 }
@@ -88,11 +88,11 @@
   color: var(--fg);
   background: var(--surface);
   border: 1px solid var(--border);
-  transition: background var(--duration-base) var(--ease-out);
+  transition: background var(--motion-base) var(--ease-out);
 
   &:hover {
     color: var(--fg);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
 }
 
@@ -108,12 +108,12 @@
 }
 
 .btn-proviant-warning {
-  color: var(--status-soon-fg);
+  color: var(--status-soon-text);
   background: var(--status-soon);
   border: none;
 
   &:hover {
-    color: var(--status-soon-fg);
+    color: var(--status-soon-text);
     background: var(--status-soon-hover);
   }
 }
@@ -126,11 +126,11 @@
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
-  transition: background var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
+  transition: background var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out);
 
   &:hover {
     color: var(--fg);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
   &.btn-sm {
     padding: 5px 12px;
@@ -145,24 +145,24 @@
 // Form controls
 .form-control,
 .form-select {
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: var(--text-base);
   color: var(--fg);
   background: var(--surface);
   border-color: var(--border);
   border-radius: var(--radius-md);
-  transition: border-color var(--duration-base), box-shadow var(--duration-base);
+  transition: border-color var(--motion-base), box-shadow var(--motion-base);
 
   &:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .15);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 15%, transparent);
   }
 
   &.is-invalid {
     border-color: var(--status-expired);
   }
   &.is-invalid:focus {
-    box-shadow: 0 0 0 3px oklch(55% .2 25deg / .12);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--status-expired) 12%, transparent);
   }
 }
 
@@ -184,7 +184,7 @@
   th {
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
-    color: var(--fg-3);
+    color: var(--meta);
     text-transform: uppercase;
     letter-spacing: .06em;
   }
@@ -201,22 +201,22 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--elev-raised);
   transition: transform .06s ease, box-shadow .15s ease;
 
   &:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--elev-raised);
   }
 }
 
 // Settings section card — accent-tinted border + accent hover shadow
 .card-section {
-  border: 1px solid oklch(78% .08 162deg);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--duration-base) var(--ease-out);
+  border: 1px solid var(--accent-border);
+  box-shadow: var(--elev-raised);
+  transition: box-shadow var(--motion-base) var(--ease-out);
 
   &:hover {
-    box-shadow: 0 6px 18px oklch(50% .12 162deg / .12);
+    box-shadow: 0 6px 18px color-mix(in oklab, var(--accent) 12%, transparent);
   }
 }
 
@@ -224,10 +224,10 @@
 .product-card {
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow var(--duration-slow) var(--ease-out), transform var(--duration-slow) var(--ease-out);
+  transition: box-shadow var(--motion-slow) var(--ease-out), transform var(--motion-slow) var(--ease-out);
 
   &:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--elev-raised);
     transform: translateY(-1px);
   }
 
@@ -245,8 +245,8 @@
     background:
       repeating-linear-gradient(
         45deg,
-        var(--bg-subtle),
-        var(--bg-subtle) 4px,
+        var(--surface-warm),
+        var(--surface-warm) 4px,
         white 4px,
         white 10px
       );
@@ -259,7 +259,7 @@
       object-fit: contain; // contain keeps full product visible; cover would crop
       background: var(--surface);
       opacity: 0;
-      transition: opacity var(--duration-slow) var(--ease-out);
+      transition: opacity var(--motion-slow) var(--ease-out);
     }
 
     .product-img-fallback {
@@ -269,7 +269,7 @@
       width: 100%;
       height: 100%;
       font-size: 2rem;
-      color: var(--fg-3);
+      color: var(--meta);
     }
   }
 
@@ -283,12 +283,12 @@
   }
   .product-cat {
     font-size: var(--text-sm);
-    color: var(--fg-3);
+    color: var(--meta);
   }
   .product-meta {
     font-family: var(--font-mono);
     font-size: 10px;
-    color: var(--fg-3);
+    color: var(--meta);
   }
 }
 
@@ -305,39 +305,39 @@
 }
 
 .badge-expired {
-  color: oklch(45% .2 25deg);
-  background: oklch(95% .05 25deg);
-  border-color: oklch(80% .12 25deg);
+  color: var(--status-expired-text);
+  background: var(--status-expired-subtle);
+  border-color: var(--status-expired-border);
 }
 .badge-critical {
-  color: oklch(50% .18 45deg);
-  background: oklch(96% .05 45deg);
-  border-color: oklch(82% .12 45deg);
+  color: var(--status-critical-text);
+  background: var(--status-critical-subtle);
+  border-color: var(--status-critical-border);
 }
 .badge-soon {
-  color: oklch(50% .16 80deg);
-  background: oklch(97% .05 80deg);
-  border-color: oklch(85% .1 80deg);
+  color: var(--status-soon-text);
+  background: var(--status-soon-subtle);
+  border-color: var(--status-soon-border);
 }
 .badge-fresh {
-  color: oklch(38% .1 145deg);
-  background: oklch(94% .04 145deg);
-  border-color: oklch(78% .08 145deg);
+  color: var(--status-fresh-text);
+  background: var(--status-fresh-subtle);
+  border-color: var(--status-fresh-border);
 }
 .badge-nodate {
-  color: oklch(45% .01 70deg);
-  background: oklch(94% .006 70deg);
-  border-color: oklch(80% .008 70deg);
+  color: var(--status-neutral-text);
+  background: var(--status-neutral-subtle);
+  border-color: var(--status-neutral-border);
 }
 .badge-lowstock {
-  color: oklch(50% .16 80deg);
-  background: oklch(97% .05 80deg);
-  border-color: oklch(85% .1 80deg);
+  color: var(--status-soon-text);
+  background: var(--status-soon-subtle);
+  border-color: var(--status-soon-border);
 }
 .badge-opened {
-  color: oklch(40% .12 280deg);
-  background: oklch(94% .03 280deg);
-  border-color: oklch(78% .08 280deg);
+  color: var(--status-neutral-text);
+  background: var(--status-neutral-subtle);
+  border-color: var(--status-neutral-border);
 }
 
 // Sidebar nav
@@ -359,7 +359,7 @@
     align-items: center;
     padding: 14px 16px;
     text-decoration: none;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
 
     .brand-logo {
       flex-shrink: 0;
@@ -397,12 +397,12 @@
 
   &:hover {
     color: var(--fg);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
   &.active {
     font-weight: 600;
-    color: var(--accent);
-    background: var(--accent-subtle);
+    color: var(--accent-text);
+    background: var(--accent-soft);
   }
 
   i {
@@ -414,7 +414,7 @@
 .modal-content {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--elev-overlay);
 }
 .modal-header {
   gap: 12px;
@@ -458,7 +458,7 @@
   &.focused {
     padding: 13px 15px; // compensate 1px→2px border so content doesn't jump
     border: 2px solid var(--accent);
-    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .15);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 15%, transparent);
   }
   input {
     width: 100%;
@@ -471,9 +471,9 @@
     border: none;
     outline: none;
     &::placeholder {
-      font-family: var(--font-sans, inherit);
+      font-family: var(--font-body, inherit);
       font-size: 14px;
-      color: var(--fg-3);
+      color: var(--meta);
       letter-spacing: 0;
     }
     &::-webkit-inner-spin-button,
@@ -485,14 +485,14 @@
 
 #addProductModal .modal-header {
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border);
 }
 #addProductModal .modal-body {
   padding-top: 18px;
 }
 #addProductModal .modal-footer {
   padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border);
 }
 
 // Empty states
@@ -502,7 +502,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--elev-raised);
 }
 .empty-icon {
   display: flex;
@@ -512,8 +512,8 @@
   height: 52px;
   margin: 0 auto 14px;
   font-size: 22px;
-  color: var(--fg-3);
-  background: var(--bg-subtle);
+  color: var(--meta);
+  background: var(--surface-warm);
   border-radius: 12px;
 }
 .empty-title {
@@ -533,10 +533,10 @@
 .pv-toast {
   border-left: 3px solid;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-overlay);
 }
 .pv-toast.toast-success {
-  border-left-color: oklch(52% .1 145deg);
+  border-left-color: var(--status-fresh);
 }
 .pv-toast.toast-error {
   border-left-color: var(--status-expired);
@@ -556,7 +556,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--elev-raised);
 
   .metric-label {
     font-size: 12px;

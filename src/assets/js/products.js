@@ -409,12 +409,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (tabManualInput) {
             tabManualInput.style.background  = isCamera ? 'transparent' : 'white';
             tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px oklch(0 0 0 / 0.10)';
-            tabManualInput.style.color       = isCamera ? 'var(--fg-3)' : 'var(--fg)';
+            tabManualInput.style.color       = isCamera ? 'var(--meta)' : 'var(--fg)';
         }
         if (tabCamera) {
             tabCamera.style.background  = isCamera ? 'white' : 'transparent';
             tabCamera.style.boxShadow   = isCamera ? '0 1px 3px oklch(0 0 0 / 0.10)' : 'none';
-            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--fg-3)';
+            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--meta)';
         }
         if (manualSection) manualSection.style.display = isCamera ? 'none' : 'block';
         if (cameraSection) cameraSection.style.display = isCamera ? 'block' : 'none';

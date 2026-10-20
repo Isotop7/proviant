@@ -16,7 +16,7 @@
   height: 64px;
   background: var(--accent);
   border-radius: 16px;
-  box-shadow: 0 6px 18px oklch(50% .12 162deg / .35);
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
 // Tabular numbers — stable width for stat tiles
@@ -73,7 +73,7 @@
   padding-bottom: env(safe-area-inset-bottom, 0);
   background: var(--surface);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -4px 20px oklch(18% .022 70deg / .08);
+  box-shadow: 0 -4px 20px color-mix(in oklab, var(--fg) 8%, transparent);
   transform: translateZ(0);
 }
 
@@ -86,19 +86,19 @@
   width: 64px;
   height: 64px;
   margin-bottom: 4px;
-  color: var(--accent-fg);
+  color: var(--accent-on);
   text-decoration: none;
   background: var(--accent);
   border-radius: 50%;
-  box-shadow: 0 4px 12px oklch(50% .12 162deg / .4);
-  transition: transform var(--duration-base), box-shadow var(--duration-base);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 40%, transparent);
+  transition: transform var(--motion-base), box-shadow var(--motion-base);
 
   i {
     font-size: 24px;
   }
 
   &:hover {
-    box-shadow: 0 6px 16px oklch(50% .12 162deg / .5);
+    box-shadow: 0 6px 16px color-mix(in oklab, var(--accent) 50%, transparent);
     transform: scale(1.05);
   }
 
@@ -118,7 +118,7 @@
   padding: 8px;
   font-size: 10px;
   font-weight: 400;
-  color: var(--fg-3);
+  color: var(--meta);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -131,7 +131,7 @@
     font-size: 20px;
   }
   span {
-    font-family: var(--font-ui);
+    font-family: var(--font-body);
   }
 
   &.active {
@@ -158,12 +158,12 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  color: var(--fg-3);
+  color: var(--meta);
   cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 50%;
-  box-shadow: 0 2px 8px oklch(18% .022 70deg / .12);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--fg) 12%, transparent);
   transition: color 120ms;
 
   i {
@@ -181,7 +181,7 @@
   margin-top: 8px;
 
   .dropdown-item {
-    font-family: var(--font-ui);
+    font-family: var(--font-body);
     font-size: 12px;
   }
 
@@ -206,7 +206,7 @@
 .mobile-nav-link {
   min-height: 48px;
   padding: 12px 16px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 500;
   color: var(--fg);
@@ -214,7 +214,7 @@
   i {
     width: 20px;
     font-size: 18px;
-    color: var(--fg-3);
+    color: var(--meta);
     text-align: center;
   }
 
