@@ -1,13 +1,15 @@
 {{ define "content" }}
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">{{ t "nav.recipes" }}</h1>
-        <p class="page-header-subtitle">{{ t "recipes.subtitle" }}</p>
+<header class="page-header">
+    <div class="page-header__lead">
+        <h1 class="page-header__title">{{ t "nav.recipes" }}</h1>
+        <p class="page-header__sub">{{ t "recipes.subtitle" }}</p>
     </div>
-    <button class="btn btn-primary d-none d-md-flex align-items-center gap-2" id="btnNewRecipe" type="button">
-        <i class="bi bi-plus-lg"></i> {{ t "recipes.newRecipe" }}
-    </button>
-</div>
+    <div class="page-header__aside">
+        <button class="btn btn-primary d-none d-md-flex align-items-center gap-2" id="btnNewRecipe" type="button">
+            <i class="bi bi-plus-lg"></i> {{ t "recipes.newRecipe" }}
+        </button>
+    </div>
+</header>
 
 <div class="d-flex align-items-center justify-content-between mb-2">
     <h2 class="h5 mb-0">{{ t "recipes.myRecipes" }}</h2>

@@ -494,14 +494,20 @@ func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDays, soonDa
 	}
 }
 
-func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDays int) (expired, critical int) {
+func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDays, soonDays int) (expired, critical, soon int) {
 	for i := range products {
 		p := &products[i]
 		effective := p.EffectiveExpireAt()
-		if !effective.IsZero() && effective.Before(now) {
+		if effective.IsZero() {
+			continue
+		}
+		switch {
+		case effective.Before(now):
 			expired++
-		} else if !effective.IsZero() && effective.Before(now.AddDate(0, 0, criticalDays)) {
+		case effective.Before(now.AddDate(0, 0, criticalDays)):
 			critical++
+		case effective.Before(now.AddDate(0, 0, soonDays)):
+			soon++
 		}
 	}
 	return
@@ -595,7 +601,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	// and therefore all past their expiry date, which would badge every one of
 	// them as urgent, so that view asks the repository for the counts directly
 	// instead of loading the active rows it would immediately throw away.
-	var expiredCount, criticalCount int
+	var expiredCount, criticalCount, soonCount int
 	if statusFilter == "archived" {
 		if archivedExpired, archivedCritical, statsErr := repos.Products.GetActiveExpiryCounts(userID, now, criticalDays); statsErr != nil {
 			logger.Warn().Msgf("Error getting active product expiry stats: %s", statsErr)
@@ -603,7 +609,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 			expiredCount, criticalCount = archivedExpired, archivedCritical
 		}
 	} else {
-		expiredCount, criticalCount = computeExpiryStats(projections, now, criticalDays)
+		expiredCount, criticalCount, soonCount = computeExpiryStats(projections, now, criticalDays, soonDays)
 	}
 
 	// ProductCount keeps its old meaning: every row the view selected, before the
@@ -670,6 +676,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"ProductCount":       totalMatched,
 		"ExpiredCount":       expiredCount,
 		"CriticalCount":      criticalCount,
+		"ExpiringSoonCount":  soonCount,
 		"UrgentCount":        expiredCount + criticalCount,
 		"Params":             params,
 		"Page":               page,
@@ -1149,6 +1156,7 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
 		"Items":         items,
 		"ItemsSorted":   unchecked,
 		"ItemCount":     len(items),
+		"CheckedCount":  len(checked),
 		"AutoItems":     filteredAutoProducts,
 		"AutoItemCount": len(filteredAutoProducts),
 		"HasAutoItems":  len(filteredAutoProducts) > 0,

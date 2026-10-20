@@ -1,21 +1,27 @@
 {{ define "content" }}
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">{{ t "nav.products" }}</h1>
-        <p class="page-header-subtitle">{{ tn "products.header.itemCount" .ProductCount }}</p>
+<header class="page-header">
+    <div class="page-header__lead">
+        <h1 class="eyebrow">{{ t "nav.products" }}</h1>
+        <div class="page-header__count">{{ .ProductCount }}</div>
+        <p class="page-header__sub">{{ t "products.header.itemsInHousehold" }}</p>
     </div>
-    <div class="d-flex gap-2">
-        {{ if .ReceiptScanEnabled }}
-        <a href="/web/products/scan-receipt" class="btn btn-outline-secondary d-none d-md-flex align-items-center gap-2">
-            <i class="bi bi-receipt"></i> {{ t "products.scanReceipt" }}
-        </a>
-        {{ end }}
-        <button class="btn btn-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
-            <i class="bi bi-plus-lg"></i> {{ t "products.addProduct" }}
-        </button>
+    <div class="page-header__aside">
+        <div class="page-header__meta">
+            {{ t "products.header.expiredCount" .ExpiredCount }} · {{ t "products.header.expiringSoonCount" .ExpiringSoonCount }}
+        </div>
+        <div class="d-flex gap-2">
+            {{ if .ReceiptScanEnabled }}
+            <a href="/web/products/scan-receipt" class="btn btn-outline-secondary d-none d-md-flex align-items-center gap-2">
+                <i class="bi bi-receipt"></i> {{ t "products.scanReceipt" }}
+            </a>
+            {{ end }}
+            <button class="btn btn-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
+                <i class="bi bi-plus-lg"></i> {{ t "products.addProduct" }}
+            </button>
+        </div>
     </div>
-</div>
+</header>
 
 <div class="toolbar-sticky">
     <!-- Row 1: search (full width on mobile, with view toggle on desktop) -->

@@ -79,6 +79,8 @@ function fmtKg(n) {
 
 function renderTiles(s) {
   const root = document.getElementById('wasteTiles');
+  const headerCount = document.getElementById('wasteHeaderCount');
+  if (headerCount) headerCount.textContent = fmtEur(s.wastedEur);
   if (!root) return;
   root.innerHTML = '';
 

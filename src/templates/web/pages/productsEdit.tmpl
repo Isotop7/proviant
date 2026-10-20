@@ -24,21 +24,23 @@
     <i class="bi bi-chevron-right"></i>
     <span>{{ t "products.editProduct" }}</span>
   </div>
-  <div class="page-header">
-    <div>
-      <h1 class="page-header-title">{{ t "products.editProduct" }}</h1>
-      <p class="page-header-subtitle"><span class="id-chip">#<span id="labelProductID">{{ .Product.ID }}</span></span> {{ t "products.changesSavedHint" }}</p>
+  <header class="page-header">
+    <div class="page-header__lead">
+      <h1 class="page-header__title">{{ t "products.editProduct" }}</h1>
+      <p class="page-header__sub"><span class="id-chip">#<span id="labelProductID">{{ .Product.ID }}</span></span> {{ t "products.changesSavedHint" }}</p>
     </div>
-    <div class="d-flex align-items-center gap-2">
-      <span class="badge badge--{{ expiryStatusClass .Product.ExpireAt }}">
-        <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}"></i>
-        {{ expiryStatusLabel .Product.ExpireAt }}
-      </span>
-      <button type="button" class="btn btn-outline-secondary btn-sm btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}" title="{{ t "products.addToShoppingList" }}">
-        <i class="bi bi-cart-plus"></i>
-      </button>
+    <div class="page-header__aside">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge badge--{{ expiryStatusClass .Product.ExpireAt }}">
+          <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}"></i>
+          {{ expiryStatusLabel .Product.ExpireAt }}
+        </span>
+        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}" title="{{ t "products.addToShoppingList" }}">
+          <i class="bi bi-cart-plus"></i>
+        </button>
+      </div>
     </div>
-  </div>
+  </header>
   <form id="editProductForm">
     <div class="pv-edit-grid">
 

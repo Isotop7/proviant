@@ -14,6 +14,7 @@
   font-weight: var(--weight-semibold);
   line-height: 1.4;
   text-align: center;
+  letter-spacing: var(--tracking-button);
   border-radius: var(--radius-pill);
   transition: background-color var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out);
 
@@ -40,10 +41,10 @@
 .btn-primary {
   --bs-btn-color: var(--accent-on);
   --bs-btn-bg: var(--accent);
-  --bs-btn-border-color: var(--accent);
+  --bs-btn-border-color: transparent;
   --bs-btn-hover-color: var(--accent-on);
   --bs-btn-hover-bg: var(--accent-hover);
-  --bs-btn-hover-border-color: var(--accent-hover);
+  --bs-btn-hover-border-color: transparent;
   --bs-btn-active-color: var(--accent-on);
   --bs-btn-active-bg: var(--accent-active);
   --bs-btn-active-border-color: var(--accent-active);
@@ -136,9 +137,9 @@
     border-color: var(--status-expired-border);
   }
   &.active {
-    color: var(--accent-text);
-    background: var(--accent-soft);
-    border-color: var(--accent-border);
+    color: var(--accent-on);
+    background: var(--accent);
+    border-color: var(--accent);
   }
 }
 

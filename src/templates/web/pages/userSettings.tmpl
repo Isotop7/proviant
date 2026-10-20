@@ -1,11 +1,11 @@
 {{ define "content" }}
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">{{ t "settings.userSettings" }}</h1>
-        <p class="page-header-subtitle"><span class="id-chip">#{{ .User.ID }}</span></p>
+<header class="page-header">
+    <div class="page-header__lead">
+        <h1 class="page-header__title">{{ t "settings.userSettings" }}</h1>
+        <p class="page-header__sub"><span class="id-chip">#{{ .User.ID }}</span></p>
     </div>
-</div>
+</header>
 
 {{ template "_settings_profile" . }}
 {{ template "_settings_notifications" . }}

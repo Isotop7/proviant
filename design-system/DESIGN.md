@@ -220,6 +220,28 @@ Das Mapping der früheren eigenen Klassen auf Bootstrap-Klassen ist in `componen
 
 Nicht verwendet werden: `navbar`, `dropdown-menu`, `carousel`, `btn-toolbar`, `form-floating` — sie passen visuell nicht zur Pill-/Crème-Sprache. Begründung pro Komponente in `components.manifest.json#bootstrapReplaced`.
 
+### Seitenkopf (Page Header)
+
+Der Seitenkopf trägt den Namen der Seite — er führt den **einzigen** `h1`
+der Seite (die Topnav ist Navigation). Er ist **kein Band**: keine Fläche,
+keine Linie, kein Schatten, kein Bleed. Er besteht aus vier Teilen:
+
+| Teil | Klasse | Inhalt |
+|---|---|---|
+| Name | `.eyebrow` (als `h1`) | der Seitenname, klein, Versalien, `--muted` |
+| Zahl | `.page-header__count` | die Zahl, die die Seite zählt — `--text-display` 600, tabellarische Ziffern, `--tracking-tight` |
+| Erklärung | `.page-header__sub` | was die Zahl zählt, `--text-sm`, `--fg-2` |
+| Kontext | `.page-header__meta` | rechtsbündig, klein, Versalien, `--muted` (z. B. „2 EXPIRED · 5 EXPIRING SOON“) |
+| Aktionen | `.page-header__aside` | rechts unter dem Kontext, an der Unterkante bündig |
+
+Seiten ohne Zahl (Einstellungen, Lizenzen, Profil, Rezepte) führen statt
+dessen `.page-header__title` (`--text-h1` 600, `--tracking-tight`) mit
+`.page-header__sub`.
+
+Die Zahl kommt aus den Daten der Seite: Products, Shopping List, Waste
+Analytics und Meal Plan zählen; Recipes, Einstellungen, Lizenzen und das
+Profil nicht.
+
 ### Buttons
 
 Bootstrap-`.btn` mit Salwei-Politur (Uppercase, Pill, Salwei-Fokus). Mapping:

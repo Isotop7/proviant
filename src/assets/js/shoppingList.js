@@ -239,10 +239,14 @@
     var container = document.getElementById('shoppingListContainer');
     if (!container) return;
     var rows = container.querySelectorAll('.shopping-list__item');
-    var total = rows.length;
-    var subtitle = document.querySelector('.page-header-subtitle');
-    if (subtitle) {
-      subtitle.textContent = proviant.tn("js.shoppingList.itemCount", total);
+    var count = document.querySelector('.page-header__count');
+    if (count) {
+      count.textContent = String(rows.length);
+    }
+    var checked = container.querySelectorAll('.shopping-list__item.checked');
+    var meta = document.querySelector('.page-header__meta');
+    if (meta) {
+      meta.textContent = proviant.t("shoppingList.checkedOff", checked.length);
     }
   }
 
