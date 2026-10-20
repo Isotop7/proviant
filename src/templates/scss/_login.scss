@@ -247,7 +247,10 @@
 }
 
 // ── Fields ───────────────────────────────────────────────────────────────────
-.field {
+// The auth form is the only place with the icon in the field and the
+// password toggle; its rules stay inside .auth so they cannot reach the
+// forms of the app.
+.auth .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -281,7 +284,7 @@
   color: var(--accent);
 }
 
-.form-control {
+.auth .form-control {
   width: 100%;
   height: 44px;
   padding: 0 12px 0 38px;
@@ -309,7 +312,7 @@
   }
 }
 
-.invalid-feedback {
+.auth .invalid-feedback {
   display: flex;
   gap: 5px;
   align-items: center;

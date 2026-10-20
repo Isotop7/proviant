@@ -150,6 +150,7 @@
 // Form controls
 .form-control,
 .form-select {
+  min-height: 44px;
   font-family: var(--font-body);
   font-size: var(--text-base);
   color: var(--fg);
