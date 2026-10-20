@@ -129,8 +129,8 @@
   "_counts": "Zählregeln, geprüft von scripts/check-design-tokens.mjs: selectors = Summe der Selektor-Einträge aller groups; classes = distinct Klassennamen aus groups[].selectors + utilities; declaredTokens = Custom Properties in tokens.css; referencedTokens = Custom Properties, die von design-system/screens referenziert werden.",
   "selectors": 117,
   "classes": 105,
-  "declaredTokens": 110,
-  "referencedTokens": 72,
+  "declaredTokens": 113,
+  "referencedTokens": 75,
   "groups": [
     {
       "id": "buttons",

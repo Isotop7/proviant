@@ -97,8 +97,8 @@
   .bento > .bento-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--elev-flat); overflow: hidden; transition: box-shadow var(--motion-base), border-color var(--motion-base); display: flex; flex-direction: column; }
   .bento > .bento-card:hover { box-shadow: var(--elev-raised); border-color: var(--border); }
   .bento > .bento-card.accent { background: var(--accent-soft); border-color: var(--accent-border); }
-  .bento > .bento-card.dark { background: oklch(20% .02 155deg); color: oklch(97% .006 145deg); border-color: oklch(28% .02 155deg); }
-  .bento > .bento-card.dark .section-title { color: oklch(70% .02 145deg); }
+  .bento > .bento-card.dark { background: var(--surface-deep); color: var(--surface-deep-ink); border-color: color-mix(in oklab, var(--surface-deep-ink) 10%, var(--surface-deep)); }
+  .bento > .bento-card.dark .section-title { color: var(--surface-deep-muted); }
   .bento-span-2 { grid-column: span 2; }
   .bento-span-3 { grid-column: span 3; }
   .bento-span-4 { grid-column: span 4; }
@@ -332,15 +332,15 @@
     <!-- Hero stat: 24 items in pantry, dark accent card spanning 3 cols x 2 rows -->
     <a href="03-products.html" class="bento-card dark bento-span-3" style="text-decoration:none">
       <div class="bento-hero-stat" style="flex:1;justify-content:space-between">
-        <div class="bsh-label" style="color:oklch(70% 0.08 145deg)"><i class="bi bi-box-seam"></i> In your pantry</div>
+        <div class="bsh-label" style="color:var(--surface-deep-muted)"><i class="bi bi-box-seam"></i> In your pantry</div>
         <div>
-          <div class="bsh-value" data-count="24" style="color:oklch(97% 0.006 145deg)">0</div>
-          <div class="bsh-sub" style="color:oklch(70% 0.02 145deg);margin-top:var(--space-2)">3 new this week · 4 opened</div>
+          <div class="bsh-value" data-count="24" style="color:var(--surface-deep-ink)">0</div>
+          <div class="bsh-sub" style="color:var(--surface-deep-muted);margin-top:var(--space-2)">3 new this week · 4 opened</div>
         </div>
         <div style="display:flex;gap:var(--space-2);flex-wrap:wrap">
-          <span class="bsh-delta" style="background:var(--status-fresh);color:oklch(20% 0.02 155deg)"><i class="bi bi-check2"></i> 17 fresh</span>
-          <span class="bsh-delta" style="background:var(--status-soon);color:oklch(20% 0.02 75deg)"><i class="bi bi-clock"></i> 5 soon</span>
-          <span class="bsh-delta" style="background:var(--status-expired);color:#fff"><i class="bi bi-exclamation"></i> 2 expired</span>
+          <span class="bsh-delta" style="background:var(--status-fresh);color:var(--surface-deep)"><i class="bi bi-check2"></i> 17 fresh</span>
+          <span class="bsh-delta" style="background:var(--status-soon);color:var(--surface-deep)"><i class="bi bi-clock"></i> 5 soon</span>
+          <span class="bsh-delta" style="background:var(--status-expired);color:var(--status-expired-on)"><i class="bi bi-exclamation"></i> 2 expired</span>
         </div>
       </div>
     </a>

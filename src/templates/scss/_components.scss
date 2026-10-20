@@ -622,6 +622,50 @@
   letter-spacing: var(--tracking-tight);
 }
 
+// The hero tile — the one card on the dashboard that is filled dark. Its ink
+// follows the card, not the page.
+.kpi--hero {
+  background: var(--surface-deep);
+  border-color: color-mix(in oklab, var(--surface-deep-ink) 10%, var(--surface-deep));
+
+  .kpi__label {
+    color: var(--surface-deep-muted);
+  }
+
+  .kpi__value {
+    font-family: var(--font-mono);
+    color: var(--surface-deep-ink);
+  }
+}
+
+.kpi__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.kpi__chip {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--surface-deep);
+  background: var(--status-fresh);
+  border-radius: var(--radius-pill);
+}
+
+.kpi__chip--soon {
+  background: var(--status-soon);
+}
+
+.kpi__chip--expired {
+  color: var(--status-expired-on);
+  background: var(--status-expired);
+}
+
 // The dashboard's cards follow the screen sheets: the hero radius and a
 // flat rest, the accent card and the filled status card are the only
 // filled ones.

@@ -44,6 +44,21 @@ function clearEmptyChart(canvasId) {
   }
 }
 
+function renderHeroTile(title, hero, chips) {
+  const col = document.createElement('div');
+  col.className = 'bento__cell bento__cell--3';
+  const chipHtml = chips.map(function (chip) {
+    return `<span class="kpi__chip kpi__chip--${chip.variant}"><i class="bi bi-${chip.icon}" aria-hidden="true"></i>${chip.label}</span>`;
+  }).join('');
+  col.innerHTML = `
+    <div class="kpi kpi--hero h-100">
+      <div class="kpi__label">${title}</div>
+      <div class="kpi__value">${hero}</div>
+      ${chipHtml ? `<div class="kpi__chips">${chipHtml}</div>` : ''}
+    </div>`;
+  return col;
+}
+
 function renderTile(title, hero, variant, heroClass, span) {
   const col = document.createElement('div');
   col.className = 'bento__cell bento__cell--' + (span || 2);
@@ -220,12 +235,26 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     const dashboard = document.getElementById('dashboard');
     if (dashboard) {
+      // The pantry count leads the dashboard as the filled hero tile, the way
+      // the screen sheets draw it.
+      dashboard.appendChild(renderHeroTile(
+        proviant.t("js.home.activeProducts"),
+        s.totalActive,
+        [
+          {
+            variant: 'soon',
+            icon: 'clock',
+            label: proviant.t("js.home.expiringSoonCount", (s.expiringSoon || []).length),
+          },
+          {
+            variant: 'expired',
+            icon: 'exclamation',
+            label: proviant.t("js.home.expiredCount", s.wasteCount || 0),
+          },
+        ],
+      ));
+
       const tiles = [
-        {
-          title: proviant.t("js.home.activeProducts"),
-          hero: s.totalActive,
-          span: 3,
-        },
         {
           title: proviant.t("js.home.expiredNotConsumed"),
           hero: `${s.wastePercent.toFixed(1)}%`,

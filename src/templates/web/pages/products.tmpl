@@ -78,8 +78,20 @@
             </div>
         </div>
 
-        <!-- Right side: bulk actions + mobile filter dropdown -->
+        <!-- Right side: reset + advanced filters | bulk actions + mobile filter dropdown -->
         <div id="toolbarRight" class="ms-auto d-flex gap-1 align-items-center flex-wrap">
+            <button id="show-all-btn" class="filter-pill" type="button" title="{{ t "partial.searchBar.showAll" }}">
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline">{{ t "partial.searchBar.showAll" }}</span>
+            </button>
+            <button class="filter-pill" type="button"
+                data-bs-toggle="collapse" data-bs-target="#advanced-filters"
+                aria-expanded="false" aria-controls="advanced-filters"
+                title="{{ t "partial.searchBar.advancedFilters" }}">
+                <i class="bi bi-funnel" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline">{{ t "partial.searchBar.filters" }}</span>
+            </button>
+
             <div id="bulkActions" class="bulk-actions-bar">
                 <span id="bulkCount" class="bulk-count"></span>
                 {{ if eq $.StatusFilter "archived" }}

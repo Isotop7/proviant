@@ -17,6 +17,9 @@
   --bg:           #FAF7F1;
   --surface:      #FAF7F1;
   --surface-warm: #F1ECE0;
+  --surface-deep:       #0F1912;
+  --surface-deep-ink:   #F3F6F3;
+  --surface-deep-muted: #97A297;
 
   /* Ink */
   --fg:    #2A2A2A;

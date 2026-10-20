@@ -2,7 +2,6 @@
 
 const pe = {
     editProduct: null,
-    searchParam: null,
     searchQuery: null,
     sortParam: null,
     sortOrder: null,
@@ -164,9 +163,19 @@ document.addEventListener("click", function (event) {
         return;
     }
 
-    // Search button
-    if (target.closest("#search-btn")) {
+    // Search field selector
+    var scopeToggle = target.closest(".search-scope__toggle");
+    if (scopeToggle) {
         event.preventDefault();
+        selectSearchScope(scopeToggle.dataset.scope);
+        performSearch();
+        return;
+    }
+
+    // Clear the search
+    if (target.closest("#search-clear")) {
+        event.preventDefault();
+        if (pe.searchQuery) pe.searchQuery.value = "";
         performSearch();
         return;
     }
@@ -334,10 +343,24 @@ document.addEventListener("keypress", function (event) {
     }
 });
 
+// The field selector is a pair of toggles inside the search field; the
+// pressed one names the field the query runs against.
+function activeSearchScope() {
+    const pressed = document.querySelector('.search-scope__toggle[aria-pressed="true"]');
+    return pressed ? pressed.dataset.scope : "product_name";
+}
+
+function selectSearchScope(scope) {
+    document.querySelectorAll('.search-scope__toggle').forEach(function (el) {
+        el.setAttribute('aria-pressed', String(el.dataset.scope === scope));
+        el.classList.toggle('active', el.dataset.scope === scope);
+    });
+}
+
 // Function to perform search
 function performSearch() {
     const params = {
-        queryParam: pe.searchParam ? pe.searchParam.value || "product_name" : "product_name",
+        queryParam: activeSearchScope(),
         queryValue: pe.searchQuery ? pe.searchQuery.value || "" : "",
         sort: pe.sortParam ? pe.sortParam.value || "created_at" : "created_at",
         order: pe.sortOrder ? pe.sortOrder.value || "asc" : "asc",
@@ -369,7 +392,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const manualSection   = document.getElementById('manualInputSection');
     const cameraSection   = document.getElementById('cameraSection');
     const editProduct     = document.getElementById('edit-product');
-    const searchParam     = document.getElementById('search-param');
     const searchQuery     = document.getElementById('search-query');
     const sortParam       = document.getElementById('sort-param');
     const sortOrder       = document.getElementById('sort-order');
@@ -381,7 +403,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectedAll       = document.getElementById('selectAll');
 
     pe.editProduct = editProduct;
-    pe.searchParam = searchParam;
     pe.searchQuery = searchQuery;
     pe.sortParam = sortParam;
     pe.sortOrder = sortOrder;

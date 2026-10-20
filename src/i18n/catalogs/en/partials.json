@@ -41,6 +41,7 @@
   "partial.searchBar.advancedFilters": "Advanced filters",
   "partial.searchBar.allLocations": "All locations",
   "partial.searchBar.ascending": "Ascending",
+  "partial.searchBar.clearSearch": "Clear search",
   "partial.searchBar.descending": "Descending",
   "partial.searchBar.direction": "Direction",
   "partial.searchBar.fieldBarcode": "Barcode",

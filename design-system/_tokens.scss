@@ -31,6 +31,12 @@ $bg:            #FAF7F1;   // Crème-Papier, App-Hintergrund
 $surface:       #FAF7F1;   // Karten, Panels, Inset-Container (die Crème-Fläche selbst)
 $surface-warm:  #F1ECE0;   // Auth-Brand-Panel, Sidebar, Hervorhebung
 
+// The one card on a screen that is filled dark: the hero tile of the
+// dashboard. Its ink follows the card, not the page.
+$surface-deep:       #0F1912;   // Hero-Karte
+$surface-deep-ink:   #F3F6F3;   // Tinte auf der Hero-Karte
+$surface-deep-muted: #97A297;   // Sekundärtext auf der Hero-Karte
+
 // ── Ink ─────────────────────────────────────────────────────────────────────
 $fg:            #2A2A2A;   // Primäre Tinte, Überschriften, Body
 $fg-2:          #4A4A4A;   // Sekundäre Tinte
@@ -197,6 +203,9 @@ $accent-border:         color-mix(in oklab, var(--accent) 45%, var(--surface));
   --bg:           #{$bg};
   --surface:      #{$surface};
   --surface-warm: #{$surface-warm};
+  --surface-deep:       #{$surface-deep};
+  --surface-deep-ink:   #{$surface-deep-ink};
+  --surface-deep-muted: #{$surface-deep-muted};
 
   // Ink
   --fg:    #{$fg};

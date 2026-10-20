@@ -109,8 +109,8 @@
   .bento > .bento-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--elev-flat); overflow: hidden; transition: box-shadow var(--motion-base), border-color var(--motion-base); display: flex; flex-direction: column; }
   .bento > .bento-card:hover { box-shadow: var(--elev-raised); border-color: var(--border); }
   .bento > .bento-card.accent { background: var(--accent-soft); border-color: var(--accent-border); }
-  .bento > .bento-card.dark { background: oklch(20% .02 155deg); color: oklch(97% .006 145deg); border-color: oklch(28% .02 155deg); }
-  .bento > .bento-card.dark .section-title { color: oklch(70% .02 145deg); }
+  .bento > .bento-card.dark { background: var(--surface-deep); color: var(--surface-deep-ink); border-color: color-mix(in oklab, var(--surface-deep-ink) 10%, var(--surface-deep)); }
+  .bento > .bento-card.dark .section-title { color: var(--surface-deep-muted); }
   .bento-span-2 { grid-column: span 2; }
   .bento-span-3 { grid-column: span 3; }
   .bento-span-4 { grid-column: span 4; }
