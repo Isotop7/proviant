@@ -41,9 +41,9 @@ func TestAssetFilesRead(t *testing.T) {
 func TestAssetFilesOpen(t *testing.T) {
 	t.Run("Can open files from AssetFiles", func(t *testing.T) {
 		// Test opening a specific file
-		file, err := AssetFiles.Open("css/auth.css")
+		file, err := AssetFiles.Open("css/main.css")
 		if err != nil {
-			t.Errorf("Failed to open auth.css: %v", err)
+			t.Errorf("Failed to open main.css: %v", err)
 			return
 		}
 

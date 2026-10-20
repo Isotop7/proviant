@@ -39,37 +39,6 @@
   margin-bottom: 28px;
 }
 
-.pv-page-title-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.pv-page-title {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--fg);
-  letter-spacing: -.02em;
-}
-
-.pv-id-chip {
-  padding: 3px 8px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: .02em;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
-  border-radius: 6px;
-}
-
-.pv-page-sub {
-  font-size: 13px;
-  color: var(--meta);
-}
 
 .pv-edit-grid {
   display: grid;

@@ -80,6 +80,7 @@ Then open http://localhost:5114
 ## Technologies and Tools
 
 - **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html), [Bootstrap](https://getbootstrap.com/)
+- **Design:** the design system in [`design-system/`](./design-system/) — crème and sage, VendSans and DMMono, one source of truth for every token
 - **Charts:** [Chart.js](https://www.chartjs.org/)
 - **Database:** MariaDB or SQLite
 - **Notifications:** SMTP, Web Push, [Ntfy](https://ntfy.sh/), [Telegram](https://telegram.org/)
@@ -387,6 +388,12 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 
 - [Package documentation](./src/docs/README.md)
 - [Swagger definition](./src/docs/swagger.yaml)
+
+The design system has its own documentation:
+
+- [design-system/DESIGN.md](./design-system/DESIGN.md) — the binding rules
+- [design-system/deviations.md](./design-system/deviations.md) — every place the app departs from them, with a reason
+- [design-system/screens/](./design-system/screens/) — the spec sheets, one per screen
 
 ## Screenshots
 

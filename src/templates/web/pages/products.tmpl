@@ -379,7 +379,11 @@
 </nav>
 {{ end }}
 {{ else }}
+{{ if eq .StatusFilter "archived" }}
+{{ template "emptyArchive" . }}
+{{ else }}
 {{ template "noproducts" . }}
+{{ end }}
 {{ end }}
 
 <!-- Mobile filter offcanvas (hidden by default) -->
