@@ -25,21 +25,32 @@ Rendered in `nav.tmpl` inside `.nav-items`, in this order:
 
 Products carries an optional badge (`.nav-badge`) with the urgent/expiring count.
 
-## 2. Sidebar — footer utilities
+## 2. Topbar — utility cluster (desktop ≥ 1024 px)
+
+Rendered in `layout/base.tmpl` inside `.app__topbar .nav-actions`,
+right-aligned, in this order:
 
 | Item | Behaviour | Icon |
 |------|-----------|------|
-| Theme | Cycles light / dark / system (`localStorage: proviant_theme`) | `bi-circle-half` |
 | Notifications | Opens a dropdown, badge with unread count | `bi-bell` |
+| Theme | Cycles light / dark / system (`localStorage: proviant_theme`) | `bi-circle-half` |
 | Logout | Returns to `/web` | `bi-escape` |
+
+The theme switcher exists **exactly once** per viewport: here in the topbar
+(desktop) and in the mobile "more" menu. There is no floating theme button;
+auth/flow screens (`01`, `09`–`16`) carry no switcher at all and follow
+`data-bs-theme` / `prefers-color-scheme`.
+
+## 2a. Sidebar — footer utilities
+
+| Item | Behaviour | Icon |
+|------|-----------|------|
 | Version | Links to the matching GitHub release tag | — |
 | Source | Links to `github.com/Isotop7/proviant` | `bi-git` |
 
-The theme switcher exists **exactly once** per page: here in the sidebar footer
-(desktop) and in the mobile "more" menu. In the spec sheets it sits in the topnav
-`.nav-actions` cluster (`.js-theme-toggle`, one delegated listener in the page's
-theme script). There is no floating theme button; auth/flow screens (`01`, `09`–`16`)
-carry no switcher at all and follow `data-theme` / `prefers-color-scheme`.
+The sidebar keeps only the brand, the seven primary items and these two
+links. Theme, notifications and logout live in the topbar, where the spec
+sheets show them.
 
 ## 3. Mobile bottom-nav (< 1024 px)
 
@@ -82,7 +93,9 @@ hidden and the bottom tab takes over.
 
 ## 5. Token note
 
-The screens currently ship their own inline token block (a green `oklch()` palette),
-not the sage palette in `tokens.css` / `DESIGN.md`. Only new screens reuse that
-inline block so the whole sheet stays visually consistent. Migrating the screens
-onto `tokens.css` is a separate task.
+The screens currently ship their own inline token block, not the canonical
+palette in `_tokens.scss`. Until that migration lands, a screen sheet and
+the app can differ in colour — the token *names* and the navigation
+structure above are the binding parts. Migrating the screens onto
+`tokens.css` is tracked in PR 6 of the migration plan; `task design-check`
+reports the remaining inline blocks from phase 6 on.

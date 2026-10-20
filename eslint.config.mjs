@@ -57,6 +57,24 @@ export default [
     },
   },
   {
+    // Build-time tooling lives in scripts/ and runs under Node as ES modules.
+    // It never ships to the browser, so it gets its own globals and its own
+    // source type.
+    ...js.configs.recommended,
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
+    },
+  },
+  {
     // Vitest specs live outside src/ and reach into jsdom globals that the
     // shipped code never touches. describe/it/expect come in via explicit
     // imports, so nothing has to be declared as an ambient global here.

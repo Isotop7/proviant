@@ -3,12 +3,14 @@
   "name": "proviant",
   "version": "2026-10",
   "description": "Komponenten-Inventar für proviant-Frontend. Bootstrap 5.3 als Basis; Marken-Palette wird über --bs-*-Variablen eingespielt, eigene Helper-Klassen nur dort, wo Bootstrap keine passende Komponente bietet.",
+  "tokenSource": "_tokens.scss",
   "tokenFile": "tokens.css",
   "tokenContract": "tokens.json",
+  "deviations": "deviations.md",
   "base": {
-    "framework": "Bootstrap 5.3",
-    "cdn": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
-    "iconLibrary": "bootstrap-icons 1.11.3",
+    "framework": "Bootstrap 5.3.8",
+    "source": "node_modules/bootstrap/scss, per `task css` nach src/assets/css/main.css kompiliert — kein CDN.",
+    "iconLibrary": "bootstrap-icons 1.13.1, selbst gehostet (src/assets/fonts)",
     "colorBinding": "Salwei-Palette ist in --bs-primary, --bs-success, --bs-warning, --bs-danger, --bs-info, --bs-body-bg, --bs-body-color, --bs-border-color, --bs-border-radius-* gespiegelt. Komponenten erben daraus automatisch."
   },
   "classMapping": {
@@ -28,8 +30,7 @@
       "field__textarea":      "form-control (mit rows=…)",
       "field__error":         "invalid-feedback (zusammen mit .is-invalid auf .form-control)",
       "field__success":       "valid-feedback (zusammen mit .is-valid auf .form-control)",
-      "field__hint":          "form-text",
-      "field--code":          "field--code (eigene Helfer-Klasse, da Bootstrap keine 6-stelligen Code-Inputs kennt)"
+      "field__hint":          "form-text"
     },
     "lists": {
       "list":                 "list-group",
@@ -84,13 +85,14 @@
       "skeleton":             "skeleton (eigene Klasse, Bootstrap hat keinen Skeleton-Primitive)"
     },
     "icons": {
-      "icon":                 "bi <name> (Bootstrap-Icons, CDN)"
+      "icon":                 "bi <name> (Bootstrap-Icons, selbst gehostet)"
     }
   },
-  "selectors": 64,
-  "classes": 28,
-  "declaredTokens": 60,
-  "referencedTokens": 52,
+  "_counts": "Zählregeln, geprüft von scripts/check-design-tokens.mjs: selectors = Summe der Selektor-Einträge aller groups; classes = distinct Klassennamen aus groups[].selectors + utilities; declaredTokens = Custom Properties in tokens.css; referencedTokens = Custom Properties, die von design-system/screens referenziert werden.",
+  "selectors": 117,
+  "classes": 105,
+  "declaredTokens": 87,
+  "referencedTokens": 82,
   "groups": [
     {
       "id": "buttons",
@@ -136,10 +138,7 @@
         ".valid-feedback",
         ".field--search",
         ".field--search .form-control",
-        ".field--search .clear",
-        ".field--code",
-        ".field--code input",
-        ".field--code input:focus-visible"
+        ".field--search .clear"
       ],
       "tokens": ["--bs-body-bg", "--bs-body-color", "--bs-border-color", "--surface", "--fg", "--muted", "--meta", "--border", "--border-strong", "--accent", "--accent-soft", "--status-expired", "--status-fresh", "--radius-md", "--field-height", "--space-2", "--space-3", "--text-sm", "--text-base", "--font-mono"]
     },
@@ -319,19 +318,22 @@
     "kpi": "kpi (Layout-Pattern auf .card)",
     "kpi__label": "kpi__label",
     "kpi__value": "kpi__value",
-    "kpi__delta": "kpi__delta",
-    "kpi__sparkline": "kpi__sparkline",
     "kpi--focus": "kpi--focus",
     "auth": "auth (eigene Grid-Klasse für Split-Screen)",
     "auth__brand": "auth__brand",
     "auth__form": "auth__form",
-    "field--code": "field--code (6-stellige Code-Inputs, Mono, 48×56 px)",
     "toast-stack": "toast-stack (vertikaler Stapel-Container)"
+  },
+  "notImplemented": {
+    "_comment": "Aus dem Spec übernommene Bausteine, die bewusst NICHT gebaut werden. Grund und Beleg stehen in deviations.md.",
+    "kpi__delta": "Keine Datenquelle — die Stats-API liefert pro Kachel keine Historie, nur einen Forward-Projektion.",
+    "kpi__sparkline": "Keine Datenquelle — dieselbe Lücke wie bei kpi__delta.",
+    "field--code": "Kein 6-stelliger Code-Flow — Verify, Reset und Invite nutzen opaque URL-Tokens.",
+    "modal--demo": "Nur für die Spec-Sheets; die App nutzt echte Bootstrap-Modals."
   },
   "bootstrapReplaced": {
     "_comment": "Bootstrap-Komponenten, die wir NICHT verwenden, weil proviant eine andere visuelle Sprache hat.",
-    "dropdown-menu": "Wir nutzen stattdessen Sidebar-Lists + Modals; Bootstrap-Dropdown passt visuell nicht zur Pill-/Crème-Sprache.",
-    "navbar": "Wir nutzen die eigene .app__topbar + .sidebar; Bootstrap-Navbar überschreibt die Marken-Geometrie zu stark.",
+    "navbar": "Wir nutzen die eigene .app__topbar + .app__sidebar; Bootstrap-Navbar überschreibt die Marken-Geometrie zu stark.",
     "carousel": "Nicht im Scope; Charts und Karten tragen die Information.",
     "btn-toolbar": "Nicht im Scope; wir nutzen .btn-group und Layout-Utilities direkt.",
     "form-floating": "Die Labels sind in der Vorrats-Domain hilfreicher als Floating; daher klassisches Label über Input."
@@ -339,12 +341,13 @@
   "navigation": {
     "_comment": "Verbindliche Menü-Struktur. Details, Routen und Icons in design-system/nav.md.",
     "sidebarPrimary": ["Dashboard", "Products", "Shopping List", "Meal Plan", "Recipes", "Waste Analytics", "Settings"],
-    "sidebarFooter": ["Theme", "Notifications", "Logout", "Version", "Source"],
+    "sidebarFooter": ["Version", "Source"],
+    "topbarActions": ["Notifications", "Theme", "Logout"],
     "bottomNav": ["Dashboard", "Products", "Scan", "Shopping", "Recipes"],
     "mobileMore": ["Theme", "Settings", "Logout"]
   },
   "iconSystem": {
-    "library": "bootstrap-icons 1.11.3 (CDN)",
+    "library": "bootstrap-icons 1.13.1, selbst gehostet (src/assets/fonts)",
     "usage": "Nur als Klassen-Name, z. B. <i class='bi bi-search'></i>. Niemals Emojis als UI-Icon.",
     "common": ["bi-basket", "bi-bell", "bi-check-circle", "bi-chevron-expand", "bi-chevron-right", "bi-clock", "bi-exclamation-triangle", "bi-info-circle", "bi-search", "bi-x-circle", "bi-x-lg"]
   }

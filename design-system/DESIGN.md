@@ -32,14 +32,14 @@ Drei Sätze Identität:
 
 ### Schema-Slots (verbindlich)
 
-| Slot | Hex | oklch | Rolle |
-|---|---|---|---|
-| `--bg` | `#FAF7F1` | `oklch(0.972 0.012 85)` | Crème-Papier, App-Hintergrund |
-| `--surface` | `#FFFFFF` | `oklch(1 0 0)` | Karten, Panels, Inset-Container |
-| `--fg` | `#2A2A2A` | `oklch(0.260 0.005 80)` | Primäre Tinte, Überschriften, Body |
-| `--muted` | `#6B6B6B` | `oklch(0.515 0.005 80)` | Sekundärtext, Meta, Labels |
-| `--border` | `#E5DFD3` | `oklch(0.905 0.018 80)` | Standard-Rahmen, Trennlinien |
-| `--accent` | `#5A8A7A` | `oklch(0.508 0.062 162)` | Salbei — primäre Aktion, Fortschritt, Logo |
+| Slot | Hex | Rolle |
+|---|---|---|
+| `--bg` | `#FAF7F1` | Crème-Papier, App-Hintergrund |
+| `--surface` | `#FFFFFF` | Karten, Panels, Inset-Container |
+| `--fg` | `#2A2A2A` | Primäre Tinte, Überschriften, Body |
+| `--muted` | `#6B6B6B` | Sekundärtext, Meta, Labels |
+| `--border` | `#E5DFD3` | Standard-Rahmen, Trennlinien |
+| `--accent` | `#418069` | Salbei — primäre Aktion, Fortschritt, Logo |
 
 `--accent` ist funktional, niemals dekorativ. Es darf **maximal zweimal
 sichtbar pro Screen** auftreten (typisches Paar: ein primärer Button +
@@ -47,28 +47,38 @@ ein Status-Chip ODER eine Navigations-Pille + ein Fortschrittsbalken).
 
 ### Status-Quadrupel (Vorratssprache)
 
-| Token | Hex | oklch | Bedeutung |
-|---|---|---|---|
-| `--status-fresh` | `#5A8A7A` | `oklch(0.508 0.062 162)` | Haltbarkeit > 7 Tage |
-| `--status-soon` | `#C2A24A` | `oklch(0.700 0.110 85)` | 3 – 7 Tage |
-| `--status-critical` | `#C26A3F` | `oklch(0.605 0.140 50)` | 1 – 2 Tage |
-| `--status-expired` | `#A24A4A` | `oklch(0.510 0.140 25)` | abgelaufen |
+| Token | Hex | Bedeutung |
+|---|---|---|
+| `--status-fresh` | `#418069` | Haltbarkeit > 7 Tage |
+| `--status-soon` | `#A58529` | 3 – 7 Tage |
+| `--status-critical` | `#C26A3F` | 1 – 2 Tage |
+| `--status-expired` | `#A24A4A` | abgelaufen |
+| `--status-neutral` | `#8A8A8A` | kein Ablaufdatum |
 
 Status ist **nicht** `--accent`. Status darf in Listen, Tabellen und
 Karten mehrfach nebeneinander stehen, ohne dass es als "mehrere
 Akzente" zählt.
 
+**Basis- und Textvariante.** Die Basisfarben tragen Icons, Punkte, Balken
+und Rahmen; **Text** nimmt die dunklere `--status-*-text`-Variante. Ohne
+diese Trennung fällt die Beschriftung auf dem 18-%-Tint unter 4.5:1 —
+`soon` läge bei 2.18:1. Jede Basisfarbe erreicht mindestens 3:1 gegen
+`--bg`, damit ein Statuspunkt als Zustandsanzeige sichtbar bleibt.
+
 ### Erweiterte Slots (semantisch)
 
 - `--surface-warm` `#F1ECE0` — wärmere Karte (z. B. Auth-Brand-Panel).
 - `--fg-2` `#4A4A4A` — sekundäre Tinte, leicht heller als `--fg`.
-- `--meta` `#8A8A8A` — tertiärer Text, Zeitstempel, Captions.
+- `--meta` `#6F6F6F` — tertiärer Text, Zeitstempel, Captions.
 - `--border-strong` `#D5CDB8` — verstärkter Rahmen für fokussierte Felder.
 - `--accent-soft` `#DDE7E0` — Salbei getintet, für Hover-BG und Chips.
+- `--accent-text` `#35604E` — **Text** in Akzentfarbe (Links, aktive
+  Navigation). `--accent` selbst ist die Flächenfarbe; als Text erreicht
+  es auf `--bg` nur 4.35:1 und auf `--accent-soft` 3.67:1.
 - `--accent-on` `#FFFFFF` — Text auf Salwei.
 - `--shadow-warm` `rgba(80, 60, 30, 0.08)` — warmer Sepia-Schatten,
   niemals neutral-grau.
-- `--success` `#5A8A7A` (Aliase zu `--status-fresh`).
+- `--success` `#418069` (Aliase zu `--status-fresh`).
 - `--warn` `#C2A24A` (Aliase zu `--status-soon`).
 - `--danger` `#A24A4A` (Aliase zu `--status-expired`).
 - `--info` `#5A7A8A` — Hinweise (z. B. "neues Rezept verfügbar"), gedeckt.
@@ -210,8 +220,12 @@ Bootstrap-`.btn` mit Salwei-Politur (Uppercase, Pill, Salwei-Fokus). Mapping:
 | `danger` | `--status-expired` | `#FFF` | — | `--radius-pill` | 0.04 em |
 
 Höhe: 40 px (Default), 48 px (Hero), 32 px (kompakt, in Tabellen).
-Label: `--text-base` 600, immer uppercase mit `letter-spacing: 0.04em`.
-Padding: `--space-2` `--space-4`. Hover: BG um 6 % abdunkeln via
+Label: `--text-base` 600, `letter-spacing: 0.04em`, **Sentence-Case**. Die
+frühere Uppercase-Regel kompensierte einen Kontrastmangel des alten Akzents
+(`#5A8A7A`, 3.92:1 auf Weiß). Mit `--accent` #418069 erreicht eine 15-px-600-Beschriftung
+4.65:1 und erfüllt WCAG AA ohne Großschreibung — und im deutschen Katalog
+bleiben Komposita lesbar. Großbuchstaben sind dem `.eyebrow`-Label
+vorbehalten. Hover: BG um 6 % abdunkeln via
 `color-mix(in oklab, var(--accent), black 6%)`. Disabled: BG `--border`,
 FG `--muted`, kein Pointer. **Für Secondary/Ghost/Danger ist der
 Disabled-Zustand explizit zu setzen** (sonst kollabiert die Pill-Form).
@@ -298,11 +312,11 @@ Footer-Utilities, Bottom-Nav-Slots) steht in `design-system/nav.md`.
 - BG `--surface-warm`, Trennlinie rechts `1 px --border`.
 - Section-Label: `--text-eyebrow`, Padding `--space-3` `--space-4`.
 - Item: 40 px hoch, 8 px Radius, 12 px horizontaler Innenpadding.
-- Aktiv: BG `--accent-soft`, FG `--accent`, Font-Gewicht 600.
+- Aktiv: BG `--accent-soft`, FG `--accent-text`, Font-Gewicht 600.
 - Inaktiv: FG `--fg-2`, Gewicht 400.
 - Icon links 20 × 20, VendSans-Icon-Font oder Bootstrap-Icons.
-- Topbar: 56 px, BG `--surface`, Border unten 1 px `--border`, Title links (`--text-h2` 600), Aktionen rechts (Notifications, Theme, Logout).
-- **Theme-Umschalter: genau einer pro Seite.** In der Shell im Sidebar-Footer (Desktop) bzw. im Mobile-More; in den Spec-Screens im Topnav-Utility-Cluster (`.nav-actions`). Ein zusätzlicher Floating-Button unten rechts ist verboten. Auth-Screens haben keinen Umschalter — dort greift nur `data-theme` / `prefers-color-scheme`.
+- Topbar: 56 px, BG `--surface`, Border unten 1 px `--border`, Title links (`--text-h2` 600), Aktionen rechts (Notifications, Theme, Logout). Der Topbar-Titel ist das **einzige** `h1` der Seite; die seitenweise `.page-header` behält nur Untertitel und Seitenaktionen.
+- **Theme-Umschalter: genau einer pro Seite.** In der Shell im Topbar-Utility-Cluster (Desktop) bzw. im Mobile-More; in den Spec-Screens ebenfalls im Topnav-Utility-Cluster (`.nav-actions`). Ein zusätzlicher Floating-Button unten rechts ist verboten. Auth-Screens haben keinen Umschalter — dort greift nur `data-bs-theme` / `prefers-color-scheme`.
 - **Mobile-Bottom-Nav** (sichtbar < 1024 px, ersetzt Sidebar): BG `--surface-warm`, Border oben 1 px `--border`, 5 Grid-Spalten (Dashboard · Products · Scan · Shopping · Recipes), 56 px hoch + `env(safe-area-inset-bottom)` für iOS-Home-Indikator. Item: Icon 20 px + Label 11 px, aktiv in `--accent` auf `--accent-soft`. Meal Plan, Waste Analytics und Settings liegen im Mobile-More-Menü.
 
 ### Modals
@@ -336,12 +350,14 @@ Bootstrap-`.toast` mit Status-Modifiern (`.toast--info|success|warn|danger`). Ma
 
 Bootstrap-`.badge` mit Status-Modifiern. Mapping: `.chip` → `.badge`, Status-Farben über `.badge--fresh|soon|critical|expired|neutral` (eigene Modifier, da Bootstrap-`.bg-success/warning/danger` zu kräftig für die Crème-Marke sind — wir nutzen `color-mix(18%)` für getintete BGs).
 
-- Vier Stufen: `fresh` (Salwei, > 7 Tage), `soon` (Senf, 3 – 7 Tage), `critical` (Terracotta, 1 – 2 Tage), `expired` (warmes Rot, abgelaufen).
+- Vier Stufen: `fresh` (Salbei, > 7 Tage), `soon` (Senf, 3 – 7 Tage), `critical` (Terracotta, 1 – 2 Tage), `expired` (warmes Rot, abgelaufen). `neutral` (grau) für Produkte ohne Ablaufdatum.
+- Hintergrund: `color-mix(in oklab, var(--status-x) 18 %, var(--surface))` — rechnet sich im Dark Theme mit, ohne eigene Token.
+- **Text: `var(--status-x-text)`**, nicht die Basisfarbe. Die Basisfarbe bleibt für Icon, Punkt, Balken und Rahmen.
 - Immer Farbe + Icon (`bi-check-circle` / `bi-clock` / `bi-exclamation-triangle` / `bi-x-circle`) + Text.
 
 ### Dashboard / Kennzahlen-Kacheln
 
-Bootstrap-`.card` (mit `.col-12 .col-md-6 .col-lg-3` für 1/2/3/4 Spalten je Breakpoint) + eigenes `.kpi`-Layout-Pattern (`.kpi__label`, `.kpi__value`, `.kpi__delta`, `.kpi__sparkline`).
+Bootstrap-`.card` (mit `.col-12 .col-md-6 .col-lg-3` für 1/2/3/4 Spalten je Breakpoint) + eigenes `.kpi`-Layout-Pattern (`.kpi__label`, `.kpi__value`). `.kpi__delta` und `.kpi__sparkline` sind **nicht** Teil des Systems — die Stats-API liefert pro Kachel keine Historie (siehe `deviations.md` #3).
 
 - Karten-Layout 1 / 2 / 3 / 4 Spalten je Breakpoint.
 - Kachel-Inhalt: Eyebrow + große Zahl (`--text-display` VendSans 600) + Delta darunter (`--text-sm`, Salwei-Pfeil nach oben, Terracotta-Pfeil nach unten) + optionaler Sparkline 80 × 24.
@@ -386,11 +402,15 @@ Auth ist die prominenteste Fläche. Hier darf das System spürbar werden:
 
 ## 8. A11y
 
-- Kontrast Body-Text (`--fg` auf `--bg`): 11.4 : 1 (AAA).
-- Kontrast Muted (`--muted` auf `--bg`): 4.6 : 1 (AA Body).
-- Kontrast Akzent-Button (`#FFF` auf `--accent`): 3.7 : 1 (AA Large).
-  Für 14-px-Label ist das grenzwertig — Buttons bleiben deshalb immer
-  uppercase und ≥ 14 px 600.
+- Kontrast Body-Text (`--fg` auf `--bg`): 13.42 : 1 (AAA).
+- Kontrast `--muted` auf `--bg`: 4.98 : 1 (AA Body).
+- Kontrast `--meta` auf `--bg`: 4.70 : 1 (AA Body).
+- Kontrast Akzent-Button (`--accent-on` auf `--accent`): 4.65 : 1 (AA Body).
+- Kontrast `--accent-text` auf `--bg`: 6.69 : 1 (AAA).
+- Status-Beschriftung (`--status-*-text` auf dem eigenen 18-%-Chip): 4.51 bis 6.41 : 1 (AA Body).
+- Status-Indikator (`--status-*` auf `--bg`): 3.23 bis 5.43 : 1 (AA Non-Text).
+  Alle Werte werden von `task design-check` gemessen und blockieren den Build,
+  sobald ein Paar die Schwelle unterschreitet.
 - Status-Farben sind nie **alleinige** Information. Immer zusätzlich
   Icon (`bi-check-circle`, `bi-exclamation-triangle`, `bi-x-circle`,
   `bi-clock`) und Text.
@@ -426,26 +446,41 @@ Auth ist die prominenteste Fläche. Hier darf das System spürbar werden:
 
 ## 10. Versionshinweis
 
-Stand 2026-10. Token-Werte spiegeln `main.scss` und `baseAuth.tmpl` aus
-`/home/hendrik/dev/proviant/src/templates/web` zum Zeitpunkt der
-Erstellung. Folgeänderungen am proviant-Code, die diese Werte
-aktualisieren, müssen zuerst `tokens.css` und `tokens.json` anpassen,
-bevor die Komponenten geändert werden.
+Stand 2026-10.
 
-Menü-Struktur: Die Screens in `screens/` spiegeln die sieben Sidebar-Items,
-die Footer-Utilities und die fünf Bottom-Nav-Slots aus `nav.md`. Die Screens
-sind eigenständige Spec-Sheets mit eigenem (älterem) Inline-Token-Block und
-zeigen das Menü als horizontale Topnav. Eine Migration der
-Screens auf `tokens.css` bleibt offen.
+**Die Token-Werte leben in `design-system/_tokens.scss`** (hell) und
+`design-system/_tokens.dark.scss` (dunkt). Diese beiden Dateien sind die
+einzige Quelle. `tokens.css`, `tokens.dark.css` und `tokens.json` sind
+**generierte Artefakte** und werden von `task design-tokens` daraus
+projiziert; `scripts/design-tokens.mjs --check` meldet veraltete
+Artefakte. `task design-check` misst die Kontrastziele, prüfft die
+Manifest-Zählwerte und schweigt nicht bei Drift.
 
-## 11. Dark Theme (neu)
+Veränderungen laufen damit immer in dieser Reihenfolge:
 
-Dark Mode ist opt-in: Entweder `<html data-theme="dark">` oder
-Automatik über `prefers-color-scheme: dark`. Überschreibt ausschließlich
-die Slots aus § 2 / § 3 und hält Status-Quadrupel + Akzent bei
-identischem Hue, aber erhöhter Lightness.
+1. `_tokens.scss` / `_tokens.dark.scss` anpassen
+2. `task design-tokens` — erzeugt `tokens.css`, `tokens.dark.css`, `tokens.json`
+3. `task design-check` — misst die neuen Werte
+4. erst danach die Komponenten ändern
 
-- Tokens: `design-system/tokens.dark.css` (überschreibt `tokens.css`).
+Früher lag hier eine `oklch()`-Spalte neben der Hex-Spalte, und die
+beide widersprachen sich (beim Akzent um ΔL 0.086 und ΔH 9.3°).
+Die Farbwerte stehen jetzt ausschließlich als Hex in der Quelle.
+
+Menü-Struktur: Die Screens in `screens/` spiegeln die sieben
+Sidebar-Items, die Topbar-Utilities und die fünf Bottom-Nav-Slots aus
+`nav.md`. Die Screens sind eigenständige Spec-Sheets und tragen bis zur
+Migration einen eigenen (älteren) Inline-Token-Block; ihre Anordnung ist
+normativ, ihre Tokens nicht.
+
+## 11. Dark Theme
+
+Dark Mode ist opt-in: `<html data-bs-theme="dark">`, gesetzt von
+`src/assets/js/theme.js`. Die Einstellung `system` wird vor dem ersten
+Paint in ein explizites `light` oder `dark` aufgelöst; ohne JavaScript
+greift `prefers-color-scheme: dark`.
+
+- Tokens: `design-system/_tokens.dark.scss` (siehe `_tokens.scss` für die Struktur).
 - Selbst-gehostete Fonts (VendSans / DMMono) bleiben unverändert;
   `font-display: swap` beibehalten.
 - Komponenten erben Dark-Mode automatisch über CSS-Variablen — keine
@@ -453,5 +488,32 @@ identischem Hue, aber erhöhter Lightness.
 - **Ein** Theme-Umschalter pro Seite (§ 5, App-Layout) — kein zweiter
   Trigger, insbesondere kein Floating-Button am unteren Rand. Auth-Screens
   bleiben ohne Umschalter.
-- Akzent darf im Dark Mode **leicht heller** sein (`oklch(60% .12 155deg`)
-  um Kontrast auf dunklem Grund zu wahren, aber gleiches Hue (155°).
+- Der Akzent wird im Dark Theme auf `#59A388` gehoben: gleicher Farbton
+  (168°), höherer Chroma, `--accent-on` wechselt auf `#1E1A14`.
+  Damit erreicht er 5.79 : 1 gegen `--bg` und als Text-Farbe auf dem
+  Akzent 5.79 : 1.
+- Die Statusfarben behalten ihren Farbton und werden nur heller; die
+  `--status-*-text`-Varianten wechseln mit.
+
+## 12. Zwei Schichten, eine Wahrheit
+
+Die beiden Artefakte in `design-system/` sind nicht gleichrangig, und sie
+widersprachen sich bis zur Migration an drei Stellen. Die Auflösung:
+
+| Schicht | Artefakt | Bindet |
+|---|---|---|
+| **System** | `DESIGN.md` (dieses Dokument) | Tokens, Farbe, Typografie, Spacing, Radius, Elevation, Motion, A11y, Status-Sprache, die Bootstrap-Klassen-Pflicht |
+| **Komposition** | `screens/*.html` | die Anordnung eines Bildschirms: Kartenraster, Reihenfolge, Seitenaufteilung |
+
+Die Trennlinie: **ändert die Regel das Aussehen einer Komponente oder die
+Anordnung einer Seite?**
+
+- *Komponente* (Farbe eines Buttons, Radius einer Karte, Schriftgröße einer
+  Kachel) → `DESIGN.md` ist normativ.
+- *Anordnung* (welche Karten auf dem Dashboard, wo das Brand-Panel, wie
+  breit die Produktliste) → das Screen-Sheet ist normativ.
+
+Wo ein Screen-Sheet eine Komponente zeigt, die `DESIGN.md` nicht kennt,
+gewinnt `DESIGN.md`: die Komponente wird ergänzt oder als Abweichung in
+`deviations.md` vermerkt — nie stillschweigend. Jede Abweichung hat dort
+eine Begründung und, wenn sie sichtbar ist, einen messbaren Beleg.

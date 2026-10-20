@@ -5,6 +5,9 @@ vars:
     sh: command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo ""
   GOLANGCI_VERSION: "v2.14.0"
   TRIVY_IMAGE: "docker.io/aquasec/trivy@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa"
+  # Stufe der Design-System-Migration. 1 = Token-Vertrag, 2 = kompiliertes CSS,
+  # 3 = alte Klassen und JS-Farben, 6 = Spec-Sheets. Wird pro PR erhöht.
+  DESIGN_PHASE: "1"
 
 tasks:
   default:
@@ -183,6 +186,16 @@ tasks:
       - cp ./res/icons/header_transparent.png ./src/assets/icons/hero.png
       - magick ./res/icons/proviant_logo_256.png -resize 192x192 ./src/assets/icons/proviant_logo_192.png
       - cp ./res/icons/header*.png ./src/assets/icons/
+
+  design-tokens:
+    desc: Regenerate the design-system token artifacts from the canonical SCSS source
+    cmds:
+      - node scripts/design-tokens.mjs
+
+  design-check:
+    desc: Verify the design token contract, contrast targets and manifest counts
+    cmds:
+      - node scripts/check-design-tokens.mjs --phase {{.DESIGN_PHASE}}
 
   css:
     desc: Compile SCSS to CSS
