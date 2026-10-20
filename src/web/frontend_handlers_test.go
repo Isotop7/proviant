@@ -593,7 +593,7 @@ func TestProductExpiryStatus(t *testing.T) {
 		expireAt time.Time
 		want     string
 	}{
-		{"no expiry date", time.Time{}, "nodate"},
+		{"no expiry date", time.Time{}, "neutral"},
 		{"already expired", now.Add(-24 * time.Hour), "expired"},
 		{"critical window", now.Add(2 * 24 * time.Hour), "critical"},
 		{"soon window", now.Add(5 * 24 * time.Hour), "soon"},

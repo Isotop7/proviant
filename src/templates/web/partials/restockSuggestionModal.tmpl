@@ -6,15 +6,12 @@
             <div class="modal-header">
                 <div class="modal-icon modal-icon-info" aria-hidden="true">
                     <i class="bi bi-cart-plus"></i>
-                </div>
-                <div class="modal-header-body">
-                    <h5 id="restockSuggestionModalLabel" class="modal-title mb-0">{{ t "partial.restockSuggestionModal.title" }}</h5>
-                </div>
+                </div><h5 id="restockSuggestionModalLabel" class="modal-title mb-0">{{ t "partial.restockSuggestionModal.title" }}</h5>
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
             </div>
             <div class="modal-body">
                 <p id="restockProductName" class="fw-semibold mb-2"></p>
-                <p id="restockReason" class="text-secondary-custom small mb-3"></p>
+                <p id="restockReason" class="text-body-secondary small mb-3"></p>
                 <div class="row g-2 align-items-end">
                     <div class="col-12">
                         <label for="restockQty" class="form-label small mb-1">{{ t "partial.restockSuggestionModal.quantity" }}</label>
@@ -23,8 +20,8 @@
                 </div>
             </div>
             <div class="modal-footer justify-content-end gap-2">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-                <button type="button" class="btn btn-proviant-primary" id="restockConfirmBtn">{{ t "partial.restockSuggestionModal.addToList" }}</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
+                <button type="button" class="btn btn-primary" id="restockConfirmBtn">{{ t "partial.restockSuggestionModal.addToList" }}</button>
             </div>
         </div>
     </div>

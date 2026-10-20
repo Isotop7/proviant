@@ -408,12 +408,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const isCamera = mode === 'camera';
         if (tabManualInput) {
             tabManualInput.style.background  = isCamera ? 'transparent' : 'white';
-            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px oklch(0 0 0 / 0.10)';
+            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)';
             tabManualInput.style.color       = isCamera ? 'var(--meta)' : 'var(--fg)';
         }
         if (tabCamera) {
             tabCamera.style.background  = isCamera ? 'white' : 'transparent';
-            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px oklch(0 0 0 / 0.10)' : 'none';
+            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)' : 'none';
             tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--meta)';
         }
         if (manualSection) manualSection.style.display = isCamera ? 'none' : 'block';
@@ -701,7 +701,7 @@ async function openCookModalInner(ids, container) {
 
     if (skipped) {
         var note = document.createElement('div');
-        note.className = 'text-secondary-custom small py-1';
+        note.className = 'text-body-secondary small py-1';
         note.textContent = proviant.tn("js.products.cookSkippedNote", skipped);
         container.appendChild(note);
     }
@@ -747,11 +747,9 @@ async function submitCook() {
         var modal = getCookModal();
         if (modal) modal.hide();
         if (res.errors.length) {
-            // Partial failure: keep the failure details on screen until the
-            // user dismisses, then reload — an 800ms auto-reload would hide
-            // them before they can be read.
-            // Single-line details: #proviantFeedbackMessage is a plain <p>,
-            // so \n would collapse into one unreadable run-on line anyway.
+            // Partial failure: the toast stays up for six seconds, then the
+            // list reloads. An 800ms auto-reload would hide the details
+            // before they can be read.
             msg += proviant.t("js.products.cookErrorsSuffix", res.errors.length, res.errors.join('; '));
             proviant.showFeedback('warning', proviant.t("js.products.cookedWithErrors"), msg, clearBulkSelectionAndReload);
             return;

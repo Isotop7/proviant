@@ -482,7 +482,7 @@ func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDays, soonDa
 	effective := p.EffectiveExpireAt()
 	switch {
 	case effective.IsZero():
-		return "nodate"
+		return "neutral"
 	case effective.Before(now):
 		return "expired"
 	case effective.Before(now.AddDate(0, 0, criticalDays)):

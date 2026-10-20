@@ -9,13 +9,13 @@
             <h2 class="h5 mb-0 fw-semibold">{{ t "integrations.title" }}</h2>
         </div>
         {{ if .ShoppingListSyncEnabled }}
-        <span class="badge-status badge-fresh">{{ t "integrations.enabled" }}</span>
+        <span class="badge badge--fresh">{{ t "integrations.enabled" }}</span>
         {{ else }}
-        <span class="badge-status badge-nodate">{{ t "integrations.disabledOnServer" }}</span>
+        <span class="badge badge--neutral">{{ t "integrations.disabledOnServer" }}</span>
         {{ end }}
     </div>
     <div class="card-body px-4 py-4">
-        <p class="text-secondary-custom small mb-3">
+        <p class="text-body-secondary small mb-3">
             {{ t "integrations.intro" }}
         </p>
 
@@ -26,12 +26,12 @@
                         <div class="fw-medium small d-flex align-items-center gap-2">
                             <span>Bring!</span>
                             {{ if not .BringSyncEnabled }}
-                            <span class="badge-status badge-nodate">{{ t "integrations.disabledInConfig" }}</span>
+                            <span class="badge badge--neutral">{{ t "integrations.disabledInConfig" }}</span>
                             {{ else if .BringIntegration.AccessTokenConfigured }}
-                            <span class="badge-status badge-fresh" id="badgeConfigured-bring">{{ t "integrations.credentialsConfigured" }}</span>
+                            <span class="badge badge--fresh" id="badgeConfigured-bring">{{ t "integrations.credentialsConfigured" }}</span>
                             {{ end }}
                         </div>
-                        <div class="text-secondary-custom small">{{ t "integrations.bringDesc" }}</div>
+                        <div class="text-body-secondary small">{{ t "integrations.bringDesc" }}</div>
                     </div>
                     <div class="form-check form-switch mb-0 flex-shrink-0">
                         {{ if .BringSyncEnabled }}
@@ -77,7 +77,7 @@
                             <input type="password" class="form-control" id="inputIntegrationToken-bring"
                                    placeholder="{{ t "integrations.keepCurrentPlaceholder" }}"
                                    autocomplete="new-password">
-                            <div class="form-text text-secondary-custom" id="tokenHint-bring">
+                            <div class="form-text text-body-secondary" id="tokenHint-bring">
                                 {{ if .BringIntegration.AccessTokenConfigured }}
                                 <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "integrations.tokenStored" }}</span> {{ t "integrations.tokenReplace" }}
                                 {{ else }}
@@ -93,7 +93,7 @@
 
                     <div id="integrationStatus-bring" class="small mb-3" aria-live="polite">
                         {{ if .BringIntegration.LastSyncAt }}
-                        <div class="text-secondary-custom"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ t "integrations.lastSynced" (humanDateTime .BringIntegration.LastSyncAt) }}</div>
+                        <div class="text-body-secondary"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ t "integrations.lastSynced" (humanDateTime .BringIntegration.LastSyncAt) }}</div>
                         {{ end }}
                         {{ if .BringIntegration.LastError }}
                         <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small" role="alert">
@@ -103,25 +103,25 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-proviant-primary btn-sm"
+                        <button type="button" class="btn btn-primary btn-sm"
                                 data-integration-action="save" data-provider="bring"
                                 id="btnSaveIntegration-bring"
                                 {{ if not .BringSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-save me-1" aria-hidden="true"></i>{{ t "common.save" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
                                 data-integration-action="test" data-provider="bring"
                                 id="btnTestIntegration-bring"
                                 {{ if not .BringSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-plug me-1" aria-hidden="true"></i>{{ t "integrations.testConnection" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
                                 data-integration-action="sync" data-provider="bring"
                                 id="btnSyncIntegration-bring"
                                 {{ if not .BringSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{ t "integrations.syncNow" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-danger btn-sm"
+                        <button type="button" class="btn btn-danger btn-sm"
                                 data-integration-action="delete" data-provider="bring"
                                 id="btnDeleteIntegration-bring">
                             <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ t "integrations.disconnect" }}
@@ -136,12 +136,12 @@
                         <div class="fw-medium small d-flex align-items-center gap-2">
                             <span>Todoist</span>
                             {{ if not .TodoistSyncEnabled }}
-                            <span class="badge-status badge-nodate">{{ t "integrations.disabledInConfig" }}</span>
+                            <span class="badge badge--neutral">{{ t "integrations.disabledInConfig" }}</span>
                             {{ else if .TodoistIntegration.AccessTokenConfigured }}
-                            <span class="badge-status badge-fresh" id="badgeConfigured-todoist">{{ t "integrations.credentialsConfigured" }}</span>
+                            <span class="badge badge--fresh" id="badgeConfigured-todoist">{{ t "integrations.credentialsConfigured" }}</span>
                             {{ end }}
                         </div>
-                        <div class="text-secondary-custom small">{{ t "integrations.todoistDesc" }}</div>
+                        <div class="text-body-secondary small">{{ t "integrations.todoistDesc" }}</div>
                     </div>
                     <div class="form-check form-switch mb-0 flex-shrink-0">
                         {{ if .TodoistSyncEnabled }}
@@ -180,7 +180,7 @@
                             <input type="password" class="form-control" id="inputIntegrationToken-todoist"
                                    placeholder="{{ t "integrations.keepCurrentPlaceholder" }}"
                                    autocomplete="new-password">
-                            <div class="form-text text-secondary-custom" id="tokenHint-todoist">
+                            <div class="form-text text-body-secondary" id="tokenHint-todoist">
                                 {{ if .TodoistIntegration.AccessTokenConfigured }}
                                 <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "integrations.tokenStored" }}</span> {{ t "integrations.tokenReplace" }}
                                 {{ else }}
@@ -196,7 +196,7 @@
 
                     <div id="integrationStatus-todoist" class="small mb-3" aria-live="polite">
                         {{ if .TodoistIntegration.LastSyncAt }}
-                        <div class="text-secondary-custom"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ t "integrations.lastSynced" (humanDateTime .TodoistIntegration.LastSyncAt) }}</div>
+                        <div class="text-body-secondary"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ t "integrations.lastSynced" (humanDateTime .TodoistIntegration.LastSyncAt) }}</div>
                         {{ end }}
                         {{ if .TodoistIntegration.LastError }}
                         <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small" role="alert">
@@ -206,25 +206,25 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-proviant-primary btn-sm"
+                        <button type="button" class="btn btn-primary btn-sm"
                                 data-integration-action="save" data-provider="todoist"
                                 id="btnSaveIntegration-todoist"
                                 {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-save me-1" aria-hidden="true"></i>{{ t "common.save" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
                                 data-integration-action="test" data-provider="todoist"
                                 id="btnTestIntegration-todoist"
                                 {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-plug me-1" aria-hidden="true"></i>{{ t "integrations.testConnection" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
                                 data-integration-action="sync" data-provider="todoist"
                                 id="btnSyncIntegration-todoist"
                                 {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{ t "integrations.syncNow" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-danger btn-sm"
+                        <button type="button" class="btn btn-danger btn-sm"
                                 data-integration-action="delete" data-provider="todoist"
                                 id="btnDeleteIntegration-todoist">
                             <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ t "integrations.disconnect" }}

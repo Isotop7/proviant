@@ -164,7 +164,7 @@
       '<div class="card-body py-2">' +
       '<div class="d-flex align-items-start gap-2">' +
       '<input type="text" class="form-control form-control-sm receipt-item-name" value="" aria-label="' + proviant.t("js.receipt.productNameLabel") + '" placeholder="' + proviant.t("js.receipt.productNameLabel") + '">' +
-      '<button type="button" class="btn btn-sm btn-proviant-secondary flex-shrink-0" data-receipt-remove aria-label="' + proviant.t("js.receipt.removeItemLabel") + '">' +
+      '<button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-receipt-remove aria-label="' + proviant.t("js.receipt.removeItemLabel") + '">' +
       '<i class="bi bi-x-lg" aria-hidden="true"></i></button>' +
       "</div>" +
       '<div class="d-flex gap-2 mt-2">' +

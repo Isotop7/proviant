@@ -375,17 +375,31 @@ function checkCompiledCss() {
 // ── Check 7 (phase 3): the legacy vocabulary is gone ───────────────────────
 
 const LEGACY_CLASSES = [
+  // Phase 3 — component vocabulary
   'btn-proviant-primary', 'btn-proviant-secondary', 'btn-proviant-danger',
   'btn-proviant-warning', 'btn-ghost', 'badge-status', 'badge-fresh',
   'badge-soon', 'badge-critical', 'badge-expired', 'badge-nodate',
   'badge-lowstock', 'badge-opened', 'field-input', 'field-label',
   'field-error', 'input-hint', 'text-primary-custom', 'text-secondary-custom',
   'text-tertiary', 'metric-tile', 'metric-label', 'metric-value',
-  'skeleton-block', 'pv-sidebar', 'pv-nav-item', 'login-root', 'login-brand',
-  'login-form-panel', 'sl-list-row', 'modal-icon', 'btn-modal-close', 'pv-toast',
+  'skeleton-block', 'btn-modal-close',
 ];
 
-const LEGACY_DYNAMIC = ['badge-{{', 'btn-proviant-{{', 'status-{{'];
+// Phase 4 — app shell and auth
+const LEGACY_CLASSES_SHELL = [
+  'pv-sidebar', 'pv-nav-item', 'login-root', 'login-brand', 'login-form-panel',
+];
+
+// Phase 5 — shopping list
+const LEGACY_CLASSES_LIST = [
+  'sl-list-row',
+];
+
+// The badge modifier is interpolated from a Go helper, so a literal grep
+// cannot reach it — the checker flags the interpolation site instead.
+// The status colour family (.status-fresh) keeps its own interpolation and
+// is not part of the legacy vocabulary.
+const LEGACY_DYNAMIC = ['badge-{{', 'btn-proviant-{{'];
 
 function sourceFiles(dirs, exts) {
   const out = [];
@@ -407,11 +421,14 @@ function checkLegacyClasses() {
     ...sourceFiles(['src/assets/js'], ['.js']),
     ...sourceFiles(['tests/js'], ['.js']),
   ];
+  const legacy = [...LEGACY_CLASSES];
+  if (PHASE >= 4) legacy.push(...LEGACY_CLASSES_SHELL);
+  if (PHASE >= 5) legacy.push(...LEGACY_CLASSES_LIST);
   for (const file of files) {
     const src = fs.readFileSync(file, 'utf8');
     const rel = path.relative(ROOT, file);
-    for (const cls of LEGACY_CLASSES) {
-      const pattern = new RegExp(`(^|[\\s"'\`])${cls.replace(/[-]/g, '\\-')}([\\s"'\`]|\\b)`, 'm');
+    for (const cls of legacy) {
+      const pattern = new RegExp(`(^|[\\s"'\`])${cls.replace(/[-]/g, '\\-')}(?![\\w-])`, 'm');
       if (pattern.test(src)) fail('legacy-class', `${rel} still uses .${cls}`);
     }
     for (const marker of LEGACY_DYNAMIC) {
@@ -425,15 +442,28 @@ function checkLegacyClasses() {
 function checkHardcodedColorsInJs() {
   // sw.js renders a standalone offline fallback document. It cannot read the
   // custom properties, so its own colours are exempt — like the notification
-  // mail templates, which are outside the app UI entirely.
-  const files = sourceFiles(['src/assets/js'], ['.js']).filter((f) => !/bootstrap\.bundle|chart\.umd|html5-qrcode|\/sw\.js$/.test(f));
+  // mail templates, which are outside the app UI entirely. theme.js writes
+  // the PWA theme colour, which is metadata rather than UI.
+  const files = sourceFiles(['src/assets/js'], ['.js']).filter(
+    (f) => !/bootstrap\.bundle|chart\.umd|html5-qrcode|\/sw\.js$|\/theme\.js$/.test(f),
+  );
   for (const file of files) {
     const src = fs.readFileSync(file, 'utf8');
     const rel = path.relative(ROOT, file);
-    for (const m of src.matchAll(/oklch\([^)]*\)/g)) {
+    // A block between the markers is a standalone document (a print view, for
+    // example) that carries the palette values literally.
+    const scanned = src
+      .split('design-tokens:off')
+      .map((part, index) => {
+        if (index === 0) return part;
+        const after = part.split('design-tokens:on');
+        return after.slice(1).join('design-tokens:on');
+      })
+      .join('');
+    for (const m of scanned.matchAll(/oklch\([^)]*\)/g)) {
       fail('js-color', `${rel} hardcodes ${m[0]} — use a design token`);
     }
-    for (const m of src.matchAll(/#[0-9a-fA-F]{6}\b/g)) {
+    for (const m of scanned.matchAll(/#[0-9a-fA-F]{6}\b/g)) {
       fail('js-color', `${rel} hardcodes ${m[0]} — use a design token`);
     }
   }
@@ -455,6 +485,63 @@ function checkJsTokenReferences() {
   }
 }
 
+// ── Check 10 (phase 3): the design system's classes all have a rule ────────
+
+// A rename that loses its CSS is invisible in a diff and invisible in a
+// screenshot review. Every class the markup uses from the design system's own
+// vocabulary must have a rule in the compiled stylesheet.
+const CLASS_MARKERS = new Set([
+  'skeleton-row', 'skeleton-tile', 'chart-empty-msg', 'row-checkbox',
+  'list-checkbox', 'item-checkbox', 'selected', 'checked', 'loading',
+  'qty-updated', 'card-clicked', 'expanded',
+]);
+
+function checkClassRules() {
+  const cssPath = path.join(ROOT, 'src', 'assets', 'css', 'main.css');
+  if (!fs.existsSync(cssPath)) {
+    fail('unmatched-class', 'src/assets/css/main.css is missing — run `task css`');
+    return;
+  }
+  const css = fs.readFileSync(cssPath, 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(path.join(DESIGN, 'components.manifest.json'), 'utf8'));
+
+  // The design system's vocabulary.
+  const vocabulary = new Set();
+  for (const group of manifest.groups ?? []) {
+    for (const entry of group.selectors ?? []) {
+      for (const part of entry.split(',')) {
+        const cls = part.trim().split(/\s+/)[0] ?? '';
+        if (cls.startsWith('.')) vocabulary.add(cls.slice(1));
+      }
+    }
+  }
+  for (const key of Object.keys(manifest.utilities ?? {})) {
+    if (!key.startsWith('_')) vocabulary.add(key.replace(/ .*/, ''));
+  }
+
+  const files = [
+    ...sourceFiles(['src/templates/web'], ['.tmpl']),
+    ...sourceFiles(['src/assets/js'], ['.js']),
+  ].filter((f) => !/bootstrap\.bundle|chart\.umd|html5-qrcode/.test(f));
+
+  for (const file of files) {
+    const src = fs.readFileSync(file, 'utf8');
+    const rel = path.relative(ROOT, file);
+    // A class attribute may contain a template action with quotes inside it.
+    for (const m of src.matchAll(/class="((?:\{\{[\s\S]*?\}\}|[^"])*)"/g)) {
+      const literal = m[1].replace(/\{\{[\s\S]*?\}\}/g, ' ');
+      for (const token of literal.split(/\s+/)) {
+        if (!token || token.includes('${')) continue;
+        if (CLASS_MARKERS.has(token) || !vocabulary.has(token)) continue;
+        const pattern = new RegExp(`\\.${token.replace(/[-]/g, '\\-')}(?![\\w-])`);
+        if (!pattern.test(css)) {
+          fail('unmatched-class', `${rel} uses .${token}, which has no rule in main.css`);
+        }
+      }
+    }
+  }
+}
+
 // ── Run ─────────────────────────────────────────────────────────────────────
 
 checkArtifactsCurrent();
@@ -468,6 +555,7 @@ if (PHASE >= 3) {
   checkLegacyClasses();
   checkHardcodedColorsInJs();
   checkJsTokenReferences();
+  checkClassRules();
 }
 if (PHASE >= 6) {
   checkSpecSheets();

@@ -12,6 +12,10 @@
 @import "../../../design-system/tokens";
 
 :root {
+  // Die Bootstrap-Texthierarchie spricht die Tinte des Design-Systems.
+  --bs-secondary-color: var(--muted);
+  --bs-tertiary-color: var(--meta);
+
   // Tertiärer Text auf deaktivierten Bedienelementen.
   --text-disabled: #8a8a8a;
 
@@ -24,11 +28,4 @@
   --hero-sub-fg: rgba(255, 255, 255, .75);
   --hero-pill-fg: #fff;
   --hero-pill-bg: rgba(0, 0, 0, .3);
-
-  // Deprecated: die alte Text-Hierarchie. Wird mit dem Wechsel auf die
-  // Bootstrap-Utilities (.text-body, .text-body-secondary,
-  // .text-body-tertiary) entfernt.
-  --text-primary: var(--fg);
-  --text-secondary: var(--muted);
-  --text-tertiary: var(--meta);
 }

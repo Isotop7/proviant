@@ -10,9 +10,9 @@ function renderSkeletons(count) {
   for (let i = 0; i < count; i++) {
     const col = document.createElement('div');
     col.className = 'col skeleton-tile';
-    col.innerHTML = `<div class="metric-tile h-100">
-      <div class="skeleton-block mb-2" style="height:.75rem;width:60%"></div>
-      <div class="skeleton-block" style="height:2rem;width:40%"></div>
+    col.innerHTML = `<div class="kpi h-100">
+      <div class="skeleton mb-2" style="height:.75rem;width:60%"></div>
+      <div class="skeleton" style="height:2rem;width:40%"></div>
     </div>`;
     dashboard.appendChild(col);
   }
@@ -28,7 +28,7 @@ function showEmptyChart(canvasId, message) {
   canvas.style.display = 'none';
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-secondary-custom small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
+    `<p class="text-body-secondary small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
   );
 }
 
@@ -63,11 +63,11 @@ function renderTile(title, hero, variant, heroClass) {
     const fill = fillMap[variant];
     const ink  = inkMap[variant];
     col.innerHTML = `
-      <div class="metric-tile h-100" style="background:${fill};box-shadow:0 6px 18px color-mix(in oklab, ${fill} 33%, transparent);border-color:transparent;position:relative;overflow:hidden;">
+      <div class="kpi h-100" style="background:${fill};box-shadow:0 6px 18px color-mix(in oklab, ${fill} 33%, transparent);border-color:transparent;position:relative;overflow:hidden;">
         <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:color-mix(in oklab, ${ink} 8%, transparent);pointer-events:none;"></div>
         <div style="position:relative;">
-          <div class="metric-label" style="color:color-mix(in oklab, ${ink} 88%, transparent);">${title}</div>
-          <div class="metric-value" style="color:${ink};" title="${hero}">${hero}</div>
+          <div class="kpi__label" style="color:color-mix(in oklab, ${ink} 88%, transparent);">${title}</div>
+          <div class="kpi__value" style="color:${ink};" title="${hero}">${hero}</div>
         </div>
       </div>`;
     return col;
@@ -75,10 +75,10 @@ function renderTile(title, hero, variant, heroClass) {
 
   const heroColor = (variant && textMap[variant]) ? textMap[variant] : 'var(--fg)';
   const heroStyle = heroClass ? '' : `style="color:${heroColor}"`;
-  const heroInnerClass = heroClass || 'metric-value';
+  const heroInnerClass = heroClass || 'kpi__value';
   col.innerHTML = `
-    <div class="metric-tile h-100">
-      <div class="metric-label">${title}</div>
+    <div class="kpi h-100">
+      <div class="kpi__label">${title}</div>
       <div class="${heroInnerClass}" ${heroStyle} title="${hero}">${hero}</div>
     </div>`;
   return col;
@@ -90,14 +90,14 @@ function renderListTile(title, items, days) {
 
   let listHtml;
   if (items.length === 0) {
-    listHtml = `<li class="list-group-item text-secondary-custom small py-2">${proviant.tn("js.home.noExpiringProducts", days)}</li>`;
+    listHtml = `<li class="list-group-item text-body-secondary small py-2">${proviant.tn("js.home.noExpiringProducts", days)}</li>`;
   } else {
     listHtml = items.map((item) => {
       const date = new Date(item.expireAt + 'T00:00:00');
       const dateLabel = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       return `<li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
         <span class="text-truncate me-2 small">${item.productName}</span>
-        <span class="text-nowrap text-secondary-custom small">${dateLabel}</span>
+        <span class="text-nowrap text-body-secondary small">${dateLabel}</span>
       </li>`;
     }).join('');
   }
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         {
           title: proviant.t("js.home.lastAddedProduct"),
           hero: s.lastInsertedProduct || '—',
-          heroClass: 'metric-value text-truncate',
+          heroClass: 'kpi__value text-truncate',
         },
       ];
 
@@ -250,9 +250,9 @@ document.addEventListener('DOMContentLoaded', async function () {
       const currentStreak = streak ? streak.currentStreak : 0;
       const longestStreak = streak ? streak.longestStreak : 0;
       const streakHero = proviant.tn("js.home.streakDays", currentStreak);
-      const streakHeroClass = currentStreak > 0 ? 'metric-value' : 'metric-value text-secondary-custom';
+      const streakHeroClass = currentStreak > 0 ? 'kpi__value' : 'kpi__value text-body-secondary';
       const streakCol = renderTile('<i class="bi bi-fire"></i> ' + proviant.t("js.home.wasteFreeStreak"), streakHero, null, streakHeroClass);
-      const streakTile = streakCol.querySelector('.metric-tile');
+      const streakTile = streakCol.querySelector('.kpi');
       if (streakTile) {
         if (longestStreak > 0) {
           const sub = document.createElement('div');
@@ -310,9 +310,9 @@ document.addEventListener('DOMContentLoaded', async function () {
           const exceeded = pct >= 100;
           const barColor = exceeded ? 'var(--status-expired)' : (pct >= 75 ? 'var(--status-soon)' : 'var(--status-fresh)');
           goalCol.innerHTML = `
-            <div class="metric-tile h-100">
-              <div class="metric-label"><i class="bi bi-bullseye me-1"></i>${proviant.t("js.home.monthlyGoal")}</div>
-              <div class="metric-value" title="${label}" style="color:${exceeded ? 'var(--status-expired)' : 'var(--fg)'}">${label}</div>
+            <div class="kpi h-100">
+              <div class="kpi__label"><i class="bi bi-bullseye me-1"></i>${proviant.t("js.home.monthlyGoal")}</div>
+              <div class="kpi__value" title="${label}" style="color:${exceeded ? 'var(--status-expired)' : 'var(--fg)'}">${label}</div>
               <div class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" style="height:6px;">
                 <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
               </div>
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         let listHtml;
         if (activities.length === 0) {
-          listHtml = `<li class="list-group-item text-secondary-custom small py-2">${proviant.t("js.home.noRecentActivity")}</li>`;
+          listHtml = `<li class="list-group-item text-body-secondary small py-2">${proviant.t("js.home.noRecentActivity")}</li>`;
         } else {
           listHtml = activities.map((a) => {
             const icon = actionIconMap[a.action] || 'bi-circle';
@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <i class="bi ${icon}" style="font-size:12px;color:var(--accent);flex-shrink:0;"></i>
                 <span class="text-truncate"><strong>${a.userName || proviant.t("js.home.someone")}</strong> ${actionText}</span>
               </span>
-              <span class="text-nowrap text-secondary-custom small" style="flex-shrink:0;">${relativeTime(a.timestamp)}</span>
+              <span class="text-nowrap text-body-secondary small" style="flex-shrink:0;">${relativeTime(a.timestamp)}</span>
             </li>`;
           }).join('');
         }
@@ -416,7 +416,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const legacyEvents = savings.legacyEvents || 0;
         if (legacyEvents > 0) {
           const note = document.createElement('div');
-          note.className = 'col-12 text-secondary-custom small mt-1';
+          note.className = 'col-12 text-body-secondary small mt-1';
           note.textContent = proviant.tn("js.home.legacySavingsNote", legacyEvents);
           dashboard.appendChild(note);
         }

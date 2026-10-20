@@ -9,10 +9,10 @@
             <h2 class="h5 mb-0 fw-semibold">{{ t "receiptScan.title" }}</h2>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnResetReceiptScanSettings">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetReceiptScanSettings">
                 {{ t "receiptScan.resetToDefaults" }}
             </button>
-            <button type="button" class="btn btn-proviant-primary btn-sm" id="btnUpdateReceiptScanSettings">
+            <button type="button" class="btn btn-primary btn-sm" id="btnUpdateReceiptScanSettings">
                 {{ t "common.save" }}
             </button>
         </div>
@@ -25,7 +25,7 @@
                     <div class="d-flex align-items-center justify-content-between gap-3">
                         <div>
                             <div class="fw-medium small">{{ t "receiptScan.overrideServer" }}</div>
-                            <div class="text-secondary-custom small">{{ t "receiptScan.overrideServerDesc" }}</div>
+                            <div class="text-body-secondary small">{{ t "receiptScan.overrideServerDesc" }}</div>
                         </div>
                         <div class="form-check form-switch mb-0 flex-shrink-0">
                             <input class="form-check-input" type="checkbox" role="switch"
@@ -43,7 +43,7 @@
                                    placeholder="{{ .ReceiptScanDefaults.Endpoint }}"
                                    value="{{ .User.ReceiptScanPreferences.Endpoint }}"
                                    autocomplete="off">
-                            <div class="form-text text-secondary-custom">{{ t "receiptScan.endpointHelp" }}</div>
+                            <div class="form-text text-body-secondary">{{ t "receiptScan.endpointHelp" }}</div>
                             <div class="invalid-feedback">{{ t "receiptScan.endpointInvalid" }}</div>
                         </div>
                         <div class="col-md-6">
@@ -52,14 +52,14 @@
                                    placeholder="{{ .ReceiptScanDefaults.Model }}"
                                    value="{{ .User.ReceiptScanPreferences.Model }}"
                                    autocomplete="off">
-                            <div class="form-text text-secondary-custom">{{ t "receiptScan.modelHelp" }}</div>
+                            <div class="form-text text-body-secondary">{{ t "receiptScan.modelHelp" }}</div>
                         </div>
                         <div class="col-md-6">
                             <label for="inputReceiptScanApiKey" class="form-label fw-medium small">{{ t "receiptScan.apiKeyLabel" }}</label>
                             <input type="password" class="form-control" id="inputReceiptScanApiKey"
                                    placeholder="{{ t "receiptScan.keepCurrentPlaceholder" }}"
                                    autocomplete="new-password">
-                            <div class="form-text text-secondary-custom">
+                            <div class="form-text text-body-secondary">
                                 {{ if .User.ReceiptScanPreferences.APIKey }}
                                 <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "receiptScan.apiKeyConfigured" }}</span>
                                 {{ t "receiptScan.apiKeyReplace" }}
@@ -86,7 +86,7 @@
                                        value="{{ if gt .User.ReceiptScanPreferences.Timeout 0 }}{{ .User.ReceiptScanPreferences.Timeout }}{{ end }}">
                                 <span class="input-group-text">s</span>
                             </div>
-                            <div class="form-text text-secondary-custom">{{ t "receiptScan.timeoutHelp" }}</div>
+                            <div class="form-text text-body-secondary">{{ t "receiptScan.timeoutHelp" }}</div>
                             <div class="invalid-feedback">{{ t "receiptScan.timeoutInvalid" }}</div>
                         </div>
                     </div>

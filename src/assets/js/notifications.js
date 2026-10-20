@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   const response = await proviant.getNotifications();
 
   if (response.code !== 200) {
-    itemsEl.innerHTML = `<p class="text-secondary-custom small px-3 py-2 mb-0">${proviant.t("js.app.notificationsLoadFailed")}</p>`;
+    itemsEl.innerHTML = `<p class="text-body-secondary small px-3 py-2 mb-0">${proviant.t("js.app.notificationsLoadFailed")}</p>`;
     return;
   }
 
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   };
 
   if (data.total === 0) {
-    itemsEl.innerHTML = `<p class="text-secondary-custom small px-3 py-2 mb-0">${proviant.t("js.app.notificationsEmpty")}</p>`;
+    itemsEl.innerHTML = `<p class="text-body-secondary small px-3 py-2 mb-0">${proviant.t("js.app.notificationsEmpty")}</p>`;
     return;
   }
 
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         <i class="bi ${iconMap[item.type] || 'bi-bell'} text-primary flex-shrink-0 mt-1" aria-hidden="true"></i>
         <div>
           <div class="small text-body">${item.title}</div>
-          <div class="text-secondary-custom notification-entry-date">${item.createdAt}</div>
+          <div class="text-body-secondary notification-entry-date">${item.createdAt}</div>
         </div>
       </div>
     </a>`;

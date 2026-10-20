@@ -67,26 +67,9 @@ func hasPassed(t time.Time) bool {
 	return t.Before(time.Now())
 }
 
-func expiryBadgeClass(t time.Time) string {
-	if t.IsZero() {
-		return "bg-secondary"
-	}
-	now := time.Now()
-	if t.Before(now) {
-		return "bg-danger"
-	}
-	if t.Before(now.Add(time.Duration(criticalThresholdDays) * 24 * time.Hour)) {
-		return "bg-danger"
-	}
-	if t.Before(now.Add(time.Duration(soonThresholdDays) * 24 * time.Hour)) {
-		return "bg-warning"
-	}
-	return "bg-success"
-}
-
 func expiryStatusClass(t time.Time) string {
 	if t.IsZero() {
-		return "nodate"
+		return "neutral"
 	}
 	now := time.Now()
 	if t.Before(now) {
@@ -128,32 +111,6 @@ func expiryStatusLabel(lang string, t time.Time) string {
 		return i18n.T(lang, "status.fresh")
 	default:
 		return i18n.T(lang, "status.noDate")
-	}
-}
-
-func expiryTextClass(t time.Time) string {
-	if t.IsZero() {
-		return "text-secondary"
-	}
-	now := time.Now()
-	if t.Before(now.Add(time.Duration(criticalThresholdDays) * 24 * time.Hour)) {
-		return "text-danger"
-	}
-	return "text-warning"
-}
-
-func expiryColor(t time.Time) string {
-	switch expiryStatusClass(t) {
-	case "expired":
-		return "var(--status-expired)"
-	case "critical":
-		return "var(--status-critical)"
-	case "soon":
-		return "var(--status-soon)"
-	case "fresh":
-		return "var(--fg-2)"
-	default:
-		return "var(--fg-3)"
 	}
 }
 
@@ -334,14 +291,11 @@ func templateFunctions(lang string) template.FuncMap {
 		"now":                  now,
 		"today":                today,
 		"hasPassed":            hasPassed,
-		"expiryBadgeClass":     expiryBadgeClass,
 		"expiryStatusClass":    expiryStatusClass,
 		"expiryStatusIcon":     expiryStatusIcon,
 		"expiryStatusLabel":    func(t time.Time) string { return expiryStatusLabel(lang, t) },
 		"expiryUrgencyText":    func(t time.Time) string { return expiryUrgencyText(lang, t) },
 		"expiryDays":           expiryDays,
-		"expiryTextClass":      expiryTextClass,
-		"expiryColor":          expiryColor,
 		"queryWith":            queryWith,
 		"stringSlice":          stringSlice,
 		"badgifyCategories":    badgifyCategories,

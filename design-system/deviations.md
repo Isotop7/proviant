@@ -36,6 +36,7 @@ sichtbar ist — einen messbaren Beleg (Kontrastwert, Route, Endpoint).
 | 19 | Das Kategorien-Diagramm nutzt `--info` als sechste Farbe | Das Design-System kennt keine kategoriale Palette: das Diagramm leiht sich die Statussprache. Vier Statusfarben plus Akzent ergeben fünf unterscheidbare Farben, die Haushalte mit mehr Kategorien brauchen eine sechste. Die Spec erlaubt sie für Diagramme nicht ausdrücklich. |
 | 20 | Das Badge `opened` nutzt die Neutralfamilie statt Violett | Der Spec verbietet Violett, und "geöffnet" ist kein Ablaufzustand. Grau ist die neutrale Aussage; die dringenden Zustände bleiben farbig. |
 | 21 | Neue Slots `--status-*-on` (Tinte auf voller Statusfläche) | Eine gefüllte Fläche braucht eine eigene Tinte: im hellen Theme Weiß, im dunklen Theme Tinte auf dem hellen Statuswert. Ohne sie trägt die Kachel in einem der beiden Themes unlesbaren Text. |
+| 22 | `.modal-icon` (das Icon-Feld im Modal-Kopf) bleibt | Der Spec nennt im Modal-Kopf nur Titel und Schließ-Button. Das Icon-Feld trägt bei der Bestätigung und beim Produkt-Scan die Gefahrenstufe, und der Feedback-Dialog ist als Toast ersetzt — das Icon trägt jetzt die Warnung, die das Icon-Feld vorher getragen hat. |
 
 ## Geprüfte Werte
 

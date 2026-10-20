@@ -138,10 +138,10 @@ describe("theme.js toggle icons", () => {
     realm.document.head.appendChild(meta);
 
     theme.set("dark");
-    expect(meta.getAttribute("content")).toBe("#2a2620");
+    expect(meta.getAttribute("content")).toBe("#1E1A14");
 
     theme.set("light");
-    expect(meta.getAttribute("content")).toBe("#3D7A5C");
+    expect(meta.getAttribute("content")).toBe("#418069");
   });
 });
 

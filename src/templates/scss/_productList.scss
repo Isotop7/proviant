@@ -59,7 +59,7 @@
   &.status-critical { background: var(--status-critical); }
   &.status-soon { background: var(--status-soon); }
   &.status-fresh { background: var(--status-fresh); }
-  &.status-nodate { background: var(--status-neutral); }
+  &.status-neutral { background: var(--status-neutral); }
 }
 
 .list-product-text {
@@ -331,7 +331,7 @@
     border-color: var(--status-fresh-border);
   }
 
-  &.active.status-nodate {
+  &.active.status-neutral {
     color: var(--status-neutral-text);
     background: var(--status-neutral-subtle);
     border-color: var(--status-neutral-border);
@@ -495,7 +495,7 @@
   &.status-critical { color: var(--status-critical-text); }
   &.status-soon { color: var(--status-soon-text); }
   &.status-fresh { color: var(--fg-2); }
-  &.status-nodate { color: var(--meta); }
+  &.status-neutral { color: var(--meta); }
 }
 
 @media (max-width: 767.98px) {

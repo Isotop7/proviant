@@ -11,7 +11,7 @@
 .text-status-critical { color: var(--status-critical-text); }
 .text-status-soon { color: var(--status-soon-text); }
 .text-status-fresh { color: var(--status-fresh-text); }
-.text-status-nodate { color: var(--status-neutral-text); }
+.text-status-neutral { color: var(--status-neutral-text); }
 
 // Status bar (replaces inline style="background: var(--status-X-bar)")
 .status-bar-expired { background: var(--status-expired); }
@@ -82,7 +82,7 @@
 .min-w-0 { min-width: 0; }
 
 // Badge status small variant
-.badge-status-sm {
+.badge--sm {
   padding: 2px 9px;
   font-size: 10px;
 }
@@ -174,38 +174,38 @@
 .modal-narrow { max-width: 400px; }
 
 // Skeleton block variants (replace inline styles in product list skeletons)
-.skeleton-icon {
+.skeleton--icon {
   width: 15px;
   height: 15px;
 }
-.skeleton-thumb {
+.skeleton--thumb {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
   border-radius: 6px;
 }
-.skeleton-line-sm {
+.skeleton--line-sm {
   width: 40%;
   height: 10px;
 }
-.skeleton-line {
+.skeleton--line {
   width: 70%;
   height: 14px;
 }
-.skeleton-badge {
+.skeleton--badge {
   width: 70px;
   height: 20px;
   border-radius: 10px;
 }
-.skeleton-date {
+.skeleton--date {
   width: 50px;
   height: 13px;
 }
-.skeleton-location {
+.skeleton--location {
   width: 70px;
   height: 13px;
 }
-.skeleton-qty {
+.skeleton--qty {
   width: 40px;
   height: 26px;
   border-radius: 4px;

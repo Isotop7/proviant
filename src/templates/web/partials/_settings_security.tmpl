@@ -7,14 +7,14 @@
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "settings.apiTokens" }}</h2>
         </div>
-        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnCreatePAT">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCreatePAT">
             {{ t "settings.createToken" }}
         </button>
     </div>
     <div class="card-body px-4 py-4">
-        <p class="text-secondary-custom small mb-3">{{ t "settings.apiTokensHelp" }}</p>
+        <p class="text-body-secondary small mb-3">{{ t "settings.apiTokensHelp" }}</p>
         <ul class="list-group" id="patList">
-            <li class="list-group-item text-center text-secondary-custom py-3" id="patLoading">
+            <li class="list-group-item text-center text-body-secondary py-3" id="patLoading">
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>{{ t "common.loading" }}
             </li>
         </ul>
@@ -39,7 +39,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="inputPatExpiry" class="form-label fw-medium">
-                            {{ t "settings.tokenExpiresAtLabel" }} <span class="text-secondary-custom fw-normal">{{ t "settings.optional" }}</span>
+                            {{ t "settings.tokenExpiresAtLabel" }} <span class="text-body-secondary fw-normal">{{ t "settings.optional" }}</span>
                         </label>
                         <input type="datetime-local" class="form-control" id="inputPatExpiry">
                     </div>
@@ -50,8 +50,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.close" }}</button>
-                <button type="button" class="btn btn-proviant-primary" id="btnSavePAT">{{ t "settings.create" }}</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.close" }}</button>
+                <button type="button" class="btn btn-primary" id="btnSavePAT">{{ t "settings.create" }}</button>
             </div>
         </div>
     </div>
@@ -66,23 +66,23 @@
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "settings.activityLog" }}</h2>
         </div>
-        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnRefreshAuditLog"
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRefreshAuditLog"
                 aria-label="{{ t "settings.refreshActivityLog" }}" title="{{ t "settings.refresh" }}">
             <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
         </button>
     </div>
     <div class="card-body p-0">
-        <p class="text-secondary-custom small px-4 pt-3 mb-0">{{ t "settings.auditLogHelp" }}</p>
+        <p class="text-body-secondary small px-4 pt-3 mb-0">{{ t "settings.auditLogHelp" }}</p>
         <div class="audit-log-container" aria-live="polite" id="auditLogContainer">
             <ul class="list-group list-group-flush" id="auditLogList">
-                <li class="list-group-item text-center text-secondary-custom py-4" id="auditLogLoading">
+                <li class="list-group-item text-center text-body-secondary py-4" id="auditLogLoading">
                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     <span>{{ t "common.loading" }}</span>
                 </li>
             </ul>
         </div>
         <div class="px-4 py-2 border-top bg-subtle">
-            <small class="text-secondary-custom text-xs" id="auditLogMeta"></small>
+            <small class="text-body-secondary text-xs" id="auditLogMeta"></small>
         </div>
     </div>
 </div>

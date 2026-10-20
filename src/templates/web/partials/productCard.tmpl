@@ -32,18 +32,18 @@
             </div>
             <div class="product-cat mb-1">{{ badgifyCategories .Categories 3 }}</div>
             <div class="product-cat font-monospace mb-2">{{- .Barcode -}}</div>
-            <span class="badge-status badge-{{ $cls }}">
+            <span class="badge badge--{{ $cls }}">
                 <i class="bi bi-{{ expiryStatusIcon $eff }}" aria-hidden="true"></i>
                 {{ expiryStatusLabel $eff }}
             </span>
             {{ if and (gt .MinStockAmount 0) (lt .Quantity .MinStockAmount) }}
-            <span class="badge-status badge-lowstock">
+            <span class="badge badge--lowstock">
                 <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
                 {{ t "partial.productCard.lowStock" }}
             </span>
             {{ end }}
             {{ if .OpenedAt }}
-            <span class="badge-status badge-opened" title="{{ t "partial.productCard.openedOn" (.OpenedAt | humanDate) }}{{ if .DaysAfterOpening }} — {{ tn "partial.productCard.shelfLifeDays" .DaysAfterOpening }}{{ end }}">
+            <span class="badge badge--opened" title="{{ t "partial.productCard.openedOn" (.OpenedAt | humanDate) }}{{ if .DaysAfterOpening }} — {{ tn "partial.productCard.shelfLifeDays" .DaysAfterOpening }}{{ end }}">
                 <i class="bi bi-box-open" aria-hidden="true"></i>
                 {{ t "partial.productCard.opened" (.OpenedAt | humanDate) }}
             </span>
@@ -61,7 +61,7 @@
             {{ end }}
             {{ if not .OpenedAt }}
             <div class="mt-2">
-                <button type="button" class="btn btn-sm btn-proviant-secondary btn-mark-opened"
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-mark-opened"
                     data-product-id="{{ .Model.ID }}" aria-label="{{ t "partial.productCard.markAsOpened" }}">
                     <i class="bi bi-box-open" aria-hidden="true"></i> {{ t "partial.productCard.markAsOpened" }}
                 </button>
@@ -71,21 +71,21 @@
         <ul class="list-group list-group-flush">
             {{ if .StorageLocation }}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-secondary-custom small">
+                <span class="text-body-secondary small">
                     <i class="bi bi-geo-alt me-2" aria-hidden="true"></i>{{ t "partial.location" }}
                 </span>
-                <span class="badge-status badge-nodate">{{ .StorageLocation.Icon }} {{ .StorageLocation.Name }}</span>
+                <span class="badge badge--neutral">{{ .StorageLocation.Icon }} {{ .StorageLocation.Name }}</span>
             </li>
             {{ end }}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-secondary-custom small">
+                <span class="text-body-secondary small">
                     <i class="bi bi-stack me-2" aria-hidden="true"></i>{{ t "partial.productCard.quantity" }}
                 </span>
                 <span class="d-flex flex-column align-items-end gap-1">
                     <span class="d-flex align-items-center gap-1">
-                        <button class="btn btn-sm btn-proviant-secondary btn-qty-dec" data-product-id="{{ .Model.ID }}" aria-label="{{ t "partial.productCard.decreaseQuantity" }}">-</button>
+                        <button class="btn btn-sm btn-outline-secondary btn-qty-dec" data-product-id="{{ .Model.ID }}" aria-label="{{ t "partial.productCard.decreaseQuantity" }}">-</button>
                         <span id="qty-{{ .Model.ID }}" class="mx-1 qty-amount" data-quantity="{{ .Quantity }}">{{ .DisplayQuantity }}</span>
-                        <button class="btn btn-sm btn-proviant-secondary btn-qty-inc" data-product-id="{{ .Model.ID }}" aria-label="{{ t "partial.productCard.increaseQuantity" }}">+</button>
+                        <button class="btn btn-sm btn-outline-secondary btn-qty-inc" data-product-id="{{ .Model.ID }}" aria-label="{{ t "partial.productCard.increaseQuantity" }}">+</button>
                     </span>
                     {{ with .PackSize }}
                     <span class="pack-size">{{ . }}</span>
@@ -93,13 +93,13 @@
                 </span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-secondary-custom small">
+                <span class="text-body-secondary small">
                     <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>{{ t "partial.productCard.scanned" }}
                 </span>
                 <span class="product-meta">{{ .ScannedAt | humanDateTime }}</span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                <span class="text-secondary-custom small">
+                <span class="text-body-secondary small">
                     <i class="bi bi-bell me-2" aria-hidden="true"></i>{{ t "partial.productCard.notified" }}
                 </span>
                 <span class="product-meta">{{ .NotifiedAt | humanDateTime }}</span>

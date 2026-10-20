@@ -21,20 +21,20 @@ function renderTile(title, hero, variant, heroClass) {
     const fill = fillMap[variant];
     const ink  = inkMap[variant];
     col.innerHTML = `
-      <div class="metric-tile h-100" style="background:${fill};box-shadow:0 6px 18px color-mix(in oklab, ${fill} 33%, transparent);border-color:transparent;position:relative;overflow:hidden;">
+      <div class="kpi h-100" style="background:${fill};box-shadow:0 6px 18px color-mix(in oklab, ${fill} 33%, transparent);border-color:transparent;position:relative;overflow:hidden;">
         <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:color-mix(in oklab, ${ink} 8%, transparent);pointer-events:none;"></div>
         <div style="position:relative;">
-          <div class="metric-label" style="color:color-mix(in oklab, ${ink} 88%, transparent);">${title}</div>
-          <div class="metric-value" style="color:${ink};" title="${hero}">${hero}</div>
+          <div class="kpi__label" style="color:color-mix(in oklab, ${ink} 88%, transparent);">${title}</div>
+          <div class="kpi__value" style="color:${ink};" title="${hero}">${hero}</div>
         </div>
       </div>`;
     return col;
   }
 
   col.innerHTML = `
-    <div class="metric-tile h-100" style="${heroClass ? `background:${heroClass};` : ''}">
-      <div class="metric-label">${title}</div>
-      <div class="metric-value" title="${hero}">${hero}</div>
+    <div class="kpi h-100" style="${heroClass ? `background:${heroClass};` : ''}">
+      <div class="kpi__label">${title}</div>
+      <div class="kpi__value" title="${hero}">${hero}</div>
     </div>`;
   return col;
 }
@@ -53,7 +53,7 @@ function showEmptyChart(canvasId, message) {
   }
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-secondary-custom small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
+    `<p class="text-body-secondary small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
   );
 }
 
@@ -166,7 +166,7 @@ function renderTable(s) {
   const rows = s.monthly || [];
   if (rows.length === 0) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" class="text-center text-secondary-custom py-3">${proviant.t("js.waste.noData")}</td>`;
+    tr.innerHTML = `<td colspan="6" class="text-center text-body-secondary py-3">${proviant.t("js.waste.noData")}</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -192,7 +192,7 @@ function renderCategories(s) {
   const cats = s.mostWastedCategories || [];
   if (cats.length === 0) {
     const empty = document.createElement('div');
-    empty.className = 'text-center text-secondary-custom py-3';
+    empty.className = 'text-center text-body-secondary py-3';
     empty.textContent = proviant.t("js.waste.noCategories");
     list.appendChild(empty);
     return;
@@ -209,9 +209,9 @@ function renderCategories(s) {
           <span>${c.displayName || c.categoryKey}</span>
         </span>
         <span class="d-flex align-items-center gap-3 small">
-          <span class="badge-status badge-nodate">${c.count || 0}</span>
-          <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
-          <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
+          <span class="badge badge--neutral">${c.count || 0}</span>
+          <span class="text-body-secondary">${fmtEur(c.costEur)}</span>
+          <span class="text-body-secondary">${fmtKg(c.co2Kg)}</span>
         </span>`;
       list.appendChild(item);
       return;
@@ -227,9 +227,9 @@ function renderCategories(s) {
             <span>${c.displayName || c.categoryKey}</span>
           </span>
           <span class="d-flex align-items-center gap-3 small">
-            <span class="badge-status badge-nodate">${c.count || 0}</span>
-            <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
-            <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
+            <span class="badge badge--neutral">${c.count || 0}</span>
+            <span class="text-body-secondary">${fmtEur(c.costEur)}</span>
+            <span class="text-body-secondary">${fmtKg(c.co2Kg)}</span>
           </span>
         </button>
       </h2>
@@ -250,9 +250,9 @@ function renderCategoryProducts(products) {
         <span>${p.productName || proviant.t("js.waste.unknown")}</span>
       </span>
       <span class="d-flex align-items-center gap-3 small">
-        <span class="badge-status badge-nodate">${p.count || 0}</span>
-        <span class="text-secondary-custom">${fmtEur(p.costEur)}</span>
-        <span class="text-secondary-custom">${fmtKg(p.co2Kg)}</span>
+        <span class="badge badge--neutral">${p.count || 0}</span>
+        <span class="text-body-secondary">${fmtEur(p.costEur)}</span>
+        <span class="text-body-secondary">${fmtKg(p.co2Kg)}</span>
       </span>
     </li>`).join('');
   return `<ul class="waste-category-product-list list-unstyled mb-0">${rows}</ul>`;
@@ -280,7 +280,7 @@ let currentPeriod = '6months';
 async function load(period) {
   if (period) currentPeriod = period;
   const tiles = document.getElementById('wasteTiles');
-  if (tiles) tiles.innerHTML = `<div class="col-12 text-center text-secondary-custom py-3"><div class="spinner-border spinner-border-sm" role="status"></div> ${proviant.t("common.loading")}</div>`;
+  if (tiles) tiles.innerHTML = `<div class="col-12 text-center text-body-secondary py-3"><div class="spinner-border spinner-border-sm" role="status"></div> ${proviant.t("common.loading")}</div>`;
 
   const resp = await proviant.getWasteAnalytics(currentPeriod, currentSort);
   if (resp.code !== 200 || !resp.message) {

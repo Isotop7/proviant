@@ -1,53 +1,104 @@
 // ── Components ─────────────────────────────────────────────────────────────
 
-// Buttons — unified size regardless of btn-sm / btn-lg modifier
-.btn-proviant-primary,
-.btn-proviant-secondary,
-.btn-proviant-danger,
-.btn-proviant-warning {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.5;
-  border-radius: var(--radius-md);
+// Buttons — the design system's geometry: pill, 600, 0.04 em tracking,
+// 40 px (48 hero, 32 compact). The label stays in sentence case.
+.btn {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  text-align: center;
+  border-radius: var(--radius-pill);
+  transition: background-color var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out);
 
   &.btn-sm {
-    padding: 5px 12px;
-    font-size: 12px;
+    min-height: 32px;
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-sm);
   }
   &.btn-lg {
-    padding: 11px 22px;
-    font-size: 15px;
+    min-height: 48px;
+    padding: var(--space-2) var(--space-5);
   }
-}
-
-.btn-proviant-primary {
-  color: var(--accent-on);
-  background: var(--accent);
-  border: none;
-  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 35%, transparent);
-  transition: background var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out);
-
-  &:hover {
-    color: var(--accent-on);
-    background: var(--accent-hover);
-    box-shadow: 0 4px 16px color-mix(in oklab, var(--accent) 50%, transparent);
-  }
-  &:active {
-    color: var(--accent-on);
-    background: var(--accent-active);
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
   }
   &:disabled {
     box-shadow: none;
-    opacity: .45;
   }
+}
+
+// The variants carry the brand colours. Bootstrap's own defaults are
+// replaced, so every button in the app speaks the same palette.
+.btn-primary {
+  --bs-btn-color: var(--accent-on);
+  --bs-btn-bg: var(--accent);
+  --bs-btn-border-color: var(--accent);
+  --bs-btn-hover-color: var(--accent-on);
+  --bs-btn-hover-bg: var(--accent-hover);
+  --bs-btn-hover-border-color: var(--accent-hover);
+  --bs-btn-active-color: var(--accent-on);
+  --bs-btn-active-bg: var(--accent-active);
+  --bs-btn-active-border-color: var(--accent-active);
+  --bs-btn-disabled-color: var(--muted);
+  --bs-btn-disabled-bg: var(--border);
+  --bs-btn-disabled-border-color: var(--border);
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: var(--fg);
+  --bs-btn-bg: var(--surface);
+  --bs-btn-border-color: var(--border);
+  --bs-btn-hover-color: var(--fg);
+  --bs-btn-hover-bg: var(--surface-warm);
+  --bs-btn-hover-border-color: var(--border-strong);
+  --bs-btn-active-color: var(--fg);
+  --bs-btn-active-bg: var(--surface-warm);
+  --bs-btn-active-border-color: var(--border-strong);
+  --bs-btn-disabled-color: var(--muted);
+  --bs-btn-disabled-bg: var(--border);
+  --bs-btn-disabled-border-color: var(--border);
+}
+
+.btn-danger {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--status-expired);
+  --bs-btn-border-color: var(--status-expired);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--status-expired-hover);
+  --bs-btn-hover-border-color: var(--status-expired-hover);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--status-expired-hover);
+  --bs-btn-active-border-color: var(--status-expired-hover);
+  --bs-btn-disabled-color: var(--muted);
+  --bs-btn-disabled-bg: var(--border);
+  --bs-btn-disabled-border-color: var(--border);
+}
+
+// The ghost variant: transparent, the ink only.
+.btn-link {
+  --bs-btn-color: var(--fg);
+  --bs-btn-hover-color: var(--fg);
+  --bs-btn-active-color: var(--fg);
+  --bs-btn-hover-bg: var(--accent-soft);
+  --bs-btn-active-bg: var(--accent-soft);
+  --bs-btn-disabled-color: var(--muted);
+  --bs-btn-focus-shadow-rgb: 0, 0, 0;
+  text-decoration: none;
 }
 
 // Button loading state
 .btn-loading {
   display: none;
 }
-.btn-proviant-primary.loading,
+.btn-primary.loading,
 .btn-bulk.loading {
   .btn-text {
     display: none;
@@ -58,87 +109,36 @@
   }
 }
 
+// The bulk-action bar carries small pill buttons — the compact variant of
+// the secondary button.
 .btn-bulk {
   display: inline-flex;
-  gap: 5px;
+  gap: var(--space-1);
   align-items: center;
-  padding: 5px 10px;
-  font-family: var(--font-body);
-  font-size: 11px;
-  color: var(--fg-2);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
   cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-pill);
+  transition: background-color var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out);
 
+  &:hover {
+    color: var(--fg);
+    background: var(--surface-warm);
+  }
   &.danger {
     color: var(--status-expired-text);
     background: var(--status-expired-subtle);
     border-color: var(--status-expired-border);
   }
-
   &.active {
-    color: var(--accent);
+    color: var(--accent-text);
     background: var(--accent-soft);
     border-color: var(--accent-border);
-  }
-}
-
-.btn-proviant-secondary {
-  color: var(--fg);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  transition: background var(--motion-base) var(--ease-out);
-
-  &:hover {
-    color: var(--fg);
-    background: var(--surface-warm);
-  }
-}
-
-.btn-proviant-danger {
-  color: white;
-  background: var(--status-expired);
-  border: none;
-
-  &:hover {
-    color: white;
-    background: var(--status-expired-hover);
-  }
-}
-
-.btn-proviant-warning {
-  color: var(--status-soon-text);
-  background: var(--status-soon);
-  border: none;
-
-  &:hover {
-    color: var(--status-soon-text);
-    background: var(--status-soon-hover);
-  }
-}
-
-.btn-ghost {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--fg-2);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  transition: background var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out);
-
-  &:hover {
-    color: var(--fg);
-    background: var(--surface-warm);
-  }
-  &.btn-sm {
-    padding: 5px 12px;
-    font-size: 12px;
-  }
-  &.btn-lg {
-    padding: 11px 22px;
-    font-size: 15px;
   }
 }
 
@@ -292,52 +292,128 @@
   }
 }
 
-// Status badges
-.badge-status {
+// Status badges — the spec's chip: tinted background, darker ink, icon + text.
+.badge {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--space-1);
   align-items: center;
   padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
   border: 1px solid;
   border-radius: var(--radius-pill);
 }
 
-.badge-expired {
+.badge--expired {
   color: var(--status-expired-text);
   background: var(--status-expired-subtle);
   border-color: var(--status-expired-border);
 }
-.badge-critical {
+.badge--critical {
   color: var(--status-critical-text);
   background: var(--status-critical-subtle);
   border-color: var(--status-critical-border);
 }
-.badge-soon {
+.badge--soon {
   color: var(--status-soon-text);
   background: var(--status-soon-subtle);
   border-color: var(--status-soon-border);
 }
-.badge-fresh {
+.badge--fresh {
   color: var(--status-fresh-text);
   background: var(--status-fresh-subtle);
   border-color: var(--status-fresh-border);
 }
-.badge-nodate {
+.badge--neutral {
   color: var(--status-neutral-text);
   background: var(--status-neutral-subtle);
   border-color: var(--status-neutral-border);
 }
-.badge-lowstock {
+.badge--lowstock {
   color: var(--status-soon-text);
   background: var(--status-soon-subtle);
   border-color: var(--status-soon-border);
 }
-.badge-opened {
+.badge--opened {
   color: var(--status-neutral-text);
   background: var(--status-neutral-subtle);
   border-color: var(--status-neutral-border);
+}
+
+// Toasts — the design system's feedback surface. Top right, a status border
+// on the left, and a dismiss button. An error stays until it is dismissed.
+.toast-stack {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 1090;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(360px, calc(100vw - 2 * var(--space-4)));
+  pointer-events: none;
+}
+
+.toast {
+  color: var(--fg);
+  pointer-events: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-overlay);
+
+  .toast-header {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    color: var(--fg);
+    background: transparent;
+    border-bottom: 0;
+  }
+
+  .toast-title {
+    flex: 1;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+
+  .toast-body {
+    padding: 0 var(--space-3) var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    white-space: pre-line;
+  }
+
+  .toast__icon {
+    font-size: var(--text-base);
+  }
+}
+
+.toast--success {
+  border-left-color: var(--status-fresh);
+
+  .toast__icon { color: var(--status-fresh-text); }
+}
+
+.toast--error {
+  border-left-color: var(--status-expired);
+
+  .toast__icon { color: var(--status-expired-text); }
+}
+
+.toast--warning {
+  border-left-color: var(--status-soon);
+
+  .toast__icon { color: var(--status-soon-text); }
+}
+
+.toast--info {
+  border-left-color: var(--info);
+
+  .toast__icon { color: var(--info); }
 }
 
 // Sidebar nav
@@ -550,24 +626,24 @@
   max-height: 220px;
 }
 
-// Metric tiles
-.metric-tile {
-  padding: 16px 18px;
+// KPI tiles — the spec's pattern: eyebrow, big number, optional delta.
+.kpi {
+  padding: var(--space-4);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--elev-raised);
+}
 
-  .metric-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--fg-2);
-  }
-  .metric-value {
-    margin-top: 8px;
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -.02em;
-  }
+.kpi__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--muted);
+}
+
+.kpi__value {
+  margin-top: var(--space-2);
+  font-size: var(--text-display);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
 }

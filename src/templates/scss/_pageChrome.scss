@@ -103,26 +103,9 @@
   background: var(--status-expired-subtle);
 }
 
-.modal-header-body {
-  flex: 1;
-  padding-top: 6px;
-}
-
 .modal-subtitle {
   font-size: var(--text-xs);
   color: var(--meta);
-}
-
-.btn-modal-close {
-  display: flex;
-  flex-shrink: 0;
-  padding: 4px;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--meta);
-  cursor: pointer;
-  background: none;
-  border: none;
 }
 
 // Mode tab switcher
@@ -160,13 +143,11 @@
 }
 
 // Input / field helpers
-.field-label {
-  margin-bottom: 8px;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  color: var(--meta);
-  text-transform: uppercase;
-  letter-spacing: .06em;
+.form-label {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
 }
 
 .kbd-hint {
@@ -179,7 +160,7 @@
   border-radius: 5px;
 }
 
-.input-hint {
+.form-text {
   display: flex;
   gap: 6px;
   align-items: center;

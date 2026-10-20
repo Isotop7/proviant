@@ -16,7 +16,7 @@
                         <i class="bi bi-exclamation-triangle me-2"></i>{{ .Error }}
                     </div>
                     <div class="text-center mt-3">
-                        <a href="/web" class="btn btn-proviant-secondary">{{ t "auth.goToDashboard" }}</a>
+                        <a href="/web" class="btn btn-outline-secondary">{{ t "auth.goToDashboard" }}</a>
                     </div>
 
                     {{ else if .Success }}
@@ -24,16 +24,16 @@
                         <i class="bi bi-check-circle me-2"></i>{{ .Success }}
                     </div>
                     <div class="text-center mt-3">
-                        <a href="/web" class="btn btn-proviant-primary">{{ t "auth.goToDashboard" }}</a>
+                        <a href="/web" class="btn btn-primary">{{ t "auth.goToDashboard" }}</a>
                     </div>
 
                     {{ else if .NeedsAuth }}
-                    <p class="text-center text-secondary-custom">{{ t "invite.needsAuthPrefix" }}<strong>{{ .HouseholdName }}</strong>{{ t "invite.needsAuthSuffix" }}</p>
+                    <p class="text-center text-body-secondary">{{ t "invite.needsAuthPrefix" }}<strong>{{ .HouseholdName }}</strong>{{ t "invite.needsAuthSuffix" }}</p>
                     <div class="alert alert-info mt-3" role="alert">
                         <i class="bi bi-info-circle me-2"></i>{{ t "invite.needsAuthAlertPrefix" }}<strong>{{ .InvitationEmail }}</strong>{{ t "invite.needsAuthAlertSuffix" }}
                     </div>
                     <div class="d-grid gap-2 mt-4">
-                        <a href="/web/auth?invite_token={{ .Token }}" class="btn btn-proviant-primary btn-lg">
+                        <a href="/web/auth?invite_token={{ .Token }}" class="btn btn-primary btn-lg">
                             <i class="bi bi-box-arrow-in-right me-2"></i>{{ t "invite.loginSignup" }}
                         </a>
                     </div>
@@ -43,14 +43,14 @@
                     <div class="alert alert-info mt-3" role="alert">
                         <i class="bi bi-info-circle me-2"></i>{{ t "invite.loggedInPrefix" }}<strong>{{ .InvitationEmail }}</strong>{{ t "invite.loggedInSuffix" }}
                     </div>
-                    <p class="text-center text-secondary-custom small mt-2">{{ t "invite.membershipReplaced" }}</p>
+                    <p class="text-center text-body-secondary small mt-2">{{ t "invite.membershipReplaced" }}</p>
                     <form id="acceptInviteForm" class="mt-4">
                         <input type="hidden" id="inviteToken" value="{{ .Token }}">
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-proviant-primary btn-lg" id="btnAcceptInvite">
+                            <button type="submit" class="btn btn-primary btn-lg" id="btnAcceptInvite">
                                 <i class="bi bi-check-lg me-2"></i>{{ t "invite.acceptJoin" }}
                             </button>
-                            <a href="/web" class="btn btn-proviant-secondary">{{ t "common.cancel" }}</a>
+                            <a href="/web" class="btn btn-outline-secondary">{{ t "common.cancel" }}</a>
                         </div>
                     </form>
                     {{ end }}

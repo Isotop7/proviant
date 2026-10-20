@@ -277,6 +277,8 @@
     }
     if (!items.length) return;
 
+    // design-tokens:off — the print view is a standalone document with its own
+    // inline styles, so it carries the palette values literally.
     var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + proviant.t("nav.shoppingList") + '</title><style>';
     html += 'body{font-family:system-ui,sans-serif;padding:1rem;color:#2A2A2A}';
     html += 'h1{margin:0 0 0.5rem;font-size:1.5rem}';
@@ -286,6 +288,7 @@
     html += '.checkbox{width:18px;height:18px;border:2px solid #2A2A2A;border-radius:3px;margin-right:0.5rem;flex-shrink:0}';
     html += '.name{font-size:1.1rem;flex:1}';
     html += '.qty{font-size:1rem;color:#35604E;margin-left:0.5rem}';
+    // design-tokens:on
     html += '.pack-size{font-size:0.875rem;color:#666;margin-left:0.35rem}';
     html += '.notes{font-size:0.875rem;color:#888;margin-left:2.25rem;margin-top:0.25rem}';
     html += '</style></head><body>';

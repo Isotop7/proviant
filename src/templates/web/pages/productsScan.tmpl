@@ -21,14 +21,14 @@
 
 <!-- Scan actions -->
 <div class="scan-actions">
-    <button class="btn btn-proviant-primary w-100 d-flex align-items-center justify-content-center gap-2 py-3" type="button" id="btnScan" data-action="scan">
+    <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-3" type="button" id="btnScan" data-action="scan">
         <i class="bi bi-upc-scan barcode-scan-icon" aria-hidden="true"></i>
         <span>{{ t "scan.actions.scanBarcode" }}</span>
     </button>
 
     <div class="scan-divider">{{ t "scan.actions.or" }}</div>
 
-    <button class="btn btn-proviant-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2" type="button"
+    <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2" type="button"
             data-bs-toggle="modal" data-bs-target="#manualBarcodeModal">
         <i class="bi bi-keyboard" aria-hidden="true"></i>
         {{ t "scan.actions.manualEntry" }}
@@ -36,7 +36,7 @@
 
     <div class="scan-divider">{{ t "scan.actions.or" }}</div>
 
-    <button class="btn btn-proviant-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2" type="button" id="btnBatchToggle">
+    <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2" type="button" id="btnBatchToggle">
         <i class="bi bi-stack" aria-hidden="true"></i>
         {{ t "scan.batchScan" }}
     </button>
@@ -47,7 +47,7 @@
     <div class="card">
         <div class="card-body">
             <div class="fw-semibold mb-1">{{ t "scan.batchScan" }}</div>
-            <div class="text-secondary-custom small mb-3">
+            <div class="text-body-secondary small mb-3">
                 {{ t "scan.batch.description" }}
             </div>
 
@@ -57,10 +57,10 @@
             </select>
 
             <div class="d-grid gap-2">
-                <button type="button" class="btn btn-proviant-primary" id="btnBatchStart">
+                <button type="button" class="btn btn-primary" id="btnBatchStart">
                     <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>{{ t "scan.batch.start" }}
                 </button>
-                <button type="button" class="btn btn-proviant-secondary" id="btnBatchCancelStart">
+                <button type="button" class="btn btn-outline-secondary" id="btnBatchCancelStart">
                     {{ t "common.cancel" }}
                 </button>
             </div>
@@ -78,15 +78,15 @@
                 </div>
                 <div class="flex-grow-1">
                     <div id="batchProductName" class="fw-semibold">{{ t "scan.batch.scanning" }}</div>
-                    <div id="batchProductBarcode" class="text-secondary-custom small font-monospace"></div>
+                    <div id="batchProductBarcode" class="text-body-secondary small font-monospace"></div>
                 </div>
             </div>
 
             <label class="form-label fw-medium small">{{ t "scan.quantity" }}</label>
             <div class="d-flex align-items-center gap-2 mb-3">
-                <button type="button" class="btn btn-proviant-secondary" id="btnBatchQuantityDec" aria-label="{{ t "scan.quantityDecrease" }}">-</button>
+                <button type="button" class="btn btn-outline-secondary" id="btnBatchQuantityDec" aria-label="{{ t "scan.quantityDecrease" }}">-</button>
                 <span id="batchQuantityDisplay" class="fs-5 px-2" aria-live="polite">1</span>
-                <button type="button" class="btn btn-proviant-secondary" id="btnBatchQuantityInc" aria-label="{{ t "scan.quantityIncrease" }}">+</button>
+                <button type="button" class="btn btn-outline-secondary" id="btnBatchQuantityInc" aria-label="{{ t "scan.quantityIncrease" }}">+</button>
             </div>
             <input type="hidden" id="batchQuantity" value="1">
 
@@ -97,16 +97,16 @@
             <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "scan.expiryDateRequired" }}</div>
 
             <div class="btn-group w-100 mb-3" role="group" aria-label="{{ t "scan.expiryShortcuts" }}">
-                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnBatchExpireAdd3">{{ t "scan.expiryAdd3Days" }}</button>
-                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnBatchExpireAdd7">{{ t "scan.expiryAdd7Days" }}</button>
-                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnBatchExpireAdd1m">{{ t "scan.expiryAdd1Month" }}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnBatchExpireAdd3">{{ t "scan.expiryAdd3Days" }}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnBatchExpireAdd7">{{ t "scan.expiryAdd7Days" }}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnBatchExpireAdd1m">{{ t "scan.expiryAdd1Month" }}</button>
             </div>
 
             <div class="d-grid gap-2">
-                <button type="button" class="btn btn-proviant-primary" id="btnBatchAdd">
+                <button type="button" class="btn btn-primary" id="btnBatchAdd">
                     <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{{ t "scan.batch.addToBatch" }}
                 </button>
-                <button type="button" class="btn btn-proviant-secondary" id="btnBatchSkip">
+                <button type="button" class="btn btn-outline-secondary" id="btnBatchSkip">
                     {{ t "scan.batch.skip" }}
                 </button>
             </div>
@@ -118,14 +118,14 @@
 <div id="batchTally" class="batch-tally d-none" aria-live="polite">
     <div class="batch-tally-info">
         <div id="batchTallyCount" class="fw-semibold">{{ tn "scan.batch.queuedItems" 0 }}</div>
-        <div id="batchTallyLast" class="text-secondary-custom small text-truncate"></div>
+        <div id="batchTallyLast" class="text-body-secondary small text-truncate"></div>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-proviant-secondary" id="btnBatchUndo" aria-label="{{ t "scan.batch.undoLabel" }}">
+        <button type="button" class="btn btn-outline-secondary" id="btnBatchUndo" aria-label="{{ t "scan.batch.undoLabel" }}">
             <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
             {{ t "scan.batch.undo" }}
         </button>
-        <button type="button" class="btn btn-proviant-primary" id="btnBatchDone">
+        <button type="button" class="btn btn-primary" id="btnBatchDone">
             <i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "scan.batch.done" }}
         </button>
     </div>
@@ -142,7 +142,7 @@
                 </div>
                 <div class="flex-grow-1">
                     <div id="productInfoName" class="fw-semibold"></div>
-                    <div id="productInfoGenericName" class="text-secondary-custom small"></div>
+                    <div id="productInfoGenericName" class="text-body-secondary small"></div>
                 </div>
             </div>
 
@@ -151,9 +151,9 @@
             <form id="formExpireAt" class="needs-validation" novalidate>
                 <label class="form-label fw-medium small">{{ t "scan.quantity" }}</label>
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <button type="button" class="btn btn-proviant-secondary" id="btnQuantityDec" aria-label="{{ t "scan.quantityDecrease" }}">-</button>
+                    <button type="button" class="btn btn-outline-secondary" id="btnQuantityDec" aria-label="{{ t "scan.quantityDecrease" }}">-</button>
                     <span id="quantityDisplay" class="fs-5 px-2" aria-live="polite">1</span>
-                    <button type="button" class="btn btn-proviant-secondary" id="btnQuantityInc" aria-label="{{ t "scan.quantityIncrease" }}">+</button>
+                    <button type="button" class="btn btn-outline-secondary" id="btnQuantityInc" aria-label="{{ t "scan.quantityIncrease" }}">+</button>
                 </div>
                 <input type="hidden" id="quantity" value="1">
 
@@ -166,33 +166,33 @@
             </form>
 
             <div class="btn-group w-100 mb-3" role="group" aria-label="{{ t "scan.expiryShortcuts" }}">
-                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd3">{{ t "scan.expiryAdd3Days" }}</button>
-                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd7">{{ t "scan.expiryAdd7Days" }}</button>
-                <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd1m">{{ t "scan.expiryAdd1Month" }}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnExpireAdd3">{{ t "scan.expiryAdd3Days" }}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnExpireAdd7">{{ t "scan.expiryAdd7Days" }}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnExpireAdd1m">{{ t "scan.expiryAdd1Month" }}</button>
             </div>
         </div>
     </div>
 
     <div class="d-grid mb-2">
-        <button id="btnAddProduct" type="submit" class="btn btn-proviant-primary">
+        <button id="btnAddProduct" type="submit" class="btn btn-primary">
             <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{{ t "scan.product.save" }}
         </button>
     </div>
 
     <div class="d-flex gap-2 mb-2" id="foundBarcode">
-        <button id="btnShowProduct" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+        <button id="btnShowProduct" type="button" class="btn btn-sm btn-outline-secondary flex-fill" disabled>
             <i class="bi bi-eye me-1" aria-hidden="true"></i>{{ t "scan.product.view" }}
         </button>
-        <button id="btnShowProducts" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+        <button id="btnShowProducts" type="button" class="btn btn-sm btn-outline-secondary flex-fill" disabled>
             <i class="bi bi-collection me-1" aria-hidden="true"></i>{{ t "scan.product.viewAll" }}
         </button>
     </div>
 
     <div class="d-flex gap-2">
-        <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+        <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-outline-secondary flex-fill" disabled>
             <i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "scan.product.consumed" }}
         </button>
-        <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-proviant-danger flex-fill" disabled>
+        <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-danger flex-fill" disabled>
             <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ t "common.delete" }}
         </button>
     </div>
@@ -206,10 +206,7 @@
             <div class="modal-header">
                 <div class="modal-icon modal-icon-subtle" aria-hidden="true">
                     <i class="bi bi-upc"></i>
-                </div>
-                <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="manualBarcodeModalLabel">{{ t "scan.manual.title" }}</h5>
-                </div>
+                </div><h5 class="modal-title mb-0" id="manualBarcodeModalLabel">{{ t "scan.manual.title" }}</h5>
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
             </div>
             <div class="modal-body">
@@ -225,8 +222,8 @@
                 </form>
             </div>
             <div class="modal-footer justify-content-end gap-2">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-                <button type="button" class="btn btn-proviant-primary" id="btnManualLookup" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
+                <button type="button" class="btn btn-primary" id="btnManualLookup" data-bs-dismiss="modal">
                     {{ t "scan.manual.lookup" }}
                 </button>
             </div>

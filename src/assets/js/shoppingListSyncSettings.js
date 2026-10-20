@@ -14,7 +14,7 @@
 
     if (data && data.lastSyncAt) {
       const syncDiv = document.createElement("div");
-      syncDiv.className = "text-secondary-custom";
+      syncDiv.className = "text-body-secondary";
       syncDiv.textContent = proviant.t("js.syncSettings.lastSynced", data.lastSyncAt);
       statusEl.appendChild(syncDiv);
     }

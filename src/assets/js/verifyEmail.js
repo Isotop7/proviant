@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const container = document.querySelector(".card-body");
       container.innerHTML =
         '<div class="text-center mb-4">' +
-        '<div class="d-inline-flex align-items-center justify-content-center rounded-3" style="width:64px;height:64px;background-color:#198754;">' +
+        '<div class="d-inline-flex align-items-center justify-content-center rounded-3" style="width:64px;height:64px;background-color:var(--status-fresh);">' +
         '<i class="bi bi-check-circle fs-1 text-white"></i>' +
         "</div>" +
         '<h3 class="mt-3 mb-1">' + proviant.t("js.auth.emailVerifiedTitle") + "</h3>" +
@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const container = document.querySelector(".card-body");
       container.innerHTML =
         '<div class="text-center mb-4">' +
-        '<div class="d-inline-flex align-items-center justify-content-center rounded-3" style="width:64px;height:64px;background-color:#dc3545;">' +
+        '<div class="d-inline-flex align-items-center justify-content-center rounded-3" style="width:64px;height:64px;background-color:var(--status-expired);">' +
         '<i class="bi bi-x-circle fs-1 text-white"></i>' +
         "</div>" +
         '<h3 class="mt-3 mb-1">' + proviant.t("js.auth.verificationFailedTitle") + "</h3>" +

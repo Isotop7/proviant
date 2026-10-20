@@ -45,14 +45,14 @@
 
         <!-- Display name — signup only -->
         <div class="field" id="field-name" style="display:none;">
-          <label class="field-label" for="auth-name">{{ t "auth.nameLabel" }}</label>
+          <label class="form-label" for="auth-name">{{ t "auth.nameLabel" }}</label>
           <div class="field-input-wrap">
-            <input class="field-input" type="text" id="auth-name"
+            <input class="form-control" type="text" id="auth-name"
               placeholder="{{ t "auth.namePlaceholder" }}" autocomplete="name"
               aria-describedby="auth-name-error">
             <i class="bi bi-person field-icon" aria-hidden="true"></i>
           </div>
-          <div class="field-error" id="auth-name-error" role="alert" style="display:none;">
+          <div class="invalid-feedback" id="auth-name-error" role="alert" style="display:none;">
             <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
             <span id="auth-name-error-text"></span>
           </div>
@@ -60,14 +60,14 @@
 
         <!-- Username — signin only -->
         <div class="field" id="field-username">
-          <label class="field-label" for="auth-username">{{ t "auth.usernameLabel" }}</label>
+          <label class="form-label" for="auth-username">{{ t "auth.usernameLabel" }}</label>
           <div class="field-input-wrap">
-            <input class="field-input" type="text" id="auth-username"
+            <input class="form-control" type="text" id="auth-username"
               placeholder="{{ t "auth.usernamePlaceholder" }}" autocomplete="username"
               aria-describedby="auth-username-error">
             <i class="bi bi-person field-icon" aria-hidden="true"></i>
           </div>
-          <div class="field-error" id="auth-username-error" role="alert" style="display:none;">
+          <div class="invalid-feedback" id="auth-username-error" role="alert" style="display:none;">
             <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
             <span id="auth-username-error-text"></span>
           </div>
@@ -75,14 +75,14 @@
 
         <!-- Email — signup only -->
         <div class="field" id="field-email" style="display:none;">
-          <label class="field-label" for="auth-email">{{ t "auth.emailLabel" }}</label>
+          <label class="form-label" for="auth-email">{{ t "auth.emailLabel" }}</label>
           <div class="field-input-wrap">
-            <input class="field-input" type="email" id="auth-email"
+            <input class="form-control" type="email" id="auth-email"
               placeholder="{{ t "auth.emailPlaceholder" }}" autocomplete="email"
               aria-describedby="auth-email-error">
             <i class="bi bi-envelope field-icon" aria-hidden="true"></i>
           </div>
-          <div class="field-error" id="auth-email-error" role="alert" style="display:none;">
+          <div class="invalid-feedback" id="auth-email-error" role="alert" style="display:none;">
             <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
             <span id="auth-email-error-text"></span>
           </div>
@@ -90,9 +90,9 @@
 
         <!-- Password -->
         <div class="field" id="field-password">
-          <label class="field-label" for="auth-password">{{ t "auth.passwordLabel" }}</label>
+          <label class="form-label" for="auth-password">{{ t "auth.passwordLabel" }}</label>
           <div class="field-input-wrap">
-            <input class="field-input" type="password" id="auth-password"
+            <input class="form-control" type="password" id="auth-password"
               placeholder="••••••••" autocomplete="current-password"
               aria-describedby="auth-password-error"
               data-min-length="{{ .PasswordMinLength }}"
@@ -145,7 +145,7 @@
             {{ end }}
           </ul>
 
-          <div class="field-error" id="auth-password-error" role="alert" style="display:none;">
+          <div class="invalid-feedback" id="auth-password-error" role="alert" style="display:none;">
             <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
             <span id="auth-password-error-text"></span>
           </div>
@@ -187,10 +187,10 @@
         <i class="bi bi-envelope-open text-info fs-1 mb-3 d-block" aria-hidden="true"></i>
         <p class="mb-1">{{ t "auth.verificationSentTo" }}</p>
         <p class="fw-semibold mb-3" id="emailVerificationAddress"></p>
-        <p class="text-secondary-custom small mb-0">{{ t "auth.verifyEmailHelp" }}</p>
+        <p class="text-body-secondary small mb-0">{{ t "auth.verifyEmailHelp" }}</p>
       </div>
       <div class="modal-footer justify-content-center">
-        <button type="button" class="btn btn-proviant-primary" data-bs-dismiss="modal">{{ t "auth.gotIt" }}</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{{ t "auth.gotIt" }}</button>
       </div>
     </div>
   </div>
