@@ -35,7 +35,7 @@ Drei Sätze Identität:
 | Slot | Hex | Rolle |
 |---|---|---|
 | `--bg` | `#FAF7F1` | Crème-Papier, App-Hintergrund |
-| `--surface` | `#FFFFFF` | Karten, Panels, Inset-Container |
+| `--surface` | `#FAF7F1` | Karten, Panels, Inset-Container |
 | `--fg` | `#2A2A2A` | Primäre Tinte, Überschriften, Body |
 | `--muted` | `#6B6B6B` | Sekundärtext, Meta, Labels |
 | `--border` | `#E5DFD3` | Standard-Rahmen, Trennlinien |

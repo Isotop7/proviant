@@ -574,6 +574,7 @@
     "app__brand": "app__brand (Wortmarke, verlinkt zur Startseite)",
     "app__nav": "app__nav (die sieben primären Einträge)",
     "app__content": "app__content (der Seiteninhalt)",
+    "app__content--table": "app__content--table (die 900-px-Messlatte der Tabellenscreens)",
     "app__footer": "app__footer (Lizenzen, Quelle, Version)"
   },
   "notImplemented": {
