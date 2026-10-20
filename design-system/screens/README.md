@@ -6,25 +6,29 @@ Beleg ist der Screenshot, nicht ein grüner Build.
 
 ## Stand der Migration
 
-Die Sheets tragen aktuell noch ihre **eigene** `:root`-Token-Block-Definition
-und ein selbst gebautes Bootstrap. `task design-check` meldet das ab Phase 6
-als Fehler (`spec-sheets`).
+Die Sheets tragen **keine eigene Palette mehr**. Sie binden
 
-Geplant (PR 6):
+- `../tokens.css` und `../tokens.dark.css` — die generierten Projektionen von
+  `design-system/_tokens.scss` und `_tokens-dark.scss`,
+- `../../src/assets/css/main.css` — das kompilierte App-Stylesheet mit
+  Bootstrap, den Icons und den selbst gehosteten Fonts,
+- `../../src/assets/js/chart.umd.min.js` — das vendorte Chart.js.
 
-1. Der inline-`:root`-Block fällt weg, die Sheets binden `../tokens.css` — die
-   generierte Projektion von `design-system/_tokens.scss`.
-2. Die handgebaute Bootstrap-Reproduktion fällt weg, die Sheets binden das
-   kompilierte `src/assets/css/main.css`. Damit rendern sie mit demselben
-   Bootstrap, denselben Tokens und denselben Icons wie die App.
-3. Die Klassen-Namen wechseln auf das App-Vokabular (`.btn btn-primary`,
-   `.form-control`, `.list-group-item`, `.badge badge--*`, `.kpi`, `.toast`).
-4. Die `@font-face`-Familiennamen werden korrigiert: `'Vend Sans'` → `VendSans`,
-   `'DM Mono'` → `DMMono`, mit Verweis auf die selbst gehosteten woff2-Dateien.
-   Heute greifen die Namen nicht, und die Sheets rendern still in `system-ui`.
-5. Das CDN-`<script>` für Chart.js entfällt zugunsten von
-   `src/assets/js/chart.umd.min.js`.
-6. Das lokale Topnav wird durch die Topbar der App-Shell ersetzt.
+Damit kann ein Sheet nicht mehr von der App abweichen: die Farben, die
+Schriften und die Icons kommen aus derselben Quelle. `task design-check`
+prüft das ab Phase 6 — ein eigenes `:root` oder ein fehlender Token-Link
+scheitert den Build.
+
+## Was die Sheets nicht sind
+
+Sie zeichnen das System, sie führen es nicht aus. Die Komponenten in ihren
+`<style>`-Blöcken sind eine *Zeichnung* der Bootstrap-Komponenten mit den
+kanonischen Tokens — der Button im Sheet ist nicht der Button der App, er
+sieht nur so aus. Wer die echten Komponenten sehen will, fährt die App an.
+
+Deshalb bleiben auch einzelne Farbliterale in den Sheets stehen: Sie gehören
+zu den gezeichneten Komponenten, nicht zur Palette. Das ist in
+`deviations.md` vermerkt.
 
 ## Noch nicht umgesetzt
 

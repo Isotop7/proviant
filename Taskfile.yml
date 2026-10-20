@@ -7,7 +7,7 @@ vars:
   TRIVY_IMAGE: "docker.io/aquasec/trivy@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa"
   # Stufe der Design-System-Migration. 1 = Token-Vertrag, 2 = kompiliertes CSS,
   # 3 = alte Klassen und JS-Farben, 6 = Spec-Sheets. Wird pro PR erhöht.
-  DESIGN_PHASE: "5"
+  DESIGN_PHASE: "6"
 
 tasks:
   default:

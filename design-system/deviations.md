@@ -37,7 +37,7 @@ sichtbar ist — einen messbaren Beleg (Kontrastwert, Route, Endpoint).
 | 20 | Das Badge `opened` nutzt die Neutralfamilie statt Violett | Der Spec verbietet Violett, und "geöffnet" ist kein Ablaufzustand. Grau ist die neutrale Aussage; die dringenden Zustände bleiben farbig. |
 | 21 | Neue Slots `--status-*-on` (Tinte auf voller Statusfläche) | Eine gefüllte Fläche braucht eine eigene Tinte: im hellen Theme Weiß, im dunklen Theme Tinte auf dem hellen Statuswert. Ohne sie trägt die Kachel in einem der beiden Themes unlesbaren Text. |
 | 22 | `.modal-icon` (das Icon-Feld im Modal-Kopf) bleibt | Der Spec nennt im Modal-Kopf nur Titel und Schließ-Button. Das Icon-Feld trägt bei der Bestätigung und beim Produkt-Scan die Gefahrenstufe, und der Feedback-Dialog ist als Toast ersetzt — das Icon trägt jetzt die Warnung, die das Icon-Feld vorher getragen hat. |
-
+| 23 | Die Spec-Sheets zeichnen ihre Komponenten selbst | Die Sheets binden die kanonischen Tokens und das kompilierte App-Stylesheet, tragen aber eine eigene Zeichnung der Bootstrap-Komponenten. Ein Button im Sheet ist nicht der Button der App — er sieht nur so aus. Die Sheets sind Mockups; wer die echten Komponenten sehen will, fährt die App an. |
 ## Geprüfte Werte
 
 `task design-check` misst diese Paare und bricht ab, wenn eines unterschritten
