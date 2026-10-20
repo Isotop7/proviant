@@ -119,9 +119,28 @@
   align-items: center;
 }
 
+// The content is centred and capped: the design system's screen sheets put
+// the page in a fixed column with generous gutters, not edge to edge.
 .app__content {
   flex: 1;
-  padding: var(--space-6) var(--space-3);
+  width: 100%;
+  max-width: var(--container-max);
+  padding: var(--space-6) var(--container-gutter-desktop) var(--space-16);
+  margin: 0 auto;
+}
+
+@media (max-width: 991.98px) {
+  .app__content {
+    padding-right: var(--container-gutter-tablet);
+    padding-left: var(--container-gutter-tablet);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .app__content {
+    padding-right: var(--container-gutter-phone);
+    padding-left: var(--container-gutter-phone);
+  }
 }
 
 .app__footer {

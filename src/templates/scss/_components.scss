@@ -614,3 +614,24 @@
   line-height: 1;
   letter-spacing: var(--tracking-tight);
 }
+
+// The dashboard's cards follow the screen sheets: the page colour with a
+// hairline border, not a white panel on a crème page. The accent card and
+// the filled status card are the only filled ones.
+//
+// The tiles live in .bento__items (display: contents): they are grid items
+// of .bento, but their DOM parent is the wrapper.
+.bento__items .kpi,
+.bento .card:not(.card-accent) {
+  background: var(--bg);
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-flat);
+  transition: box-shadow var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out);
+}
+
+.bento__items .kpi:hover,
+.bento .card:not(.card-accent):hover {
+  box-shadow: var(--elev-raised);
+}
+
