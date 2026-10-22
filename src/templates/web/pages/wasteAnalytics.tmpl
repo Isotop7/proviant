@@ -32,7 +32,9 @@
                     {{ t "waste.monthlyBreakdown" }}
                 </div>
                 <div class="card-body">
-                    <canvas id="chartMonthly" role="img" aria-label="{{ t "waste.chartMonthlyLabel" }}"></canvas>
+                    <div class="chart-frame chart-frame--lg">
+                        <canvas id="chartMonthly" role="img" aria-label="{{ t "waste.chartMonthlyLabel" }}"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -43,7 +45,9 @@
                     {{ t "waste.trendTitle" }}
                 </div>
                 <div class="card-body">
-                    <canvas id="chartTrend" role="img" aria-label="{{ t "waste.chartTrendLabel" }}"></canvas>
+                    <div class="chart-frame">
+                        <canvas id="chartTrend" role="img" aria-label="{{ t "waste.chartTrendLabel" }}"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -97,6 +101,7 @@
 </div>
 
 <script src="/assets/js/chart.umd.min.js" defer></script>
+<script src="/assets/js/chartTheme.js" defer></script>
 <script src="/assets/js/wasteAnalytics.js" defer></script>
 
 {{ else }}

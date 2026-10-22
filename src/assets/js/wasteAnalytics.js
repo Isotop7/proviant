@@ -1,10 +1,6 @@
 (function() {
 'use strict';
 
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
 let monthlyChart = null;
 let trendChart = null;
 let lastStats = null;
@@ -122,18 +118,32 @@ function renderMonthlyChart(s) {
     return;
   }
 
+  const t = proviantChart.applyTheme();
+  const base = proviantChart.baseOptions(t);
   monthlyChart = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels,
+      labels: labels.map((month) => proviantChart.monthLabel(month)),
       datasets: [
-        { label: proviant.t("waste.consumed"), data: consumed, backgroundColor: cssVar('--status-fresh') },
-        { label: proviant.t("waste.wasted"),   data: wasted,   backgroundColor: cssVar('--status-expired') },
+        { label: proviant.t("waste.consumed"), data: consumed, backgroundColor: t.statusFresh, borderRadius: 4, maxBarThickness: 28 },
+        { label: proviant.t("waste.wasted"),   data: wasted,   backgroundColor: t.statusExpired, borderRadius: 4, maxBarThickness: 28 },
       ],
     },
     options: {
-      plugins: { legend: { position: 'bottom' } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      ...base,
+      scales: {
+        x: {
+          grid: { display: false, drawBorder: false },
+          border: { display: false },
+          ticks: { color: t.muted, padding: 6, maxRotation: 0, autoSkip: true },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: t.border, drawBorder: false },
+          border: { display: false },
+          ticks: { color: t.muted, padding: 8, precision: 0 },
+        },
+      },
     },
   });
 }
@@ -154,23 +164,47 @@ function renderTrendChart(s) {
     return;
   }
 
+  const t = proviantChart.applyTheme();
+  const base = proviantChart.baseOptions(t);
   trendChart = new Chart(canvas, {
     type: 'line',
     data: {
-      labels,
+      labels: labels.map((month) => proviantChart.monthLabel(month)),
       datasets: [{
         label: proviant.t("waste.wasted"),
         data,
-        borderColor: cssVar('--status-expired'),
-        pointBackgroundColor: cssVar('--status-expired'),
-        backgroundColor: cssVar('--status-expired-subtle'),
-        tension: 0.3,
+        borderColor: t.statusExpired,
+        pointBackgroundColor: t.statusExpired,
+        pointBorderColor: t.statusExpired,
+        backgroundColor: (context) => proviantChart.areaGradient(context.chart, t.statusExpired, 0.24, 0),
         fill: true,
       }],
     },
     options: {
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      ...base,
+      plugins: {
+        ...base.plugins,
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => proviantChart.monthTitle(labels[items[0].dataIndex]),
+            label: (context) => proviant.tn("js.chart.itemCount", context.parsed.y),
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false, drawBorder: false },
+          border: { display: false },
+          ticks: { color: t.muted, padding: 6, maxRotation: 0, autoSkip: true },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: t.border, drawBorder: false },
+          border: { display: false },
+          ticks: { color: t.muted, padding: 8, precision: 0 },
+        },
+      },
     },
   });
 }
@@ -312,7 +346,6 @@ async function load(period) {
   }
   const s = resp.message;
   lastStats = s;
-  Chart.defaults.color = cssVar('--fg-2');
   if (s.sort) currentSort = s.sort;
   setActivePeriod(s.period || currentPeriod);
   setActiveSort(currentSort);
@@ -327,7 +360,6 @@ async function load(period) {
 
 document.addEventListener('proviant:themechange', () => {
   if (!lastStats) return;
-  Chart.defaults.color = cssVar('--fg-2');
   renderMonthlyChart(lastStats);
   renderTrendChart(lastStats);
 });

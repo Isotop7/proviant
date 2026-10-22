@@ -26,6 +26,7 @@ export default [
         Html5QrcodeSupportedFormats: "readonly",
         Html5QrcodeScannerState: "readonly",
         proviant: "readonly",
+        proviantChart: "readonly",
         // Top-level function declarations in classic scripts become window
         // properties, so these are genuine cross-file globals at runtime:
         // clearBulkSelectionAndReload lives in proviant.js but is called from

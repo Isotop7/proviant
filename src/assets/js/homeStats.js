@@ -1,10 +1,6 @@
 (function() {
 'use strict';
 
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
 function renderSkeletons(count) {
   const dashboard = document.getElementById('dashboard');
   for (let i = 0; i < count; i++) {
@@ -164,76 +160,192 @@ function renderListTile(title, items, days) {
 let dashboardCharts = [];
 let lastStats = null;
 
+function setChartValue(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+
+// A category name that is too long for the axis is cut with an ellipsis.
+function shortLabel(name, max) {
+  return name.length > max ? `${name.slice(0, max - 1)}…` : name;
+}
+
+// The category keys reach the dashboard as slugs and as the two buckets the
+// API fills itself ("Other" for the tail, "Uncategorized" for products without
+// a category).
+function categoryLabel(name) {
+  if (name === 'Other') return proviant.t("js.chart.other");
+  if (name === 'Uncategorized') return proviant.t("js.chart.uncategorized");
+  const words = name.replace(/[-_]+/g, ' ').trim();
+  if (!words) return name;
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 function renderCharts(s) {
   dashboardCharts.forEach((chart) => chart.destroy());
   dashboardCharts = [];
-  Chart.defaults.color = cssVar('--fg-2');
+  const t = proviantChart.applyTheme();
 
   // Chart 1 — Waste donut (expired vs fresh)
   clearEmptyChart('chartWaste');
-  if (!s.totalActive) {
+  const expired = s.wasteCount || 0;
+  const active = s.totalActive || 0;
+  setChartValue('wasteRateValue', active ? `${s.wastePercent.toFixed(1)}%` : '—');
+  if (!active) {
     showEmptyChart('chartWaste', proviant.t("js.home.noActiveProducts"));
   } else {
+    const base = proviantChart.baseOptions(t);
     dashboardCharts.push(new Chart(document.getElementById('chartWaste'), {
       type: 'doughnut',
       data: {
         labels: [proviant.t("status.expired"), proviant.t("status.fresh")],
         datasets: [{
-          data: [s.wasteCount, s.totalActive - s.wasteCount],
-          backgroundColor: [cssVar('--status-expired'), cssVar('--status-fresh')],
+          data: [expired, active - expired],
+          backgroundColor: [t.statusExpired, t.statusFresh],
+          borderWidth: 0,
+          borderRadius: 4,
+          hoverOffset: 6,
         }],
       },
-      options: { plugins: { legend: { position: 'bottom' } } },
+      options: {
+        ...base,
+        cutout: '70%',
+        // A doughnut has no axes — the base options would draw a pair of them.
+        scales: {},
+        plugins: {
+          ...base.plugins,
+          legend: {
+            ...base.plugins.legend,
+            labels: { ...base.plugins.legend.labels, generateLabels: proviantChart.shareLegend },
+          },
+          proviantCenterText: {
+            value: String(expired),
+            label: proviant.t("js.home.expiredCenterLabel"),
+            color: t.fg,
+            labelColor: t.muted,
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const value = context.parsed;
+                const share = active > 0 ? Math.round((value / active) * 100) : 0;
+                return `${context.label}: ${value} (${share}%)`;
+              },
+            },
+          },
+        },
+      },
     }));
   }
 
-  // Chart 2 — Category breakdown (pie)
+  // Chart 2 — Category breakdown (ranked bars)
   clearEmptyChart('chartCategories');
-  if (!Object.keys(s.categories).length) {
+  const categories = Object.keys(s.categories || {})
+    .map((name) => [name, s.categories[name] || 0])
+    .sort((a, b) => b[1] - a[1]);
+  setChartValue(
+    'categoryCountValue',
+    categories.length ? proviant.tn("js.home.categoryCount", categories.length) : '—',
+  );
+  if (!categories.length) {
     showEmptyChart('chartCategories', proviant.t("js.home.noCategoryData"));
   } else {
+    const base = proviantChart.baseOptions(t);
     dashboardCharts.push(new Chart(document.getElementById('chartCategories'), {
-      type: 'pie',
+      type: 'bar',
       data: {
-        labels: Object.keys(s.categories),
+        labels: categories.map(([name]) => shortLabel(categoryLabel(name), 18)),
         datasets: [{
-          data: Object.values(s.categories),
-          // The design system has no categorical palette: the category
-          // breakdown borrows the status language. Six slots, cycled by
-          // Chart.js when a household has more categories than that.
-          backgroundColor: [
-            cssVar('--accent'),
-            cssVar('--status-critical'),
-            cssVar('--info'),
-            cssVar('--status-soon'),
-            cssVar('--status-neutral'),
-            cssVar('--status-expired'),
-          ],
+          data: categories.map(([, count]) => count),
+          backgroundColor: t.accent,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 22,
         }],
       },
-      options: { plugins: { legend: { position: 'bottom' } } },
+      options: {
+        ...base,
+        indexAxis: 'y',
+        plugins: {
+          ...base.plugins,
+          legend: { display: false },
+          proviantBarValues: { enabled: true, color: t.fg2, insideColor: t.accentOn },
+          tooltip: {
+            callbacks: {
+              title: (items) => categoryLabel(categories[items[0].dataIndex][0]),
+              label: (context) => proviant.tn("js.chart.itemCount", context.parsed.x),
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: t.border, drawBorder: false },
+            border: { display: false },
+            ticks: { color: t.muted, padding: 8, precision: 0 },
+          },
+          y: {
+            grid: { display: false, drawBorder: false },
+            border: { display: false },
+            ticks: { color: t.fg2, padding: 6, autoSkip: false },
+          },
+        },
+      },
     }));
   }
 
   // Chart 3 — Expiry trend (line)
   clearEmptyChart('chartExpiryTrend');
-  if (!s.expiryTrend.length) {
+  const trend = s.expiryTrend || [];
+  const expiring = trend.reduce((sum, month) => sum + (month.count || 0), 0);
+  setChartValue(
+    'expiryTrendValue',
+    trend.length ? proviant.tn("js.chart.itemCount", expiring) : '—',
+  );
+  if (!trend.length) {
     showEmptyChart('chartExpiryTrend', proviant.t("js.home.noExpiryTrendData"));
   } else {
+    const base = proviantChart.baseOptions(t);
     dashboardCharts.push(new Chart(document.getElementById('chartExpiryTrend'), {
       type: 'line',
       data: {
-        labels: s.expiryTrend.map((m) => m.month),
+        labels: trend.map((m) => proviantChart.monthLabel(m.month)),
         datasets: [{
           label: proviant.t("js.home.productsExpiring"),
-          data: s.expiryTrend.map((m) => m.count),
-          borderColor: cssVar('--accent'),
-          pointBackgroundColor: cssVar('--accent'),
-          tension: 0.3,
-          fill: false,
+          data: trend.map((m) => m.count || 0),
+          borderColor: t.accent,
+          pointBackgroundColor: t.accent,
+          pointBorderColor: t.accent,
+          backgroundColor: (context) => proviantChart.areaGradient(context.chart, t.accent, 0.28, 0),
+          fill: true,
         }],
       },
-      options: { plugins: { legend: { display: false } } },
+      options: {
+        ...base,
+        plugins: {
+          ...base.plugins,
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => proviantChart.monthTitle(trend[items[0].dataIndex].month),
+              label: (context) => proviant.tn("js.chart.itemCount", context.parsed.y),
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false, drawBorder: false },
+            border: { display: false },
+            ticks: { color: t.muted, padding: 6, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: t.border, drawBorder: false },
+            border: { display: false },
+            ticks: { color: t.muted, padding: 8, precision: 0 },
+          },
+        },
+      },
     }));
   }
 }
@@ -534,7 +646,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     lastStats = s;
     renderCharts(s);
-  } catch {
+  } catch (error) {
+    console.error('proviant: dashboard load failed', error);
     clearSkeletons();
     const status = document.getElementById('dashboard-status');
     if (status) status.textContent = proviant.t("js.home.loadFailed");

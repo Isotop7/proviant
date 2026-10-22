@@ -33,39 +33,58 @@
 
     <div class="bento__cell bento__cell--3">
         <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+            <div class="card-header chart-card__header">
                 <div class="icon-chip" aria-hidden="true">
                     <i class="bi bi-pie-chart-fill"></i>
                 </div>
-                {{ t "home.wasteRate" }}
+                <div class="chart-card__headings">
+                    <div class="chart-card__eyebrow">{{ t "home.wasteRate" }}</div>
+                    <div class="chart-card__value" id="wasteRateValue">&mdash;</div>
+                </div>
             </div>
-            <div class="card-body d-flex align-items-center justify-content-center">
-                <canvas id="chartWaste" role="img" aria-label="{{ t "home.wasteChartAria" }}"></canvas>
+            <div class="card-body">
+                <div class="chart-frame">
+                    <canvas id="chartWaste" role="img" aria-label="{{ t "home.wasteChartAria" }}"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="bento__cell bento__cell--3">
         <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+            <div class="card-header chart-card__header">
                 <div class="icon-chip" aria-hidden="true">
                     <i class="bi bi-tags-fill"></i>
                 </div>
-                {{ t "home.categoryBreakdown" }}
+                <div class="chart-card__headings">
+                    <div class="chart-card__eyebrow">{{ t "home.categoryBreakdown" }}</div>
+                    <div class="chart-card__value" id="categoryCountValue">&mdash;</div>
+                </div>
             </div>
-            <div class="card-body"><canvas id="chartCategories" role="img" aria-label="{{ t "home.categoriesChartAria" }}"></canvas></div>
+            <div class="card-body">
+                <div class="chart-frame">
+                    <canvas id="chartCategories" role="img" aria-label="{{ t "home.categoriesChartAria" }}"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="bento__cell bento__cell--6">
         <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+            <div class="card-header chart-card__header">
                 <div class="icon-chip" aria-hidden="true">
                     <i class="bi bi-graph-up-arrow"></i>
                 </div>
-                {{ t "home.expiryTrend" }}
+                <div class="chart-card__headings">
+                    <div class="chart-card__eyebrow">{{ t "home.expiryTrend" }}</div>
+                    <div class="chart-card__value" id="expiryTrendValue">&mdash;</div>
+                </div>
             </div>
-            <div class="card-body"><canvas id="chartExpiryTrend" role="img" aria-label="{{ t "home.expiryTrendChartAria" }}"></canvas></div>
+            <div class="card-body">
+                <div class="chart-frame chart-frame--lg">
+                    <canvas id="chartExpiryTrend" role="img" aria-label="{{ t "home.expiryTrendChartAria" }}"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -101,6 +120,7 @@
 </div>
 
 <script src="/assets/js/chart.umd.min.js" defer></script>
+<script src="/assets/js/chartTheme.js" defer></script>
 <script src="/assets/js/homeStats.js" defer></script>
 
 {{ else }}
