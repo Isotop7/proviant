@@ -226,6 +226,30 @@
   }
 }
 
+// The danger zone: the one settings card that carries the expiry status as a
+// surface. Its ink follows the fill, and its hover does not glow in accent.
+.card--danger {
+  background: var(--status-expired-subtle);
+  border-color: var(--status-expired-border);
+
+  &:hover {
+    box-shadow: 0 6px 18px color-mix(in oklab, var(--status-expired) 12%, transparent);
+  }
+
+  .card-header {
+    background: var(--status-expired-subtle);
+    border-bottom-color: var(--status-expired-border);
+  }
+
+  .icon-chip {
+    background: color-mix(in oklab, var(--status-expired) 26%, var(--surface));
+
+    i {
+      color: var(--status-expired-text);
+    }
+  }
+}
+
 // Product cards
 .product-card {
   overflow: hidden;
@@ -642,8 +666,8 @@
 }
 
 .kpi__value {
-  margin-top: var(--space-2);
   padding-bottom: var(--space-2);
+  margin-top: var(--space-2);
   font-size: var(--text-display);
   font-weight: var(--weight-semibold);
   line-height: 1;

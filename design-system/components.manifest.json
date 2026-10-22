@@ -127,8 +127,8 @@
     }
   },
   "_counts": "Zählregeln, geprüft von scripts/check-design-tokens.mjs: selectors = Summe der Selektor-Einträge aller groups; classes = distinct Klassennamen aus groups[].selectors + utilities; declaredTokens = Custom Properties in tokens.css; referencedTokens = Custom Properties, die von design-system/screens referenziert werden.",
-  "selectors": 117,
-  "classes": 105,
+  "selectors": 118,
+  "classes": 106,
   "declaredTokens": 113,
   "referencedTokens": 75,
   "groups": [
@@ -227,7 +227,8 @@
         ".card-body",
         ".card__header",
         ".card__footer",
-        ".card--hero"
+        ".card--hero",
+        ".card--danger"
       ],
       "tokens": [
         "--bs-card-bg",
@@ -239,7 +240,11 @@
         "--radius-md",
         "--space-4",
         "--space-5",
-        "--elev-raised"
+        "--elev-raised",
+        "--status-expired",
+        "--status-expired-subtle",
+        "--status-expired-border",
+        "--status-expired-text"
       ]
     },
     {
