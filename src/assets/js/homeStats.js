@@ -99,6 +99,23 @@ function renderTile(title, hero, variant, heroClass, span) {
   return col;
 }
 
+// The expiry status of a product, derived from its date with the app's own
+// thresholds: critical within three days, soon within seven.
+function expiryStatus(expireAt) {
+  const days = (new Date(expireAt + 'T00:00:00') - new Date()) / 86400000;
+  if (days < 0) return 'expired';
+  if (days < 3) return 'critical';
+  if (days < 7) return 'soon';
+  return 'fresh';
+}
+
+const EXPIRY_STATUS = {
+  expired: { label: 'status.expired', icon: 'x-circle-fill' },
+  critical: { label: 'status.critical', icon: 'exclamation-circle-fill' },
+  soon: { label: 'status.soon', icon: 'clock-fill' },
+  fresh: { label: 'status.fresh', icon: 'check-circle-fill' },
+};
+
 function renderListTile(title, items, days) {
   const col = document.createElement('div');
   col.className = 'h-100';
@@ -108,22 +125,35 @@ function renderListTile(title, items, days) {
     listHtml = `<li class="list-group-item text-body-secondary small py-2">${proviant.tn("js.home.noExpiringProducts", days)}</li>`;
   } else {
     listHtml = items.map((item) => {
+      const status = expiryStatus(item.expireAt);
+      const meta = EXPIRY_STATUS[status];
       const date = new Date(item.expireAt + 'T00:00:00');
       const dateLabel = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      return `<li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
-        <span class="text-truncate me-2 small">${item.productName}</span>
-        <span class="text-nowrap text-body-secondary small">${dateLabel}</span>
+      return `<li class="list-group-item d-flex align-items-center gap-3 px-3 py-2">
+        <span class="list-group-item__stripe list-group-item__stripe--${status}" aria-hidden="true"></span>
+        <span class="list-group-item__body">
+          <span class="list-group-item__title text-truncate">${item.productName}</span>
+        </span>
+        <span class="list-group-item__trailing">
+          <span class="expiry-text status-${status}">${dateLabel}</span>
+          <span class="badge badge--${status}"><i class="bi bi-${meta.icon}" aria-hidden="true"></i>${proviant.t(meta.label)}</span>
+        </span>
       </li>`;
     }).join('');
   }
 
+  const countChip = items.length
+    ? `<span class="badge badge--critical"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>${proviant.tn("js.home.expiringItemCount", items.length)}</span>`
+    : '';
+
   col.innerHTML = `
     <div class="card h-100" style="overflow:hidden;">
       <div class="card-header d-flex align-items-center gap-2 fw-bold">
-        <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
-          <i class="bi bi-clock-history" style="font-size:12px;color:var(--accent);"></i>
+        <div class="icon-chip" aria-hidden="true">
+          <i class="bi bi-clock-history"></i>
         </div>
         <span class="flex-grow-1">${title}</span>
+        ${countChip}
         <i class="bi bi-info-circle tile-threshold-info" style="font-size:14px;cursor:default;color:var(--meta);font-weight:normal;"></i>
       </div>
       <div class="tile-scroll-body">

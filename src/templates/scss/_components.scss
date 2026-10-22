@@ -440,6 +440,7 @@
 }
 
 .list-group-item__title {
+  display: block;
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   color: var(--fg);
@@ -455,6 +456,32 @@
   gap: var(--space-1);
   align-items: center;
   justify-content: flex-end;
+}
+
+// The status bar in front of a list row. It is never the only signal: the row
+// carries a status chip too.
+.list-group-item__stripe {
+  flex-shrink: 0;
+  width: 4px;
+  height: 28px;
+  background: var(--status-neutral);
+  border-radius: 2px;
+}
+
+.list-group-item__stripe--expired {
+  background: var(--status-expired);
+}
+
+.list-group-item__stripe--critical {
+  background: var(--status-critical);
+}
+
+.list-group-item__stripe--soon {
+  background: var(--status-soon);
+}
+
+.list-group-item__stripe--fresh {
+  background: var(--status-fresh);
 }
 
 // Sidebar nav
