@@ -144,7 +144,9 @@
 }
 
 .mobile-top-more {
-  display: block;
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
 }
 
 .mobile-top-more-btn {

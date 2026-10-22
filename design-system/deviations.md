@@ -44,6 +44,7 @@ sichtbar ist — einen messbaren Beleg (Kontrastwert, Route, Endpoint).
 | 27 | Die Produkttabelle steht in 900 px statt in der globalen Content-Breite | `DESIGN.md` §4 nennt 1120 px als maximale Content-Breite; die Spec-Sheets geben den Tabellenscreens 900 px, damit die Spalten eine lesbare Zeilenlänge behalten. Die Sheets sind die normative Schicht für die Anordnung, also misst die Produkttabelle 900 px; alle übrigen Screens behalten 1120 px. |
 | 28 | Das Formular-Panel des Auth-Screens steht links, das Brand-Panel rechts | `DESIGN.md` §6 schreibt das Brand-Panel nach links und das Formular nach rechts. Die Spec-Sheets zeichnen es umgekehrt, und die App folgt ihnen, bis die Norm nachgezogen ist. |
 | 29 | Die Eingabefelder sind 44 px hoch | `DESIGN.md` §5 nennt 40 px, die Spec-Sheets zeichnen 44 px — die Höhe, die auch die Mindestberührungsfläche der App verlangt. Die App folgt den Sheets. |
+| 30 | Die Einstellungen stehen in der Topnav, nicht im Mobile-More-Menü | `nav.md` legt die Einstellungen in das More-Menü. Auf dem Telefon ist das More-Menü zwei Klicks entfernt und die Einstellungen stehen rechts in der Topnav, wo sie mit einem Klick erreichbar sind. Die Sheets zeichnen die Einstellungen ebenfalls nicht im More-Menü. |
 ## Geprüfte Werte
 
 `task design-check` misst diese Paare und bricht ab, wenn eines unterschritten
