@@ -8,7 +8,7 @@ COPY ./ ./
 RUN npm ci --ignore-scripts && \
     npm run css && \
     cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
-	cp node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/ && \
+	cp node_modules/@fontsource-variable/jost/files/jost-latin-wght-*.woff2 ./src/assets/fonts/ && \
     cp node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2 ./src/assets/fonts/ && \
     cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/ && \
     cp node_modules/html5-qrcode/html5-qrcode.min.js ./src/assets/js/ && \

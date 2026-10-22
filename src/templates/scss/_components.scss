@@ -499,7 +499,7 @@
   border-bottom: none;
 }
 .modal-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
 }
 .modal-body {
@@ -643,6 +643,7 @@
 
 .kpi__value {
   margin-top: var(--space-2);
+  padding-bottom: var(--space-2);
   font-size: var(--text-display);
   font-weight: var(--weight-semibold);
   line-height: 1;
@@ -774,4 +775,3 @@
 .bento .card:not(.card-accent):hover {
   box-shadow: var(--elev-raised);
 }
-

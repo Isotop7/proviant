@@ -21,7 +21,7 @@ Drei Sätze Identität:
 
 1. **Warmes Crème, kein Tech-Weiß.** Crème-Papier als Grundton, Tinte in
    Anthrazit, ein einziger Salbei-Akzent für Aktion und Fortschritt.
-2. **VendSans trägt, DMMono zählt.** VendSans (Variable 300 – 700) für
+2. **Jost trägt, DMMono zählt.** Jost (Variable 100 – 900) für
    UI und Fließtext. DMMono nur dort, wo Zahlen, Codes oder Bestände
    ausgerichtet werden müssen.
 3. **Vierstufiger Vorratsstatus.** `fresh`, `soon`, `critical`, `expired`
@@ -114,29 +114,35 @@ hellen Theme hellt er auf, im dunklen dunkelt er ab.
 
 ### Schriften
 
-- **Display / UI / Body** — `VendSans` (Variable, 300 – 700),
+- **Display / UI / Body** — `Jost` (Variable, 100 – 900),
   Fallback `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif`.
 - **Mono** — `DMMono` (Regular 400, Medium 500),
   Fallback `ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace`.
 
-VendSans trägt alles, was im Interface lesbar sein muss. DMMono wird
+Jost trägt alles, was im Interface lesbar sein muss. DMMono wird
 **ausschließlich** für Bestandszahlen, Datums-Shortcodes, Hash-Looks
 und Code-Beispiele eingesetzt.
 
 ### Skala
 
-| Rolle | Token | VendSans | Größe | Zeilenhöhe | Tracking |
+| Rolle | Token | Jost | Größe | Zeilenhöhe | Tracking |
 |---|---|---|---|---|---|
 | Display | `--text-display` | 600 | 32 px | 1.15 | −0.01 em |
 | H1 | `--text-h1` | 600 | 24 px | 1.20 | −0.01 em |
 | H2 | `--text-h2` | 600 | 20 px | 1.25 | 0 |
 | H3 | `--text-h3` | 500 | 18 px | 1.30 | 0 |
-| Body | `--text-base` | 400 | 15 px | 1.55 | 0 |
-| Body Bold | `--text-base-bold` | 600 | 15 px | 1.55 | 0 |
-| Small | `--text-sm` | 400 | 13 px | 1.45 | 0 |
-| Caption | `--text-xs` | 500 | 11 px | 1.40 | +0.04 em |
-| Eyebrow | `--text-eyebrow` | 600 | 11 px | 1.20 | +0.10 em (uppercase) |
+| Body | `--text-base` | 400 | 16 px | 1.55 | 0 |
+| Body Bold | `--text-base-bold` | 600 | 16 px | 1.55 | 0 |
+| Small | `--text-sm` | 400 | 14 px | 1.45 | 0 |
+| Caption | `--text-xs` | 500 | 12 px | 1.40 | +0.04 em |
+| Eyebrow | `--text-eyebrow` | 600 | 12 px | 1.20 | +0.10 em (uppercase) |
 | Mono | `--text-mono` | DMMono 400 | 13 px | 1.40 | 0 |
+
+Die x-getriebenen Stufen (Body, Small, Caption, Eyebrow) sind um 1 px
+angehoben: Jost hat eine x-Höhe von 46 %, die für eine UI-Schrift
+niedrig ist. Ohne die Anhebung säuft der Fließtext sichtbar ein. Die
+Überschriften bleiben unangetastet — ihre Versalhöhe hängt nicht an der
+x-Höhe.
 
 `Eyebrow` ist uppercase mit `letter-spacing: 0.10em` und
 `text-transform: uppercase`. Es leitet Sektionen ein (z. B. "VORRAT",
@@ -148,7 +154,7 @@ und Code-Beispiele eingesetzt.
 - **500** H3, fette Labels, Captions.
 - **600** Display, H1, H2, Eyebrow, Buttons.
 
-700 wird **nicht** im Default-Set verwendet; VendSans Variable darf
+700 wird **nicht** im Default-Set verwendet; Jost Variable darf
 hochgezogen werden, wenn ein Hero besonders betont werden muss.
 
 ### Linienlänge
@@ -303,7 +309,7 @@ Wichtige Felder:
 - **Text / Email / Passwort** — `--radius-md`, BG `--surface`.
 - **Suche** — pill, Icon links (`bi-search`), X-Button rechts zum Leeren.
 - **Select** — nativer `<select>` ist okay; Custom-Trigger zeigt Chevron rechts.
-- **Datum** — nativer Datepicker; VendSans im Eingabefeld.
+- **Datum** — nativer Datepicker; Jost im Eingabefeld.
 - **Textarea** — Mindesthöhe 96 px, resize vertikal.
 
 ### Karten
@@ -332,7 +338,7 @@ Bootstrap-`.list-group` mit Custom-Geometrie (56 px Min-Höhe, 40 px Leading-Ava
 - Sortierbarer Header: Chevron rechts (`bi-chevron-expand`).
 - Zeilen-Hover: BG `--accent-soft`, FG bleibt `--fg`.
 - Auswahl: Checkbox links, ausgewählte Zeile BG `--accent-soft` + Border-Left `2 px --accent`.
-- Pagination unten rechts, "1 – 10 von 84" links, VendSans 400.
+- Pagination unten rechts, "1 – 10 von 84" links, Jost 400.
 - **Leerer Zustand**: `.table-wrap` enthält nur einen `.table-empty`-Block (zentriert, Icon `bi-inbox` 32 px in `--meta`, Headline + CTA "Filter zurücksetzen" oder "Erstes Produkt anlegen"). Die Header-Zeile verschwindet — Empty ersetzt die Tabelle vollständig, nicht nur den Body.
 
 ### Datentabellen (dicht)
@@ -400,7 +406,7 @@ Bootstrap-`.badge` mit Status-Modifiern. Mapping: `.chip` → `.badge`, Status-F
 Bootstrap-`.card` (mit `.col-12 .col-md-6 .col-lg-3` für 1/2/3/4 Spalten je Breakpoint) + eigenes `.kpi`-Layout-Pattern (`.kpi__label`, `.kpi__value`). `.kpi__delta` und `.kpi__sparkline` sind **nicht** Teil des Systems — die Stats-API liefert pro Kachel keine Historie (siehe `deviations.md` #3).
 
 - Karten-Layout 1 / 2 / 3 / 4 Spalten je Breakpoint.
-- Kachel-Inhalt: Eyebrow + große Zahl (`--text-display` VendSans 600) + Delta darunter (`--text-sm`, Salwei-Pfeil nach oben, Terracotta-Pfeil nach unten) + optionaler Sparkline 80 × 24.
+- Kachel-Inhalt: Eyebrow + große Zahl (`--text-display` Jost 600) + Delta darunter (`--text-sm`, Salwei-Pfeil nach oben, Terracotta-Pfeil nach unten) + optionaler Sparkline 80 × 24.
 - Eine Kachel darf `--accent-soft` als BG haben (`.kpi--focus`), um sie als "im Fokus" zu markieren. Maximal eine pro Dashboard.
 
 ### Diagramme / Charts
@@ -408,9 +414,9 @@ Bootstrap-`.card` (mit `.col-12 .col-md-6 .col-lg-3` für 1/2/3/4 Spalten je Bre
 - Bibliothek: **Chart.js** (Default) oder **ApexCharts** (für komplexe
   Tooltips). Kein D3 im Default, da Overhead zu hoch für Haushalts-UI.
 - Primärfarbe: `--accent`. Sekundärfarben: `--status-fresh`, `--status-soon`, `--status-critical`, `--status-expired`. Keine weiteren Farben.
-- Achsen: VendSans 13 px 400, FG `--muted`. Trennlinien `1 px --border`.
+- Achsen: Jost 13 px 400, FG `--muted`. Trennlinien `1 px --border`.
 - Tooltip: BG `--surface`, Border `--border`, Schatten `--elev-raised`.
-- Legende: unterhalb des Charts, 12 px Gap, VendSans 13 px.
+- Legende: unterhalb des Charts, 12 px Gap, Jost 13 px.
 - Bestand-Linie immer Salwei (`--accent`), Trend-Linie `--status-soon` gestrichelt.
 
 ## 6. Auth (spezifisch)
@@ -418,7 +424,7 @@ Bootstrap-`.card` (mit `.col-12 .col-md-6 .col-lg-3` für 1/2/3/4 Spalten je Bre
 Auth ist die prominenteste Fläche. Hier darf das System spürbar werden:
 
 - **Brand-Panel** links auf Desktop (50 % Breite), BG `--surface-warm`.
-  Logo oben links, Headline (`--text-display` 600, VendSans) zentriert
+  Logo oben links, Headline (`--text-display` 600, Jost) zentriert
   vertikal, Bildplatzhalter (16:9) darunter.
 - **Form-Panel** rechts auf Desktop, BG `--bg`, Padding `--space-12`.
   Felder `--space-5` vertikal gestapelt. Primärer Button full-width.
@@ -466,7 +472,7 @@ Auth ist die prominenteste Fläche. Hier darf das System spürbar werden:
 
 - `--bg` für Seiten, `--surface` für Karten, `--surface-warm` für
   Hervorhebung. Niemals weiß-auf-weiß.
-- VendSans für alles, DMMono nur für Zahlen.
+- Jost für alles, DMMono nur für Zahlen.
 - Status via Farbe + Icon + Text.
 - Pill-Buttons (`--radius-pill`) für Aktionen, eckige Karten für Inhalt.
 - Schatten in Sepia, nicht in Neutral-Grau.
@@ -521,7 +527,7 @@ Paint in ein explizites `light` oder `dark` aufgelöst; ohne JavaScript
 greift `prefers-color-scheme: dark`.
 
 - Tokens: `design-system/_tokens-dark.scss` (siehe `_tokens.scss` für die Struktur).
-- Selbst-gehostete Fonts (VendSans / DMMono) bleiben unverändert;
+- Selbst-gehostete Fonts (Jost / DMMono) bleiben unverändert;
   `font-display: swap` beibehalten.
 - Komponenten erben Dark-Mode automatisch über CSS-Variablen — keine
   separate Dark-Komponente nötig.

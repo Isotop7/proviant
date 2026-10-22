@@ -83,19 +83,19 @@
   --info:    #5A7A8A;
 
   /* Typografie */
-  --font-display: "VendSans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --font-body:    "VendSans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display: "Jost", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-body:    "Jost", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono:    "DMMono", ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
 
   --text-display:    32px;
   --text-h1:         24px;
   --text-h2:         20px;
   --text-h3:         18px;
-  --text-base:       15px;
-  --text-base-bold:  15px;
-  --text-sm:         13px;
-  --text-xs:         11px;
-  --text-eyebrow:    11px;
+  --text-base:       16px;
+  --text-base-bold:  16px;
+  --text-sm:         14px;
+  --text-xs:         12px;
+  --text-eyebrow:    12px;
   --text-mono:       13px;
 
   --leading-tight: 1.20;

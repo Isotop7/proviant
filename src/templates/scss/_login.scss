@@ -104,7 +104,7 @@
 
 .brand-sub {
   max-width: 320px;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   color: color-mix(in oklab, var(--accent-on) 72%, transparent);
 }
@@ -137,7 +137,7 @@
 }
 
 .brand-feature-text {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
   color: color-mix(in oklab, var(--accent-on) 85%, transparent);
@@ -147,7 +147,7 @@
 .brand-bottom {
   position: relative;
   z-index: 1;
-  font-size: 11px;
+  font-size: 12px;
   color: color-mix(in oklab, var(--accent-on) 45%, transparent);
   letter-spacing: .2px;
 }
@@ -175,7 +175,7 @@
   align-items: flex-start;
   padding: 12px 14px;
   margin-bottom: 20px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--fg-2);
   background: var(--accent-soft);
@@ -185,7 +185,7 @@
   i {
     flex-shrink: 0;
     margin-top: 1px;
-    font-size: 15px;
+    font-size: 16px;
     color: var(--accent);
   }
 
@@ -241,7 +241,7 @@
 }
 
 .form-heading-sub {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--fg-2);
 }
@@ -273,7 +273,7 @@
   position: absolute;
   top: 50%;
   left: 12px;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--meta);
   pointer-events: none;
   transition: color 150ms ease;
@@ -328,7 +328,7 @@
   display: flex;
   align-items: center;
   padding: 0;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--meta);
   cursor: pointer;
   background: none;
@@ -358,7 +358,7 @@
 
 .strength-label {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -375,7 +375,7 @@
     display: flex;
     gap: 5px;
     align-items: center;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--meta);
     transition: color 150ms;
 
@@ -411,7 +411,7 @@
 // ── Terms note ────────────────────────────────────────────────────────────────
 .terms-note {
   margin-top: 16px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
   color: var(--meta);
   text-align: center;

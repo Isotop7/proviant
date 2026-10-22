@@ -80,19 +80,23 @@ $danger:  #A24A4A;   // = --status-expired
 $info:    #5A7A8A;   // Hinweise, gedeckt
 
 // ── Typografie ─────────────────────────────────────────────────────────────
-$font-display: "VendSans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-$font-body:    "VendSans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+$font-display: "Jost", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+$font-body:    "Jost", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 $font-mono:    "DMMono", ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
 
+// Jost hat eine x-Höhe von 46 % — niedrig für eine UI-Schrift. Die
+// x-getriebenen Stufen sind um 1 px angehoben, damit die scheinbare
+// Größe erhalten bleibt. Die Überschriften bleiben unangetastet: ihre
+// Versalhöhe hängt nicht an der x-Höhe.
 $text-display:    32px;   // Display
 $text-h1:         24px;   // H1
 $text-h2:         20px;   // H2, Topbar-Titel
 $text-h3:         18px;   // H3
-$text-base:       15px;   // Body
-$text-base-bold:  15px;   // Body, fett
-$text-sm:         13px;   // Kleingedrucktes, Tabellentext
-$text-xs:         11px;   // Caption
-$text-eyebrow:    11px;   // Sektions-Label, uppercase
+$text-base:       16px;   // Body
+$text-base-bold:  16px;   // Body, fett
+$text-sm:         14px;   // Kleingedrucktes, Tabellentext
+$text-xs:         12px;   // Caption
+$text-eyebrow:    12px;   // Sektions-Label, uppercase
 $text-mono:       13px;   // Zahlen, Codes, Bestände
 
 $leading-tight:  1.20;

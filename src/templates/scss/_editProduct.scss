@@ -13,7 +13,7 @@
   margin-bottom: 20px;
 
   a {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--meta);
     text-decoration: none;
 
@@ -26,7 +26,7 @@
   }
 
   span {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--fg-2);
   }
 }
@@ -78,7 +78,7 @@
 }
 
 .pv-card-header-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
 }
@@ -140,7 +140,7 @@ select.pv-field-input {
 
 .pv-field-hint {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--meta);
 }
 
@@ -161,7 +161,7 @@ select.pv-field-input {
   gap: 5px;
   align-items: center;
   padding: 2px 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--accent);
   background: var(--accent-soft);
@@ -186,7 +186,7 @@ select.pv-field-input {
   gap: 4px;
   align-items: center;
   padding: 2px 9px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--fg-2);
   background: var(--surface-warm);
   border: 1px solid var(--border);
@@ -195,7 +195,7 @@ select.pv-field-input {
   button {
     display: flex;
     padding: 0;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--meta);
     cursor: pointer;
     background: none;
@@ -207,7 +207,7 @@ select.pv-field-input {
   flex: 1;
   min-width: 100px;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg);
   background: transparent;
   border: none;
@@ -366,7 +366,7 @@ select.pv-field-input {
     }
 
     span {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--meta);
     }
   }
@@ -410,7 +410,7 @@ select.pv-field-input {
 
 .pv-product-name-disp {
   margin-bottom: 4px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--fg);
   letter-spacing: -.01em;
@@ -482,7 +482,7 @@ select.pv-field-input {
   align-items: center;
   padding: 10px 16px;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--status-expired);
   cursor: pointer;
   background: transparent;

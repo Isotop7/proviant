@@ -203,7 +203,7 @@ departure in `design-system/deviations.md`.
 - **Color**: theme via the design system's CSS custom properties, no raw hex and no `oklch()` in the app's own styles. `--accent` fills, `--accent-text` writes; the status colours carry a `-text` variant for labels and the plain value for icons, dots and bars.
 - **Components**: Bootstrap 5.3 first. `.btn`, `.badge`, `.form-control`, `.list-group` and their modifiers carry the brand; own classes only where Bootstrap has none (`.kpi`, `.toast-stack`, `.list-group-item__*`, `.bento*`).
 - **Layout**: 4/8pt spacing via the spacing tokens or Bootstrap utilities; touch targets ≥44×44px; the app shell is `.app` with `.app__sidebar` and `.app__topbar`.
-- **Type**: VendSans for the interface, DMMono for numbers and codes; hierarchy via weight and size, not colour alone.
+- **Type**: Jost for the interface, DMMono for numbers and codes; hierarchy via weight and size, not colour alone.
 - **Guidance**: async >500ms → loading indicator + disable the trigger; inline validation on blur, page-level feedback at submit; empty states carry a clear CTA; confirm before irreversible actions.
 - **Feedback**: `proviant.showFeedback()` shows a toast, not a modal; field and section errors stay inline. A toast's callback fires when it goes — the auto-hiding types after their timeout, an error when it is dismissed.
 - **Accessibility**: `<html lang>` matches the active UI language; the page header carries the page's only `h1` — the topnav is navigation; icon-only buttons get an `aria-label`; everything keyboard-navigable (`tabindex`, `focus-visible`); populate `aria-live` after dynamic updates.

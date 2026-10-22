@@ -92,7 +92,7 @@
   position: absolute;
   top: 50%;
   left: 11px;
-  font-size: 15px;
+  font-size: 16px;
   pointer-events: none;
   transform: translateY(-50%);
 }
@@ -120,7 +120,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 14px;
 }
 .product-info-row-sep {
   padding-top: 10px;
@@ -132,7 +132,7 @@
 // Mobile product name (truncated)
 .mobile-product-name {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
   text-overflow: ellipsis;
