@@ -498,6 +498,91 @@ func TestMatchRecipesToProducts_MatchedProductIDs(t *testing.T) {
 	}
 }
 
+func TestMatchRecipesToProducts_SearchTermAnchorsTheExpiringProduct(t *testing.T) {
+	ctrl := newTestRecipeController()
+
+	// The provider searched for the product name and lists the ingredient in
+	// another spelling, so only the search term links the recipe to the
+	// household product that is about to expire.
+	recipes := []Recipe{
+		{ID: "1", Title: "Oatmeal", Ingredients: []string{"Oats", "Water"}, SearchTerm: "quaker oats"},
+	}
+	products := []dbModel.Product{
+		{Model: gorm.Model{ID: 401}, ProductName: "Quaker Oats", ExpireAt: time.Now().AddDate(0, 0, 2)},
+	}
+	expiring := []dbModel.Product{products[0]}
+
+	suggestions := ctrl.matchRecipesToProducts(recipes, products, expiring)
+
+	if len(suggestions) != 1 {
+		t.Fatalf("expected 1 suggestion, got %d", len(suggestions))
+	}
+	if len(suggestions[0].MatchedProducts) != 1 || suggestions[0].MatchedProducts[0] != "Oats" {
+		t.Errorf("MatchedProducts = %v, want [Oats]", suggestions[0].MatchedProducts)
+	}
+	if suggestions[0].ExpiryPoints <= 0 {
+		t.Errorf("ExpiryPoints = %d, want > 0 (the anchored product is expiring)", suggestions[0].ExpiryPoints)
+	}
+}
+
+func TestMatchRecipesToProducts_AnchorDoesNotEnableTheCookAction(t *testing.T) {
+	ctrl := newTestRecipeController()
+
+	recipes := []Recipe{
+		{ID: "1", Title: "Oatmeal", Ingredients: []string{"Oats"}, SearchTerm: "quaker oats"},
+	}
+	products := []dbModel.Product{
+		{Model: gorm.Model{ID: 401}, ProductName: "Quaker Oats", ExpireAt: time.Now().AddDate(0, 0, 2)},
+	}
+	expiring := []dbModel.Product{products[0]}
+
+	suggestions := ctrl.matchRecipesToProducts(recipes, products, expiring)
+
+	if len(suggestions) != 1 {
+		t.Fatalf("expected 1 suggestion, got %d", len(suggestions))
+	}
+	if len(suggestions[0].MatchedProductIDs) != 0 {
+		t.Errorf("MatchedProductIDs = %v, want none: a search term identifies a product, not an ingredient",
+			suggestions[0].MatchedProductIDs)
+	}
+}
+
+func TestMatchRecipesToProducts_SearchTermOfAnotherHouseholdKeepsTheRecipeOut(t *testing.T) {
+	ctrl := newTestRecipeController()
+
+	// The term names a product the household does not keep, and the ingredient
+	// matches nothing either, so nothing links the recipe to the household.
+	recipes := []Recipe{
+		{ID: "1", Title: "Miso", Ingredients: []string{"Miso"}, SearchTerm: "miso paste"},
+	}
+	products := []dbModel.Product{
+		{Model: gorm.Model{ID: 401}, ProductName: "Rolled Oats"},
+	}
+
+	suggestions := ctrl.matchRecipesToProducts(recipes, products, nil)
+
+	if len(suggestions) != 0 {
+		t.Fatalf("expected no suggestion, got %d", len(suggestions))
+	}
+}
+
+func TestCollectKeywords_PrefersProductNamesOverCategories(t *testing.T) {
+	ctrl := newTestRecipeController()
+
+	products := []dbModel.Product{
+		{ProductName: "Quaker Oats", Categories: "Breakfasts"},
+		{ProductName: "Chopped Tomatoes", Categories: "Fruits and vegetables based foods"},
+	}
+	got := ctrl.collectKeywords(products)
+
+	if len(got) < 2 {
+		t.Fatalf("collectKeywords() returned %d keywords, want at least 2", len(got))
+	}
+	if got[0] != "quaker oats" || got[1] != "chopped tomatoes" {
+		t.Errorf("collectKeywords() = %v, want the product names first", got)
+	}
+}
+
 func TestGetSuggestions_DisabledFeatureReturnsEmpty(t *testing.T) {
 	logger := zerolog.Nop()
 	ctrl := &RecipeController{
