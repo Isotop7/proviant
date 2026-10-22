@@ -18,7 +18,10 @@
   "js.home.daysAgo_other": "vor %s Tagen",
   "js.home.expiredCount": "%d abgelaufen",
   "js.home.expiredNotConsumed": "Abgelaufen (nicht verbraucht)",
+  "js.home.archivedNotWasted": "Verbraucht, nicht verschwendet",
   "js.home.expiringSoonCount": "%d läuft bald ab",
+  "js.home.freshCount": "%d frisch",
+  "js.home.expiredOfTotal": "%s von %s Produkten",
   "js.home.expiringItemCount": "%d Produkte",
   "js.home.expiringItemCount_one": "%d Produkt",
   "js.home.expiringItemCount_other": "%d Produkte",
@@ -41,6 +44,7 @@
   "js.home.noActiveProducts": "Noch keine aktiven Produkte",
   "js.home.noCategoryData": "Noch keine Kategoriedaten",
   "js.home.noExpiringProducts": "Keine Produkte laufen in den nächsten %s Tagen ab",
+  "js.home.recentlyAdded": "Zuletzt hinzugefügt",
   "js.home.noExpiringProducts_one": "Keine Produkte laufen in den nächsten %s Tag ab",
   "js.home.noExpiringProducts_other": "Keine Produkte laufen in den nächsten %s Tagen ab",
   "js.home.noExpiryTrendData": "Noch keine Ablauftrend-Daten",
@@ -57,5 +61,6 @@
   "js.home.thresholdTooltip_other": "Zeigt Produkte, die innerhalb Ihrer Benachrichtigungsschwelle (%s Tage) ablaufen. Ändern Sie dies in den Benutzereinstellungen.",
   "js.home.totalConsumed": "Insgesamt verbraucht",
   "js.home.wasteFreeStreak": "Abfallfreie Serie",
+  "js.home.versusWastingIt": "Statt zu verschwenden",
   "js.home.wastedOfGoal": "%s / %s verschwendet"
 }

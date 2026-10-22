@@ -18,7 +18,10 @@
   "js.home.daysAgo_other": "%s days ago",
   "js.home.expiredCount": "%d expired",
   "js.home.expiredNotConsumed": "Expired (not consumed)",
+  "js.home.archivedNotWasted": "Archived, not wasted",
   "js.home.expiringSoonCount": "%d expiring soon",
+  "js.home.freshCount": "%d fresh",
+  "js.home.expiredOfTotal": "%s of %s items",
   "js.home.expiringItemCount": "%d items",
   "js.home.expiringItemCount_one": "%d item",
   "js.home.expiringItemCount_other": "%d items",
@@ -41,6 +44,7 @@
   "js.home.noActiveProducts": "No active products yet",
   "js.home.noCategoryData": "No category data yet",
   "js.home.noExpiringProducts": "No products expiring in the next %s days",
+  "js.home.recentlyAdded": "Recently added",
   "js.home.noExpiringProducts_one": "No products expiring in the next %s day",
   "js.home.noExpiringProducts_other": "No products expiring in the next %s days",
   "js.home.noExpiryTrendData": "No expiry trend data yet",
@@ -57,5 +61,6 @@
   "js.home.thresholdTooltip_other": "Shows products expiring within your notification threshold (%s days). Change this in User Settings.",
   "js.home.totalConsumed": "Total Consumed",
   "js.home.wasteFreeStreak": "Waste-free streak",
+  "js.home.versusWastingIt": "Versus wasting it",
   "js.home.wastedOfGoal": "%s / %s wasted"
 }

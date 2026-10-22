@@ -660,6 +660,58 @@
   color: var(--muted);
 }
 
+// The line under a tile carries the status, the accent or the muted ink.
+.kpi__sub--fresh {
+  color: var(--status-fresh);
+}
+
+.kpi__sub--soon {
+  color: var(--status-soon);
+}
+
+.kpi__sub--critical {
+  color: var(--status-critical);
+}
+
+.kpi__sub--accent {
+  color: var(--accent-text);
+}
+
+// The value carries the status when the tile is not filled.
+.kpi__value--danger {
+  color: var(--status-expired-text);
+}
+
+.kpi__value--warning {
+  color: var(--status-soon-text);
+}
+
+.kpi__value--success {
+  color: var(--status-fresh-text);
+}
+
+.kpi__value--accent {
+  color: var(--accent-text);
+}
+
+// The filled tile: the one card that carries a status as a surface. Its ink
+// follows the fill (--status-*-on), not the page.
+.kpi--fill-expired {
+  color: var(--status-expired-on);
+  background: var(--status-expired);
+  border-color: transparent;
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--status-expired) 33%, transparent);
+}
+
+.kpi--fill-expired .kpi__label {
+  color: color-mix(in oklab, var(--status-expired-on) 88%, transparent);
+}
+
+.kpi--fill-expired .kpi__value,
+.kpi--fill-expired .kpi__sub {
+  color: var(--status-expired-on);
+}
+
 // The hero tile — the one card on the dashboard that is filled dark. Its ink
 // follows the card, not the page.
 .kpi--hero {

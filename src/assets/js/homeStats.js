@@ -48,7 +48,8 @@ function renderHeroTile(title, hero, chips) {
   const col = document.createElement('div');
   col.className = 'bento__cell bento__cell--3';
   const chipHtml = chips.map(function (chip) {
-    return `<span class="kpi__chip kpi__chip--${chip.variant}"><i class="bi bi-${chip.icon}" aria-hidden="true"></i>${chip.label}</span>`;
+    const modifier = chip.variant && chip.variant !== 'fresh' ? ' kpi__chip--' + chip.variant : '';
+    return `<span class="kpi__chip${modifier}"><i class="bi bi-${chip.icon}" aria-hidden="true"></i>${chip.label}</span>`;
   }).join('');
   col.innerHTML = `
     <div class="kpi kpi--hero h-100">
@@ -59,42 +60,38 @@ function renderHeroTile(title, hero, chips) {
   return col;
 }
 
-function renderTile(title, hero, variant, heroClass, span) {
+// The variants a tile's value can carry: the status quad plus the accent for
+// the money tiles.
+const TILE_VALUE_VARIANTS = ['danger', 'warning', 'success', 'accent'];
+
+function renderTile(title, hero, variant, heroClass, span, sub) {
   const col = document.createElement('div');
   col.className = 'bento__cell bento__cell--' + (span || 2);
   // A solid fill is reserved for the expired state — the design system's
   // bento sheet fills exactly one card. Every other variant colours the
   // value, which is what the status text variants exist for.
-  const fillMap = { danger: 'var(--status-expired)' };
-  const inkMap  = { danger: 'var(--status-expired-on)' };
-  const textMap = {
-    danger: 'var(--status-expired-text)',
-    warning: 'var(--status-soon-text)',
-    success: 'var(--status-fresh-text)',
-  };
+  const fillClass = variant === 'danger' ? 'kpi--fill-expired' : '';
+  const valueClass = TILE_VALUE_VARIANTS.includes(variant) ? ' kpi__value--' + variant : '';
+  const subHtml = sub
+    ? `<div class="kpi__sub${sub.variant ? ' kpi__sub--' + sub.variant : ''}"><i class="bi bi-${sub.icon}" aria-hidden="true"></i>${sub.text}</div>`
+    : '';
 
-  // Accent-fill tile for non-zero urgent values
-  if (variant && fillMap[variant] && !heroClass && Number.parseFloat(hero) > 0) {
-    const fill = fillMap[variant];
-    const ink  = inkMap[variant];
+  if (fillClass && !heroClass && Number.parseFloat(hero) > 0) {
     col.innerHTML = `
-      <div class="kpi h-100" style="background:${fill};box-shadow:0 6px 18px color-mix(in oklab, ${fill} 33%, transparent);border-color:transparent;position:relative;overflow:hidden;">
-        <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:color-mix(in oklab, ${ink} 8%, transparent);pointer-events:none;"></div>
-        <div style="position:relative;">
-          <div class="kpi__label" style="color:color-mix(in oklab, ${ink} 88%, transparent);">${title}</div>
-          <div class="kpi__value" style="color:${ink};" title="${hero}">${hero}</div>
-        </div>
+      <div class="kpi ${fillClass} h-100">
+        <div class="kpi__label">${title}</div>
+        <div class="kpi__value" title="${hero}">${hero}</div>
+        ${subHtml}
       </div>`;
     return col;
   }
 
-  const heroColor = (variant && textMap[variant]) ? textMap[variant] : 'var(--fg)';
-  const heroStyle = heroClass ? '' : `style="color:${heroColor}"`;
   const heroInnerClass = heroClass || 'kpi__value';
   col.innerHTML = `
     <div class="kpi h-100">
       <div class="kpi__label">${title}</div>
-      <div class="${heroInnerClass}" ${heroStyle} title="${hero}">${hero}</div>
+      <div class="${heroInnerClass}${valueClass}" title="${hero}">${hero}</div>
+      ${subHtml}
     </div>`;
   return col;
 }
@@ -267,19 +264,27 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (dashboard) {
       // The pantry count leads the dashboard as the filled hero tile, the way
       // the screen sheets draw it.
+      const expiringSoon = s.expiringSoon || [];
+      const expiredCount = s.wasteCount || 0;
+      const freshCount = Math.max(0, s.totalActive - expiredCount - expiringSoon.length);
       dashboard.appendChild(renderHeroTile(
         proviant.t("js.home.activeProducts"),
         s.totalActive,
         [
           {
+            variant: 'fresh',
+            icon: 'check2',
+            label: proviant.t("js.home.freshCount", freshCount),
+          },
+          {
             variant: 'soon',
             icon: 'clock',
-            label: proviant.t("js.home.expiringSoonCount", (s.expiringSoon || []).length),
+            label: proviant.t("js.home.expiringSoonCount", expiringSoon.length),
           },
           {
             variant: 'expired',
             icon: 'exclamation',
-            label: proviant.t("js.home.expiredCount", s.wasteCount || 0),
+            label: proviant.t("js.home.expiredCount", expiredCount),
           },
         ],
       ));
@@ -288,24 +293,38 @@ document.addEventListener('DOMContentLoaded', async function () {
         {
           title: proviant.t("js.home.expiredNotConsumed"),
           hero: `${s.wastePercent.toFixed(1)}%`,
-          variant: s.wasteCount > 0 ? 'danger' : null,
+          variant: expiredCount > 0 ? 'danger' : null,
           span: 3,
+          sub: {
+            text: proviant.t("js.home.expiredOfTotal", expiredCount, s.totalActive),
+            icon: 'exclamation',
+          },
         },
         {
           title: proviant.t("js.home.totalConsumed"),
           hero: s.totalArchived,
           span: 2,
+          sub: {
+            text: proviant.t("js.home.archivedNotWasted"),
+            icon: 'check2-circle',
+            variant: 'fresh',
+          },
         },
         {
           title: proviant.t("js.home.lastAddedProduct"),
           hero: s.lastInsertedProduct || '—',
           heroClass: 'kpi__value text-truncate',
           span: 2,
+          sub: {
+            text: proviant.t("js.home.recentlyAdded"),
+            icon: 'plus-circle',
+            variant: 'muted',
+          },
         },
       ];
 
-      tiles.forEach(({ title, hero, variant, heroClass, span }) => {
-        dashboard.appendChild(renderTile(title, hero, variant, heroClass, span));
+      tiles.forEach(({ title, hero, variant, heroClass, span, sub }) => {
+        dashboard.appendChild(renderTile(title, hero, variant, heroClass, span, sub));
       });
 
       // Streak tile
@@ -319,7 +338,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (streakTile) {
         if (longestStreak > 0) {
           const sub = document.createElement('div');
-          sub.style.cssText = 'font-size:var(--text-xs);color:var(--meta);margin-top:var(--space-1)';
+          sub.className = 'kpi__sub kpi__sub--muted';
           sub.textContent = proviant.tn("js.home.bestStreak", longestStreak);
           streakTile.appendChild(sub);
         }
@@ -375,7 +394,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           goalCol.innerHTML = `
             <div class="kpi h-100">
               <div class="kpi__label"><i class="bi bi-bullseye me-1"></i>${proviant.t("js.home.monthlyGoal")}</div>
-              <div class="kpi__value" title="${label}" style="color:${exceeded ? 'var(--status-expired)' : 'var(--fg)'}">${label}</div>
+              <div class="kpi__value${exceeded ? ' kpi__value--danger' : ''}" title="${label}">${label}</div>
               <div class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" style="height:6px;">
                 <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
               </div>
@@ -465,14 +484,20 @@ document.addEventListener('DOMContentLoaded', async function () {
         dashboard.appendChild(renderTile(
           proviant.t("js.home.savedThisMonth"),
           `€${(savings.savedEurThisMonth ?? 0).toFixed(2)}`,
-          savings.savedEurThisMonth > 0 ? 'success' : null,
+          savings.savedEurThisMonth > 0 ? 'accent' : null,
           null,
         ));
         dashboard.appendChild(renderTile(
           proviant.t("js.home.co2AvoidedThisMonth"),
           `${(savings.savedCo2KgThisMonth ?? 0).toFixed(2)} kg`,
-          savings.savedCo2KgThisMonth > 0 ? 'success' : null,
+          savings.savedCo2KgThisMonth > 0 ? 'accent' : null,
           null,
+          2,
+          {
+            text: proviant.t("js.home.versusWastingIt"),
+            icon: 'cloud-arrow-down',
+            variant: 'accent',
+          },
         ));
         // The events from before the count model are not in the totals: their
         // figures were scaled by the net content, not by a count of packs.
