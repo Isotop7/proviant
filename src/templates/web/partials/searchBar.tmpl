@@ -2,41 +2,22 @@
 {{/* Search bar — design-token controlled, no input-group */}}
 <div role="search" class="search-bar mb-2 mb-md-0">
     <div class="search-row">
-        {{/* Search icon (hidden on mobile to save space) */}}
-        <i class="bi bi-search search-icon d-none d-md-block" aria-hidden="true"></i>
+        {{/* Search icon */}}
+        <i class="bi bi-search search-icon" aria-hidden="true"></i>
 
-        {{/* Field selector */}}
-        <div class="select-wrapper">
-            <select id="search-param" class="search-select" aria-label="{{ t "partial.searchBar.searchByField" }}">
-                <option value="product_name" {{ if eq .QueryParam "product_name" }}selected{{ end }}>{{ t "partial.searchBar.fieldProductName" }}</option>
-                <option value="barcode" {{ if eq .QueryParam "barcode" }}selected{{ end }}>{{ t "partial.searchBar.fieldBarcode" }}</option>
-            </select>
-            <i class="bi bi-chevron-down select-indicator" aria-hidden="true"></i>
+        {{/* Field selector — two toggles inside the field, the way the screen sheets draw it */}}
+        <div class="search-scope" role="group" aria-label="{{ t "partial.searchBar.searchByField" }}">
+            <button type="button" class="search-scope__toggle{{ if ne .QueryParam "barcode" }} active{{ end }}" data-scope="product_name" aria-pressed="{{ if ne .QueryParam "barcode" }}true{{ else }}false{{ end }}">{{ t "partial.searchBar.fieldProductName" }}</button>
+            <button type="button" class="search-scope__toggle{{ if eq .QueryParam "barcode" }} active{{ end }}" data-scope="barcode" aria-pressed="{{ if eq .QueryParam "barcode" }}true{{ else }}false{{ end }}">{{ t "partial.searchBar.fieldBarcode" }}</button>
         </div>
 
         {{/* Search input */}}
         <input type="search" id="search-query" class="search-input" placeholder="{{ t "partial.searchBar.searchPlaceholder" }}"
             value="{{ .QueryValue }}" aria-label="{{ t "partial.searchBar.searchProducts" }}" />
 
-        {{/* Search button */}}
-        <button id="search-btn" class="btn btn-search" title="{{ t "common.search" }}" type="button">
-            <i class="bi bi-search" aria-hidden="true"></i>
-            <span class="d-none d-sm-inline">{{ t "common.search" }}</span>
-        </button>
-
-        {{/* Show all button */}}
-        <button id="show-all-btn" class="btn btn-show-all" type="button" title="{{ t "partial.searchBar.showAll" }}">
-            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-            <span class="d-none d-sm-inline">{{ t "partial.searchBar.showAll" }}</span>
-        </button>
-
-        {{/* Filters button */}}
-        <button class="btn btn-filters" type="button"
-            data-bs-toggle="collapse" data-bs-target="#advanced-filters"
-            aria-expanded="false" aria-controls="advanced-filters"
-            title="{{ t "partial.searchBar.advancedFilters" }}">
-            <i class="bi bi-funnel" aria-hidden="true"></i>
-            <span class="d-none d-sm-inline">{{ t "partial.searchBar.filters" }}</span>
+        {{/* Clear the search */}}
+        <button type="button" id="search-clear" class="search-clear" title="{{ t "partial.searchBar.clearSearch" }}" aria-label="{{ t "partial.searchBar.clearSearch" }}">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
         </button>
     </div>
 

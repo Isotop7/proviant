@@ -4,7 +4,7 @@
     "css-compile": "sass --style compressed --source-map --embed-sources --no-error-css --load-path=node_modules src/templates/scss/:src/assets/css/",
     "css-prefix": "postcss --replace src/assets/css/main.css --use autoprefixer --map",
     "css": "npm-run-all css-compile css-prefix",
-    "lint-css": "stylelint src/templates/scss/",
+    "lint-css": "stylelint \"src/templates/scss/**/*.scss\" \"design-system/**/*.scss\"",
     "lint-js": "eslint src/assets/js/ tests/js/",
     "lint-html": "htmlhint \"src/templates/web/**/*.tmpl\"",
     "test": "npm-run-all lint-css css",
@@ -12,9 +12,8 @@
     "test-js-watch": "vitest"
   },
   "dependencies": {
-    "@fontsource-variable/vend-sans": "^5.3.0",
+    "@fontsource-variable/jost": "^5.3.0",
     "@fontsource/dm-mono": "^5.3.0",
-    "@fontsource/pacifico": "^5.3.0",
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",

@@ -9,7 +9,7 @@
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#3D7A5C">
+  <meta name="theme-color" content="#418069">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,27 +24,71 @@
 </head>
 
 <body>
-  <a href="#main-content" class="skip-link">{{ t "a11y.skipToContent" }}</a>
-  {{template "nav" .}}
-  <!-- Mobile top-right more menu -->
-  <div class="mobile-top-more">
-    <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
-      <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-    </button>
-    <div class="dropdown-menu dropdown-menu-end mobile-top-more-dropdown">
-      <button type="button" class="dropdown-item" id="btnThemeToggleMobile">
-        <i class="bi bi-circle-half me-2" id="themeToggleIconMobile" aria-hidden="true"></i>{{ t "common.toggleTheme" }}
-      </button>
-      <div class="dropdown-divider"></div>
-      <a href="/web/user/settings" class="dropdown-item">
-        <i class="bi bi-gear-wide-connected me-2" aria-hidden="true"></i>{{ t "common.settings" }}
-      </a>
-      <a href="/web" id="btnLogout" class="dropdown-item dropdown-item-danger">
-        <i class="bi bi-escape me-2" aria-hidden="true"></i>{{ t "common.logout" }}
-      </a>
-    </div>
+  <a href="#main-content" class="skip-link">{{ t "a11y.skipToContent" }}
+  <div class="app">
+    <header class="app__topbar">
+      {{template "nav" .}}
+
+      <div class="app__topbar-actions">
+        <div class="position-relative">
+          <button class="btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+            aria-label="{{ t "a11y.notifications" }}" title="{{ t "nav.notifications" }}">
+            <i class="bi bi-bell" aria-hidden="true"></i>
+            <span class="nav-badge position-absolute d-none" id="notification-badge">0</span>
+          </button>
+          <div class="dropdown-menu p-0 dropdown-menu-end" id="notification-dropdown">
+            <div class="px-3 py-2 border-bottom">
+              <span class="fw-bold small">{{ t "nav.notifications" }}</span>
+            </div>
+            <div id="notification-items">
+              <p class="text-body-secondary small px-3 py-2 mb-0">{{ t "common.loading" }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-none d-lg-flex gap-1">
+          <button class="btn-icon" type="button" id="btnThemeToggle"
+            aria-label="{{ t "a11y.toggleColorTheme" }}" title="{{ t "a11y.toggleColorTheme" }}">
+            <i class="bi bi-circle-half" id="themeToggleIcon" aria-hidden="true"></i>
+          </button>
+
+          <a class="btn-icon" href="/web" data-logout aria-label="{{ t "nav.logout" }}" title="{{ t "nav.logout" }}">
+            <i class="bi bi-escape" aria-hidden="true"></i>
+          </a>
+        </div>
+
+        <!-- Mobile only: the rest of the utility cluster -->
+        <div class="mobile-top-more d-lg-none">
+          <a class="btn-icon d-lg-none" href="/web/user/settings" aria-label="{{ t "nav.settings" }}" title="{{ t "nav.settings" }}">
+            <i class="bi bi-gear-wide-connected" aria-hidden="true"></i>
+          </a>
+          <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end mobile-top-more-dropdown">
+            <button type="button" class="dropdown-item" id="btnThemeToggleMobile">
+              <i class="bi bi-circle-half me-2" id="themeToggleIconMobile" aria-hidden="true"></i>{{ t "common.toggleTheme" }}
+            </button>
+            <div class="dropdown-divider"></div>
+            <a href="/web" data-logout class="dropdown-item dropdown-item-danger">
+              <i class="bi bi-escape me-2" aria-hidden="true"></i>{{ t "common.logout" }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" class="app__content{{ with .ContentClass }} {{ . }}{{ end }}">
+      {{template "content" .}}
+    </main>
+
+    <footer class="app__footer">
+      <a href="/web/licenses">{{ t "nav.licenses" }}</a>
+      <a href="https://github.com/Isotop7/proviant" target="_blank" rel="noopener">{{ t "nav.viewSource" }}</a>
+      <span class="app__footer-version">{{ .Version }}</span>
+    </footer>
   </div>
-  <!-- Mobile bottom navigation -->
+  <!-- Mobile bottom navigation — the link row of the topnav is gone below 1024 px -->
   <nav class="bottom-nav" aria-label="{{ t "a11y.mobileNavigation" }}">
     <a href="/web" class="bottom-nav-item {{ if eq .Title "Home" }}active{{ end }}"
        {{ if eq .Title "Home" }}aria-current="page"{{ end }}>
@@ -96,29 +140,6 @@
       </div>
     </div>
   </div>
-  <!-- Offline banner — shown by JS while offline, and while changes are stuck unsynced -->
-  <div id="offlineBanner" class="offline-banner d-none">
-    <span role="status" aria-live="polite">
-      <i id="offlineBannerIcon" class="bi bi-wifi-off me-2" aria-hidden="true"></i>
-      <span id="offlineBannerText">{{ t "common.offlineBanner" }}</span>
-      <span id="offlineQueueCount" class="ms-1 fw-semibold d-none"></span>
-    </span>
-    <button type="button" id="offlineQueueRetry" class="btn btn-link btn-sm p-0 fw-semibold ms-2 offline-banner-action d-none">{{ t "common.retry" }}</button>
-    <button type="button" id="offlineQueueDiscard" class="btn btn-link btn-sm p-0 fw-semibold ms-2 offline-banner-action d-none">{{ t "common.discard" }}</button>
-  </div>
-  <!-- Update banner — shown by JS when new service worker activates -->
-  <div id="swUpdateBanner" class="sw-update-banner d-none" role="status" aria-live="polite">
-    <i class="bi bi-arrow-repeat me-2" aria-hidden="true"></i>
-    {{ t "common.updateAvailable" }}
-    <a href="/" class="btn btn-link btn-sm p-0 fw-semibold sw-update-reload">{{ t "common.reload" }}</a>
-    {{ t "common.updateHint" }}
-  </div>
-
-  <main id="main-content">
-    <div id="content-wrapper">
-      {{template "content" .}}
-    </div>
-  </main>
   <!-- Shared confirm modal — destructive actions requiring user decision -->
   <div id="proviantConfirmModal" class="modal fade" tabindex="-1"
        aria-labelledby="proviantConfirmModalLabel" aria-hidden="true">
@@ -127,51 +148,24 @@
         <div class="modal-header">
           <div class="modal-icon modal-icon-danger" id="proviantConfirmIconBox" aria-hidden="true">
             <i id="proviantConfirmIcon" class="bi bi-exclamation-triangle-fill"></i>
-          </div>
-          <div class="modal-header-body">
-            <h5 id="proviantConfirmTitle" class="modal-title mb-0"></h5>
-          </div>
-          <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+          </div><h5 id="proviantConfirmTitle" class="modal-title mb-0"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
             <i class="bi bi-x"></i>
           </button>
         </div>
         <div class="modal-body">
-          <p id="proviantConfirmMessage" class="text-secondary-custom small mb-0"></p>
+          <p id="proviantConfirmMessage" class="text-body-secondary small mb-0"></p>
         </div>
         <div class="modal-footer justify-content-end gap-2 flex-nowrap">
-          <button type="button" class="btn btn-proviant-secondary text-nowrap" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-          <button type="button" class="btn btn-proviant-danger text-nowrap" id="proviantConfirmBtn">{{ t "common.confirm" }}</button>
+          <button type="button" class="btn btn-outline-secondary text-nowrap" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
+          <button type="button" class="btn btn-danger text-nowrap" id="proviantConfirmBtn">{{ t "common.confirm" }}</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Shared feedback modal — all pages, all async results -->
-  <div id="proviantFeedbackModal" class="modal fade" tabindex="-1"
-       aria-labelledby="proviantFeedbackModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-      <div class="modal-content">
-        <div class="modal-header">
-          <div class="modal-icon" id="proviantFeedbackIconBox" aria-hidden="true">
-            <i id="proviantFeedbackIcon" class="bi"></i>
-          </div>
-          <div class="modal-header-body">
-            <h5 id="proviantFeedbackTitle" class="modal-title mb-0"></h5>
-          </div>
-          <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
-            <i class="bi bi-x"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p id="proviantFeedbackMessage" class="text-secondary-custom small mb-0"></p>
-        </div>
-        <div class="modal-footer justify-content-end">
-          <button type="button" class="btn btn-proviant-primary"
-                  id="proviantFeedbackBtn" data-bs-dismiss="modal">{{ t "common.ok" }}</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Toasts — page-level feedback for every async result -->
+  <div class="toast-stack" id="proviantToastStack" aria-live="polite" aria-atomic="true"></div>
 
   <script src="/assets/js/bootstrap.bundle.min.js"></script>
   <script src="/assets/js/main.js"></script>

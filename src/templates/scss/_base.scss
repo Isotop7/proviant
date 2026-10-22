@@ -1,9 +1,9 @@
 // ── Base and reset ─────────────────────────────────────────────────────────
 
 // Text hierarchy utilities
-.text-primary-custom { color: var(--text-primary); }
-.text-secondary-custom { color: var(--text-secondary); }
-.text-tertiary { color: var(--text-tertiary); }
+// The text hierarchy is Bootstrap's own: .text-body, .text-body-secondary
+// and .text-body-tertiary. Their colours come from --bs-body-color,
+// --bs-secondary-color and --bs-tertiary-color.
 .text-disabled-custom { color: var(--text-disabled); }
 
 // Skip link — visible on focus for keyboard navigation
@@ -14,10 +14,10 @@
   z-index: 9999;
   padding: var(--space-2) var(--space-4);
   font-weight: 600;
-  color: var(--accent-fg);
+  color: var(--accent-on);
   background: var(--accent);
   border-radius: var(--radius-md);
-  transition: top var(--duration-fast);
+  transition: top var(--motion-fast);
 
   &:focus {
     top: var(--space-2);

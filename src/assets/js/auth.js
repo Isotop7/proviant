@@ -34,7 +34,7 @@ function updateStrengthMeter(value) {
     });
     if (label) {
         label.textContent  = score > 0 ? proviant.t(STRENGTH_LABEL_KEYS[score - 1]) : '';
-        label.style.color  = score > 0 ? STRENGTH_COLORS[score - 1] : 'var(--fg-3)';
+        label.style.color  = score > 0 ? STRENGTH_COLORS[score - 1] : 'var(--meta)';
     }
 }
 
@@ -341,7 +341,7 @@ document.getElementById('authForm')?.addEventListener('submit', (event) => {
 
 // Logout button (present on other pages but auth.js is auth-only; kept for safety)
 document.addEventListener('click', (event) => {
-    if (event.target.closest('#btnLogout')) {
+    if (event.target.closest('[data-logout]')) {
         event.preventDefault();
         void proviant.logoutUser().then(() => {
             window.location.href = '/web';

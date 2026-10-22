@@ -71,5 +71,10 @@
   "js.syncSettings.syncSucceeded": "Einkaufsliste von %s synchronisiert.",
   "js.syncSettings.syncedTitle": "Synchronisiert",
   "js.syncSettings.tokenStored": "Token gespeichert. Geben Sie ein neues Token ein, um es zu ersetzen.",
-  "js.tagInput.addPlaceholder": "Hinzufügen…"
+  "js.tagInput.addPlaceholder": "Hinzufügen…",
+  "js.waste.consumedShare": "%d%% verbraucht",
+  "js.waste.itemsWasted": "%d Produkte verworfen",
+  "js.waste.wastedItems": "%d Produkte verworfen",
+  "js.waste.wastedShare": "%d%% verworfen",
+  "js.waste.wastedThisMonth": "%d Produkte in diesem Monat"
 }

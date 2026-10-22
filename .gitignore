@@ -34,7 +34,8 @@ src/assets/css/fonts.css*
 src/assets/css/login.css*
 src/assets/js/bootstrap*
 src/assets/js/html5-qrcode.min.js
-src/assets/js/chart*
+src/assets/js/chart.umd.min.js
+src/assets/js/chart.umd.min.js.map
 
 ## Custom
 src/proviant

@@ -482,7 +482,7 @@ func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDays, soonDa
 	effective := p.EffectiveExpireAt()
 	switch {
 	case effective.IsZero():
-		return "nodate"
+		return "neutral"
 	case effective.Before(now):
 		return "expired"
 	case effective.Before(now.AddDate(0, 0, criticalDays)):
@@ -494,14 +494,20 @@ func productExpiryStatus(p *dbModel.Product, now time.Time, criticalDays, soonDa
 	}
 }
 
-func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDays int) (expired, critical int) {
+func computeExpiryStats(products []dbModel.Product, now time.Time, criticalDays, soonDays int) (expired, critical, soon int) {
 	for i := range products {
 		p := &products[i]
 		effective := p.EffectiveExpireAt()
-		if !effective.IsZero() && effective.Before(now) {
+		if effective.IsZero() {
+			continue
+		}
+		switch {
+		case effective.Before(now):
 			expired++
-		} else if !effective.IsZero() && effective.Before(now.AddDate(0, 0, criticalDays)) {
+		case effective.Before(now.AddDate(0, 0, criticalDays)):
 			critical++
+		case effective.Before(now.AddDate(0, 0, soonDays)):
+			soon++
 		}
 	}
 	return
@@ -595,7 +601,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	// and therefore all past their expiry date, which would badge every one of
 	// them as urgent, so that view asks the repository for the counts directly
 	// instead of loading the active rows it would immediately throw away.
-	var expiredCount, criticalCount int
+	var expiredCount, criticalCount, soonCount int
 	if statusFilter == "archived" {
 		if archivedExpired, archivedCritical, statsErr := repos.Products.GetActiveExpiryCounts(userID, now, criticalDays); statsErr != nil {
 			logger.Warn().Msgf("Error getting active product expiry stats: %s", statsErr)
@@ -603,7 +609,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 			expiredCount, criticalCount = archivedExpired, archivedCritical
 		}
 	} else {
-		expiredCount, criticalCount = computeExpiryStats(projections, now, criticalDays)
+		expiredCount, criticalCount, soonCount = computeExpiryStats(projections, now, criticalDays, soonDays)
 	}
 
 	// ProductCount keeps its old meaning: every row the view selected, before the
@@ -657,6 +663,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken":        ctx.Query("invite_token"),
 		"Title":              "Products",
+		"ContentClass":       util.ContentClassTable,
 		"Products":           products,
 		"QueryParam":         queryParam,
 		"QueryValue":         queryValue,
@@ -670,6 +677,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"ProductCount":       totalMatched,
 		"ExpiredCount":       expiredCount,
 		"CriticalCount":      criticalCount,
+		"ExpiringSoonCount":  soonCount,
 		"UrgentCount":        expiredCount + criticalCount,
 		"Params":             params,
 		"Page":               page,
@@ -822,6 +830,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	pageData := map[string]any{
 		"InviteToken":                     ctx.Query("invite_token"),
 		"Title":                           "Products",
+		"PageTitle":                       "EditProduct",
 		"Product":                         product,
 		"Locations":                       locations,
 		"IsArchived":                      product.DeletedAt.Valid,
@@ -847,7 +856,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	token := ctx.Query("token")
 
 	if token == "" {
-		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusBadRequest, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteTokenMissing"),
 		})
@@ -857,7 +866,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
 	if !ok {
 		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
-		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": i18n.T(pageLanguage(ctx), "pageError.internalError"),
 		})
@@ -867,14 +876,14 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 	invitation, invErr := repos.Invitations.GetInvitationByToken(token)
 	if invErr != nil {
 		if invErr == errors.ErrInvitationNotFound {
-			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "base", AcceptInviteFileName, map[string]any{
+			templates.Render(ctx, frontend.TemplateCache, http.StatusNotFound, "baseAuth", AcceptInviteFileName, map[string]any{
 				"Title": AcceptInvitationTitle,
 				"Error": i18n.T(pageLanguage(ctx), "pageError.inviteNotFound"),
 			})
 			return
 		}
 		logger.Error().Msg(invErr.Error())
-		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusInternalServerError, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteProcessError"),
 		})
@@ -891,7 +900,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		default:
 			msg = i18n.T(pageLanguage(ctx), "pageError.inviteAlreadyUsed")
 		}
-		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": msg,
 		})
@@ -900,7 +909,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 
 	if time.Now().After(invitation.ExpiresAt) {
 		_ = repos.Invitations.MarkInvitationExpired(invitation.ID)
-		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "base", AcceptInviteFileName, map[string]any{
+		templates.Render(ctx, frontend.TemplateCache, http.StatusGone, "baseAuth", AcceptInviteFileName, map[string]any{
 			"Title": AcceptInvitationTitle,
 			"Error": i18n.T(pageLanguage(ctx), "pageError.inviteExpired"),
 		})
@@ -919,7 +928,7 @@ func (frontend *Frontend) AcceptInvite(ctx *gin.Context) {
 		userID, ok := claims[static.TokenIdentityKey].(float64)
 		if ok && uint(userID) > 0 {
 			// User is logged in — show confirmation
-			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", AcceptInviteFileName, map[string]any{
+			templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", AcceptInviteFileName, map[string]any{
 				"Title":           AcceptInvitationTitle,
 				"ConfirmAccept":   true,
 				"Token":           token,
@@ -1148,6 +1157,7 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
 		"Items":         items,
 		"ItemsSorted":   unchecked,
 		"ItemCount":     len(items),
+		"CheckedCount":  len(checked),
 		"AutoItems":     filteredAutoProducts,
 		"AutoItemCount": len(filteredAutoProducts),
 		"HasAutoItems":  len(filteredAutoProducts) > 0,

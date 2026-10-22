@@ -1,17 +1,19 @@
 {{ define "content" }}
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">{{ t "nav.recipes" }}</h1>
-        <p class="page-header-subtitle">{{ t "recipes.subtitle" }}</p>
+<header class="page-header">
+    <div class="page-header__lead">
+        <h1 class="page-header__title">{{ t "nav.recipes" }}</h1>
+        <p class="page-header__sub">{{ t "recipes.subtitle" }}</p>
     </div>
-    <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnNewRecipe" type="button">
-        <i class="bi bi-plus-lg"></i> {{ t "recipes.newRecipe" }}
-    </button>
-</div>
+    <div class="page-header__aside">
+        <button class="btn btn-primary d-none d-md-flex align-items-center gap-2" id="btnNewRecipe" type="button">
+            <i class="bi bi-plus-lg"></i> {{ t "recipes.newRecipe" }}
+        </button>
+    </div>
+</header>
 
 <div class="d-flex align-items-center justify-content-between mb-2">
     <h2 class="h5 mb-0">{{ t "recipes.myRecipes" }}</h2>
-    <button class="btn btn-proviant-primary d-md-none" id="btnNewRecipeMobile" type="button" aria-label="{{ t "recipes.newRecipe" }}">
+    <button class="btn btn-primary d-md-none" id="btnNewRecipeMobile" type="button" aria-label="{{ t "recipes.newRecipe" }}">
         <i class="bi bi-plus-lg" aria-hidden="true"></i>
     </button>
 </div>
@@ -43,39 +45,39 @@
         </div>
         <h4 class="h6">{{ t "recipes.ingredients" }}</h4>
         <div id="ingredientRows" class="mb-2"></div>
-        <button type="button" class="btn btn-proviant-secondary btn-sm mb-3" id="btnAddIngredient">
+        <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="btnAddIngredient">
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> {{ t "recipes.addIngredient" }}
         </button>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-proviant-primary" id="btnSaveRecipe">{{ t "recipes.saveRecipe" }}</button>
-            <button type="button" class="btn btn-proviant-secondary" id="btnCancelRecipe">{{ t "common.cancel" }}</button>
+            <button type="button" class="btn btn-primary" id="btnSaveRecipe">{{ t "recipes.saveRecipe" }}</button>
+            <button type="button" class="btn btn-outline-secondary" id="btnCancelRecipe">{{ t "common.cancel" }}</button>
         </div>
     </div>
 </div>
 
 <div id="savedRecipesContainer" aria-live="polite">
     <div class="loading-state">
-        <div class="spinner-border text-secondary-custom" role="status">
+        <div class="spinner-border text-body-secondary" role="status">
             <span class="visually-hidden">{{ t "recipes.loading" }}</span>
         </div>
-        <p class="mt-2 text-secondary-custom">{{ t "recipes.loadingSaved" }}</p>
+        <p class="mt-2 text-body-secondary">{{ t "recipes.loadingSaved" }}</p>
     </div>
 </div>
 
 <h2 class="h5 mb-2 mt-4">{{ t "recipes.suggestions.title" }}</h2>
 
 <div class="d-flex justify-content-end mb-2">
-    <button class="btn btn-proviant-secondary d-flex align-items-center gap-2" id="refreshRecipesBtn" type="button">
+    <button class="btn btn-outline-secondary d-flex align-items-center gap-2" id="refreshRecipesBtn" type="button">
         <i class="bi bi-arrow-clockwise"></i> {{ t "recipes.refresh" }}
     </button>
 </div>
 
 <div id="recipe-suggestions-container">
     <div class="loading-state">
-        <div class="spinner-border text-secondary-custom" role="status">
+        <div class="spinner-border text-body-secondary" role="status">
             <span class="visually-hidden">{{ t "recipes.loading" }}</span>
         </div>
-        <p class="mt-2 text-secondary-custom">{{ t "recipes.suggestions.loading" }}</p>
+        <p class="mt-2 text-body-secondary">{{ t "recipes.suggestions.loading" }}</p>
     </div>
 </div>
 
@@ -86,7 +88,7 @@
         </div>
         <div class="empty-title">{{ t "recipes.error.title" }}</div>
         <div class="empty-desc">{{ t "recipes.error.desc" }}<br>{{ t "common.error" }}: <span id="error-message"></span></div>
-        <button class="btn btn-proviant-secondary" id="recipesRetryBtn" type="button">
+        <button class="btn btn-outline-secondary" id="recipesRetryBtn" type="button">
             <i class="bi bi-arrow-clockwise me-1"></i> {{ t "recipes.tryAgain" }}
         </button>
     </div>

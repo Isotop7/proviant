@@ -2,7 +2,6 @@
 
 const pe = {
     editProduct: null,
-    searchParam: null,
     searchQuery: null,
     sortParam: null,
     sortOrder: null,
@@ -164,9 +163,19 @@ document.addEventListener("click", function (event) {
         return;
     }
 
-    // Search button
-    if (target.closest("#search-btn")) {
+    // Search field selector
+    var scopeToggle = target.closest(".search-scope__toggle");
+    if (scopeToggle) {
         event.preventDefault();
+        selectSearchScope(scopeToggle.dataset.scope);
+        performSearch();
+        return;
+    }
+
+    // Clear the search
+    if (target.closest("#search-clear")) {
+        event.preventDefault();
+        if (pe.searchQuery) pe.searchQuery.value = "";
         performSearch();
         return;
     }
@@ -334,10 +343,24 @@ document.addEventListener("keypress", function (event) {
     }
 });
 
+// The field selector is a pair of toggles inside the search field; the
+// pressed one names the field the query runs against.
+function activeSearchScope() {
+    const pressed = document.querySelector('.search-scope__toggle[aria-pressed="true"]');
+    return pressed ? pressed.dataset.scope : "product_name";
+}
+
+function selectSearchScope(scope) {
+    document.querySelectorAll('.search-scope__toggle').forEach(function (el) {
+        el.setAttribute('aria-pressed', String(el.dataset.scope === scope));
+        el.classList.toggle('active', el.dataset.scope === scope);
+    });
+}
+
 // Function to perform search
 function performSearch() {
     const params = {
-        queryParam: pe.searchParam ? pe.searchParam.value || "product_name" : "product_name",
+        queryParam: activeSearchScope(),
         queryValue: pe.searchQuery ? pe.searchQuery.value || "" : "",
         sort: pe.sortParam ? pe.sortParam.value || "created_at" : "created_at",
         order: pe.sortOrder ? pe.sortOrder.value || "asc" : "asc",
@@ -369,7 +392,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const manualSection   = document.getElementById('manualInputSection');
     const cameraSection   = document.getElementById('cameraSection');
     const editProduct     = document.getElementById('edit-product');
-    const searchParam     = document.getElementById('search-param');
     const searchQuery     = document.getElementById('search-query');
     const sortParam       = document.getElementById('sort-param');
     const sortOrder       = document.getElementById('sort-order');
@@ -381,7 +403,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectedAll       = document.getElementById('selectAll');
 
     pe.editProduct = editProduct;
-    pe.searchParam = searchParam;
     pe.searchQuery = searchQuery;
     pe.sortParam = sortParam;
     pe.sortOrder = sortOrder;
@@ -408,13 +429,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const isCamera = mode === 'camera';
         if (tabManualInput) {
             tabManualInput.style.background  = isCamera ? 'transparent' : 'white';
-            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px oklch(0 0 0 / 0.10)';
-            tabManualInput.style.color       = isCamera ? 'var(--fg-3)' : 'var(--fg)';
+            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)';
+            tabManualInput.style.color       = isCamera ? 'var(--meta)' : 'var(--fg)';
         }
         if (tabCamera) {
             tabCamera.style.background  = isCamera ? 'white' : 'transparent';
-            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px oklch(0 0 0 / 0.10)' : 'none';
-            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--fg-3)';
+            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)' : 'none';
+            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--meta)';
         }
         if (manualSection) manualSection.style.display = isCamera ? 'none' : 'block';
         if (cameraSection) cameraSection.style.display = isCamera ? 'block' : 'none';
@@ -701,7 +722,7 @@ async function openCookModalInner(ids, container) {
 
     if (skipped) {
         var note = document.createElement('div');
-        note.className = 'text-secondary-custom small py-1';
+        note.className = 'text-body-secondary small py-1';
         note.textContent = proviant.tn("js.products.cookSkippedNote", skipped);
         container.appendChild(note);
     }
@@ -747,11 +768,9 @@ async function submitCook() {
         var modal = getCookModal();
         if (modal) modal.hide();
         if (res.errors.length) {
-            // Partial failure: keep the failure details on screen until the
-            // user dismisses, then reload — an 800ms auto-reload would hide
-            // them before they can be read.
-            // Single-line details: #proviantFeedbackMessage is a plain <p>,
-            // so \n would collapse into one unreadable run-on line anyway.
+            // Partial failure: the toast stays up for six seconds, then the
+            // list reloads. An 800ms auto-reload would hide the details
+            // before they can be read.
             msg += proviant.t("js.products.cookErrorsSuffix", res.errors.length, res.errors.join('; '));
             proviant.showFeedback('warning', proviant.t("js.products.cookedWithErrors"), msg, clearBulkSelectionAndReload);
             return;

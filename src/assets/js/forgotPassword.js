@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 : proviant.t("js.auth.resetLinkSentFallback")) +
               "</div>" +
               '<div class="text-center mt-3">' +
-              '<a href="' + routeAuth + '" class="btn btn-proviant-secondary">' + proviant.t("reset.backToSignIn") + '</a>' +
+              '<a href="' + routeAuth + '" class="btn btn-outline-secondary">' + proviant.t("reset.backToSignIn") + '</a>' +
               "</div>";
           }
           return;

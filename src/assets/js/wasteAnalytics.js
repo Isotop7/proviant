@@ -1,38 +1,31 @@
 (function() {
 'use strict';
 
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
 let monthlyChart = null;
 let trendChart = null;
 let lastStats = null;
 
-function renderTile(title, hero, variant, heroClass) {
+// A tile of the waste screen: the value carries the status colour, the line
+// under it carries the icon and the share. The sheets draw no filled tile
+// here — only the dashboard fills a card.
+const WASTE_VALUE_COLORS = {
+  success: 'var(--status-fresh-text)',
+  warning: 'var(--status-soon-text)',
+  danger: 'var(--status-expired-text)',
+};
+
+function renderTile(title, hero, variant, sub) {
   const col = document.createElement('div');
   col.className = 'col';
-  const variantColorMap  = { danger: 'var(--status-expired)', warning: 'var(--status-soon)', success: 'var(--status-fresh)' };
-  const variantShadowMap = { danger: 'oklch(0.55 0.20 25)', warning: 'oklch(0.72 0.16 80)', success: 'oklch(0.50 0.12 162)' };
-
-  if (variant && variantColorMap[variant] && !heroClass && Number.parseFloat(hero) > 0) {
-    const fill   = variantColorMap[variant];
-    const shadow = variantShadowMap[variant];
-    col.innerHTML = `
-      <div class="metric-tile h-100" style="background:${fill};box-shadow:0 6px 18px ${shadow}55;border-color:transparent;position:relative;overflow:hidden;">
-        <div style="position:absolute;right:-10px;top:-10px;width:70px;height:70px;border-radius:999px;background:rgba(255,255,255,0.08);pointer-events:none;"></div>
-        <div style="position:relative;">
-          <div class="metric-label" style="color:rgba(255,255,255,0.70);">${title}</div>
-          <div class="metric-value" style="color:white;" title="${hero}">${hero}</div>
-        </div>
-      </div>`;
-    return col;
-  }
-
+  const color = variant ? WASTE_VALUE_COLORS[variant] : '';
+  const subHtml = sub
+    ? `<div class="kpi__sub"><i class="bi bi-${sub.icon}" aria-hidden="true"></i>${sub.label}</div>`
+    : '';
   col.innerHTML = `
-    <div class="metric-tile h-100" style="${heroClass ? `background:${heroClass};` : ''}">
-      <div class="metric-label">${title}</div>
-      <div class="metric-value" title="${hero}">${hero}</div>
+    <div class="kpi h-100">
+      <div class="kpi__label">${title}</div>
+      <div class="kpi__value"${color ? ` style="color:${color}"` : ''} title="${hero}">${hero}</div>
+      ${subHtml}
     </div>`;
   return col;
 }
@@ -51,7 +44,7 @@ function showEmptyChart(canvasId, message) {
   }
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-secondary-custom small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
+    `<p class="text-body-secondary small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
   );
 }
 
@@ -77,14 +70,35 @@ function fmtKg(n) {
 
 function renderTiles(s) {
   const root = document.getElementById('wasteTiles');
+  const headerCount = document.getElementById('wasteHeaderCount');
+  if (headerCount) headerCount.textContent = fmtEur(s.wastedEur);
   if (!root) return;
   root.innerHTML = '';
 
-  root.appendChild(renderTile(proviant.t("waste.consumed"), String(s.consumedCount ?? 0), 'success', null));
-  root.appendChild(renderTile(proviant.t("waste.wasted"), String(s.wastedCount ?? 0), s.wastedCount > 0 ? 'danger' : null, null));
-  root.appendChild(renderTile(proviant.t("waste.wastePercent"), `${(s.wastedPercent ?? 0).toFixed(1)}%`, s.wastedPercent > 25 ? 'danger' : (s.wastedPercent > 10 ? 'warning' : null), null));
-  root.appendChild(renderTile(proviant.t("waste.wastedEur"), fmtEur(s.wastedEur), s.wastedEur > 0 ? 'danger' : null, null));
-  root.appendChild(renderTile(proviant.t("js.waste.wastedCo2"), fmtKg(s.wastedCo2Kg), s.wastedCo2Kg > 0 ? 'warning' : null, null));
+  const consumed = s.consumedCount ?? 0;
+  const wasted = s.wastedCount ?? 0;
+  const handled = consumed + wasted;
+  const share = (part) => (handled > 0 ? Math.round((part / handled) * 100) : 0);
+  const months = Array.isArray(s.monthly) ? s.monthly : [];
+  const thisMonth = months.length ? months[months.length - 1] : {};
+
+  root.appendChild(renderTile(proviant.t("waste.consumed"), String(consumed), 'success', {
+    icon: 'check2',
+    label: proviant.t("js.waste.consumedShare", share(consumed)),
+  }));
+  root.appendChild(renderTile(proviant.t("waste.wasted"), String(wasted), 'danger', {
+    icon: 'arrow-up',
+    label: proviant.t("js.waste.wastedShare", share(wasted)),
+  }));
+  root.appendChild(renderTile(proviant.t("waste.wastePercent"), `${(s.wastedPercent ?? 0).toFixed(1)}%`, null, {
+    icon: 'arrow-up',
+    label: proviant.t("js.waste.wastedItems", wasted),
+  }));
+  root.appendChild(renderTile(proviant.t("waste.wastedEur"), fmtEur(s.wastedEur), 'danger', {
+    icon: 'arrow-up',
+    label: proviant.t("js.waste.wastedThisMonth", thisMonth.wastedCount || 0),
+  }));
+  root.appendChild(renderTile(proviant.t("js.waste.wastedCo2"), fmtKg(s.wastedCo2Kg), 'warning', null));
 }
 
 function renderMonthlyChart(s) {
@@ -104,18 +118,32 @@ function renderMonthlyChart(s) {
     return;
   }
 
+  const t = proviantChart.applyTheme();
+  const base = proviantChart.baseOptions(t);
   monthlyChart = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels,
+      labels: labels.map((month) => proviantChart.monthLabel(month)),
       datasets: [
-        { label: proviant.t("waste.consumed"), data: consumed, backgroundColor: cssVar('--status-fresh') },
-        { label: proviant.t("waste.wasted"),   data: wasted,   backgroundColor: cssVar('--status-expired') },
+        { label: proviant.t("waste.consumed"), data: consumed, backgroundColor: t.statusFresh, borderRadius: 4, maxBarThickness: 28 },
+        { label: proviant.t("waste.wasted"),   data: wasted,   backgroundColor: t.statusExpired, borderRadius: 4, maxBarThickness: 28 },
       ],
     },
     options: {
-      plugins: { legend: { position: 'bottom' } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      ...base,
+      scales: {
+        x: {
+          grid: { display: false, drawBorder: false },
+          border: { display: false },
+          ticks: { color: t.muted, padding: 6, maxRotation: 0, autoSkip: true },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: t.border, drawBorder: false },
+          border: { display: false },
+          ticks: { color: t.muted, padding: 8, precision: 0 },
+        },
+      },
     },
   });
 }
@@ -136,23 +164,47 @@ function renderTrendChart(s) {
     return;
   }
 
+  const t = proviantChart.applyTheme();
+  const base = proviantChart.baseOptions(t);
   trendChart = new Chart(canvas, {
     type: 'line',
     data: {
-      labels,
+      labels: labels.map((month) => proviantChart.monthLabel(month)),
       datasets: [{
         label: proviant.t("waste.wasted"),
         data,
-        borderColor: cssVar('--status-expired'),
-        pointBackgroundColor: cssVar('--status-expired'),
-        backgroundColor: cssVar('--status-expired-subtle'),
-        tension: 0.3,
+        borderColor: t.statusExpired,
+        pointBackgroundColor: t.statusExpired,
+        pointBorderColor: t.statusExpired,
+        backgroundColor: (context) => proviantChart.areaGradient(context.chart, t.statusExpired, 0.24, 0),
         fill: true,
       }],
     },
     options: {
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      ...base,
+      plugins: {
+        ...base.plugins,
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => proviantChart.monthTitle(labels[items[0].dataIndex]),
+            label: (context) => proviant.tn("js.chart.itemCount", context.parsed.y),
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false, drawBorder: false },
+          border: { display: false },
+          ticks: { color: t.muted, padding: 6, maxRotation: 0, autoSkip: true },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: t.border, drawBorder: false },
+          border: { display: false },
+          ticks: { color: t.muted, padding: 8, precision: 0 },
+        },
+      },
     },
   });
 }
@@ -164,7 +216,7 @@ function renderTable(s) {
   const rows = s.monthly || [];
   if (rows.length === 0) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" class="text-center text-secondary-custom py-3">${proviant.t("js.waste.noData")}</td>`;
+    tr.innerHTML = `<td colspan="6" class="text-center text-body-secondary py-3">${proviant.t("js.waste.noData")}</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -190,7 +242,7 @@ function renderCategories(s) {
   const cats = s.mostWastedCategories || [];
   if (cats.length === 0) {
     const empty = document.createElement('div');
-    empty.className = 'text-center text-secondary-custom py-3';
+    empty.className = 'text-center text-body-secondary py-3';
     empty.textContent = proviant.t("js.waste.noCategories");
     list.appendChild(empty);
     return;
@@ -203,13 +255,16 @@ function renderCategories(s) {
       item.className = 'list-group-item d-flex justify-content-between align-items-center';
       item.innerHTML = `
         <span class="d-flex align-items-center gap-2">
+          <span class="waste-cat__stripe"></span>
           <i class="bi bi-tag-fill" style="color:var(--accent);"></i>
-          <span>${c.displayName || c.categoryKey}</span>
+          <span>
+            <span class="waste-cat__name">${c.displayName || c.categoryKey}</span>
+            <span class="waste-cat__meta">${proviant.t("js.waste.itemsWasted", c.count || 0)}</span>
+          </span>
         </span>
         <span class="d-flex align-items-center gap-3 small">
-          <span class="badge-status badge-nodate">${c.count || 0}</span>
-          <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
-          <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
+          <span class="waste-cat__cost">${fmtEur(c.costEur)}</span>
+          <span class="text-body-secondary">${fmtKg(c.co2Kg)}</span>
         </span>`;
       list.appendChild(item);
       return;
@@ -221,13 +276,16 @@ function renderCategories(s) {
       <h2 class="accordion-header">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${targetId}" aria-expanded="false" aria-controls="${targetId}">
           <span class="d-flex align-items-center gap-2 flex-grow-1">
+            <span class="waste-cat__stripe"></span>
             <i class="bi bi-tag-fill" style="color:var(--accent);"></i>
-            <span>${c.displayName || c.categoryKey}</span>
+            <span>
+              <span class="waste-cat__name">${c.displayName || c.categoryKey}</span>
+              <span class="waste-cat__meta">${proviant.t("js.waste.itemsWasted", c.count || 0)}</span>
+            </span>
           </span>
           <span class="d-flex align-items-center gap-3 small">
-            <span class="badge-status badge-nodate">${c.count || 0}</span>
-            <span class="text-secondary-custom">${fmtEur(c.costEur)}</span>
-            <span class="text-secondary-custom">${fmtKg(c.co2Kg)}</span>
+            <span class="waste-cat__cost">${fmtEur(c.costEur)}</span>
+            <span class="text-body-secondary">${fmtKg(c.co2Kg)}</span>
           </span>
         </button>
       </h2>
@@ -248,9 +306,9 @@ function renderCategoryProducts(products) {
         <span>${p.productName || proviant.t("js.waste.unknown")}</span>
       </span>
       <span class="d-flex align-items-center gap-3 small">
-        <span class="badge-status badge-nodate">${p.count || 0}</span>
-        <span class="text-secondary-custom">${fmtEur(p.costEur)}</span>
-        <span class="text-secondary-custom">${fmtKg(p.co2Kg)}</span>
+        <span class="badge badge--neutral">${p.count || 0}</span>
+        <span class="text-body-secondary">${fmtEur(p.costEur)}</span>
+        <span class="text-body-secondary">${fmtKg(p.co2Kg)}</span>
       </span>
     </li>`).join('');
   return `<ul class="waste-category-product-list list-unstyled mb-0">${rows}</ul>`;
@@ -278,7 +336,7 @@ let currentPeriod = '6months';
 async function load(period) {
   if (period) currentPeriod = period;
   const tiles = document.getElementById('wasteTiles');
-  if (tiles) tiles.innerHTML = `<div class="col-12 text-center text-secondary-custom py-3"><div class="spinner-border spinner-border-sm" role="status"></div> ${proviant.t("common.loading")}</div>`;
+  if (tiles) tiles.innerHTML = `<div class="col-12 text-center text-body-secondary py-3"><div class="spinner-border spinner-border-sm" role="status"></div> ${proviant.t("common.loading")}</div>`;
 
   const resp = await proviant.getWasteAnalytics(currentPeriod, currentSort);
   if (resp.code !== 200 || !resp.message) {
@@ -288,7 +346,6 @@ async function load(period) {
   }
   const s = resp.message;
   lastStats = s;
-  Chart.defaults.color = cssVar('--fg-2');
   if (s.sort) currentSort = s.sort;
   setActivePeriod(s.period || currentPeriod);
   setActiveSort(currentSort);
@@ -303,7 +360,6 @@ async function load(period) {
 
 document.addEventListener('proviant:themechange', () => {
   if (!lastStats) return;
-  Chart.defaults.color = cssVar('--fg-2');
   renderMonthlyChart(lastStats);
   renderTrendChart(lastStats);
 });

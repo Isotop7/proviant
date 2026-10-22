@@ -13,8 +13,8 @@
   margin-bottom: 20px;
 
   a {
-    font-size: 13px;
-    color: var(--fg-3);
+    font-size: 14px;
+    color: var(--meta);
     text-decoration: none;
 
     &:hover { color: var(--accent); }
@@ -22,11 +22,11 @@
 
   i {
     font-size: 10px;
-    color: var(--fg-3);
+    color: var(--meta);
   }
 
   span {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--fg-2);
   }
 }
@@ -39,37 +39,6 @@
   margin-bottom: 28px;
 }
 
-.pv-page-title-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.pv-page-title {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--fg);
-  letter-spacing: -.02em;
-}
-
-.pv-id-chip {
-  padding: 3px 8px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: .02em;
-  background: var(--accent-subtle);
-  border: 1px solid oklch(78% .08 162deg);
-  border-radius: 6px;
-}
-
-.pv-page-sub {
-  font-size: 13px;
-  color: var(--fg-3);
-}
 
 .pv-edit-grid {
   display: grid;
@@ -84,7 +53,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--elev-raised);
 }
 
 .pv-card-header {
@@ -92,7 +61,7 @@
   gap: 8px;
   align-items: center;
   padding: 14px 18px 12px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border);
 }
 
 .pv-card-header-icon {
@@ -104,12 +73,12 @@
   height: 28px;
   font-size: 14px;
   color: var(--accent);
-  background: var(--accent-subtle);
+  background: var(--accent-soft);
   border-radius: 7px;
 }
 
 .pv-card-header-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
 }
@@ -139,7 +108,7 @@
 .pv-field-input {
   width: 100%;
   padding: 9px 12px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
   background: var(--surface);
@@ -150,7 +119,7 @@
 
   &:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .15);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 15%, transparent);
   }
 
   &.mono {
@@ -171,8 +140,8 @@ select.pv-field-input {
 
 .pv-field-hint {
   margin-top: 4px;
-  font-size: 11px;
-  color: var(--fg-3);
+  font-size: 12px;
+  color: var(--meta);
 }
 
 .pv-tag-wrap {
@@ -192,11 +161,11 @@ select.pv-field-input {
   gap: 5px;
   align-items: center;
   padding: 2px 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--accent);
-  background: var(--accent-subtle);
-  border: 1px solid oklch(78% .08 162deg);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
   border-radius: 999px;
 
   button {
@@ -204,7 +173,7 @@ select.pv-field-input {
     padding: 0;
     font-size: 12px;
     line-height: 1;
-    color: oklch(60% .1 162deg);
+    color: var(--accent-text);
     cursor: pointer;
     background: none;
     border: none;
@@ -217,17 +186,17 @@ select.pv-field-input {
   gap: 4px;
   align-items: center;
   padding: 2px 9px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--fg-2);
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   border: 1px solid var(--border);
   border-radius: 999px;
 
   button {
     display: flex;
     padding: 0;
-    font-size: 11px;
-    color: var(--fg-3);
+    font-size: 12px;
+    color: var(--meta);
     cursor: pointer;
     background: none;
     border: none;
@@ -237,8 +206,8 @@ select.pv-field-input {
 .pv-tag-input {
   flex: 1;
   min-width: 100px;
-  font-family: var(--font-ui);
-  font-size: 13px;
+  font-family: var(--font-body);
+  font-size: 14px;
   color: var(--fg);
   background: transparent;
   border: none;
@@ -263,7 +232,7 @@ select.pv-field-input {
     font-size: 18px;
     color: var(--fg-2);
     cursor: pointer;
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
     border: none;
     transition: background 120ms, color 120ms;
     &:hover {
@@ -303,7 +272,7 @@ select.pv-field-input {
   margin-bottom: 4px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--fg-3);
+  color: var(--meta);
   text-transform: uppercase;
   letter-spacing: .06em;
 }
@@ -313,8 +282,8 @@ select.pv-field-input {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--fg-2);
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-subtle);
+  background: var(--surface-warm);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -332,7 +301,7 @@ select.pv-field-input {
   width: 52px;
   height: 52px;
   overflow: hidden;
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   border-radius: 8px;
 
   img {
@@ -343,12 +312,12 @@ select.pv-field-input {
     padding: 4px;
     object-fit: contain;
     opacity: 0;
-    transition: opacity var(--duration-slow) var(--ease-out);
+    transition: opacity var(--motion-slow) var(--ease-out);
   }
 
   .pv-mobile-thumb-icon {
     font-size: 22px;
-    color: var(--fg-3);
+    color: var(--meta);
   }
 }
 
@@ -358,7 +327,7 @@ select.pv-field-input {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--elev-raised);
 }
 
 .pv-product-image-area {
@@ -368,7 +337,7 @@ select.pv-field-input {
   justify-content: center;
   aspect-ratio: 1;
   overflow: hidden;
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
 
   img {
     position: absolute;
@@ -378,7 +347,7 @@ select.pv-field-input {
     padding: 12px;
     object-fit: contain;
     opacity: 0;
-    transition: opacity var(--duration-slow) var(--ease-out);
+    transition: opacity var(--motion-slow) var(--ease-out);
   }
 
   .pv-product-image-fallback {
@@ -393,12 +362,12 @@ select.pv-field-input {
 
     i {
       font-size: 40px;
-      color: var(--fg-3);
+      color: var(--meta);
     }
 
     span {
-      font-size: 11px;
-      color: var(--fg-3);
+      font-size: 12px;
+      color: var(--meta);
     }
   }
 }
@@ -409,7 +378,7 @@ select.pv-field-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: oklch(18% .022 70deg / 0);
+  background: color-mix(in oklab, var(--fg) 0%, transparent);
   opacity: 0;
   transition: background 200ms;
 
@@ -418,7 +387,7 @@ select.pv-field-input {
     gap: 6px;
     align-items: center;
     padding: 8px 14px;
-    font-family: var(--font-ui);
+    font-family: var(--font-body);
     font-size: 12px;
     font-weight: 600;
     color: var(--fg);
@@ -430,18 +399,18 @@ select.pv-field-input {
 }
 
 .pv-product-image-area:hover .pv-product-image-overlay {
-  background: oklch(18% .022 70deg / .45);
+  background: color-mix(in oklab, var(--fg) 45%, transparent);
   opacity: 1;
 }
 
 .pv-product-info {
   padding: 14px 16px;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border);
 }
 
 .pv-product-name-disp {
   margin-bottom: 4px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--fg);
   letter-spacing: -.01em;
@@ -451,7 +420,7 @@ select.pv-field-input {
   margin-bottom: 10px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 .pv-form-actions {
@@ -468,7 +437,7 @@ select.pv-field-input {
   gap: 8px;
   align-items: center;
   padding: 10px 20px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
   color: white;
@@ -477,7 +446,7 @@ select.pv-field-input {
   background: var(--accent);
   border: none;
   border-radius: 8px;
-  box-shadow: 0 4px 12px oklch(50% .12 162deg / .3);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 30%, transparent);
   transition: background 150ms;
 
   &:hover {
@@ -491,7 +460,7 @@ select.pv-field-input {
   gap: 7px;
   align-items: center;
   padding: 10px 18px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
   text-decoration: none;
@@ -503,7 +472,7 @@ select.pv-field-input {
 
   &:hover {
     color: var(--fg);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
 }
 
@@ -512,8 +481,8 @@ select.pv-field-input {
   gap: 7px;
   align-items: center;
   padding: 10px 16px;
-  font-family: var(--font-ui);
-  font-size: 13px;
+  font-family: var(--font-body);
+  font-size: 14px;
   color: var(--status-expired);
   cursor: pointer;
   background: transparent;
@@ -521,7 +490,7 @@ select.pv-field-input {
   border-radius: 8px;
   transition: background 150ms;
 
-  &:hover { background: oklch(95% .05 25deg); }
+  &:hover { background: var(--status-expired-subtle); }
 }
 
 .pv-btn-restore {
@@ -529,19 +498,19 @@ select.pv-field-input {
   gap: 7px;
   align-items: center;
   padding: 10px 18px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
   color: var(--accent);
   text-decoration: none;
   cursor: pointer;
   background: var(--surface);
-  border: 1px solid oklch(78% .08 162deg);
+  border: 1px solid var(--accent-border);
   border-radius: 8px;
   transition: background 150ms;
 
   &:hover {
-    background: var(--accent-subtle);
+    background: var(--accent-soft);
   }
 }
 

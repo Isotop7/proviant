@@ -305,6 +305,8 @@ function mealPlanEntryHtml(entry, day) {
 function renderMealPlanEntries(entries) {
     const grid = document.getElementById("mealPlanGrid");
     if (!grid) return;
+    const headerCount = document.getElementById("mealPlanHeaderCount");
+    if (headerCount) headerCount.textContent = String(entries.length);
     const allDays = planDays();
     const todayISO = toISODate(new Date());
     const weeks = [];

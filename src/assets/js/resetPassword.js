@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 : proviant.t("js.auth.passwordResetSuccess")) +
               "</div>" +
               '<div class="text-center mt-3">' +
-              '<a href="' + routeAuth + '" class="btn btn-proviant-primary">' + proviant.t("auth.logIn") + '</a>' +
+              '<a href="' + routeAuth + '" class="btn btn-primary">' + proviant.t("auth.logIn") + '</a>' +
               "</div>";
           }
           return;

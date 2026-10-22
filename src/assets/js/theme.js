@@ -26,7 +26,7 @@
   function updateMetaThemeColor(theme) {
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute('content', theme === 'dark' ? '#2a2620' : '#3D7A5C');
+      meta.setAttribute('content', theme === 'dark' ? '#1E1A14' : '#418069');
     }
   }
 

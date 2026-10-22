@@ -50,6 +50,10 @@ const (
 	RouteHealthReady = "/health/ready"
 	RouteMetrics     = "/metrics"
 
+	// ContentClassTable narrows a page to the measure the screen sheets give
+	// the table screens, where the columns need a readable line length.
+	ContentClassTable = "app__content--table"
+
 	// Consumption rate estimation
 	ConsumptionHistoryWindowDays = 90
 	ConsumptionMinSamples        = 2

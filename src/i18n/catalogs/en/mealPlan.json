@@ -45,6 +45,7 @@
   "mealPlan.addMeal": "Add meal",
   "mealPlan.day": "Day",
   "mealPlan.generateShoppingList": "Generate shopping list",
+  "mealPlan.header.mealsPlanned": "meals planned in the selected month",
   "mealPlan.jumpToCurrentMonth": "Jump to the current month",
   "mealPlan.loadNextMonth": "Load next month",
   "mealPlan.loadPreviousMonth": "Load previous month",
@@ -54,6 +55,5 @@
   "mealPlan.noHouseholdTitle": "No household yet",
   "mealPlan.recipe": "Recipe",
   "mealPlan.servings": "Servings",
-  "mealPlan.subtitle": "Plan a full month and generate your shopping list",
   "mealPlan.today": "Today"
 }

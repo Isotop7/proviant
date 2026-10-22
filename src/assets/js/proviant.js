@@ -72,65 +72,107 @@ proviant.debug = function () {
 };
 
 /* ── UI helpers ──────────────────────────────────────────────────────────────── */
-let feedbackModalHidden = null;
-let deferredFeedbackCloses = [];
+// Page-level feedback. The design system replaces the feedback modal with a
+// stack of toasts: the message is visible without blocking the page, and a
+// second message does not swallow the first one's callback.
+const TOAST_CONFIG = {
+  success: { icon: "bi-check-circle-fill", delay: 4000 },
+  error:   { icon: "bi-x-circle-fill", delay: null },
+  warning: { icon: "bi-exclamation-triangle-fill", delay: 6000 },
+  info:    { icon: "bi-info-circle-fill", delay: 4000 },
+};
 
-function runDeferredFeedbackCloses() {
-  const pending = deferredFeedbackCloses;
-  deferredFeedbackCloses = [];
-  pending.forEach(function (fn) { fn(); });
+const TOAST_MAX = 4;
+
+function toastStack() {
+  let stack = document.getElementById("proviantToastStack");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.className = "toast-stack";
+    stack.id = "proviantToastStack";
+    stack.setAttribute("aria-live", "polite");
+    stack.setAttribute("aria-atomic", "true");
+    document.body.appendChild(stack);
+  }
+  return stack;
 }
 
 proviant.showFeedback = function (type, title, message, onClose) {
-  const modal = document.getElementById("proviantFeedbackModal");
-  if (!modal) return;
-  const iconEl = document.getElementById("proviantFeedbackIcon");
-  const titleEl = document.getElementById("proviantFeedbackTitle");
-  const msgEl = document.getElementById("proviantFeedbackMessage");
-  const configs = {
-    success: { icon: "bi-check-circle-fill",       boxBg: "oklch(0.94 0.04 145)", boxColor: "oklch(0.40 0.10 145)" },
-    error:   { icon: "bi-x-circle-fill",           boxBg: "oklch(0.95 0.05 25)",  boxColor: "oklch(0.45 0.20 25)"  },
-    warning: { icon: "bi-exclamation-triangle-fill", boxBg: "oklch(0.96 0.06 80)", boxColor: "oklch(0.55 0.18 75)"  },
-    info:    { icon: "bi-info-circle-fill",         boxBg: "oklch(0.94 0.03 230)", boxColor: "oklch(0.45 0.12 230)" },
+  const cfg = TOAST_CONFIG[type] || TOAST_CONFIG.info;
+  const stack = toastStack();
+
+  const toastEl = document.createElement("div");
+  toastEl.className = "toast toast--" + (TOAST_CONFIG[type] ? type : "info");
+  toastEl.setAttribute("role", "status");
+  toastEl.setAttribute("aria-live", "polite");
+  toastEl.setAttribute("aria-atomic", "true");
+
+  const header = document.createElement("div");
+  header.className = "toast-header";
+
+  const icon = document.createElement("i");
+  icon.className = "bi " + cfg.icon + " toast__icon";
+  icon.setAttribute("aria-hidden", "true");
+  header.appendChild(icon);
+
+  const titleEl = document.createElement("strong");
+  titleEl.className = "toast-title";
+  titleEl.textContent = title || "";
+  header.appendChild(titleEl);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "btn-close";
+  closeBtn.setAttribute("data-bs-dismiss", "toast");
+  closeBtn.setAttribute("aria-label", proviant.t("a11y.close"));
+  header.appendChild(closeBtn);
+
+  toastEl.appendChild(header);
+
+  if (message) {
+    const body = document.createElement("div");
+    body.className = "toast-body";
+    body.textContent = message;
+    toastEl.appendChild(body);
+  }
+
+  stack.appendChild(toastEl);
+
+  // The stack never grows without bound. The oldest toast gives way, and its
+  // callback still runs — a state refresh must not be lost to a new message.
+  while (stack.children.length > TOAST_MAX) {
+    const oldest = stack.firstElementChild;
+    oldest.dispatchEvent(new Event("hidden.bs.toast"));
+    oldest.remove();
+  }
+
+  // An error stays until it is dismissed: it is the one message that must
+  // not disappear on its own.
+  const autohide = cfg.delay !== null;
+  let dismissed = false;
+  const dismiss = function () {
+    if (dismissed) return;
+    dismissed = true;
+    toastEl.remove();
+    if (onClose) onClose();
   };
-  const cfg = configs[type] || configs.info;
-  const boxEl = document.getElementById("proviantFeedbackIconBox");
-  if (iconEl) iconEl.className = "bi " + cfg.icon;
-  if (boxEl) { boxEl.style.background = cfg.boxBg; boxEl.style.color = cfg.boxColor; }
-  if (titleEl) titleEl.textContent = title || "";
-  if (msgEl) msgEl.textContent = message || "";
-  // Wire onClose to any dismissal path (OK button, ESC, backdrop) via a
-  // one-shot hidden listener — the OK button only carries data-bs-dismiss,
-  // so a btn.onclick assignment would fire onClose twice on click and
-  // never on ESC/backdrop. The handler removes itself when it fires.
-  // A still-pending onClose replaced by a newer toast is deferred instead
-  // of dropped or fired synchronously: firing it here would run a reload
-  // mid-render and kill the replacement toast before it is visible. The
-  // deferred callback runs after the replacement toast is dismissed
-  // (chained after a new onClose), so a state-refreshing reload is never
-  // silently lost and never swallows the currently shown message.
-  if (feedbackModalHidden) {
-    modal.removeEventListener("hidden.bs.modal", feedbackModalHidden);
-    deferredFeedbackCloses.push(feedbackModalHidden);
-    feedbackModalHidden = null;
+
+  // onClose fires on every dismissal path: the close button, and the
+  // timeout for the auto-hiding types.
+  toastEl.addEventListener("hidden.bs.toast", dismiss);
+
+  if (typeof bootstrap !== "undefined" && bootstrap.Toast) {
+    bootstrap.Toast.getOrCreateInstance(toastEl, {
+      autohide: autohide,
+      delay: autohide ? cfg.delay : 5000,
+    }).show();
+  } else {
+    // No Bootstrap in this document — the script can run before the bundle
+    // is parsed. Show the toast and dismiss it on a timer.
+    toastEl.classList.add("show");
+    if (autohide) setTimeout(dismiss, cfg.delay);
   }
-  if (onClose) {
-    const handler = function () {
-      modal.removeEventListener("hidden.bs.modal", handler);
-      if (feedbackModalHidden === handler) feedbackModalHidden = null;
-      onClose();
-      runDeferredFeedbackCloses();
-    };
-    feedbackModalHidden = handler;
-    modal.addEventListener("hidden.bs.modal", handler);
-  } else if (deferredFeedbackCloses.length) {
-    const deferredHandler = function () {
-      modal.removeEventListener("hidden.bs.modal", deferredHandler);
-      runDeferredFeedbackCloses();
-    };
-    modal.addEventListener("hidden.bs.modal", deferredHandler);
-  }
-  bootstrap.Modal.getOrCreateInstance(modal).show();
+  return toastEl;
 };
 
 proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confirmType) {
@@ -143,10 +185,10 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
   if (msgEl) msgEl.textContent = message || "";
   if (btnEl) {
     const confirmClasses = {
-      primary: "btn btn-proviant-primary",
-      secondary: "btn btn-proviant-secondary",
-      warning: "btn btn-proviant-warning",
-      danger: "btn btn-proviant-danger",
+      primary: "btn btn-primary",
+      secondary: "btn btn-outline-secondary",
+      warning: "btn btn-primary",
+      danger: "btn btn-danger",
     };
     btnEl.textContent = confirmLabel || proviant.t("common.confirm");
     btnEl.className = confirmClasses[confirmType] || confirmClasses.danger;

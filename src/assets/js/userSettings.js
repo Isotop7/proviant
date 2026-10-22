@@ -709,7 +709,7 @@ function renderAdminUserRow(user, currentUserID, currentUserIsAdmin, householdAd
     <li class="list-group-item d-flex justify-content-between align-items-center" id="admin-user-${user.id}">
       <span>
         <i class="bi bi-person me-2"></i>${user.username}
-        <span class="text-secondary-custom ms-1">&lt;${user.mailAddress || ""}&gt;</span>
+        <span class="text-body-secondary ms-1">&lt;${user.mailAddress || ""}&gt;</span>
         ${isSelf ? '<span class="badge bg-secondary ms-1">' + proviant.t("js.settings.you") + '</span>' : ""}
         <span class="badge ${roleBadgeClass} ms-1"><i class="bi ${roleIcon} me-1"></i>${roleLabel}</span>
       </span>
@@ -743,14 +743,14 @@ function loadAdminUsers() {
     if (response.code === 200) {
       const users = response.message;
       if (!users || !Array.isArray(users) || users.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noUsers") + '</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-body-secondary py-3">' + proviant.t("js.settings.noUsers") + '</li>';
         return;
       }
       const currentUserID = Number.parseInt(list.dataset.currentUserId || "0", 10) || 0;
       const householdAdminID = Number.parseInt(list.dataset.adminId || "0", 10) || 0;
       const rendered = users.map((u) => renderAdminUserRow(u, currentUserID, currentUserID === householdAdminID, householdAdminID)).join("");
       if (!rendered) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noUsers") + '</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-body-secondary py-3">' + proviant.t("js.settings.noUsers") + '</li>';
         return;
       }
       list.innerHTML = rendered;
@@ -924,7 +924,7 @@ function renderPATRow(pat) {
     <li class="list-group-item d-flex justify-content-between align-items-center" id="pat-${pat.id}">
       <span>
         <i class="bi bi-key me-2"></i>${pat.name}
-        <small class="text-secondary-custom d-block">${lastUsedText} · ${expiresText}</small>
+        <small class="text-body-secondary d-block">${lastUsedText} · ${expiresText}</small>
       </span>
       <button type="button" class="btn btn-sm btn-outline-danger btn-delete-pat" data-id="${pat.id}" title="${proviant.t("js.settings.deleteTokenTitle")}">
         <i class="bi bi-trash"></i>
@@ -945,7 +945,7 @@ function loadPATs() {
     if (response.code === 200) {
       const pats = response.message;
       if (!pats || !Array.isArray(pats) || pats.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noTokens") + '</li>';
+        list.innerHTML = '<li class="list-group-item text-center text-body-secondary py-3">' + proviant.t("js.settings.noTokens") + '</li>';
         return;
       }
       list.innerHTML = pats.map((p) => renderPATRow(p)).join("");
@@ -1055,7 +1055,7 @@ function RenderWebhookList() {
   if (!container) return;
 
   if (currentWebhooks.length === 0) {
-    container.innerHTML = '<div class="text-center text-secondary-custom py-4">' + proviant.t("js.settings.noWebhooks") + '</div>';
+    container.innerHTML = '<div class="text-center text-body-secondary py-4">' + proviant.t("js.settings.noWebhooks") + '</div>';
     return;
   }
 
@@ -1069,7 +1069,7 @@ function RenderWebhookList() {
           <div class="d-flex justify-content-between align-items-start mb-2">
             <div>
               <h6 class="mb-1">${escapeHtml(wh.url)}</h6>
-              <small class="text-secondary-custom">${proviant.t("js.settings.webhookEvents", escapeHtml(eventsList))}</small>
+              <small class="text-body-secondary">${proviant.t("js.settings.webhookEvents", escapeHtml(eventsList))}</small>
             </div>
             <div class="form-check form-switch">
               <input class="form-check-input webhook-toggle-active" type="checkbox" ${toggleChecked} data-id="${wh.id}">
@@ -1155,7 +1155,7 @@ function ShowDeliveriesModal(deliveries) {
   let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>' + proviant.t("js.settings.colTime") + '</th><th>' + proviant.t("js.settings.colAttempt") + '</th><th>' + proviant.t("js.settings.colStatus") + '</th><th>' + proviant.t("js.settings.colResponse") + '</th><th>' + proviant.t("common.error") + '</th></tr></thead><tbody>';
 
   if (deliveries.length === 0) {
-    html += '<tr><td colspan="5" class="text-center text-secondary-custom">' + proviant.t("js.settings.noDeliveries") + '</td></tr>';
+    html += '<tr><td colspan="5" class="text-center text-body-secondary">' + proviant.t("js.settings.noDeliveries") + '</td></tr>';
   } else {
     for (const d of deliveries) {
       const statusClass = d.statusCode >= 200 && d.statusCode < 300 ? 'text-success' : 'text-danger';
@@ -1307,13 +1307,13 @@ function renderAuditLogRow(log) {
         <div class="flex-grow-1 min-w-0">
           <div class="d-flex justify-content-between align-items-start gap-2">
             <span class="fw-medium small">${label}</span>
-            <small class="text-secondary-custom flex-shrink-0" style="font-size: var(--text-xs);">${time}</small>
+            <small class="text-body-secondary flex-shrink-0" style="font-size: var(--text-xs);">${time}</small>
           </div>
           <div class="d-flex gap-2 mt-1">
-            <small class="text-secondary-custom" style="font-size: var(--text-xs);">${proviant.t("js.settings.userLabel", userText)}</small>
-            ${log.ipAddress ? `<small class="text-secondary-custom" style="font-size: var(--text-xs);">· ${escapeHtml(log.ipAddress)}</small>` : ""}
+            <small class="text-body-secondary" style="font-size: var(--text-xs);">${proviant.t("js.settings.userLabel", userText)}</small>
+            ${log.ipAddress ? `<small class="text-body-secondary" style="font-size: var(--text-xs);">· ${escapeHtml(log.ipAddress)}</small>` : ""}
           </div>
-          ${details ? `<small class="text-secondary-custom d-block mt-1" style="font-size: var(--text-xs);">${details}</small>` : ""}
+          ${details ? `<small class="text-body-secondary d-block mt-1" style="font-size: var(--text-xs);">${details}</small>` : ""}
         </div>
       </div>
     </li>
@@ -1329,7 +1329,7 @@ function renderAuditLog(logs) {
   if (loading) loading.remove();
 
   if (!logs || logs.length === 0) {
-    list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-4">' + proviant.t("js.settings.noActivity") + '</li>';
+    list.innerHTML = '<li class="list-group-item text-center text-body-secondary py-4">' + proviant.t("js.settings.noActivity") + '</li>';
     if (meta) meta.textContent = "";
     return;
   }
@@ -1345,7 +1345,7 @@ function loadAuditLog(date) {
   if (!list) return;
 
   if (loading) {
-    list.innerHTML = `<li class="list-group-item text-center text-secondary-custom py-4" id="auditLogLoading">
+    list.innerHTML = `<li class="list-group-item text-center text-body-secondary py-4" id="auditLogLoading">
       <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
       <span>${proviant.t("common.loading")}</span>
     </li>`;
@@ -2076,12 +2076,12 @@ function saveStorageLocation() {
         li.innerHTML = `
           <span>${locIcon} <strong>${locName}</strong></span>
           <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-proviant-secondary btn-edit-sl"
+            <button type="button" class="btn btn-outline-secondary btn-edit-sl"
                     data-id="${locId}" data-name="${locName}" data-icon="${locIcon}"
                     data-sortorder="${locSort}" aria-label="${proviant.t("household.editStorageLocationAria", locName)}">
               <i class="bi bi-pencil" aria-hidden="true"></i>
             </button>
-            <button type="button" class="btn btn-proviant-danger btn-delete-sl"
+            <button type="button" class="btn btn-danger btn-delete-sl"
                     data-id="${locId}" data-name="${locName}" aria-label="${proviant.t("household.deleteStorageLocationAria", locName)}">
               <i class="bi bi-trash" aria-hidden="true"></i>
             </button>

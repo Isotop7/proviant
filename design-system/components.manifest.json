@@ -3,94 +3,134 @@
   "name": "proviant",
   "version": "2026-10",
   "description": "Komponenten-Inventar für proviant-Frontend. Bootstrap 5.3 als Basis; Marken-Palette wird über --bs-*-Variablen eingespielt, eigene Helper-Klassen nur dort, wo Bootstrap keine passende Komponente bietet.",
+  "tokenSource": "_tokens.scss",
   "tokenFile": "tokens.css",
   "tokenContract": "tokens.json",
+  "deviations": "deviations.md",
   "base": {
-    "framework": "Bootstrap 5.3",
-    "cdn": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
-    "iconLibrary": "bootstrap-icons 1.11.3",
+    "framework": "Bootstrap 5.3.8",
+    "source": "node_modules/bootstrap/scss, per `task css` nach src/assets/css/main.css kompiliert — kein CDN.",
+    "iconLibrary": "bootstrap-icons 1.13.1, selbst gehostet (src/assets/fonts)",
     "colorBinding": "Salwei-Palette ist in --bs-primary, --bs-success, --bs-warning, --bs-danger, --bs-info, --bs-body-bg, --bs-body-color, --bs-border-color, --bs-border-radius-* gespiegelt. Komponenten erben daraus automatisch."
   },
   "classMapping": {
     "_comment": "Mapping eigener Klassen (alte Spec-Sheet) → Bootstrap-5.3-Klassen. Eigene Klassen sind NICHT 1:1 weiterzuführen, sondern durch Bootstrap-Klassen zu ersetzen.",
     "buttons": {
-      "btn btn--primary":    "btn btn-primary",
-      "btn btn--secondary":  "btn btn-outline-secondary",
-      "btn btn--ghost":      "btn btn-link",
-      "btn btn--danger":     "btn btn-danger",
-      "btn btn--sm":         "btn btn-sm",
-      "btn btn--lg":         "btn btn-lg"
+      "btn btn--primary": "btn btn-primary",
+      "btn btn--secondary": "btn btn-outline-secondary",
+      "btn btn--ghost": "btn btn-link",
+      "btn btn--danger": "btn btn-danger",
+      "btn btn--sm": "btn btn-sm",
+      "btn btn--lg": "btn btn-lg"
     },
     "forms": {
-      "field__label":         "form-label",
-      "field__input":         "form-control",
-      "field__select":        "form-select",
-      "field__textarea":      "form-control (mit rows=…)",
-      "field__error":         "invalid-feedback (zusammen mit .is-invalid auf .form-control)",
-      "field__success":       "valid-feedback (zusammen mit .is-valid auf .form-control)",
-      "field__hint":          "form-text",
-      "field--code":          "field--code (eigene Helfer-Klasse, da Bootstrap keine 6-stelligen Code-Inputs kennt)"
+      "field__label": "form-label",
+      "field__input": "form-control",
+      "field__select": "form-select",
+      "field__textarea": "form-control (mit rows=…)",
+      "field__error": "invalid-feedback (zusammen mit .is-invalid auf .form-control)",
+      "field__success": "valid-feedback (zusammen mit .is-valid auf .form-control)",
+      "field__hint": "form-text"
     },
     "lists": {
-      "list":                 "list-group",
-      "list__item":           "list-group-item",
-      "list__item--active":   "list-group-item active"
+      "list": "list-group",
+      "list__item": "list-group-item",
+      "list__item--active": "list-group-item active"
     },
     "chips": {
-      "chip":                 "badge",
-      "chip--fresh":          "badge badge--fresh",
-      "chip--soon":           "badge badge--soon",
-      "chip--critical":       "badge badge--critical",
-      "chip--expired":        "badge badge--expired",
-      "chip--neutral":        "badge badge--neutral"
+      "chip": "badge",
+      "chip--fresh": "badge badge--fresh",
+      "chip--soon": "badge badge--soon",
+      "chip--critical": "badge badge--critical",
+      "chip--expired": "badge badge--expired",
+      "chip--neutral": "badge badge--neutral"
     },
     "cards": {
-      "card":                 "card",
-      "card--hero":           "card card--hero (Klasse bleibt für Hero-Padding-Variante)",
-      "card__header":         "card-header (optional) ODER eigene card__header-Klasse",
-      "card__body":           "card-body",
-      "card__footer":         "card-footer (optional) ODER eigene card__footer-Klasse"
+      "card": "card",
+      "card--hero": "card card--hero (Klasse bleibt für Hero-Padding-Variante)",
+      "card__header": "card-header (optional) ODER eigene card__header-Klasse",
+      "card__body": "card-body",
+      "card__footer": "card-footer (optional) ODER eigene card__footer-Klasse"
     },
     "tables": {
-      "table":                "table",
-      "table--dense":         "table table-sm",
-      "table-wrap":           "card > table-responsive",
+      "table": "table",
+      "table--dense": "table table-sm",
+      "table-wrap": "card > table-responsive",
       "table tr.is-selected": "table-active (Bootstrap-Default) ODER eigene tr.is-selected",
-      "pagination":           "d-flex justify-content-between"
+      "pagination": "d-flex justify-content-between"
+    },
+    "appMigration": {
+      "_comment": "Was die App vor der Migration benutzt hat und wofür sie jetzt steht. Der Umbau ist abgeschlossen; die Klassen links existieren im Markup nicht mehr.",
+      "btn btn-proviant-primary": "btn btn-primary",
+      "btn btn-proviant-secondary": "btn btn-outline-secondary",
+      "btn btn-proviant-danger": "btn btn-danger",
+      "btn btn-ghost": "btn btn-link",
+      "badge-status": "badge",
+      "badge-status badge-fresh": "badge badge--fresh",
+      "badge-status badge-soon": "badge badge--soon",
+      "badge-status badge-critical": "badge badge--critical",
+      "badge-status badge-expired": "badge badge--expired",
+      "badge-status badge-nodate": "badge badge--neutral",
+      "badge-status badge-lowstock": "badge badge--lowstock",
+      "badge-status badge-opened": "badge badge--opened",
+      "badge-status-sm": "badge--sm",
+      "field-input": "form-control",
+      "field-label": "form-label",
+      "field-error": "invalid-feedback",
+      "input-hint": "form-text",
+      "text-primary-custom": "text-body",
+      "text-secondary-custom": "text-body-secondary",
+      "text-tertiary": "text-body-tertiary",
+      "skeleton-block": "skeleton",
+      "skeleton-line": "skeleton--line",
+      "skeleton-badge": "skeleton--badge",
+      "btn-modal-close": "btn-close",
+      "metric-tile": "kpi",
+      "metric-label": "kpi__label",
+      "metric-value": "kpi__value",
+      "pv-sidebar": "app__topbar + app__nav",
+      "pv-nav-item": "nav-link (in .app__nav)",
+      "login-root": "auth",
+      "login-brand": "auth__brand",
+      "login-form-panel": "auth__form",
+      "login-form-inner": "auth__form-inner",
+      "app__sidebar": "app__topbar",
+      "app__sidebar .nav-link": "app__nav .nav-link"
     },
     "app-layout": {
-      "app":                  "app (eigene Grid-Klasse, da Bootstrap-Default-Container für App-Shells ungeeignet)",
-      "app__sidebar":         "app__sidebar (eigene Komponente)",
-      "sidebar__item":        "nav-link in nav.flex-column",
-      "topbar__title":        "h5/h6 in app__topbar",
-      "bottom-nav__item":     "nav-link in nav (innerhalb .bottom-nav)"
+      "app": "app (eigene Grid-Klasse, da Bootstrap-Default-Container für App-Shells ungeeignet)",
+      "app__sidebar": "app__sidebar (eigene Komponente)",
+      "sidebar__item": "nav-link in nav.flex-column",
+      "topbar__title": "h5/h6 in app__topbar",
+      "bottom-nav__item": "nav-link in nav (innerhalb .bottom-nav)"
     },
     "modals": {
-      "modal":                "modal (Bootstrap-Standard; in echter App via Bootstrap-JS aktiviert)",
-      "modal__dialog":        "modal-dialog > modal-content",
-      "modal__header":        "modal-header",
-      "modal__body":          "modal-body",
-      "modal__footer":        "modal-footer"
+      "modal": "modal (Bootstrap-Standard; in echter App via Bootstrap-JS aktiviert)",
+      "modal__dialog": "modal-dialog > modal-content",
+      "modal__header": "modal-header",
+      "modal__body": "modal-body",
+      "modal__footer": "modal-footer"
     },
     "toasts": {
-      "toast":                "toast",
-      "toast--info":          "toast toast--info",
-      "toast--success":       "toast toast--success",
-      "toast--warn":          "toast toast--warn",
-      "toast--danger":        "toast toast--danger"
+      "toast": "toast",
+      "toast--info": "toast toast--info",
+      "toast--success": "toast toast--success",
+      "toast--warn": "toast toast--warn",
+      "toast--danger": "toast toast--danger"
     },
     "feedback": {
-      "spinner":              "spinner-border (Bootstrap) ODER eigene .spinner (für Inline-Buttons)",
-      "skeleton":             "skeleton (eigene Klasse, Bootstrap hat keinen Skeleton-Primitive)"
+      "spinner": "spinner-border (Bootstrap) ODER eigene .spinner (für Inline-Buttons)",
+      "skeleton": "skeleton (eigene Klasse, Bootstrap hat keinen Skeleton-Primitive)"
     },
     "icons": {
-      "icon":                 "bi <name> (Bootstrap-Icons, CDN)"
+      "icon": "bi <name> (Bootstrap-Icons, selbst gehostet)"
     }
   },
-  "selectors": 64,
-  "classes": 28,
-  "declaredTokens": 60,
-  "referencedTokens": 52,
+  "_counts": "Zählregeln, geprüft von scripts/check-design-tokens.mjs: selectors = Summe der Selektor-Einträge aller groups; classes = distinct Klassennamen aus groups[].selectors + utilities; declaredTokens = Custom Properties in tokens.css; referencedTokens = Custom Properties, die von design-system/screens referenziert werden.",
+  "selectors": 118,
+  "classes": 106,
+  "declaredTokens": 113,
+  "referencedTokens": 75,
   "groups": [
     {
       "id": "buttons",
@@ -117,7 +157,23 @@
         ".btn-group",
         ".btn-close"
       ],
-      "tokens": ["--bs-primary", "--accent", "--accent-on", "--accent-soft", "--surface", "--fg", "--muted", "--border", "--status-expired", "--radius-pill", "--field-height", "--field-height-compact", "--field-height-hero", "--tracking-button", "--weight-semibold"]
+      "tokens": [
+        "--bs-primary",
+        "--accent",
+        "--accent-on",
+        "--accent-soft",
+        "--surface",
+        "--fg",
+        "--muted",
+        "--border",
+        "--status-expired",
+        "--radius-pill",
+        "--field-height",
+        "--field-height-compact",
+        "--field-height-hero",
+        "--tracking-button",
+        "--weight-semibold"
+      ]
     },
     {
       "id": "forms",
@@ -136,12 +192,30 @@
         ".valid-feedback",
         ".field--search",
         ".field--search .form-control",
-        ".field--search .clear",
-        ".field--code",
-        ".field--code input",
-        ".field--code input:focus-visible"
+        ".field--search .clear"
       ],
-      "tokens": ["--bs-body-bg", "--bs-body-color", "--bs-border-color", "--surface", "--fg", "--muted", "--meta", "--border", "--border-strong", "--accent", "--accent-soft", "--status-expired", "--status-fresh", "--radius-md", "--field-height", "--space-2", "--space-3", "--text-sm", "--text-base", "--font-mono"]
+      "tokens": [
+        "--bs-body-bg",
+        "--bs-body-color",
+        "--bs-border-color",
+        "--surface",
+        "--fg",
+        "--muted",
+        "--meta",
+        "--border",
+        "--border-strong",
+        "--accent",
+        "--accent-soft",
+        "--status-expired",
+        "--status-fresh",
+        "--radius-md",
+        "--field-height",
+        "--space-2",
+        "--space-3",
+        "--text-sm",
+        "--text-base",
+        "--font-mono"
+      ]
     },
     {
       "id": "cards",
@@ -153,9 +227,25 @@
         ".card-body",
         ".card__header",
         ".card__footer",
-        ".card--hero"
+        ".card--hero",
+        ".card--danger"
       ],
-      "tokens": ["--bs-card-bg", "--bs-card-border-color", "--surface", "--border", "--fg", "--muted", "--radius-md", "--space-4", "--space-5", "--elev-raised"]
+      "tokens": [
+        "--bs-card-bg",
+        "--bs-card-border-color",
+        "--surface",
+        "--border",
+        "--fg",
+        "--muted",
+        "--radius-md",
+        "--space-4",
+        "--space-5",
+        "--elev-raised",
+        "--status-expired",
+        "--status-expired-subtle",
+        "--status-expired-border",
+        "--status-expired-text"
+      ]
     },
     {
       "id": "lists",
@@ -171,7 +261,25 @@
         ".list-group-item__meta",
         ".list-group-item__trailing"
       ],
-      "tokens": ["--bs-list-group-bg", "--bs-list-group-border-color", "--bs-list-group-action-hover-bg", "--bs-list-group-active-bg", "--surface", "--fg", "--fg-2", "--muted", "--meta", "--border", "--accent-soft", "--accent", "--space-3", "--space-4", "--text-base", "--text-sm", "--weight-semibold"]
+      "tokens": [
+        "--bs-list-group-bg",
+        "--bs-list-group-border-color",
+        "--bs-list-group-action-hover-bg",
+        "--bs-list-group-active-bg",
+        "--surface",
+        "--fg",
+        "--fg-2",
+        "--muted",
+        "--meta",
+        "--border",
+        "--accent-soft",
+        "--accent",
+        "--space-3",
+        "--space-4",
+        "--text-base",
+        "--text-sm",
+        "--weight-semibold"
+      ]
     },
     {
       "id": "tables",
@@ -188,7 +296,28 @@
         ".table-responsive",
         ".table-empty"
       ],
-      "tokens": ["--bs-table-bg", "--bs-table-color", "--bs-table-border-color", "--bs-table-hover-bg", "--surface", "--bg", "--fg", "--muted", "--meta", "--border", "--accent-soft", "--accent", "--space-2", "--space-3", "--space-4", "--text-sm", "--text-xs", "--text-mono", "--font-mono", "--weight-semibold"]
+      "tokens": [
+        "--bs-table-bg",
+        "--bs-table-color",
+        "--bs-table-border-color",
+        "--bs-table-hover-bg",
+        "--surface",
+        "--bg",
+        "--fg",
+        "--muted",
+        "--meta",
+        "--border",
+        "--accent-soft",
+        "--accent",
+        "--space-2",
+        "--space-3",
+        "--space-4",
+        "--text-sm",
+        "--text-xs",
+        "--text-mono",
+        "--font-mono",
+        "--weight-semibold"
+      ]
     },
     {
       "id": "app-layout",
@@ -212,7 +341,28 @@
         ".bottom-nav .nav-link.active",
         ".bottom-nav .nav-link:focus-visible"
       ],
-      "tokens": ["--surface-warm", "--surface", "--bg", "--fg", "--fg-2", "--muted", "--border", "--accent", "--accent-soft", "--sidebar-width", "--topbar-height", "--container-max", "--container-gutter-desktop", "--container-gutter-phone", "--text-eyebrow", "--tracking-eyebrow", "--space-3", "--space-4", "--weight-semibold", "--weight-regular"]
+      "tokens": [
+        "--surface-warm",
+        "--surface",
+        "--bg",
+        "--fg",
+        "--fg-2",
+        "--muted",
+        "--border",
+        "--accent",
+        "--accent-soft",
+        "--sidebar-width",
+        "--topbar-height",
+        "--container-max",
+        "--container-gutter-desktop",
+        "--container-gutter-phone",
+        "--text-eyebrow",
+        "--tracking-eyebrow",
+        "--space-3",
+        "--space-4",
+        "--weight-semibold",
+        "--weight-regular"
+      ]
     },
     {
       "id": "modals-toasts",
@@ -237,7 +387,30 @@
         ".spinner",
         ".skeleton"
       ],
-      "tokens": ["--bs-modal-bg", "--bs-modal-border-color", "--surface", "--bg", "--fg", "--muted", "--meta", "--border", "--status-fresh", "--status-soon", "--status-expired", "--info", "--radius-md", "--radius-lg", "--elev-overlay", "--elev-raised", "--space-6", "--text-display", "--text-h2", "--text-sm", "--text-base", "--weight-semibold"]
+      "tokens": [
+        "--bs-modal-bg",
+        "--bs-modal-border-color",
+        "--surface",
+        "--bg",
+        "--fg",
+        "--muted",
+        "--meta",
+        "--border",
+        "--status-fresh",
+        "--status-soon",
+        "--status-expired",
+        "--info",
+        "--radius-md",
+        "--radius-lg",
+        "--elev-overlay",
+        "--elev-raised",
+        "--space-6",
+        "--text-display",
+        "--text-h2",
+        "--text-sm",
+        "--text-base",
+        "--weight-semibold"
+      ]
     },
     {
       "id": "status-chips",
@@ -251,7 +424,21 @@
         ".badge--expired",
         ".badge--neutral"
       ],
-      "tokens": ["--status-fresh", "--status-soon", "--status-critical", "--status-expired", "--muted", "--surface", "--fg", "--radius-sm", "--space-1", "--space-2", "--text-xs", "--weight-semibold", "--leading-tight"]
+      "tokens": [
+        "--status-fresh",
+        "--status-soon",
+        "--status-critical",
+        "--status-expired",
+        "--muted",
+        "--surface",
+        "--fg",
+        "--radius-sm",
+        "--space-1",
+        "--space-2",
+        "--text-xs",
+        "--weight-semibold",
+        "--leading-tight"
+      ]
     },
     {
       "id": "dashboard",
@@ -267,7 +454,23 @@
         ".kpi__sparkline",
         ".kpi--focus"
       ],
-      "tokens": ["--surface", "--accent-soft", "--border", "--fg", "--muted", "--accent", "--status-critical", "--radius-md", "--space-4", "--space-5", "--text-display", "--text-eyebrow", "--text-sm", "--weight-semibold", "--tracking-eyebrow"]
+      "tokens": [
+        "--surface",
+        "--accent-soft",
+        "--border",
+        "--fg",
+        "--muted",
+        "--accent",
+        "--status-critical",
+        "--radius-md",
+        "--space-4",
+        "--space-5",
+        "--text-display",
+        "--text-eyebrow",
+        "--text-sm",
+        "--weight-semibold",
+        "--tracking-eyebrow"
+      ]
     },
     {
       "id": "charts",
@@ -280,7 +483,22 @@
         ".chart__axis",
         ".chart__grid"
       ],
-      "tokens": ["--accent", "--status-fresh", "--status-soon", "--status-critical", "--status-expired", "--fg", "--muted", "--meta", "--border", "--surface", "--text-sm", "--text-xs", "--weight-regular", "--leading-tight"]
+      "tokens": [
+        "--accent",
+        "--status-fresh",
+        "--status-soon",
+        "--status-critical",
+        "--status-expired",
+        "--fg",
+        "--muted",
+        "--meta",
+        "--border",
+        "--surface",
+        "--text-sm",
+        "--text-xs",
+        "--weight-regular",
+        "--leading-tight"
+      ]
     },
     {
       "id": "auth",
@@ -298,7 +516,24 @@
         ".auth__footer",
         ".auth__switch"
       ],
-      "tokens": ["--surface-warm", "--surface", "--bg", "--fg", "--muted", "--accent", "--accent-soft", "--border", "--radius-md", "--radius-lg", "--space-12", "--text-display", "--text-h2", "--text-sm", "--text-base", "--weight-semibold"]
+      "tokens": [
+        "--surface-warm",
+        "--surface",
+        "--bg",
+        "--fg",
+        "--muted",
+        "--accent",
+        "--accent-soft",
+        "--border",
+        "--radius-md",
+        "--radius-lg",
+        "--space-12",
+        "--text-display",
+        "--text-h2",
+        "--text-sm",
+        "--text-base",
+        "--weight-semibold"
+      ]
     }
   ],
   "utilities": {
@@ -310,42 +545,125 @@
     "eyebrow": "font: var(--weight-semibold) var(--text-eyebrow)/var(--leading-tight) var(--font-body); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--muted);",
     "page-header": "page-header (eigene Klasse, da Bootstrap keine Brand-Pattern-Header kennt)",
     "page-header__brand": "page-header__brand (Wortmarke, kein h1)",
+    "page-header__lead": "min-width: 0;",
+    "page-header__count": "font: var(--weight-semibold) var(--text-display) / 1.15 var(--font-body); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; color: var(--fg);",
+    "page-header__sub": "font-size: var(--text-sm); color: var(--fg-2);",
+    "page-header__meta": "font: var(--weight-semibold) var(--text-xs) / var(--leading-tight) var(--font-body); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--muted);",
+    "page-header__title": "font: var(--weight-semibold) var(--text-h1) / var(--leading-tight) var(--font-body); letter-spacing: var(--tracking-tight); color: var(--fg);",
+    "page-header__aside": "display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3);",
     "page-nav": "page-nav (eigene Klasse, sticky Anker-Sektion-Navigation)",
-    "app": "app (eigene Grid-Klasse für App-Shell)",
-    "app__sidebar": "app__sidebar (eigene Komponente)",
+    "app": "app (die Seite: Topnav, Inhalt, Fußzeile)",
     "bottom-nav": "bottom-nav (eigene Komponente, sticky mobile)",
     "modal--demo": "modal--demo (Demo-Modal ohne JS im Spec-Sheet sichtbar)",
     "skeleton": "skeleton (eigene Klasse, Bootstrap hat keinen Skeleton-Primitive)",
     "kpi": "kpi (Layout-Pattern auf .card)",
     "kpi__label": "kpi__label",
     "kpi__value": "kpi__value",
-    "kpi__delta": "kpi__delta",
-    "kpi__sparkline": "kpi__sparkline",
+    "kpi__sub": "kpi__sub (die Zeile mit Icon unter dem Wert)",
+    "list-group-item__stripe": "list-group-item__stripe (der senkrechte Statusbalken vor einer Listenzeile)",
+    "list-group-item__stripe--expired": "list-group-item__stripe--expired",
+    "list-group-item__stripe--critical": "list-group-item__stripe--critical",
+    "list-group-item__stripe--soon": "list-group-item__stripe--soon",
+    "list-group-item__stripe--fresh": "list-group-item__stripe--fresh",
+    "kpi--fill-expired": "kpi--fill-expired (die gefüllte Kachel mit dem Verfalls-Status)",
+    "kpi__sub--fresh": "kpi__sub--fresh (die Zeile unter einer Kachel in der Statusfarbe)",
+    "kpi__sub--soon": "kpi__sub--soon",
+    "kpi__sub--critical": "kpi__sub--critical",
+    "kpi__sub--accent": "kpi__sub--accent",
+    "kpi__value--danger": "kpi__value--danger (der Wert einer Kachel in der Verfallsfarbe)",
+    "kpi__value--warning": "kpi__value--warning",
+    "kpi__value--success": "kpi__value--success",
+    "kpi__value--accent": "kpi__value--accent (der Wert einer Kachel im Akzent)",
+    "waste-cat__stripe": "waste-cat__stripe (der senkrechte Streifen links an einer Abfall-Kategorie)",
+    "waste-cat__name": "waste-cat__name",
+    "waste-cat__meta": "waste-cat__meta (die Anzahl der verworfenen Produkte)",
+    "waste-cat__cost": "waste-cat__cost (die Kosten in der Abfallfarbe)",
     "kpi--focus": "kpi--focus",
     "auth": "auth (eigene Grid-Klasse für Split-Screen)",
     "auth__brand": "auth__brand",
     "auth__form": "auth__form",
-    "field--code": "field--code (6-stellige Code-Inputs, Mono, 48×56 px)",
-    "toast-stack": "toast-stack (vertikaler Stapel-Container)"
+    "toast-stack": "toast-stack (vertikaler Stapel-Container)",
+    "list-group-item__leading": "list-group-item__leading (Avatar oder Checkbox)",
+    "list-group-item__body": "list-group-item__body (Titel und Meta-Zeile)",
+    "list-group-item__title": "list-group-item__title",
+    "list-group-item__meta": "list-group-item__meta",
+    "list-group-item__trailing": "list-group-item__trailing (Chip oder Aktionen)",
+    "bento": "bento (Sechs-Spalten-Raster für das Dashboard)",
+    "bento__items": "bento__items (display: contents, ein Container im Raster)",
+    "bento__cell": "bento__cell",
+    "bento__cell--2": "bento__cell--2 (zwei Spalten)",
+    "bento__cell--3": "bento__cell--3 (drei Spalten)",
+    "bento__cell--6": "bento__cell--6 (die volle Breite)",
+    "app__topbar": "app__topbar (die Navigationsleiste über dem Inhalt)",
+    "app__brand": "app__brand (Wortmarke, verlinkt zur Startseite)",
+    "app__nav": "app__nav (die sieben primären Einträge)",
+    "app__content": "app__content (der Seiteninhalt)",
+    "app__content--table": "app__content--table (die 900-px-Messlatte der Tabellenscreens)",
+    "app__footer": "app__footer (Lizenzen, Quelle, Version)"
+  },
+  "notImplemented": {
+    "_comment": "Aus dem Spec übernommene Bausteine, die bewusst NICHT gebaut werden. Grund und Beleg stehen in deviations.md.",
+    "kpi__delta": "Keine Datenquelle — die Stats-API liefert pro Kachel keine Historie, nur einen Forward-Projektion.",
+    "kpi__sparkline": "Keine Datenquelle — dieselbe Lücke wie bei kpi__delta.",
+    "field--code": "Kein 6-stelliger Code-Flow — Verify, Reset und Invite nutzen opaque URL-Tokens.",
+    "modal--demo": "Nur für die Spec-Sheets; die App nutzt echte Bootstrap-Modals."
   },
   "bootstrapReplaced": {
     "_comment": "Bootstrap-Komponenten, die wir NICHT verwenden, weil proviant eine andere visuelle Sprache hat.",
-    "dropdown-menu": "Wir nutzen stattdessen Sidebar-Lists + Modals; Bootstrap-Dropdown passt visuell nicht zur Pill-/Crème-Sprache.",
-    "navbar": "Wir nutzen die eigene .app__topbar + .sidebar; Bootstrap-Navbar überschreibt die Marken-Geometrie zu stark.",
+    "navbar": "Wir nutzen die eigene .app__topbar + .app__sidebar; Bootstrap-Navbar überschreibt die Marken-Geometrie zu stark.",
     "carousel": "Nicht im Scope; Charts und Karten tragen die Information.",
     "btn-toolbar": "Nicht im Scope; wir nutzen .btn-group und Layout-Utilities direkt.",
     "form-floating": "Die Labels sind in der Vorrats-Domain hilfreicher als Floating; daher klassisches Label über Input."
   },
   "navigation": {
     "_comment": "Verbindliche Menü-Struktur. Details, Routen und Icons in design-system/nav.md.",
-    "sidebarPrimary": ["Dashboard", "Products", "Shopping List", "Meal Plan", "Recipes", "Waste Analytics", "Settings"],
-    "sidebarFooter": ["Theme", "Notifications", "Logout", "Version", "Source"],
-    "bottomNav": ["Dashboard", "Products", "Scan", "Shopping", "Recipes"],
-    "mobileMore": ["Theme", "Settings", "Logout"]
+    "bottomNav": [
+      "Dashboard",
+      "Products",
+      "Scan",
+      "Shopping",
+      "Recipes"
+    ],
+    "mobileMore": [
+      "Theme",
+      "Settings",
+      "Logout"
+    ],
+    "topnavPrimary": [
+      "Dashboard",
+      "Products",
+      "Shopping List",
+      "Meal Plan",
+      "Recipes",
+      "Waste Analytics",
+      "Settings"
+    ],
+    "topnavActions": [
+      "Notifications",
+      "Theme",
+      "Logout"
+    ],
+    "footer": [
+      "Licenses",
+      "Source",
+      "Version"
+    ]
   },
   "iconSystem": {
-    "library": "bootstrap-icons 1.11.3 (CDN)",
+    "library": "bootstrap-icons 1.13.1, selbst gehostet (src/assets/fonts)",
     "usage": "Nur als Klassen-Name, z. B. <i class='bi bi-search'></i>. Niemals Emojis als UI-Icon.",
-    "common": ["bi-basket", "bi-bell", "bi-check-circle", "bi-chevron-expand", "bi-chevron-right", "bi-clock", "bi-exclamation-triangle", "bi-info-circle", "bi-search", "bi-x-circle", "bi-x-lg"]
+    "common": [
+      "bi-basket",
+      "bi-bell",
+      "bi-check-circle",
+      "bi-chevron-expand",
+      "bi-chevron-right",
+      "bi-clock",
+      "bi-exclamation-triangle",
+      "bi-info-circle",
+      "bi-search",
+      "bi-x-circle",
+      "bi-x-lg"
+    ]
   }
 }

@@ -1,0 +1,359 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// design-system/_tokens.scss
+//
+// CANONICAL SOURCE for the proviant design tokens (light theme).
+//
+// This file is the single source of truth. `scripts/design-tokens.mjs`
+// projects it into design-system/tokens.css, design-system/tokens.dark.css and
+// design-system/tokens.json. Never edit the generated files — edit this one and
+// run `task design-tokens`.
+//
+// Two projections live here on purpose:
+//
+//   $variables  compile-time values. The app's SCSS uses them to configure
+//               Bootstrap ($primary: $accent), so the Bootstrap layer and the
+//               custom-property layer can never disagree again.
+//   :root       the runtime custom properties the browser sees.
+//
+// Every value is a plain hex / px / ms literal — no oklch(), no colour
+// functions. The tokens are a contract with humans, build tools and the
+// spec sheets, and hex keeps that contract greppable and diffable.
+//
+// Contrast targets (enforced by `task design-check`):
+//   body text on --bg            >= 4.5:1
+//   text on a tinted status chip >= 4.5:1
+//   --accent-on on --accent      >= 4.5:1
+//   non-text UI on --bg          >= 3:1
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Surfaces ────────────────────────────────────────────────────────────────
+$bg:            #FAF7F1;   // Crème-Papier, App-Hintergrund
+$surface:       #FAF7F1;   // Karten, Panels, Inset-Container (die Crème-Fläche selbst)
+$surface-warm:  #F1ECE0;   // Auth-Brand-Panel, Sidebar, Hervorhebung
+
+// The one card on a screen that is filled dark: the hero tile of the
+// dashboard. Its ink follows the card, not the page.
+$surface-deep:       #0F1912;   // Hero-Karte
+$surface-deep-ink:   #F3F6F3;   // Tinte auf der Hero-Karte
+$surface-deep-muted: #97A297;   // Sekundärtext auf der Hero-Karte
+
+// ── Ink ─────────────────────────────────────────────────────────────────────
+$fg:            #2A2A2A;   // Primäre Tinte, Überschriften, Body
+$fg-2:          #4A4A4A;   // Sekundäre Tinte
+$muted:         #6B6B6B;   // Sekundärtext, Labels
+$meta:          #6F6F6F;   // Tertiärer Text, Zeitstempel, Captions
+
+// ── Lines ───────────────────────────────────────────────────────────────────
+$border:        #E5DFD3;   // Standard-Rahmen, Trennlinien
+$border-strong: #D5CDB8;   // Verstärkter Rahmen, Fokus-Feld
+
+// ── Accent (Salbei) ────────────────────────────────────────────────────────
+$accent:        #418069;   // Primäre Aktion, Fokus, Fortschritt, Logo
+$accent-text:   #35604E;   // Text in Akzentfarbe (Links, aktive Navigation)
+$accent-soft:   #DDE7E0;   // Salbei getintet, Hover-BG, Chips
+$accent-on:     #FFFFFF;   // Text auf Salbei
+
+// ── Vorratsstatus (die Sprache der App) ────────────────────────────────────
+// Die Basisfarben tragen Icons, Punkte, Balken und Rahmen; Text benutzt die
+// -text-Varianten darunter. Jede Basisfarbe erreicht mindestens 3:1 gegen
+// --bg, damit ein Statuspunkt als Zustandsanzeige sichtbar bleibt — der
+// Spec-Wert #C2A24A für "soon" lag bei 2.29:1 und ist dafür abgedunkelt.
+$status-fresh:    #418069;   // Haltbarkeit > 7 Tage
+$status-soon:     #A58529;   // 3 – 7 Tage
+$status-critical: #C26A3F;   // 1 – 2 Tage
+$status-expired:  #A24A4A;   // abgelaufen
+$status-neutral:  #8A8A8A;   // kein Ablaufdatum
+
+// Textvarianten der Statusfarben. Die Basisfarben sind für Icons, Punkte,
+// Balken und Rahmen; Text braucht eine dunklere Variante, sonst fällt die
+// Beschriftung auf dem 18-%-Tint unter 4.5:1.
+$status-fresh-text:    #35604E;
+$status-soon-text:     #77600F;
+$status-critical-text: #93491F;
+$status-expired-text:  #8C3A3A;
+$status-neutral-text:  #5F5F5F;
+
+// ── Semantische Aliase (Bootstrap-Theme) ───────────────────────────────────
+$success: #418069;   // = --status-fresh
+$warn:    #C2A24A;   // = --status-soon
+$danger:  #A24A4A;   // = --status-expired
+$info:    #5A7A8A;   // Hinweise, gedeckt
+
+// ── Typografie ─────────────────────────────────────────────────────────────
+$font-display: "Jost", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+$font-body:    "Jost", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+$font-mono:    "DMMono", ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+
+// Jost hat eine x-Höhe von 46 % — niedrig für eine UI-Schrift. Die
+// x-getriebenen Stufen sind um 1 px angehoben, damit die scheinbare
+// Größe erhalten bleibt. Die Überschriften bleiben unangetastet: ihre
+// Versalhöhe hängt nicht an der x-Höhe.
+$text-display:    32px;   // Display
+$text-h1:         24px;   // H1
+$text-h2:         20px;   // H2, Topbar-Titel
+$text-h3:         18px;   // H3
+$text-base:       16px;   // Body
+$text-base-bold:  16px;   // Body, fett
+$text-sm:         14px;   // Kleingedrucktes, Tabellentext
+$text-xs:         12px;   // Caption
+$text-eyebrow:    12px;   // Sektions-Label, uppercase
+$text-mono:       13px;   // Zahlen, Codes, Bestände
+
+$leading-tight:  1.20;
+$leading-snug:   1.30;
+$leading-body:   1.55;
+$leading-mono:   1.40;
+
+$tracking-tight:   -0.01em;
+$tracking-flat:     0;
+$tracking-button:   0.04em;
+$tracking-eyebrow:  0.10em;
+
+$weight-regular:  400;
+$weight-medium:   500;
+$weight-semibold: 600;
+$weight-bold:     700;
+
+// ── Spacing (4-px-Basis) ───────────────────────────────────────────────────
+$space-1:   4px;
+$space-2:   8px;
+$space-3:  12px;
+$space-4:  16px;
+$space-5:  20px;
+$space-6:  24px;
+$space-8:  32px;
+$space-10: 40px;
+$space-12: 48px;
+$space-16: 64px;
+
+// ── Radius ─────────────────────────────────────────────────────────────────
+$radius-sm:   4px;
+$radius-md:   8px;
+$radius-lg:  12px;
+$radius-pill: 999px;
+
+// ── Schatten (Sepia, nie neutral) ──────────────────────────────────────────
+$shadow-warm: rgba(80, 60, 30, 0.08);
+$elev-flat:    none;
+$elev-raised:  0 1px 2px rgba(80, 60, 30, 0.06), 0 4px 12px rgba(80, 60, 30, 0.08);
+$elev-overlay: 0 8px 24px rgba(80, 60, 30, 0.12), 0 24px 48px rgba(80, 60, 30, 0.10);
+$elev-inset:   inset 0 0 0 1px var(--border);
+$elev-focus:   inset 0 0 0 1px var(--accent);
+$focus-ring:   0 0 0 3px var(--accent-soft);
+
+// ── Motion ─────────────────────────────────────────────────────────────────
+$motion-fast: 120ms;
+$motion-base: 180ms;
+$motion-slow: 240ms;
+$ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
+$ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+
+// ── Layout ─────────────────────────────────────────────────────────────────
+$container-max:            1120px;
+$container-gutter-desktop: 48px;
+$container-gutter-tablet:  24px;
+$container-gutter-phone:   16px;
+$sidebar-width:            240px;
+$topbar-height:            56px;
+$field-height:             40px;
+$field-height-hero:        48px;
+$field-height-compact:     32px;
+
+// ── Abgeleitete Slots ──────────────────────────────────────────────────────
+// Keine eigenen Farbwerte, sondern Ableitungen aus den Slots darüber. Sie
+// rechnen sich zur Compile-Zeit als Ausdruck, nicht als Farbe — dadurch
+// ziehen sie automatisch mit, wenn `--surface` im Dark Theme wechselt.
+//
+//   subtle  Chip-Hintergrund   18 % Status, 82 % Fläche
+//   border  Chip-Rahmen         32 % Status, 68 % Fläche
+//   hover   Hover auf gefülltem Status 8 % abgedunkelt
+//
+// Der Akzent-Rahmen mischt den Akzent mit der Fläche statt mit Weiß, damit
+// er im hellen Theme aufhellt und im dunklen Theme abdunkelt.
+$status-fresh-subtle:   color-mix(in oklab, var(--status-fresh) 18%, var(--surface));
+$status-fresh-border:   color-mix(in oklab, var(--status-fresh) 32%, var(--surface));
+$status-fresh-hover:    color-mix(in oklab, var(--status-fresh), black 8%);
+$status-soon-subtle:    color-mix(in oklab, var(--status-soon) 18%, var(--surface));
+$status-soon-border:    color-mix(in oklab, var(--status-soon) 32%, var(--surface));
+$status-soon-hover:     color-mix(in oklab, var(--status-soon), black 8%);
+$status-critical-subtle: color-mix(in oklab, var(--status-critical) 18%, var(--surface));
+$status-critical-border: color-mix(in oklab, var(--status-critical) 32%, var(--surface));
+$status-critical-hover:  color-mix(in oklab, var(--status-critical), black 8%);
+$status-expired-subtle: color-mix(in oklab, var(--status-expired) 18%, var(--surface));
+$status-expired-border: color-mix(in oklab, var(--status-expired) 32%, var(--surface));
+$status-expired-hover:  color-mix(in oklab, var(--status-expired), black 8%);
+$status-neutral-subtle: color-mix(in oklab, var(--status-neutral) 18%, var(--surface));
+$status-neutral-border: color-mix(in oklab, var(--status-neutral) 32%, var(--surface));
+$status-neutral-hover:  color-mix(in oklab, var(--status-neutral), black 8%);
+// Tinte auf einer soliden Statusflaeche. Im hellen Theme weiss, im dunkten
+// Theme Tinte auf dem hellen Statusfarbwert.
+$status-fresh-on: #FFFFFF;
+$status-soon-on: #FFFFFF;
+$status-critical-on: #FFFFFF;
+$status-expired-on: #FFFFFF;
+$status-neutral-on: #FFFFFF;
+$accent-hover:          color-mix(in oklab, var(--accent), black 6%);
+$accent-active:         color-mix(in oklab, var(--accent), black 12%);
+$accent-border:         color-mix(in oklab, var(--accent) 45%, var(--surface));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Runtime custom properties
+// ─────────────────────────────────────────────────────────────────────────────
+
+:root {
+  color-scheme: light;
+
+  // Surfaces
+  --bg:           #{$bg};
+  --surface:      #{$surface};
+  --surface-warm: #{$surface-warm};
+  --surface-deep:       #{$surface-deep};
+  --surface-deep-ink:   #{$surface-deep-ink};
+  --surface-deep-muted: #{$surface-deep-muted};
+
+  // Ink
+  --fg:    #{$fg};
+  --fg-2:  #{$fg-2};
+  --muted: #{$muted};
+  --meta:  #{$meta};
+
+  // Lines
+  --border:        #{$border};
+  --border-strong: #{$border-strong};
+
+  // Accent
+  --accent:      #{$accent};
+  --accent-text: #{$accent-text};
+  --accent-soft: #{$accent-soft};
+  --accent-on:   #{$accent-on};
+
+  // Vorratsstatus
+  --status-fresh:    #{$status-fresh};
+  --status-soon:     #{$status-soon};
+  --status-critical: #{$status-critical};
+  --status-expired:  #{$status-expired};
+  --status-neutral:  #{$status-neutral};
+
+  --status-fresh-text:    #{$status-fresh-text};
+  --status-soon-text:     #{$status-soon-text};
+  --status-critical-text: #{$status-critical-text};
+  --status-expired-text:  #{$status-expired-text};
+  --status-neutral-text:  #{$status-neutral-text};
+
+  // Abgeleitete Slots (siehe „Abgeleitete Slots" oben)
+  --status-fresh-subtle:    #{$status-fresh-subtle};
+  --status-fresh-border:    #{$status-fresh-border};
+  --status-fresh-hover:     #{$status-fresh-hover};
+  --status-soon-subtle:     #{$status-soon-subtle};
+  --status-soon-border:     #{$status-soon-border};
+  --status-soon-hover:      #{$status-soon-hover};
+  --status-critical-subtle: #{$status-critical-subtle};
+  --status-critical-border: #{$status-critical-border};
+  --status-critical-hover:  #{$status-critical-hover};
+  --status-expired-subtle:  #{$status-expired-subtle};
+  --status-expired-border:  #{$status-expired-border};
+  --status-expired-hover:   #{$status-expired-hover};
+  --status-neutral-subtle:  #{$status-neutral-subtle};
+  --status-neutral-border:  #{$status-neutral-border};
+  --status-neutral-hover:   #{$status-neutral-hover};
+  --status-fresh-on:    #{$status-fresh-on};
+  --status-soon-on:     #{$status-soon-on};
+  --status-critical-on: #{$status-critical-on};
+  --status-expired-on:  #{$status-expired-on};
+  --status-neutral-on:  #{$status-neutral-on};
+
+  --accent-hover:           #{$accent-hover};
+  --accent-active:          #{$accent-active};
+  --accent-border:          #{$accent-border};
+
+  // Semantische Aliase
+  --success: #{$success};
+  --warn:    #{$warn};
+  --danger:  #{$danger};
+  --info:    #{$info};
+
+  // Typografie
+  --font-display: #{$font-display};
+  --font-body:    #{$font-body};
+  --font-mono:    #{$font-mono};
+
+  --text-display:    #{$text-display};
+  --text-h1:         #{$text-h1};
+  --text-h2:         #{$text-h2};
+  --text-h3:         #{$text-h3};
+  --text-base:       #{$text-base};
+  --text-base-bold:  #{$text-base-bold};
+  --text-sm:         #{$text-sm};
+  --text-xs:         #{$text-xs};
+  --text-eyebrow:    #{$text-eyebrow};
+  --text-mono:       #{$text-mono};
+
+  --leading-tight: #{$leading-tight};
+  --leading-snug:  #{$leading-snug};
+  --leading-body:  #{$leading-body};
+  --leading-mono:  #{$leading-mono};
+
+  --tracking-tight:   #{$tracking-tight};
+  --tracking-flat:    #{$tracking-flat};
+  --tracking-button:  #{$tracking-button};
+  --tracking-eyebrow: #{$tracking-eyebrow};
+
+  --weight-regular:  #{$weight-regular};
+  --weight-medium:   #{$weight-medium};
+  --weight-semibold: #{$weight-semibold};
+  --weight-bold:     #{$weight-bold};
+
+  // Spacing
+  --space-1:  #{$space-1};
+  --space-2:  #{$space-2};
+  --space-3:  #{$space-3};
+  --space-4:  #{$space-4};
+  --space-5:  #{$space-5};
+  --space-6:  #{$space-6};
+  --space-8:  #{$space-8};
+  --space-10: #{$space-10};
+  --space-12: #{$space-12};
+  --space-16: #{$space-16};
+
+  // Radius
+  --radius-sm:   #{$radius-sm};
+  --radius-md:   #{$radius-md};
+  --radius-lg:   #{$radius-lg};
+  --radius-pill: #{$radius-pill};
+
+  // Schatten
+  --shadow-warm: #{$shadow-warm};
+  --elev-flat:    #{$elev-flat};
+  --elev-raised:  #{$elev-raised};
+  --elev-overlay: #{$elev-overlay};
+  --elev-inset:   #{$elev-inset};
+  --elev-focus:   #{$elev-focus};
+  --focus-ring:   #{$focus-ring};
+
+  // Motion
+  --motion-fast: #{$motion-fast};
+  --motion-base: #{$motion-base};
+  --motion-slow: #{$motion-slow};
+  --ease-out:    #{$ease-out};
+  --ease-in:     #{$ease-in};
+
+  // Layout
+  --container-max:            #{$container-max};
+  --container-gutter-desktop: #{$container-gutter-desktop};
+  --container-gutter-tablet:  #{$container-gutter-tablet};
+  --container-gutter-phone:   #{$container-gutter-phone};
+  --sidebar-width:            #{$sidebar-width};
+  --topbar-height:            #{$topbar-height};
+  --field-height:             #{$field-height};
+  --field-height-hero:        #{$field-height-hero};
+  --field-height-compact:     #{$field-height-compact};
+}
+
+// Reduce-Motion: alle Dauern auf 0, Loops deaktivieren.
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+}

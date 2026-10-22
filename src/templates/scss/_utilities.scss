@@ -1,29 +1,29 @@
 // ── Utilities ──────────────────────────────────────────────────────────────
 
 // Shared utility classes — eliminate inline styles across templates
-.bg-subtle { background: var(--bg-subtle); }
+.bg-subtle { background: var(--surface-warm); }
 .font-mono { font-family: var(--font-mono); }
-.text-fg-3 { color: var(--fg-3); }
+.text-fg-3 { color: var(--meta); }
 .text-fg-2 { color: var(--fg-2); }
 
 // Status text colors (replaces inline style="color: var(--status-X)")
-.text-status-expired { color: var(--status-expired); }
-.text-status-critical { color: var(--status-critical); }
-.text-status-soon { color: var(--status-soon); }
-.text-status-fresh { color: var(--status-fresh); }
-.text-status-nodate { color: var(--status-nodate); }
+.text-status-expired { color: var(--status-expired-text); }
+.text-status-critical { color: var(--status-critical-text); }
+.text-status-soon { color: var(--status-soon-text); }
+.text-status-fresh { color: var(--status-fresh-text); }
+.text-status-neutral { color: var(--status-neutral-text); }
 
 // Status bar (replaces inline style="background: var(--status-X-bar)")
-.status-bar-expired { background: var(--status-expired-bar); }
-.status-bar-critical { background: var(--status-critical-bar); }
-.status-bar-soon { background: var(--status-soon-bar); }
-.status-bar-fresh { background: var(--status-fresh-bar); }
-.status-bar-nodate { background: var(--status-nodate-bar); }
+.status-bar-expired { background: var(--status-expired); }
+.status-bar-critical { background: var(--status-critical); }
+.status-bar-soon { background: var(--status-soon); }
+.status-bar-fresh { background: var(--status-fresh); }
+.status-bar-nodate { background: var(--status-neutral); }
 
 // Card accent variant (for dashboard CTA cards)
 .card-accent {
-  background: var(--accent-subtle);
-  border: 1px solid var(--border-subtle);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
 }
 
 // Icon chip inverse (white background on accent cards)
@@ -34,7 +34,7 @@
 
 // Empty state danger variant
 .empty-icon-danger {
-  color: var(--status-expired);
+  color: var(--status-expired-text);
   background: var(--status-expired-subtle);
 }
 
@@ -64,7 +64,7 @@
   font-weight: 700;
   color: var(--accent);
   letter-spacing: .02em;
-  background: var(--accent-subtle);
+  background: var(--accent-soft);
   border: 1px solid var(--accent-border);
   border-radius: 6px;
 }
@@ -73,7 +73,7 @@
 .text-xs { font-size: var(--text-xs); }
 .text-sm { font-size: var(--text-sm); }
 .text-base { font-size: var(--text-base); }
-.text-2xl { font-size: var(--text-2xl); }
+.text-2xl { font-size: var(--text-h1); }
 
 // Background utilities
 .bg-body { background: var(--bg); }
@@ -82,7 +82,7 @@
 .min-w-0 { min-width: 0; }
 
 // Badge status small variant
-.badge-status-sm {
+.badge--sm {
   padding: 2px 9px;
   font-size: 10px;
 }
@@ -92,7 +92,7 @@
   position: absolute;
   top: 50%;
   left: 11px;
-  font-size: 15px;
+  font-size: 16px;
   pointer-events: none;
   transform: translateY(-50%);
 }
@@ -105,7 +105,7 @@
 }
 
 // Empty state large title
-.empty-title-lg { font-size: var(--text-2xl); }
+.empty-title-lg { font-size: var(--text-h1); }
 
 // Product info card body (compact flex column)
 .product-info-body {
@@ -120,29 +120,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 14px;
 }
 .product-info-row-sep {
   padding-top: 10px;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border);
 }
 
 // Mobile topbar title
-.mobile-topbar-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--fg);
-  letter-spacing: -.01em;
-}
-.mobile-topbar-sub {
-  font-size: 10px;
-  color: var(--fg-3);
-}
 
 // Mobile product name (truncated)
 .mobile-product-name {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
   text-overflow: ellipsis;
@@ -151,7 +141,7 @@
 .mobile-product-barcode {
   margin-top: 2px;
   font-size: 10px;
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 // Mobile sticky footer
@@ -164,7 +154,7 @@
   padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
   background: var(--surface);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -4px 16px oklch(18% .022 70deg / 8%);
+  box-shadow: 0 -4px 16px color-mix(in oklab, var(--fg) 8%, transparent);
 }
 
 // Progress bar small height
@@ -174,38 +164,38 @@
 .modal-narrow { max-width: 400px; }
 
 // Skeleton block variants (replace inline styles in product list skeletons)
-.skeleton-icon {
+.skeleton--icon {
   width: 15px;
   height: 15px;
 }
-.skeleton-thumb {
+.skeleton--thumb {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
   border-radius: 6px;
 }
-.skeleton-line-sm {
+.skeleton--line-sm {
   width: 40%;
   height: 10px;
 }
-.skeleton-line {
+.skeleton--line {
   width: 70%;
   height: 14px;
 }
-.skeleton-badge {
+.skeleton--badge {
   width: 70px;
   height: 20px;
   border-radius: 10px;
 }
-.skeleton-date {
+.skeleton--date {
   width: 50px;
   height: 13px;
 }
-.skeleton-location {
+.skeleton--location {
   width: 70px;
   height: 13px;
 }
-.skeleton-qty {
+.skeleton--qty {
   width: 40px;
   height: 26px;
   border-radius: 4px;

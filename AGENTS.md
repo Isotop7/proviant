@@ -195,12 +195,18 @@ Home (`/web/`) is fully client-side: `web/frontend.go → Root` passes only `Has
 
 ## UI/UX Standards
 
-- **Color**: theme via CSS custom properties (Bootstrap vars), no raw hex; primary color for primary CTAs only; WCAG AA ≥4.5:1 for normal text.
-- **Layout**: 4/8pt spacing via Bootstrap utilities (`p-2`, `m-3`, `gap-2`); touch targets ≥44×44px.
-- **Type**: ≤5 font sizes; hierarchy via weight + size, not color alone.
+The design system lives in `design-system/` and is binding. Read
+`design-system/DESIGN.md` before touching markup or styles, and record every
+departure in `design-system/deviations.md`.
+
+- **Tokens**: `design-system/_tokens.scss` is the only source. Change it there, run `task design-tokens`, never edit `design-system/tokens.css` or `tokens.json` by hand. `task design-check` fails a stale artifact, a missing token or a contrast below its target.
+- **Color**: theme via the design system's CSS custom properties, no raw hex and no `oklch()` in the app's own styles. `--accent` fills, `--accent-text` writes; the status colours carry a `-text` variant for labels and the plain value for icons, dots and bars.
+- **Components**: Bootstrap 5.3 first. `.btn`, `.badge`, `.form-control`, `.list-group` and their modifiers carry the brand; own classes only where Bootstrap has none (`.kpi`, `.toast-stack`, `.list-group-item__*`, `.bento*`).
+- **Layout**: 4/8pt spacing via the spacing tokens or Bootstrap utilities; touch targets ≥44×44px; the app shell is `.app` with `.app__sidebar` and `.app__topbar`.
+- **Type**: Jost for the interface, DMMono for numbers and codes; hierarchy via weight and size, not colour alone.
 - **Guidance**: async >500ms → loading indicator + disable the trigger; inline validation on blur, page-level feedback at submit; empty states carry a clear CTA; confirm before irreversible actions.
-- **Feedback**: `proviant.showFeedback()` for page-level async results; inline alerts for field/section errors — no global banner for a local problem.
-- **Accessibility**: `<html lang>` matches the active UI language; icon-only buttons get an `aria-label`; everything keyboard-navigable (`tabindex`, `focus-visible`); populate `aria-live` after dynamic updates.
+- **Feedback**: `proviant.showFeedback()` shows a toast, not a modal; field and section errors stay inline. A toast's callback fires when it goes — the auto-hiding types after their timeout, an error when it is dismissed.
+- **Accessibility**: `<html lang>` matches the active UI language; the page header carries the page's only `h1` — the topnav is navigation; icon-only buttons get an `aria-label`; everything keyboard-navigable (`tabindex`, `focus-visible`); populate `aria-live` after dynamic updates.
 
 ## graphify
 

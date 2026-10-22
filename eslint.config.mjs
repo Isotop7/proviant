@@ -26,6 +26,7 @@ export default [
         Html5QrcodeSupportedFormats: "readonly",
         Html5QrcodeScannerState: "readonly",
         proviant: "readonly",
+        proviantChart: "readonly",
         // Top-level function declarations in classic scripts become window
         // properties, so these are genuine cross-file globals at runtime:
         // clearBulkSelectionAndReload lives in proviant.js but is called from
@@ -54,6 +55,24 @@ export default [
     files: ["src/assets/js/products.js"],
     languageOptions: {
       globals: { updateBulkSelected: "off" },
+    },
+  },
+  {
+    // Build-time tooling lives in scripts/ and runs under Node as ES modules.
+    // It never ships to the browser, so it gets its own globals and its own
+    // source type.
+    ...js.configs.recommended,
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
     },
   },
   {

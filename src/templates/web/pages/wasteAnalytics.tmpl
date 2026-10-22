@@ -4,18 +4,21 @@
 
 <div aria-live="polite" aria-atomic="true" class="visually-hidden" id="waste-status"></div>
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">{{ t "nav.wasteAnalytics" }}</h1>
-        <p class="page-header-subtitle">{{ t "waste.subtitle" }}</p>
+<header class="page-header">
+    <div class="page-header__lead">
+        <h1 class="eyebrow">{{ t "nav.wasteAnalytics" }}</h1>
+        <div class="page-header__count" id="wasteHeaderCount">&mdash;</div>
+        <p class="page-header__sub">{{ t "waste.header.wastedInPeriod" }}</p>
     </div>
-    <div class="btn-group gap-1" role="group" aria-label="{{ t "waste.periodSelector" }}" id="periodSelector">
-        <button type="button" class="btn-bulk" data-period="month">{{ t "waste.period.thisMonth" }}</button>
-        <button type="button" class="btn-bulk" data-period="3months">{{ t "waste.period.threeMonths" }}</button>
-        <button type="button" class="btn-bulk active" data-period="6months" aria-pressed="true">{{ t "waste.period.sixMonths" }}</button>
-        <button type="button" class="btn-bulk" data-period="12months">{{ t "waste.period.twelveMonths" }}</button>
+    <div class="page-header__aside">
+        <div class="btn-group gap-1" role="group" aria-label="{{ t "waste.periodSelector" }}" id="periodSelector">
+            <button type="button" class="btn-bulk" data-period="month">{{ t "waste.period.thisMonth" }}</button>
+            <button type="button" class="btn-bulk" data-period="3months">{{ t "waste.period.threeMonths" }}</button>
+            <button type="button" class="btn-bulk active" data-period="6months" aria-pressed="true">{{ t "waste.period.sixMonths" }}</button>
+            <button type="button" class="btn-bulk" data-period="12months">{{ t "waste.period.twelveMonths" }}</button>
+        </div>
     </div>
-</div>
+</header>
 
 <div>
 
@@ -29,7 +32,9 @@
                     {{ t "waste.monthlyBreakdown" }}
                 </div>
                 <div class="card-body">
-                    <canvas id="chartMonthly" role="img" aria-label="{{ t "waste.chartMonthlyLabel" }}"></canvas>
+                    <div class="chart-frame chart-frame--lg">
+                        <canvas id="chartMonthly" role="img" aria-label="{{ t "waste.chartMonthlyLabel" }}"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -40,7 +45,9 @@
                     {{ t "waste.trendTitle" }}
                 </div>
                 <div class="card-body">
-                    <canvas id="chartTrend" role="img" aria-label="{{ t "waste.chartTrendLabel" }}"></canvas>
+                    <div class="chart-frame">
+                        <canvas id="chartTrend" role="img" aria-label="{{ t "waste.chartTrendLabel" }}"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -87,13 +94,14 @@
         </div>
     </div>
 
-    <p class="text-secondary-custom small mt-3 mb-0">
+    <p class="text-body-secondary small mt-3 mb-0">
         <i class="bi bi-info-circle"></i>
         {{ t "waste.methodologyNote" }}
     </p>
 </div>
 
 <script src="/assets/js/chart.umd.min.js" defer></script>
+<script src="/assets/js/chartTheme.js" defer></script>
 <script src="/assets/js/wasteAnalytics.js" defer></script>
 
 {{ else }}
@@ -104,7 +112,7 @@
     </div>
     <div class="empty-title">{{ t "waste.emptyTitle" }}</div>
     <div class="empty-desc">{{ t "waste.emptyDesc" }}</div>
-    <a class="btn btn-proviant-primary" href="/web/user/settings#household">
+    <a class="btn btn-primary" href="/web/user/settings#household">
         <i class="bi bi-people me-2"></i> {{ t "waste.setupHousehold" }}
     </a>
 </div>
