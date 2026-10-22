@@ -65,20 +65,6 @@
             </div>
         </div>
 
-        <!-- The locations are a second axis: they get their own row -->
-        <div id="toolbarLocations" class="d-none d-md-flex gap-1 align-items-center flex-shrink-0">
-            {{ if .StorageLocations }}
-            <a href="?{{ queryWith .Params "locationId" "" }}"
-               class="filter-pill {{ if eq .LocationFilter "" }}active{{ end }}">{{ t "partial.searchBar.allLocations" }}</a>
-            {{ range $l := .StorageLocations }}
-            <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
-               class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
-                {{ $l.Name }}
-            </a>
-            {{ end }}
-            {{ end }}
-        </div>
-
         <!-- Right side: reset + advanced filters | bulk actions + mobile filter dropdown -->
         <div id="toolbarRight" class="ms-auto d-flex gap-1 align-items-center flex-wrap">
             <button id="show-all-btn" class="filter-pill" type="button" title="{{ t "partial.searchBar.showAll" }}">
@@ -149,6 +135,20 @@
             </div>
             {{ end }}
         </div>
+    </div>
+
+    <!-- The locations are the second axis: they get their own row below the states -->
+    <div id="toolbarLocations" class="d-none d-md-flex gap-1 align-items-center flex-shrink-0 mt-2 mb-2">
+        {{ if .StorageLocations }}
+        <a href="?{{ queryWith .Params "locationId" "" }}"
+           class="filter-pill {{ if eq .LocationFilter "" }}active{{ end }}">{{ t "partial.searchBar.allLocations" }}</a>
+        {{ range $l := .StorageLocations }}
+        <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
+           class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
+            {{ $l.Name }}
+        </a>
+        {{ end }}
+        {{ end }}
     </div>
 </div>
 
