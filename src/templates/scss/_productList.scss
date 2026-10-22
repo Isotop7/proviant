@@ -80,7 +80,7 @@
 .list-product-meta {
   font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--meta);
+  color: var(--muted);
 }
 
 
@@ -95,9 +95,9 @@
   > div {
     font-size: 10px;
     font-weight: 600;
-    color: var(--meta);
+    color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: .06em;
+    letter-spacing: var(--tracking-eyebrow);
   }
 }
 
@@ -129,9 +129,8 @@
 }
 
 .col-location {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--meta);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
 }
 
 .col-actions {
@@ -273,7 +272,10 @@
   gap: 1px;
   align-items: flex-end;
   justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
   line-height: 1.2;
+  color: var(--fg);
 }
 
 .filter-pill {
@@ -283,6 +285,7 @@
   padding: 4px 10px;
   font-family: var(--font-body);
   font-size: 11px;
+  font-weight: 500;
   color: var(--fg-2);
   text-decoration: none;
   white-space: nowrap;
