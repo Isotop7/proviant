@@ -35,6 +35,7 @@ var models = []any{
 	&dbModel.WasteStreak{},
 	&dbModel.ProductCategoryPrice{},
 	&dbModel.SavingsRecord{},
+	&dbModel.ModelCutover{},
 	&dbModel.ExpiryScan{},
 	&dbModel.AuditLog{},
 	&dbModel.ActivityLog{},
@@ -67,6 +68,15 @@ func hashPassword(password string) string {
 func seedDemoData(db *gorm.DB) {
 	now := time.Now()
 	verifiedAt := now.Add(-time.Hour)
+
+	// The demo data is written in the count model, so the cutover has already
+	// happened when this database is created. The marker keeps the server from
+	// flagging these records as legacy, which would take them out of the waste
+	// analytics and leave the screen empty.
+	cutover := dbModel.ModelCutover{Name: util.CountModelCutover, CutoverAt: now}
+	if err := db.Create(&cutover).Error; err != nil {
+		panic(err)
+	}
 
 	household := dbModel.Household{
 		Model:   gorm.Model{ID: 1},
