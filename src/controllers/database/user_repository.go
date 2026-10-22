@@ -25,6 +25,7 @@ type UserRepositoryInterface interface {
 	CreateUser(user *authentication.User) error
 	UpdateUser(userID uint, user *authentication.User) error
 	UpdateUserReceiptScanSettings(userID uint, prefs authentication.ReceiptScanPreferences, apiKey *string) error
+	UpdateUserDashboardLayout(userID uint, layout string) error
 	UpdateAdminUserFields(userID uint, username, mailAddress string) error
 	UpdateDisplayName(userID uint, displayName string) error
 	UpdateUserPassword(userID uint, login *authentication.Login) error
@@ -224,6 +225,7 @@ func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) erro
 		"receipt_scan_model",
 		"receipt_scan_timeout",
 		"receipt_scan_api_key",
+		"dashboard_layout",
 	).Save(&dbUser)
 	if saveResult.Error != nil {
 		return saveResult.Error
@@ -264,6 +266,19 @@ func (r *UserRepository) UpdateUserReceiptScanSettings(userID uint, prefs authen
 			Update("receipt_scan_api_key", *apiKey)
 		return keyResult.Error
 	})
+}
+
+// UpdateUserDashboardLayout stores the arrangement of the dashboard tiles. The
+// column is written on its own so a concurrent save of another preference can
+// never be replayed from a stale snapshot.
+func (r *UserRepository) UpdateUserDashboardLayout(userID uint, layout string) error {
+	if userID <= 0 {
+		return errors.ErrInvalidUserID
+	}
+
+	return r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Updates(map[string]any{"dashboard_layout": layout}).Error
 }
 
 // UpdateAdminUserFields allows admins to change login-credential fields (username, email).

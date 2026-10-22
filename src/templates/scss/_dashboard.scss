@@ -1,0 +1,137 @@
+// ── Dashboard ───────────────────────────────────────────────────────────────
+
+// The dashboard's bento grid: six columns on the desktop, and the cards
+// span the columns the design system's sheet gives them. The row track is
+// the unit a tile's height is measured in — the layout engine lets a tile
+// span more than one row.
+.bento {
+  --bento-row-height: 120px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: minmax(var(--bento-row-height), auto);
+  gap: var(--space-3);
+}
+
+.bento__cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.bento__cell--2 { grid-column: span 2; }
+.bento__cell--3 { grid-column: span 3; }
+.bento__cell--6 { grid-column: span 6; }
+
+// The layout engine writes the arrangement onto the tile: its position in
+// the grid, the columns and the rows it spans.
+.bento__cell[data-tile-span] {
+  grid-row: span var(--tile-h);
+  grid-column: span var(--tile-w);
+  order: var(--tile-order);
+}
+
+// A chart fills the tile it stands in: the frame keeps its height as a
+// minimum and grows with the tile.
+.bento__cell .card-body {
+  min-height: 0;
+}
+
+.bento__cell .chart-frame {
+  height: 100%;
+  min-height: 200px;
+}
+
+.bento__cell .chart-frame--lg {
+  min-height: 260px;
+}
+
+// A list fills the tile it stands in and scrolls inside it.
+.bento__cell .tile-scroll-body {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+}
+
+.bento__cell--dragging,
+.bento__cell--resizing {
+  z-index: 10;
+}
+
+.bento__cell--dragging {
+  cursor: grabbing;
+  opacity: .9;
+}
+
+// The grips that move and resize a tile. They sit in the tile's cell, not in
+// the card: two of the tiles are links, and a button inside a link is not
+// valid markup.
+.bento__handle {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 14px;
+  color: var(--meta);
+  cursor: grab;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  opacity: .55;
+  transition: opacity var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out);
+
+  // The grip reaches beyond its visible button, so the touch target keeps
+  // the size the design system asks for.
+  &::before {
+    position: absolute;
+    inset: -8px;
+    content: "";
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: var(--fg);
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
+.bento__handle--move {
+  top: 4px;
+  right: 4px;
+}
+
+.bento__handle--resize {
+  right: 4px;
+  bottom: 4px;
+  cursor: nwse-resize;
+}
+
+@media (max-width: 991.98px) {
+  .bento {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .bento__cell--2 { grid-column: span 2; }
+  .bento__cell--3 { grid-column: span 4; }
+  .bento__cell--6 { grid-column: span 4; }
+}
+
+@media (max-width: 575.98px) {
+  .bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bento__cell--2 { grid-column: span 2; }
+  .bento__cell--3 { grid-column: span 2; }
+  .bento__cell--6 { grid-column: span 2; }
+}

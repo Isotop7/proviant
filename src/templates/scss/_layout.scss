@@ -1,47 +1,5 @@
 // ── Page shell & widgets ───────────────────────────────────────────────────
 
-// The dashboard's bento grid: six columns on the desktop, and the cards
-// span the columns the design system's sheet gives them.
-.bento {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.bento__items {
-  display: contents;
-}
-
-.bento__cell {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.bento__cell--2 { grid-column: span 2; }
-.bento__cell--3 { grid-column: span 3; }
-.bento__cell--6 { grid-column: span 6; }
-
-@media (max-width: 991.98px) {
-  .bento {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .bento__cell--2 { grid-column: span 2; }
-  .bento__cell--3 { grid-column: span 4; }
-  .bento__cell--6 { grid-column: span 4; }
-}
-
-@media (max-width: 575.98px) {
-  .bento {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .bento__cell--2 { grid-column: span 2; }
-  .bento__cell--3 { grid-column: span 2; }
-  .bento__cell--6 { grid-column: span 2; }
-}
-
 // The app shell: a sticky topnav and the content below it. The navigation
 // sits in the topbar, the way the design system's screen sheets show it.
 .app {

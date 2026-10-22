@@ -1585,6 +1585,24 @@ definitions:
     required:
     - email
     type: object
+  v1.dashboardLayout:
+    properties:
+      tiles:
+        additionalProperties:
+          $ref: '#/definitions/v1.dashboardLayoutTile'
+        type: object
+      version:
+        type: integer
+    type: object
+  v1.dashboardLayoutTile:
+    properties:
+      h:
+        type: integer
+      order:
+        type: integer
+      w:
+        type: integer
+    type: object
   v1.receiptScanDefaultsResponse:
     properties:
       apiKeyConfigured:
@@ -5077,6 +5095,58 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Updates a user object
+      tags:
+      - user
+  /api/v1/user/dashboard-layout:
+    get:
+      consumes:
+      - application/json
+      description: 'Returns the stored arrangement of the dashboard tiles: the position
+        and the column and row span of every tile. An empty tile map means the default
+        arrangement.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.dashboardLayout'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Gets the current user's dashboard layout
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: 'Stores the arrangement of the dashboard tiles: the position and
+        the column and row span of every tile. An empty tile map resets the dashboard
+        to the default arrangement.'
+      parameters:
+      - description: Dashboard layout
+        in: body
+        name: layout
+        required: true
+        schema:
+          $ref: '#/definitions/v1.dashboardLayout'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Updates the current user's dashboard layout
       tags:
       - user
   /api/v1/user/household/create:

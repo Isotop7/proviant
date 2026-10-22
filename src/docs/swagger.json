@@ -5056,6 +5056,79 @@
                 }
             }
         },
+        "/api/v1/user/dashboard-layout": {
+            "get": {
+                "description": "Returns the stored arrangement of the dashboard tiles: the position and the column and row span of every tile. An empty tile map means the default arrangement.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Gets the current user's dashboard layout",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.dashboardLayout"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Stores the arrangement of the dashboard tiles: the position and the column and row span of every tile. An empty tile map resets the dashboard to the default arrangement.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Updates the current user's dashboard layout",
+                "parameters": [
+                    {
+                        "description": "Dashboard layout",
+                        "name": "layout",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.dashboardLayout"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user/household/create": {
             "post": {
                 "description": "Creates a new household with the given name and assigns the user to it.",
@@ -9117,6 +9190,34 @@
             "properties": {
                 "email": {
                     "type": "string"
+                }
+            }
+        },
+        "v1.dashboardLayout": {
+            "type": "object",
+            "properties": {
+                "tiles": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/v1.dashboardLayoutTile"
+                    }
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.dashboardLayoutTile": {
+            "type": "object",
+            "properties": {
+                "h": {
+                    "type": "integer"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "w": {
+                    "type": "integer"
                 }
             }
         },

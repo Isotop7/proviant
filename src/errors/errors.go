@@ -55,6 +55,11 @@ var (
 	// ErrUnsupportedLanguage is thrown when a language has no message catalog
 	ErrUnsupportedLanguage = errors.New("unsupported language")
 
+	// ErrDashboardLayoutInvalid is thrown when a submitted dashboard layout does
+	// not match the expected shape: an unknown version, a tile span outside the
+	// grid, or a payload above the size limit.
+	ErrDashboardLayoutInvalid = errors.New("invalid dashboard layout")
+
 	// ErrInvalidProductQuantity is thrown when a product is patched with a pack
 	// count of zero: a product always holds at least one pack.
 	ErrInvalidProductQuantity = errors.New("quantity must be at least 1")

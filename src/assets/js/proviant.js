@@ -560,6 +560,18 @@ proviant.updateReceiptScanSettings = async function (settings) {
   return { code: res.status, message: body.message };
 };
 
+proviant.getDashboardLayout = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/dashboard-layout`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  const body = await res.json();
+  return { code: res.status, message: body };
+};
+
+proviant.saveDashboardLayout = async function (layout) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/dashboard-layout`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(layout) });
+  const body = await res.json();
+  return { code: res.status, message: body.message };
+};
+
 proviant.generateTelegramLinkToken = async function () {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/telegram-link-token`, { method: "POST" });
   const body = await res.json();

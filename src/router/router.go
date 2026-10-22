@@ -276,6 +276,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI.POST("/notification-preferences", v1.WrapHandler(v1.UpdateUserNotificationPreferences))
 	protectedUserAPI.GET("/receipt-scan-settings", v1.WrapHandler(v1.GetUserReceiptScanSettings))
 	protectedUserAPI.POST("/receipt-scan-settings", v1.WrapHandler(v1.UpdateUserReceiptScanSettings))
+	protectedUserAPI.GET("/dashboard-layout", v1.WrapHandler(v1.GetUserDashboardLayout))
+	protectedUserAPI.PUT("/dashboard-layout", v1.WrapHandler(v1.UpdateUserDashboardLayout))
 	protectedUserAPI.POST("/telegram-link-token", v1.WrapHandler(v1.GenerateTelegramLinkToken))
 	protectedUserAPI.POST("/household/leave", v1.WrapHandler(v1.LeaveHousehold))
 	protectedUserAPI.POST("/household/create", v1.WrapHandler(v1.CreateHousehold))

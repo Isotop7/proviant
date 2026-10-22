@@ -1,16 +1,31 @@
 (function() {
 'use strict';
 
-function renderSkeletons(count) {
+// The tiles the script builds go in front of the ones the template renders:
+// the template's list cell is the anchor, so the dashboard keeps the order the
+// screen sheet draws it in.
+function tileAnchor() {
   const dashboard = document.getElementById('dashboard');
+  return dashboard ? dashboard.querySelector('[data-tile="expiring-list"]') : null;
+}
+
+function insertTile(cell) {
+  const dashboard = document.getElementById('dashboard');
+  if (!dashboard) return;
+  const anchor = tileAnchor();
+  if (anchor) dashboard.insertBefore(cell, anchor);
+  else dashboard.appendChild(cell);
+}
+
+function renderSkeletons(count) {
   for (let i = 0; i < count; i++) {
     const col = document.createElement('div');
-    col.className = 'col skeleton-tile';
+    col.className = 'bento__cell bento__cell--2 skeleton-tile';
     col.innerHTML = `<div class="kpi h-100">
       <div class="skeleton mb-2" style="height:.75rem;width:60%"></div>
       <div class="skeleton" style="height:2rem;width:40%"></div>
     </div>`;
-    dashboard.appendChild(col);
+    insertTile(col);
   }
 }
 
@@ -40,9 +55,10 @@ function clearEmptyChart(canvasId) {
   }
 }
 
-function renderHeroTile(title, hero, chips) {
+function renderHeroTile(tileId, title, hero, chips) {
   const col = document.createElement('div');
   col.className = 'bento__cell bento__cell--3';
+  col.dataset.tile = tileId;
   const chipHtml = chips.map(function (chip) {
     const modifier = chip.variant && chip.variant !== 'fresh' ? ' kpi__chip--' + chip.variant : '';
     return `<span class="kpi__chip${modifier}"><i class="bi bi-${chip.icon}" aria-hidden="true"></i>${chip.label}</span>`;
@@ -60,9 +76,10 @@ function renderHeroTile(title, hero, chips) {
 // the money tiles.
 const TILE_VALUE_VARIANTS = ['danger', 'warning', 'success', 'accent'];
 
-function renderTile(title, hero, variant, heroClass, span, sub) {
+function renderTile(tileId, title, hero, variant, heroClass, span, sub) {
   const col = document.createElement('div');
   col.className = 'bento__cell bento__cell--' + (span || 2);
+  col.dataset.tile = tileId;
   // A solid fill is reserved for the expired state — the design system's
   // bento sheet fills exactly one card. Every other variant colours the
   // value, which is what the status text variants exist for.
@@ -379,7 +396,8 @@ document.addEventListener('DOMContentLoaded', async function () {
       const expiringSoon = s.expiringSoon || [];
       const expiredCount = s.wasteCount || 0;
       const freshCount = Math.max(0, s.totalActive - expiredCount - expiringSoon.length);
-      dashboard.appendChild(renderHeroTile(
+      insertTile(renderHeroTile(
+        'hero',
         proviant.t("js.home.activeProducts"),
         s.totalActive,
         [
@@ -403,6 +421,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       const tiles = [
         {
+          tile: 'waste-rate',
           title: proviant.t("js.home.expiredNotConsumed"),
           hero: `${s.wastePercent.toFixed(1)}%`,
           variant: expiredCount > 0 ? 'danger' : null,
@@ -413,6 +432,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           },
         },
         {
+          tile: 'consumed',
           title: proviant.t("js.home.totalConsumed"),
           hero: s.totalArchived,
           span: 2,
@@ -423,6 +443,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           },
         },
         {
+          tile: 'last-added',
           title: proviant.t("js.home.lastAddedProduct"),
           hero: s.lastInsertedProduct || '—',
           heroClass: 'kpi__value text-truncate',
@@ -435,8 +456,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         },
       ];
 
-      tiles.forEach(({ title, hero, variant, heroClass, span, sub }) => {
-        dashboard.appendChild(renderTile(title, hero, variant, heroClass, span, sub));
+      tiles.forEach(({ tile, title, hero, variant, heroClass, span, sub }) => {
+        insertTile(renderTile(tile, title, hero, variant, heroClass, span, sub));
       });
 
       // Streak tile
@@ -445,7 +466,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       const longestStreak = streak ? streak.longestStreak : 0;
       const streakHero = proviant.tn("js.home.streakDays", currentStreak);
       const streakHeroClass = currentStreak > 0 ? 'kpi__value' : 'kpi__value text-body-secondary';
-      const streakCol = renderTile('<i class="bi bi-fire"></i> ' + proviant.t("js.home.wasteFreeStreak"), streakHero, null, streakHeroClass, 2);
+      const streakCol = renderTile('streak', '<i class="bi bi-fire"></i> ' + proviant.t("js.home.wasteFreeStreak"), streakHero, null, streakHeroClass, 2);
       const streakTile = streakCol.querySelector('.kpi');
       if (streakTile) {
         if (longestStreak > 0) {
@@ -480,7 +501,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           streakTile.appendChild(prog);
         }
       }
-      dashboard.appendChild(streakCol);
+      insertTile(streakCol);
 
       // Monthly waste goal tile
       const settingsResponse = await proviant.getHouseholdSettings();
@@ -488,7 +509,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         const hs = settingsResponse.message;
         if (hs.monthlyWasteGoalType === 'count' || hs.monthlyWasteGoalType === 'percent') {
           const goalCol = document.createElement('div');
-          goalCol.className = 'col';
+          goalCol.className = 'bento__cell bento__cell--2';
+          goalCol.dataset.tile = 'goal';
           const wasteThisMonth = s.wasteCount;
           let pct = 0;
           let label = '';
@@ -511,7 +533,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
               </div>
             </div>`;
-          dashboard.appendChild(goalCol);
+          insertTile(goalCol);
         }
       }
 
@@ -520,7 +542,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (activityResponse.code === 200 && activityResponse.message && activityResponse.message.activities) {
         const activities = activityResponse.message.activities;
         const activityCol = document.createElement('div');
-        activityCol.className = 'col-12';
+        activityCol.className = 'h-100';
 
         const actionIconMap = {
           add: 'bi-plus-circle',
@@ -586,20 +608,23 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         const activityRow = document.createElement('div');
         activityRow.className = 'bento__cell bento__cell--6';
+        activityRow.dataset.tile = 'activity';
         activityRow.appendChild(activityCol);
-        dashboard.appendChild(activityRow);
+        insertTile(activityRow);
       }
 
       // Savings tiles
       const savings = (savingsResponse.code === 200 && savingsResponse.message) ? savingsResponse.message : null;
       if (savings) {
-        dashboard.appendChild(renderTile(
+        insertTile(renderTile(
+          'savings-eur',
           proviant.t("js.home.savedThisMonth"),
           `€${(savings.savedEurThisMonth ?? 0).toFixed(2)}`,
           savings.savedEurThisMonth > 0 ? 'accent' : null,
           null,
         ));
-        dashboard.appendChild(renderTile(
+        insertTile(renderTile(
+          'savings-co2',
           proviant.t("js.home.co2AvoidedThisMonth"),
           `${(savings.savedCo2KgThisMonth ?? 0).toFixed(2)} kg`,
           savings.savedCo2KgThisMonth > 0 ? 'accent' : null,
@@ -616,9 +641,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         const legacyEvents = savings.legacyEvents || 0;
         if (legacyEvents > 0) {
           const note = document.createElement('div');
-          note.className = 'bento__cell bento__cell--6 text-body-secondary small mt-1';
+          note.className = 'bento__cell bento__cell--6 text-body-secondary small';
+          note.dataset.tile = 'legacy-note';
+          note.dataset.tileFixed = 'true';
           note.textContent = proviant.tn("js.home.legacySavingsNote", legacyEvents);
-          dashboard.appendChild(note);
+          insertTile(note);
         }
       }
     }
@@ -645,6 +672,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (status) status.textContent = proviant.t("js.home.loaded");
 
     lastStats = s;
+
+    // Every tile stands in the grid now: the layout engine arranges them.
+    document.dispatchEvent(new CustomEvent('proviant:dashboardready'));
+
     renderCharts(s);
   } catch (error) {
     console.error('proviant: dashboard load failed', error);
