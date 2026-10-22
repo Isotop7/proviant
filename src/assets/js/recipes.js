@@ -115,17 +115,17 @@ function renderRecipes(recipes) {
 
 
                         </div>
-                        <div class="card-footer bg-transparent border-top-0 pb-3">
+                        <div class="card-footer bg-transparent border-top-0 pb-3 d-flex flex-wrap gap-3 align-items-center">
                             <a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm${cookIds.length ? '' : ' stretched-link'}">
                                 ${proviant.t("js.recipes.viewRecipe")} <i class="bi bi-box-arrow-up-right"></i>
                             </a>
-                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2 save-suggestion-btn"
+                            <button type="button" class="btn btn-outline-secondary btn-sm position-relative z-2 save-suggestion-btn"
                                     data-suggestion-index="${index}"
                                     aria-label="${proviant.t("js.recipes.saveSuggestionLabel", escapeHtml(recipe.title))}">
                                 <i class="bi bi-save"></i> ${proviant.t("js.recipes.saveRecipe")}
                             </button>
                             ${cookIds.length ? `
-                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2 cook-recipe-btn"
+                            <button type="button" class="btn btn-outline-secondary btn-sm position-relative z-2 cook-recipe-btn"
                                     data-product-ids='${JSON.stringify(cookIds)}'
                                     aria-label="${proviant.tn("js.recipes.cookThisLabel", cookIds.length)}">
                                 <i class="bi bi-fire"></i> ${proviant.t("js.recipes.cookThis")}
