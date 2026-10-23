@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.24.0] - 2026-10-23
+
+### Added
+- (c9ff88aa): Feat: add unit system with metric/imperial display
+Closes: #399
+- (76dd8409): Feat: add OpenFoodFacts bulk dump import
+Closes: #412
+- (8ea521b4): Show measured products as one package
+- (03832834): **products:** Replace amount and unit with quantity and pack size
+- (b3c9980a): **ui:** Migrate UI to design system
+- (ef6f37fd): **api:** Customizable dashboard tile layout
+- (1bde8855): **dashboard:** Arrange tiles in an edit mode
+
+
+### CI/CD
+- (82664cdf): Compile the CSS before the Go checks
+
+
+### Changed
+- (5c4b3cf4): **frontend:** Migrate to Bootstrap 6
+- (86c37aa4): Update skills
+
+
+### Documentation
+- (d612ea43): Add nav spec, mealplan and scan screens
+
+
+### Fixed
+- (e9387f07): **docker:** Bump Go builder to 1.26.10 for CVE-2026-111943
+- (0a85f767): **assets:** Handle floating promises and use Number.* parsers
+- (cf9024af): **assets:** Create the tile tooltip through the bootstrap factory
+
+
+### Miscellaneous
+- (da332abf): Update CHANGELOG.md for v0.23.0
+- (ec66d768): Update sonarcloud project key
+- (1162da52): Mark sonar false positives NOSONAR
+
+
+### Security
+- (abbb0ce6): Pin actions, npm scripts, cdn assets
+- (7ca273c4): Drop hardcoded database password, secure cookies on https
+- (84c5ddfa): Stop expanding secrets in ci, root-own the demo entrypoint
+
+
 ## [0.23.0] - 2026-10-17
 
 ### Added
