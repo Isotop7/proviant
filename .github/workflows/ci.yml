@@ -35,6 +35,18 @@ jobs:
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
+      # The Go build embeds src/assets/css, but that directory is generated and
+      # gitignored, so a fresh checkout has no file matching the embed pattern
+      # and every Go step below (lint, test, build) fails to compile the assets
+      # package. Compile the SCSS first, exactly like the Dockerfile does.
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build CSS
+        run: npm run css
       - name: Verify modules
         run: |
           cd ./src
