@@ -232,6 +232,66 @@ func TestOpenFoodFactsConfigurationStruct(t *testing.T) {
 	})
 }
 
+// TestValidateOpenFoodFactsDumpConfiguration verifies the dump import is only
+// valid when fully configured.
+func TestValidateOpenFoodFactsDumpConfiguration(t *testing.T) {
+	base := func() *ProviantConfiguration {
+		config := &ProviantConfiguration{}
+		config.OpenFoodFacts.URL = "https://world.openfoodfacts.org/api/v2/product"
+		config.OpenFoodFacts.Timeout = 5
+		config.Database.SelectedEngine = database.SQLite
+		return config
+	}
+
+	t.Run("disabled dump only needs API settings", func(t *testing.T) {
+		if err := base().ValidateOpenFoodFactsConfiguration(); err != nil {
+			t.Errorf("err = %v, want nil", err)
+		}
+	})
+
+	t.Run("enabled dump rejects non-positive expiry", func(t *testing.T) {
+		config := base()
+		config.OpenFoodFacts.DumpImportEnabled = true
+		config.OpenFoodFacts.DumpURL = "https://example.com/dump.jsonl.gz"
+		config.OpenFoodFacts.DumpImportExpiryDays = 0
+		if err := config.ValidateOpenFoodFactsConfiguration(); err != proviantErrors.ErrOpenFoodFactsDumpInvalidExpiryDays {
+			t.Errorf("err = %v, want %v", err, proviantErrors.ErrOpenFoodFactsDumpInvalidExpiryDays)
+		}
+	})
+
+	t.Run("enabled dump rejects empty URL", func(t *testing.T) {
+		config := base()
+		config.OpenFoodFacts.DumpImportEnabled = true
+		config.OpenFoodFacts.DumpImportExpiryDays = 7
+		if err := config.ValidateOpenFoodFactsConfiguration(); err != proviantErrors.ErrOpenFoodFactsDumpEmptyURL {
+			t.Errorf("err = %v, want %v", err, proviantErrors.ErrOpenFoodFactsDumpEmptyURL)
+		}
+	})
+
+	t.Run("enabled dump on MariaDB requires a schema", func(t *testing.T) {
+		config := base()
+		config.Database.SelectedEngine = database.MariaDB
+		config.OpenFoodFacts.DumpImportEnabled = true
+		config.OpenFoodFacts.DumpImportExpiryDays = 7
+		config.OpenFoodFacts.DumpURL = "https://example.com/dump.jsonl.gz"
+		if err := config.ValidateOpenFoodFactsConfiguration(); err != proviantErrors.ErrOpenFoodFactsDumpEmptyDatabase {
+			t.Errorf("err = %v, want %v", err, proviantErrors.ErrOpenFoodFactsDumpEmptyDatabase)
+		}
+	})
+
+	t.Run("fully configured dump is valid", func(t *testing.T) {
+		config := base()
+		config.Database.SelectedEngine = database.MariaDB
+		config.OpenFoodFacts.DumpImportEnabled = true
+		config.OpenFoodFacts.DumpImportExpiryDays = 7
+		config.OpenFoodFacts.DumpURL = "https://example.com/dump.jsonl.gz"
+		config.OpenFoodFacts.DumpDatabase = "off_dump"
+		if err := config.ValidateOpenFoodFactsConfiguration(); err != nil {
+			t.Errorf("err = %v, want nil", err)
+		}
+	})
+}
+
 func TestProviantConfigurationStruct(t *testing.T) {
 	config := ProviantConfiguration{
 		Database: DatabaseConfiguration{

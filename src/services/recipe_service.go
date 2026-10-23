@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/Isotop7/proviant/controllers/database"
 	apiModel "github.com/Isotop7/proviant/models/api"
@@ -23,30 +22,15 @@ func NewRecipeService(repos *database.RepositoryContainer, logger *zerolog.Logge
 	return &RecipeService{repos: repos, logger: logger, products: NewProductService(repos, logger)}
 }
 
-// scaleIngredientAmount scales a recipe amount to the requested servings,
-// rounding half up. baseServings <= 0 is treated as 1.
-func scaleIngredientAmount(amount, servings, baseServings int) int {
-	if baseServings <= 0 {
-		baseServings = 1
-	}
-	if servings <= 0 {
-		servings = baseServings
-	}
-	scaled := (int64(amount)*int64(servings) + int64(baseServings)/2) / int64(baseServings)
-	if scaled < 0 {
-		return 0
-	}
-	if scaled > int64(math.MaxInt) {
-		return math.MaxInt
-	}
-	return int(scaled)
-}
-
-// CookRecipe consumes the ingredients of a recipe scaled to the requested
-// servings (0 = the recipe's own serving count). Free-text ingredients, missing
-// products and unit mismatches are reported as per-ingredient gaps and skipped;
+// CookRecipe consumes the ingredients of a recipe. Every linked ingredient
+// costs a pack: the stock is counted in packs, and a recipe states how much
+// of something a dish needs, not how many packs of it that is. A cook for
+// more servings than the recipe states needs more packs of every ingredient,
+// so the requested servings scale the pack count. Free-text ingredients and
+// missing products are reported as per-ingredient gaps and skipped;
 // everything else is delegated to CookProducts. internalErr carries the first
-// server-side failure so the handler can answer 5xx instead of blaming the client.
+// server-side failure so the handler can answer 5xx instead of blaming the
+// client.
 func (s *RecipeService) CookRecipe(recipeID uint, servings int, userID uint) (consumed, partial int, errs []string, internalErr error) {
 	householdID, householdErr := s.repos.Users.GetUserHouseholdByID(userID)
 	if householdErr != nil {
@@ -64,25 +48,23 @@ func (s *RecipeService) CookRecipe(recipeID uint, servings int, userID uint) (co
 		return 0, 0, nil, err
 	}
 
-	if servings <= 0 {
-		servings = recipe.Servings
-	}
-
 	items := make([]apiModel.CookItemAPIModel, 0, len(recipe.Ingredients))
+	// A cook for more servings than the recipe states needs more packs of every
+	// ingredient: the stock is counted in packs, so the ratio of the requested
+	// servings to the recipe's own becomes the number of packs. The recipe's
+	// ingredient amount stays display metadata and never re-enters the
+	// arithmetic.
+	packs := 1
+	if servings > 0 && recipe.Servings > 0 && servings > recipe.Servings {
+		packs = int(math.Ceil(float64(servings) / float64(recipe.Servings)))
+	}
 	for i := range recipe.Ingredients {
 		ingredient := &recipe.Ingredients[i]
 		if ingredient.ProductID == nil {
 			errs = append(errs, fmt.Sprintf("%s: not linked to a product", ingredient.Name))
 			continue
 		}
-		// A zero amount would mean "consume everything" to CookProducts; for a
-		// recipe ingredient with no amount set that would silently archive the
-		// whole product, so report it as a gap instead.
-		if ingredient.Amount <= 0 {
-			errs = append(errs, fmt.Sprintf("%s: no amount set", ingredient.Name))
-			continue
-		}
-		product, productErr := s.repos.Products.GetProductByID(*ingredient.ProductID, userID)
+		_, productErr := s.repos.Products.GetProductByID(*ingredient.ProductID, userID)
 		if productErr != nil {
 			if errors.Is(productErr, gorm.ErrRecordNotFound) {
 				errs = append(errs, fmt.Sprintf("%s: product not found", ingredient.Name))
@@ -95,13 +77,9 @@ func (s *RecipeService) CookRecipe(recipeID uint, servings int, userID uint) (co
 			}
 			continue
 		}
-		if ingredient.Unit != "" && product.Unit != "" && !strings.EqualFold(ingredient.Unit, product.Unit) {
-			errs = append(errs, fmt.Sprintf("%s: unit %s does not match product unit %s", ingredient.Name, ingredient.Unit, product.Unit))
-			continue
-		}
 		items = append(items, apiModel.CookItemAPIModel{
 			ProductID: *ingredient.ProductID,
-			Amount:    scaleIngredientAmount(ingredient.Amount, servings, recipe.Servings),
+			Quantity:  packs,
 		})
 	}
 

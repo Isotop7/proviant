@@ -63,7 +63,7 @@ func isPrivateOrReservedIP(ip net.IP) bool {
 	}
 
 	// Block CG-NAT: 100.64.0.0/10 (not covered by IsPrivate)
-	if _, cgnat, _ := net.ParseCIDR("100.64.0.0/10"); cgnat.Contains(ip) {
+	if _, cgnat, _ := net.ParseCIDR("100.64.0.0/10"); cgnat.Contains(ip) { // NOSONAR
 		return true
 	}
 

@@ -1,7 +1,7 @@
 {{ define "content" }}
 
 {{ if .DemoMode }}
-<div class="alert alert-info text-center mb-0 py-2" role="alert">
+<div class="alert alert theme-info text-center mb-0 py-3" role="alert">
     <i class="bi bi-info-circle-fill me-1"></i>
     <strong>{{ t "home.demoMode.title" }}</strong> — {{ t "home.demoMode.desc" }}
 </div>
@@ -11,9 +11,11 @@
 
 <div aria-live="polite" aria-atomic="true" class="visually-hidden" id="dashboard-status"></div>
 
+<h1 class="visually-hidden">{{ t "nav.dashboard" }}</h1>
+
 <!-- Hero scan card — mobile only -->
-<div class="px-3 pt-3 d-md-none">
-    <a href="/web/products/scan" class="hero-scan-card mb-3" aria-label="{{ t "home.scanProduct" }}">
+<div class="px-5 pt-5 md:d-none">
+    <a href="/web/products/scan" class="hero-scan-card mb-5" aria-label="{{ t "home.scanProduct" }}">
         <div>
             <div class="hero-label">{{ t "home.quickAction" }}</div>
             <div class="hero-title">{{ t "home.scanProduct" }}</div>
@@ -23,87 +25,117 @@
     </a>
 </div>
 
-<!-- Row 1: stat tiles -->
-<div class="row row-cols-2 row-cols-md-4 g-3 px-3 pt-3 pb-2" id="dashboard"></div>
+<div class="dashboard-tools px-5 pt-5 pb-4 d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-outline theme-secondary btn-sm" id="dashboard-edit-layout"
+            aria-controls="dashboard" disabled
+            data-edit-label="{{ t "home.editDashboard" }}"
+            data-done-label="{{ t "home.doneEditing" }}">
+        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+        <span class="dashboard-tools__label">{{ t "home.editDashboard" }}</span>
+    </button>
+    <button type="button" class="btn btn-link btn-sm" id="dashboard-reset-layout" disabled hidden>
+        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+        {{ t "home.resetLayout" }}
+    </button>
+</div>
 
-<!-- Row 2: expiring soon list + waste donut -->
-<div class="row g-3 px-3 pb-3">
-    <div class="col-md-7" id="dashboard-list"></div>
-    <div class="col-md-5">
+<!-- The bento grid: the tiles, the lists and the charts share six columns.
+     Every tile carries a data-tile name: the layout engine arranges them. -->
+<div class="bento px-5 pb-5" id="dashboard">
+    <div class="bento__cell bento__cell--6" data-tile="expiring-list" id="dashboard-list"></div>
+
+    <div class="bento__cell bento__cell--3" data-tile="chart-waste">
         <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+            <div class="card-header chart-card__header">
                 <div class="icon-chip" aria-hidden="true">
                     <i class="bi bi-pie-chart-fill"></i>
                 </div>
-                {{ t "home.wasteRate" }}
+                <div class="chart-card__headings">
+                    <div class="chart-card__eyebrow">{{ t "home.wasteRate" }}</div>
+                    <div class="chart-card__value" id="wasteRateValue">&mdash;</div>
+                </div>
             </div>
-            <div class="card-body d-flex align-items-center justify-content-center">
-                <canvas id="chartWaste" role="img" aria-label="{{ t "home.wasteChartAria" }}"></canvas>
+            <div class="card-body">
+                <div class="chart-frame">
+                    <canvas id="chartWaste" role="img" aria-label="{{ t "home.wasteChartAria" }}"></canvas>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Row 3: category breakdown + expiry trend -->
-<div class="row g-3 px-3 pb-3">
-    <div class="col-md-6">
+    <div class="bento__cell bento__cell--3" data-tile="chart-categories">
         <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+            <div class="card-header chart-card__header">
                 <div class="icon-chip" aria-hidden="true">
                     <i class="bi bi-tags-fill"></i>
                 </div>
-                {{ t "home.categoryBreakdown" }}
+                <div class="chart-card__headings">
+                    <div class="chart-card__eyebrow">{{ t "home.categoryBreakdown" }}</div>
+                    <div class="chart-card__value" id="categoryCountValue">&mdash;</div>
+                </div>
             </div>
-            <div class="card-body"><canvas id="chartCategories" role="img" aria-label="{{ t "home.categoriesChartAria" }}"></canvas></div>
+            <div class="card-body">
+                <div class="chart-frame">
+                    <canvas id="chartCategories" role="img" aria-label="{{ t "home.categoriesChartAria" }}"></canvas>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="col-md-6">
+
+    <div class="bento__cell bento__cell--6" data-tile="chart-expiry">
         <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+            <div class="card-header chart-card__header">
                 <div class="icon-chip" aria-hidden="true">
                     <i class="bi bi-graph-up-arrow"></i>
                 </div>
-                {{ t "home.expiryTrend" }}
+                <div class="chart-card__headings">
+                    <div class="chart-card__eyebrow">{{ t "home.expiryTrend" }}</div>
+                    <div class="chart-card__value" id="expiryTrendValue">&mdash;</div>
+                </div>
             </div>
-            <div class="card-body"><canvas id="chartExpiryTrend" role="img" aria-label="{{ t "home.expiryTrendChartAria" }}"></canvas></div>
+            <div class="card-body">
+                <div class="chart-frame chart-frame--lg">
+                    <canvas id="chartExpiryTrend" role="img" aria-label="{{ t "home.expiryTrendChartAria" }}"></canvas>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Row 4: CTAs — waste analytics + recipe suggestions -->
-<div class="row g-3 px-3 pb-3">
-    <div class="col-md-6">
-        <a href="/web/waste-analytics" class="card card-accent h-100 text-decoration-none text-reset">
-            <div class="card-body d-flex align-items-center gap-3">
+    <div class="bento__cell bento__cell--3" data-tile="cta-waste" data-tile-label="{{ t "home.viewWasteAnalytics" }}">
+        <a href="/web/waste-analytics" class="card card-accent h-100 text-decoration-none fg-body">
+            <div class="card-body d-flex flex-row align-items-center gap-5">
                 <div class="icon-chip icon-chip-inverse" aria-hidden="true">
                     <i class="bi bi-bar-chart-line-fill"></i>
                 </div>
                 <div class="flex-grow-1">
                     <div class="fw-bold">{{ t "home.viewWasteAnalytics" }}</div>
-                    <div class="text-secondary-custom small">{{ t "home.wasteAnalyticsDesc" }}</div>
+                    <div class="fg-secondary small">{{ t "home.wasteAnalyticsDesc" }}</div>
                 </div>
-                <i class="bi bi-chevron-right text-secondary-custom"></i>
+                <i class="bi bi-chevron-right fg-secondary"></i>
             </div>
         </a>
     </div>
-    <div class="col-md-6">
-        <a href="/web/recipes" class="card card-accent h-100 text-decoration-none text-reset">
-            <div class="card-body d-flex align-items-center gap-3">
+
+    <div class="bento__cell bento__cell--3" data-tile="cta-recipes" data-tile-label="{{ t "home.whatCanIMake" }}">
+        <a href="/web/recipes" class="card card-accent h-100 text-decoration-none fg-body">
+            <div class="card-body d-flex flex-row align-items-center gap-5">
                 <div class="icon-chip icon-chip-inverse" aria-hidden="true">
                     <i class="bi bi-egg-fried"></i>
                 </div>
                 <div class="flex-grow-1">
                     <div class="fw-bold">{{ t "home.whatCanIMake" }}</div>
-                    <div class="text-secondary-custom small">{{ t "home.recipesDesc" }}</div>
+                    <div class="fg-secondary small">{{ t "home.recipesDesc" }}</div>
                 </div>
-                <i class="bi bi-chevron-right text-secondary-custom"></i>
+                <i class="bi bi-chevron-right fg-secondary"></i>
             </div>
         </a>
     </div>
 </div>
 
 <script src="/assets/js/chart.umd.min.js" defer></script>
+<script src="/assets/js/chartTheme.js" defer></script>
 <script src="/assets/js/homeStats.js" defer></script>
+<script src="/assets/js/dashboardLayout.js" defer></script>
 
 {{ else }}
 
@@ -113,7 +145,7 @@
     </div>
     <div class="empty-title">{{ t "home.noHouseholdTitle" }}</div>
     <div class="empty-desc">{{ t "home.noHouseholdDesc" }}</div>
-    <a class="btn btn-proviant-primary" href="/web/user/settings#household">
+    <a class="btn btn-solid theme-primary" href="/web/user/settings#household">
         <i class="bi bi-people me-2"></i>
         {{ t "home.setUpHousehold" }}
     </a>

@@ -54,8 +54,8 @@ func productToExportRow(p *dbModel.Product) []string {
 	return []string{
 		p.ProductName,
 		p.Barcode,
-		fmt.Sprintf("%d", p.Amount),
-		p.Unit,
+		fmt.Sprintf("%d", p.Quantity),
+		p.PackSize,
 		p.Categories,
 		func() string {
 			if p.StorageLocation != nil {
@@ -98,7 +98,10 @@ func ExportProductsCSV(ctx *gin.Context, appCtx *AppContext) {
 	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"products.csv\"")
 
 	writer := csv.NewWriter(ctx.Writer)
-	if err := writer.Write([]string{"name", "barcode", "quantity", "unit", "category", "storage_location", "expiry_date", "added_at"}); err != nil {
+	if err := writer.Write([]string{
+		util.CsvColumnName, util.CsvColumnBarcode, util.CsvColumnQuantity, util.CsvColumnPackSize,
+		util.CsvColumnCategory, util.CsvColumnStorageLocation, util.CsvColumnExpiryDate, util.CsvColumnAddedAt,
+	}); err != nil {
 		appCtx.Logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 		return
 	}
@@ -163,7 +166,11 @@ func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext) {
 	ctx.Header(util.RequestHeaderContentDisposition, "attachment; filename=\"archive.csv\"")
 
 	writer := csv.NewWriter(ctx.Writer)
-	if err := writer.Write([]string{"name", "barcode", "quantity", "unit", "category", "storage_location", "expiry_date", "added_at", "archived_at"}); err != nil {
+	if err := writer.Write([]string{
+		util.CsvColumnName, util.CsvColumnBarcode, util.CsvColumnQuantity, util.CsvColumnPackSize,
+		util.CsvColumnCategory, util.CsvColumnStorageLocation, util.CsvColumnExpiryDate, util.CsvColumnAddedAt,
+		"archived_at",
+	}); err != nil {
 		appCtx.Logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)
 		return
 	}

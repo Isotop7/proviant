@@ -37,6 +37,7 @@ type Recipe struct {
 	ImageURL    string
 	SourceURL   string
 	Ingredients []string
+	SearchTerm string
 }
 
 // RecipeSuggestion is a recipe matched to household products.
@@ -348,9 +349,15 @@ func (rc *RecipeController) storeCacheWithTTL(cacheKey string, suggestions []Rec
 	}
 }
 
-// collectKeywords builds a capped, ordered set of category tokens and product
-// name tokens from expiring products. Product order (expiry-soonest first) is
-// preserved so capping keeps the most urgent products' keywords.
+// collectKeywords builds a capped, ordered set of search keywords from the
+// expiring products. The product names come first: a name is the household's
+// own word for the thing that is about to expire, while a category token is a
+// coarse fallback that names a kind of food rather than a product. The
+// category tokens follow, deduplicated, and only fill the budget the product
+// names leave.
+//
+// Product order (expiry-soonest first) is preserved so capping keeps the most
+// urgent products' keywords.
 func (rc *RecipeController) collectKeywords(products []dbModel.Product) []string {
 	keywordSet := make(map[string]struct{})
 	keywords := make([]string, 0, maxRecipeKeywords)
@@ -359,25 +366,34 @@ func (rc *RecipeController) collectKeywords(products []dbModel.Product) []string
 		if len(keywords) >= maxRecipeKeywords {
 			return keywords
 		}
-		p := &products[i]
-		name := normalizeString(p.ProductName)
-		if name != "" {
-			if _, exists := keywordSet[name]; !exists {
-				keywordSet[name] = struct{}{}
-				keywords = append(keywords, name)
-			}
+		name := normalizeString(products[i].ProductName)
+		if name == "" {
+			continue
 		}
-		for _, cat := range strings.Split(p.Categories, ",") {
+		if _, exists := keywordSet[name]; exists {
+			continue
+		}
+		keywordSet[name] = struct{}{}
+		keywords = append(keywords, name)
+	}
+
+	for i := range products {
+		if len(keywords) >= maxRecipeKeywords {
+			return keywords
+		}
+		for _, cat := range strings.Split(products[i].Categories, ",") {
 			if len(keywords) >= maxRecipeKeywords {
 				return keywords
 			}
 			cat = normalizeString(cat)
-			if cat != "" && cat != "food" && cat != "de:lebensmittel" {
-				if _, exists := keywordSet[cat]; !exists {
-					keywordSet[cat] = struct{}{}
-					keywords = append(keywords, cat)
-				}
+			if cat == "" || cat == "food" || cat == "de:lebensmittel" {
+				continue
 			}
+			if _, exists := keywordSet[cat]; exists {
+				continue
+			}
+			keywordSet[cat] = struct{}{}
+			keywords = append(keywords, cat)
 		}
 	}
 	return keywords
@@ -410,6 +426,7 @@ func deduplicateRecipes(recipes []Recipe) []Recipe {
 func (rc *RecipeController) matchRecipesToProducts(recipes []Recipe, allProducts []dbModel.Product, expiringProducts []dbModel.Product) []RecipeSuggestion {
 	suggestions := make([]RecipeSuggestion, 0)
 	normalized := buildNormalizedIndex(allProducts)
+	expiringIndex := buildNormalizedIndex(expiringProducts)
 	expiryPointsByProductID := buildExpiryPoints(expiringProducts)
 
 	for _, recipe := range recipes {
@@ -424,8 +441,21 @@ func (rc *RecipeController) matchRecipesToProducts(recipes []Recipe, allProducts
 		var rankedIDs []uint
 		var cookIDs []uint
 
+		normTerm := normalizeString(recipe.SearchTerm)
+		var anchor *productIndex
+		if normTerm != "" {
+			anchor, _ = ingredientMatched(normTerm, expiringIndex)
+		}
+
 		for _, ingredient := range recipe.Ingredients {
-			match, rank := ingredientMatched(normalizeString(ingredient), normalized)
+			normIng := normalizeString(ingredient)
+			match, rank := ingredientMatched(normIng, normalized)
+			anchored := false
+			if match == nil && anchor != nil && termCoversIngredient(normTerm, normIng) {
+				match = anchor
+				rank = rankWordName
+				anchored = true
+			}
 			ingredientMatches = append(ingredientMatches, api.IngredientMatch{
 				Name:    ingredient,
 				Matched: match != nil,
@@ -443,7 +473,7 @@ func (rc *RecipeController) matchRecipesToProducts(recipes []Recipe, allProducts
 			// substring hits select a product the recipe does not name —
 			// "milk" inside "Coconut Milk" — and consuming it would be
 			// irreversible and wrong. Loose hits stay display-only.
-			if rank == rankExactName {
+			if rank == rankExactName && !anchored {
 				cookIDs = append(cookIDs, match.productID)
 			}
 		}
@@ -705,6 +735,44 @@ func containsWholeWord(words []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+// termCoversIngredient reports whether a search term names the ingredient it
+// was searched for: the term is one of the ingredient's words or the
+// ingredient is one of the term's words, in either singular or plural form
+// ("tomato" searched, "Tomatoes" listed). The comparison is word-wise on
+// purpose — a plain substring test would call "oil" a match for "boiled oil"
+// and hand the recipe to the wrong product.
+func termCoversIngredient(normTerm, normIngredient string) bool {
+	if normTerm == "" || normIngredient == "" {
+		return false
+	}
+	termWords := strings.Fields(normTerm)
+	ingredientWords := strings.Fields(normIngredient)
+	for _, termWord := range termWords {
+		for _, ingredientWord := range ingredientWords {
+			if termWord == ingredientWord || singularWord(termWord) == singularWord(ingredientWord) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// singularWord reduces an English food word to its singular form so that a
+// search term and a listed ingredient recognize each other across the plural
+// boundary.
+func singularWord(word string) string {
+	switch {
+	case strings.HasSuffix(word, "ies") && len(word) > 4:
+		return strings.TrimSuffix(word, "ies") + "y"
+	case strings.HasSuffix(word, "es") && len(word) > 3:
+		return strings.TrimSuffix(word, "es")
+	case strings.HasSuffix(word, "s") && len(word) > 2:
+		return strings.TrimSuffix(word, "s")
+	default:
+		return word
+	}
 }
 
 // limitSuggestions returns at most limit items.

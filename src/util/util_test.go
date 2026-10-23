@@ -1,6 +1,7 @@
 package util
 
 import (
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -58,7 +59,7 @@ func TestCsvImportColumnAliases(t *testing.T) {
 		CsvColumnName:            true,
 		CsvColumnBarcode:         true,
 		CsvColumnQuantity:        true,
-		CsvColumnUnit:            true,
+		CsvColumnPackSize:        true,
 		CsvColumnCategory:        true,
 		CsvColumnStorageLocation: true,
 		CsvColumnExpiryDate:      true,
@@ -78,6 +79,17 @@ func TestCsvImportColumnAliases(t *testing.T) {
 			got, ok := CsvImportColumnAliases[col]
 			if !ok || got != col {
 				t.Errorf("canonical column %q maps to %q (present=%v), want itself", col, got, ok)
+			}
+		})
+	}
+
+	// A header of the pre-count-model format must not be aliased: its
+	// quantity column held a net content, and reading it as a pack count
+	// would turn a net content of 500 into 500 packs.
+	for _, legacy := range CsvLegacyColumnHeaders {
+		t.Run("legacy/"+legacy, func(t *testing.T) {
+			if target, ok := CsvImportColumnAliases[legacy]; ok {
+				t.Errorf("legacy column %q is aliased to %q, want no alias", legacy, target)
 			}
 		})
 	}
@@ -137,8 +149,9 @@ func TestLimitsArePositive(t *testing.T) {
 		{"ReceiptScanDefaultTimeout", ReceiptScanDefaultTimeout},
 		{"ReceiptItemMaxNameLength", ReceiptItemMaxNameLength},
 		{"ReceiptItemMaxCategoriesLength", ReceiptItemMaxCategoriesLength},
-		{"ReceiptItemMaxUnitLength", ReceiptItemMaxUnitLength},
-		{"ReceiptItemMaxAmount", ReceiptItemMaxAmount},
+		{"MaxPackSizeLength", MaxPackSizeLength},
+		{"MinProductQuantity", MinProductQuantity},
+		{"MaxProductQuantity", MaxProductQuantity},
 		{"DefaultMaxUploadSizeMB", DefaultMaxUploadSizeMB},
 		{"ConsumptionHistoryWindowDays", ConsumptionHistoryWindowDays},
 		{"ConsumptionMinSamples", ConsumptionMinSamples},
@@ -239,4 +252,135 @@ func TestStringConstants(t *testing.T) {
 			t.Errorf("CsvImportTemplateFilename = %q, want .csv suffix", CsvImportTemplateFilename)
 		}
 	})
+}
+
+func TestOffDumpSQLiteFilename(t *testing.T) {
+	tests := []struct {
+		name         string
+		databaseName string
+		want         string
+	}{
+		{
+			name:         "empty falls back to the default dump file",
+			databaseName: "",
+			want:         OffDumpDBFilename,
+		},
+		{
+			name:         "default name keeps the documented path",
+			databaseName: OffDumpDefaultDatabase,
+			want:         OffDumpDBFilename,
+		},
+		{
+			name:         "bare name lives beside the main database",
+			databaseName: "proviant_off_dump",
+			want:         filepath.Join(filepath.Dir(OffDumpDBFilename), "proviant_off_dump.db"),
+		},
+		{
+			name:         "absolute path is used verbatim",
+			databaseName: "/var/opt/off_dump",
+			want:         "/var/opt/off_dump",
+		},
+		{
+			name:         "relative path is used verbatim",
+			databaseName: "var/opt/off_dump",
+			want:         "var/opt/off_dump",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := OffDumpSQLiteFilename(test.databaseName); got != test.want {
+				t.Errorf("OffDumpSQLiteFilename(%q) = %q, want %q", test.databaseName, got, test.want)
+			}
+		})
+	}
+}
+
+func TestOffDumpStagingFilename(t *testing.T) {
+	tests := []struct {
+		name         string
+		databaseName string
+		want         string
+	}{
+		{
+			name:         "empty falls back to the default name",
+			databaseName: "",
+			want:         OffDumpDefaultDatabase + OffDumpStagingSuffix,
+		},
+		{
+			name:         "default name keeps the documented file",
+			databaseName: OffDumpDefaultDatabase,
+			want:         "off_dump" + OffDumpStagingSuffix,
+		},
+		{
+			name:         "bare name is carried over",
+			databaseName: "proviant_off_dump",
+			want:         "proviant_off_dump" + OffDumpStagingSuffix,
+		},
+		{
+			name:         "a path contributes only its base name",
+			databaseName: "/var/opt/off_dump",
+			want:         "off_dump" + OffDumpStagingSuffix,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := OffDumpStagingFilename(test.databaseName); got != test.want {
+				t.Errorf("OffDumpStagingFilename(%q) = %q, want %q", test.databaseName, got, test.want)
+			}
+		})
+	}
+}
+
+func TestIsHTTPSBaseURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		baseURL string
+		want    bool
+	}{
+		{
+			name:    "https deployment is secure",
+			baseURL: "https://proviant.local.de",
+			want:    true,
+		},
+		{
+			name:    "https with a path stays secure",
+			baseURL: "https://proviant.local.de/proviant",
+			want:    true,
+		},
+		{
+			name:    "uppercase scheme is still secure",
+			baseURL: "HTTPS://proviant.local.de",
+			want:    true,
+		},
+		{
+			name:    "surrounding whitespace is ignored",
+			baseURL: "  https://proviant.local.de  ",
+			want:    true,
+		},
+		{
+			name:    "http deployment is not secure",
+			baseURL: "http://127.0.0.1:5114",
+			want:    false,
+		},
+		{
+			name:    "empty base URL is not secure",
+			baseURL: "",
+			want:    false,
+		},
+		{
+			name:    "a scheme in the host does not count",
+			baseURL: "proviant.local.de/https",
+			want:    false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := IsHTTPSBaseURL(test.baseURL); got != test.want {
+				t.Errorf("IsHTTPSBaseURL(%q) = %v, want %v", test.baseURL, got, test.want)
+			}
+		})
+	}
 }

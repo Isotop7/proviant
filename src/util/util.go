@@ -1,7 +1,11 @@
 // util contains helper functions and generic vars
 package util
 
-import "time"
+import (
+	"path/filepath"
+	"strings"
+	"time"
+)
 
 const (
 	DefaultDateFormatParseStr       = "2006-01-02"
@@ -47,6 +51,10 @@ const (
 	RouteHealthReady = "/health/ready"
 	RouteMetrics     = "/metrics"
 
+	// ContentClassTable narrows a page to the measure the screen sheets give
+	// the table screens, where the columns need a readable line length.
+	ContentClassTable = "app__content--table"
+
 	// Consumption rate estimation
 	ConsumptionHistoryWindowDays = 90
 	ConsumptionMinSamples        = 2
@@ -68,10 +76,12 @@ const (
 
 	// CSV import column names. The canonical set mirrors the export header
 	// (see api/v1/export.go) so export → import round-trips by construction.
+	// The quantity column counts the packs of a product and the pack_size
+	// column states the size of one pack.
 	CsvColumnName            = "name"
 	CsvColumnBarcode         = "barcode"
 	CsvColumnQuantity        = "quantity"
-	CsvColumnUnit            = "unit"
+	CsvColumnPackSize        = "pack_size"
 	CsvColumnCategory        = "category"
 	CsvColumnStorageLocation = "storage_location"
 	CsvColumnExpiryDate      = "expiry_date"
@@ -187,9 +197,16 @@ const (
 	// a bulk-created product. Receipt scans emit short comma lists; the cap
 	// exists so a direct API client cannot push an unbounded string to the DB.
 	ReceiptItemMaxCategoriesLength = 100
-	ReceiptItemMaxUnitLength       = 20
-	ReceiptItemMaxAmount           = 999
 	ReceiptItemMaxPrice            = 100000.0
+
+	// MinProductQuantity is the smallest pack count a product may hold: a
+	// product always holds at least one pack.
+	MinProductQuantity = 1
+	// MaxProductQuantity bounds the pack count of a product, on every path
+	// that writes one: a create, a patch, a bulk create and a receipt scan
+	// all read the same bound, so a count cannot enter the database from one
+	// path that another path would have refused.
+	MaxProductQuantity = 999
 
 	// OfflineSyncIDMaxLength bounds both the client sync id that makes a queued
 	// create idempotent and the client mutation id that makes a queued amount
@@ -246,20 +263,95 @@ const (
 	// DefaultBackupStopWaitSeconds bounds Stop(): filesystem writes cannot be
 	// canceled reliably, so shutdown waits briefly instead of hanging forever.
 	DefaultBackupStopWaitSeconds = 5
+
+	// OpenFoodFacts bulk dump import (issue #412). The dump is OFF's full
+	// nightly JSONL export; deltas are the daily change files OFF publishes for
+	// a rolling window. This is distinct from open_food_facts_caches, which
+	// caches individual live API responses.
+	OpenFoodFactsDumpURL       = "https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz"
+	OpenFoodFactsDeltaIndexURL = "https://static.openfoodfacts.org/data/delta/index.txt"
+	OpenFoodFactsDeltaBaseURL  = "https://static.openfoodfacts.org/data/delta/"
+
+	// OffDumpDBFilename is the SQLite dump file used when dumpDatabase is empty.
+	// It lives beside the main database and is deliberately excluded from
+	// household backups, which only carry household data.
+	OffDumpDBFilename = "data/off_dump.db"
+
+	// OffDumpDefaultDatabase names the dump store when dumpDatabase is unset: the
+	// MariaDB schema, or data/<name>.db on SQLite. It is separate from the main
+	// schema so its lifecycle (bulk import, truncate) never touches household
+	// data. The app never creates the schema.
+	OffDumpDefaultDatabase = "off_dump"
+
+	// OffDumpStagingDir is where the full dump is staged before import, so an
+	// interrupted import resumes from disk instead of re-downloading. It holds
+	// the multi-gigabyte .part/.ready file and must sit on a volume with room
+	// for both the staging file and the growing dump store.
+	OffDumpStagingDir = "data"
+
+	// OffDumpStagingSuffix is appended to the dump store's name for the staged
+	// download; the in-progress download gets a .part suffix and the completed
+	// one a .ready suffix.
+	OffDumpStagingSuffix = ".jsonl.gz"
+
+	// OffDumpStagingPartSuffix marks an in-progress staging download, resumable
+	// from its current size.
+	OffDumpStagingPartSuffix = ".part"
+
+	// OffDumpStagingReadySuffix marks a fully staged download awaiting import.
+	OffDumpStagingReadySuffix = ".ready"
+
+	// OpenFoodFactsDumpBatchSize is the number of parsed products buffered
+	// before one upsert transaction. Large enough to amortize the transaction,
+	// small enough to bound memory against multi-megabyte dump lines.
+	OpenFoodFactsDumpBatchSize = 1000
+
+	// OpenFoodFactsDumpCheckIntervalHours is how often the worker wakes to
+	// decide whether the dump is expired or new deltas exist.
+	OpenFoodFactsDumpCheckIntervalHours = 6
+
+	// OpenFoodFactsDumpStopWaitSeconds bounds shutdown while a download or
+	// import is in flight.
+	OpenFoodFactsDumpStopWaitSeconds = 10
+
+	// DefaultOpenFoodFactsDumpExpiryDays is the full re-download cadence.
+	DefaultOpenFoodFactsDumpExpiryDays = 7
+
+	// DefaultOpenFoodFactsDeltaWindowDays bounds how many days of delta files
+	// are considered. OFF publishes the previous ~14 days.
+	DefaultOpenFoodFactsDeltaWindowDays = 14
+
+	// OffDump state keys.
+	OffDumpStateLastFullImport = "last_full_import"
+	OffDumpStateLastDeltaEnd   = "last_delta_end_unix"
+
+	// OffDump state keys describing the in-flight full import, so a restart can
+	// resume the download and the import instead of starting over.
+	OffDumpStateFullImportURL          = "full_import_url"
+	OffDumpStateFullImportETag         = "full_import_etag"
+	OffDumpStateFullImportLastModified = "full_import_last_modified"
+	OffDumpStateFullImportRecords      = "full_import_records"
+
+	// CountModelCutover names the cutover to the count model, the change that
+	// replaced the amount and the unit of a product by a count of packs. It
+	// marks the savings records written before that change.
+	CountModelCutover = "count_model"
 )
 
 // CsvImportColumnAliases maps an accepted alternative column header to its
-// canonical name. The issue's proposed column list used `amount`,
-// `product_name` and `categories`; rather than a second contract, those become
-// aliases of the export header's names. `added_at` is listed so it is
-// recognised (and then ignored — GORM owns CreatedAt) instead of silently
-// treated as an unknown column.
+// canonical name. The issue's proposed column list used `product_name` and
+// `categories`; rather than a second contract, those become aliases of the
+// export header's names. `added_at` is listed so it is recognised (and then
+// ignored — GORM owns CreatedAt) instead of silently treated as an unknown
+// column. A header of the pre-count-model format is not aliased: it is
+// rejected by the importer, because its quantity column held a net content
+// and would land as a pack count.
 var CsvImportColumnAliases = map[string]string{
 	"product_name":           CsvColumnName,
 	CsvColumnName:            CsvColumnName,
-	"amount":                 CsvColumnQuantity,
 	CsvColumnQuantity:        CsvColumnQuantity,
-	CsvColumnUnit:            CsvColumnUnit,
+	CsvColumnPackSize:        CsvColumnPackSize,
+	"packsize":               CsvColumnPackSize,
 	"categories":             CsvColumnCategory,
 	CsvColumnCategory:        CsvColumnCategory,
 	"location":               CsvColumnStorageLocation,
@@ -270,4 +362,44 @@ var CsvImportColumnAliases = map[string]string{
 	CsvColumnExpiryDate:      CsvColumnExpiryDate,
 	CsvColumnBarcode:         CsvColumnBarcode,
 	CsvColumnAddedAt:         CsvColumnAddedAt,
+}
+
+// CsvLegacyColumnHeaders are the headers of a file written before products
+// were counted in packs. Such a file states a net content where the current
+// format states a pack count, so the importer refuses it instead of reading a
+// net content of 500 as 500 packs.
+var CsvLegacyColumnHeaders = []string{"unit", "amount"}
+
+// OffDumpSQLiteFilename resolves the SQLite dump store for a configured
+// dumpDatabase. A bare name lives beside the main database as data/<name>.db;
+// a value that names a path is used verbatim, matching database.sqlite.filepath.
+// An empty name falls back to OffDumpDBFilename.
+func OffDumpSQLiteFilename(databaseName string) string {
+	if databaseName == "" {
+		return OffDumpDBFilename
+	}
+	if filepath.Base(databaseName) != databaseName {
+		return databaseName
+	}
+	return filepath.Join(filepath.Dir(OffDumpDBFilename), databaseName+".db")
+}
+
+// OffDumpStagingFilename is the staged download's base name, derived from the
+// dump store's name so each store resumes its own .part/.ready files.
+func OffDumpStagingFilename(databaseName string) string {
+	if databaseName == "" {
+		return OffDumpDefaultDatabase + OffDumpStagingSuffix
+	}
+	return filepath.Base(databaseName) + OffDumpStagingSuffix
+}
+
+// IsHTTPSBaseURL reports whether the deployment's public URL is reached over
+// TLS. The server itself never terminates TLS — it always listens on plain
+// HTTP and a reverse proxy in front of it does the encryption — so the scheme
+// of the configured base URL is the only statement about the transport to the
+// browser. It decides whether a cookie may carry the Secure attribute: a
+// plain-HTTP deployment must not set it, or the browser drops the cookie and
+// every state-changing request fails.
+func IsHTTPSBaseURL(baseURL string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(baseURL)), "https://")
 }

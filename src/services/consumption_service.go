@@ -29,7 +29,6 @@ func NewConsumptionService(repos *database.RepositoryContainer, logger *zerolog.
 // sentence for the API/UI; TemplateMessage is the same sentence for the
 // server-rendered product detail alert.
 type ConsumptionRate struct {
-	Unit            string
 	PerWeek         float64
 	SampleCount     int
 	HasEstimate     bool
@@ -45,7 +44,6 @@ type ConsumptionRate struct {
 type RestockSuggestion struct {
 	ProductName     string
 	SuggestedQty    int
-	Unit            string
 	Source          string
 	WeeklyRate      float64
 	SampleCount     int
@@ -73,8 +71,7 @@ func (s *ConsumptionService) ComputeConsumptionRate(householdID, userID uint, ba
 		return rate, nil
 	}
 
-	totalAmount, dominantUnit := aggregateSamples(products)
-	rate.Unit = dominantUnit
+	totalQuantity := aggregateSamples(products)
 
 	first := products[0].DeletedAt.Time
 	last := products[rate.SampleCount-1].DeletedAt.Time
@@ -95,12 +92,12 @@ func (s *ConsumptionService) ComputeConsumptionRate(householdID, userID uint, ba
 	}
 
 	weeks := float64(spanDays) / 7.0
-	rate.PerWeek = totalAmount / weeks
+	rate.PerWeek = totalQuantity / weeks
 	rate.HasEstimate = true
 	lastCopy := last
 	rate.LastConsumed = &lastCopy
-	rate.Display = formatRateDisplay(rate.PerWeek, rate.Unit)
-	rate.TemplateMessage = formatRateTemplateMessage(rate.PerWeek, rate.Unit, rate.SampleCount)
+	rate.Display = formatRateDisplay(rate.PerWeek)
+	rate.TemplateMessage = formatRateTemplateMessage(rate.PerWeek, rate.SampleCount)
 
 	return rate, nil
 }
@@ -118,17 +115,15 @@ func (s *ConsumptionService) ComputeRestockSuggestionFromProduct(householdID, us
 
 	suggestion := RestockSuggestion{
 		ProductName: product.ProductName,
-		Unit:        product.Unit,
 		WeeklyRate:  rate.PerWeek,
 		SampleCount: rate.SampleCount,
 	}
 
 	if rate.HasEstimate && rate.PerWeek > 0 {
 		suggestion.SuggestedQty = int(math.Ceil(rate.PerWeek))
-		suggestion.Unit = pickUnit(rate.Unit, product.Unit)
 		suggestion.Source = util.ConsumptionSourceRate
 		suggestion.HasEstimate = true
-		suggestion.Display = formatSuggestionDisplay(suggestion.SuggestedQty, suggestion.Unit)
+		suggestion.Display = formatSuggestionDisplay(suggestion.SuggestedQty)
 		suggestion.TemplateMessage = rate.TemplateMessage
 		suggestion.PerWeekDisplay = rate.Display
 		return suggestion
@@ -138,13 +133,12 @@ func (s *ConsumptionService) ComputeRestockSuggestionFromProduct(householdID, us
 	// the configured minimum. When the minimum is met (or not configured)
 	// we return "none" so the UI does not open a misleading modal.
 	if product.MinStockAmount > 0 {
-		deficit := product.MinStockAmount - product.Amount
+		deficit := product.MinStockAmount - product.Quantity
 		if deficit > 0 {
 			suggestion.SuggestedQty = deficit
 			suggestion.Source = util.ConsumptionSourceMinStock
-			suggestion.Unit = product.Unit
-			suggestion.Display = formatSuggestionDisplay(suggestion.SuggestedQty, suggestion.Unit)
-			suggestion.TemplateMessage = formatMinStockTemplateMessage(suggestion.SuggestedQty, suggestion.Unit, product.MinStockAmount)
+			suggestion.Display = formatSuggestionDisplay(suggestion.SuggestedQty)
+			suggestion.TemplateMessage = formatMinStockTemplateMessage(suggestion.SuggestedQty, product.MinStockAmount)
 			return suggestion
 		}
 	}
@@ -154,67 +148,18 @@ func (s *ConsumptionService) ComputeRestockSuggestionFromProduct(householdID, us
 	return suggestion
 }
 
-// aggregateSamples sums the amount and picks the dominant unit across all
-// samples. Amounts <= 0 are treated as 1 to keep the denominator meaningful.
-// On a tie, the most recent sample's unit wins (samples are expected to be
-// ordered ascending by deleted_at, which the repository query guarantees).
-func aggregateSamples(products []dbModel.Product) (float64, string) {
+// aggregateSamples sums the pack counts across all samples. A sample with no
+// count is treated as one pack to keep the denominator meaningful.
+func aggregateSamples(products []dbModel.Product) float64 {
 	var total float64
-	type unitStat struct {
-		count     int
-		lastIndex int
-	}
-	unitStats := make(map[string]*unitStat)
-
 	for i := range products {
-		p := &products[i]
-		amount := p.Amount
-		if amount <= 0 {
-			amount = 1
+		quantity := products[i].Quantity
+		if quantity <= 0 {
+			quantity = 1
 		}
-		total += float64(amount)
-		if p.Unit == "" {
-			continue
-		}
-		stat, ok := unitStats[p.Unit]
-		if !ok {
-			unitStats[p.Unit] = &unitStat{count: 1, lastIndex: i}
-			continue
-		}
-		stat.count++
-		stat.lastIndex = i
+		total += float64(quantity)
 	}
-
-	if len(unitStats) == 0 {
-		return total, ""
-	}
-
-	dominant := ""
-	var bestStat *unitStat
-	for unit, stat := range unitStats {
-		if bestStat == nil {
-			dominant = unit
-			bestStat = stat
-			continue
-		}
-		if stat.count > bestStat.count {
-			dominant = unit
-			bestStat = stat
-			continue
-		}
-		if stat.count == bestStat.count && stat.lastIndex > bestStat.lastIndex {
-			dominant = unit
-			bestStat = stat
-		}
-	}
-	return total, dominant
-}
-
-func pickUnit(rateUnit, productUnit string) string {
-	if rateUnit != "" {
-		return rateUnit
-	}
-	return productUnit
+	return total
 }
 
 // humanizeQuantity rounds to 1 decimal and strips trailing zeros so that
@@ -227,35 +172,21 @@ func humanizeQuantity(value float64) string {
 	return fmt.Sprintf("%.1f", rounded)
 }
 
-func formatRateDisplay(perWeek float64, unit string) string {
-	qty := humanizeQuantity(perWeek)
-	if unit == "" {
-		return fmt.Sprintf("~%s per week", qty)
-	}
-	return fmt.Sprintf("~%s %s per week", qty, unit)
+func formatRateDisplay(perWeek float64) string {
+	return fmt.Sprintf("~%s per week", humanizeQuantity(perWeek))
 }
 
-func formatRateTemplateMessage(perWeek float64, unit string, sampleCount int) string {
-	qty := humanizeQuantity(perWeek)
-	if unit == "" {
-		return fmt.Sprintf("You use ~%s per week (based on the last %d consumptions).", qty, sampleCount)
-	}
-	return fmt.Sprintf("You use ~%s %s per week (based on the last %d consumptions).", qty, unit, sampleCount)
+func formatRateTemplateMessage(perWeek float64, sampleCount int) string {
+	return fmt.Sprintf("You use ~%s per week (based on the last %d consumptions).", humanizeQuantity(perWeek), sampleCount)
 }
 
-func formatSuggestionDisplay(qty int, unit string) string {
+func formatSuggestionDisplay(qty int) string {
 	if qty <= 0 {
 		return ""
 	}
-	if unit == "" {
-		return fmt.Sprintf("Suggested: %d", qty)
-	}
-	return fmt.Sprintf("Suggested: %d %s", qty, unit)
+	return fmt.Sprintf("Suggested: %d", qty)
 }
 
-func formatMinStockTemplateMessage(suggestedQty int, unit string, minStock int) string {
-	if unit == "" {
-		return fmt.Sprintf("Suggested restock: %d to meet your minimum stock of %d.", suggestedQty, minStock)
-	}
-	return fmt.Sprintf("Suggested restock: %d %s to meet your minimum stock of %d %s.", suggestedQty, unit, minStock, unit)
+func formatMinStockTemplateMessage(suggestedQty int, minStock int) string {
+	return fmt.Sprintf("Suggested restock: %d to meet your minimum stock of %d.", suggestedQty, minStock)
 }

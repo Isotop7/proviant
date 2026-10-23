@@ -222,7 +222,7 @@ func TestProductRepository_UserHasProductAccessErrors(t *testing.T) {
 	}
 }
 
-func TestProductRepository_UpdateProductAmount(t *testing.T) {
+func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewProductRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
@@ -232,7 +232,7 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 	setup := func(t *testing.T, amount int) dbModel.Product {
 		t.Helper()
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
-		product.Amount = amount
+		product.Quantity = amount
 		if err := db.Save(product).Error; err != nil {
 			t.Fatalf("save product: %v", err)
 		}
@@ -240,50 +240,50 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 	}
 
 	t.Run("zero id is not implemented", func(t *testing.T) {
-		if _, _, err := repo.UpdateProductAmount(0, user.ID, 1, nil); err != gorm.ErrNotImplemented {
-			t.Errorf("UpdateProductAmount(0) error = %v, want %v", err, gorm.ErrNotImplemented)
+		if _, _, err := repo.UpdateProductQuantity(0, user.ID, 1, nil); err != gorm.ErrNotImplemented {
+			t.Errorf("UpdateProductQuantity(0) error = %v, want %v", err, gorm.ErrNotImplemented)
 		}
 	})
 
 	t.Run("unknown product errors", func(t *testing.T) {
-		if _, _, err := repo.UpdateProductAmount(9999, user.ID, 1, nil); err == nil {
-			t.Error("UpdateProductAmount(9999) error = nil, want error")
+		if _, _, err := repo.UpdateProductQuantity(9999, user.ID, 1, nil); err == nil {
+			t.Error("UpdateProductQuantity(9999) error = nil, want error")
 		}
 	})
 
 	t.Run("cross-household is rejected", func(t *testing.T) {
 		foreign := testutil.CreateTestProduct(db, otherHousehold.ID)
-		if _, _, err := repo.UpdateProductAmount(foreign.ID, user.ID, 1, nil); err != errors.ErrMismatcherUserID {
-			t.Errorf("UpdateProductAmount() error = %v, want %v", err, errors.ErrMismatcherUserID)
+		if _, _, err := repo.UpdateProductQuantity(foreign.ID, user.ID, 1, nil); err != errors.ErrMismatcherUserID {
+			t.Errorf("UpdateProductQuantity() error = %v, want %v", err, errors.ErrMismatcherUserID)
 		}
 	})
 
 	t.Run("positive delta increases amount", func(t *testing.T) {
 		product := setup(t, 2)
-		deleted, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, nil)
+		deleted, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, nil)
 		if err != nil {
-			t.Fatalf("UpdateProductAmount() error = %v", err)
+			t.Fatalf("UpdateProductQuantity() error = %v", err)
 		}
 		if deleted {
-			t.Error("UpdateProductAmount() deleted = true, want false")
+			t.Error("UpdateProductQuantity() deleted = true, want false")
 		}
 		var updated dbModel.Product
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		if updated.Amount != 5 {
-			t.Errorf("Amount = %d, want 5", updated.Amount)
+		if updated.Quantity != 5 {
+			t.Errorf("Amount = %d, want 5", updated.Quantity)
 		}
 	})
 
 	t.Run("negative delta clamps at zero and hard-deletes", func(t *testing.T) {
 		product := setup(t, 2)
-		deleted, _, err := repo.UpdateProductAmount(product.ID, user.ID, -5, nil)
+		deleted, _, err := repo.UpdateProductQuantity(product.ID, user.ID, -5, nil)
 		if err != nil {
-			t.Fatalf("UpdateProductAmount() error = %v", err)
+			t.Fatalf("UpdateProductQuantity() error = %v", err)
 		}
 		if !deleted {
-			t.Error("UpdateProductAmount() deleted = false, want true at zero stock")
+			t.Error("UpdateProductQuantity() deleted = false, want true at zero stock")
 		}
 		var count int64
 		db.Unscoped().Model(&dbModel.Product{}).Where("id = ?", product.ID).Count(&count)
@@ -316,7 +316,7 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				<-start
-				deleted, _, err := repo.UpdateProductAmount(product.ID, user.ID, -2, nil)
+				deleted, _, err := repo.UpdateProductQuantity(product.ID, user.ID, -2, nil)
 				if stderrors.Is(err, gorm.ErrRecordNotFound) {
 					mu.Lock()
 					vanishedCount++
@@ -324,11 +324,11 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 					return
 				}
 				if err != nil {
-					t.Errorf("UpdateProductAmount() error = %v", err)
+					t.Errorf("UpdateProductQuantity() error = %v", err)
 					return
 				}
 				if !deleted {
-					t.Error("UpdateProductAmount() deleted = false, want true — the zeroing delta must report the row gone")
+					t.Error("UpdateProductQuantity() deleted = false, want true — the zeroing delta must report the row gone")
 				}
 				mu.Lock()
 				deletedCount++
@@ -355,28 +355,28 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 		product := setup(t, 2)
 		mutationID := "mutation-1"
 
-		if _, applied, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &mutationID); err != nil {
-			t.Fatalf("first UpdateProductAmount() error = %v", err)
+		if _, applied, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &mutationID); err != nil {
+			t.Fatalf("first UpdateProductQuantity() error = %v", err)
 		} else if !applied {
-			t.Error("first UpdateProductAmount() applied = false, want true")
+			t.Error("first UpdateProductQuantity() applied = false, want true")
 		}
-		deleted, applied, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &mutationID)
+		deleted, applied, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &mutationID)
 		if err != nil {
-			t.Fatalf("replayed UpdateProductAmount() error = %v", err)
+			t.Fatalf("replayed UpdateProductQuantity() error = %v", err)
 		}
 		if deleted {
-			t.Error("replayed UpdateProductAmount() deleted = true, want false")
+			t.Error("replayed UpdateProductQuantity() deleted = true, want false")
 		}
 		if applied {
-			t.Error("replayed UpdateProductAmount() applied = true, want false — a replay the caller cannot tell apart repeats its side effects")
+			t.Error("replayed UpdateProductQuantity() applied = true, want false — a replay the caller cannot tell apart repeats its side effects")
 		}
 
 		var updated dbModel.Product
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		if updated.Amount != 5 {
-			t.Errorf("Amount = %d, want 5 — the replay applied a second time", updated.Amount)
+		if updated.Quantity != 5 {
+			t.Errorf("Amount = %d, want 5 — the replay applied a second time", updated.Quantity)
 		}
 	})
 
@@ -385,19 +385,19 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 		first := "mutation-1"
 		second := "mutation-2"
 
-		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &first); err != nil {
-			t.Fatalf("first UpdateProductAmount() error = %v", err)
+		if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &first); err != nil {
+			t.Fatalf("first UpdateProductQuantity() error = %v", err)
 		}
-		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &second); err != nil {
-			t.Fatalf("second UpdateProductAmount() error = %v", err)
+		if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &second); err != nil {
+			t.Fatalf("second UpdateProductQuantity() error = %v", err)
 		}
 
 		var updated dbModel.Product
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		if updated.Amount != 8 {
-			t.Errorf("Amount = %d, want 8", updated.Amount)
+		if updated.Quantity != 8 {
+			t.Errorf("Amount = %d, want 8", updated.Quantity)
 		}
 	})
 
@@ -410,27 +410,27 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 		first := "mutation-1"
 		second := "mutation-2"
 
-		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &first); err != nil {
-			t.Fatalf("first UpdateProductAmount() error = %v", err)
+		if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &first); err != nil {
+			t.Fatalf("first UpdateProductQuantity() error = %v", err)
 		}
-		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &second); err != nil {
-			t.Fatalf("second UpdateProductAmount() error = %v", err)
+		if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &second); err != nil {
+			t.Fatalf("second UpdateProductQuantity() error = %v", err)
 		}
 
-		deleted, applied, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &first)
+		deleted, applied, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &first)
 		if err != nil {
-			t.Fatalf("replayed UpdateProductAmount() error = %v", err)
+			t.Fatalf("replayed UpdateProductQuantity() error = %v", err)
 		}
 		if deleted || applied {
-			t.Errorf("UpdateProductAmount() = (%v, %v), want (false, false)", deleted, applied)
+			t.Errorf("UpdateProductQuantity() = (%v, %v), want (false, false)", deleted, applied)
 		}
 
 		var updated dbModel.Product
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		if updated.Amount != 8 {
-			t.Errorf("Amount = %d, want 8 — the superseded replay applied a second time", updated.Amount)
+		if updated.Quantity != 8 {
+			t.Errorf("Amount = %d, want 8 — the superseded replay applied a second time", updated.Quantity)
 		}
 	})
 
@@ -441,11 +441,11 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 		second := setup(t, 2)
 		shared := "mutation-shared"
 
-		if _, applied, err := repo.UpdateProductAmount(first.ID, user.ID, 3, &shared); err != nil || !applied {
-			t.Fatalf("UpdateProductAmount() = (%v, %v), want applied", applied, err)
+		if _, applied, err := repo.UpdateProductQuantity(first.ID, user.ID, 3, &shared); err != nil || !applied {
+			t.Fatalf("UpdateProductQuantity() = (%v, %v), want applied", applied, err)
 		}
-		if _, applied, err := repo.UpdateProductAmount(second.ID, user.ID, 3, &shared); err != nil || !applied {
-			t.Fatalf("UpdateProductAmount() on the second product = (%v, %v), want applied", applied, err)
+		if _, applied, err := repo.UpdateProductQuantity(second.ID, user.ID, 3, &shared); err != nil || !applied {
+			t.Fatalf("UpdateProductQuantity() on the second product = (%v, %v), want applied", applied, err)
 		}
 	})
 
@@ -453,19 +453,19 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 		product := setup(t, 2)
 		empty := ""
 
-		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, &empty); err != nil {
-			t.Fatalf("first UpdateProductAmount() error = %v", err)
+		if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, &empty); err != nil {
+			t.Fatalf("first UpdateProductQuantity() error = %v", err)
 		}
-		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, &empty); err != nil {
-			t.Fatalf("second UpdateProductAmount() error = %v", err)
+		if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, &empty); err != nil {
+			t.Fatalf("second UpdateProductQuantity() error = %v", err)
 		}
 
 		var updated dbModel.Product
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		if updated.Amount != 4 {
-			t.Errorf("Amount = %d, want 4 — a stored empty token would have made the second call a replay", updated.Amount)
+		if updated.Quantity != 4 {
+			t.Errorf("Amount = %d, want 4 — a stored empty token would have made the second call a replay", updated.Quantity)
 		}
 		var claims int64
 		db.Model(&dbModel.ProductMutationClaim{}).Where("product_id = ?", product.ID).Count(&claims)
@@ -488,9 +488,9 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				<-start
-				_, applied, err := repo.UpdateProductAmount(product.ID, user.ID, 3, &mutationID)
+				_, applied, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &mutationID)
 				if err != nil {
-					t.Errorf("UpdateProductAmount() error = %v", err)
+					t.Errorf("UpdateProductQuantity() error = %v", err)
 				}
 				if applied {
 					mu.Lock()
@@ -510,8 +510,8 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		if updated.Amount != 3 {
-			t.Errorf("Amount = %d, want 3 — the racing replay applied a second time", updated.Amount)
+		if updated.Quantity != 3 {
+			t.Errorf("Amount = %d, want 3 — the racing replay applied a second time", updated.Quantity)
 		}
 	})
 
@@ -524,8 +524,8 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, nil); err != nil {
-					t.Errorf("UpdateProductAmount() error = %v", err)
+				if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err != nil {
+					t.Errorf("UpdateProductQuantity() error = %v", err)
 				}
 			}()
 		}
@@ -535,8 +535,8 @@ func TestProductRepository_UpdateProductAmount(t *testing.T) {
 		if err := db.First(&updated, product.ID).Error; err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		if updated.Amount != 8 {
-			t.Errorf("Amount = %d, want 8", updated.Amount)
+		if updated.Quantity != 8 {
+			t.Errorf("Amount = %d, want 8", updated.Quantity)
 		}
 	})
 }

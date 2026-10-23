@@ -1,46 +1,50 @@
 {{ define "_settings_notifications" }}
-<div class="card card-section mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
-        <div class="d-flex align-items-center gap-2">
+<div class="card card-section mb-7">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-bell"></i>
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "settingsNotifications.title" }}</h2>
         </div>
-        <button type="button" class="btn btn-proviant-primary btn-sm" id="btnUpdateNotificationSettings">
+        <button type="button" class="btn btn-solid theme-primary btn-sm" id="btnUpdateNotificationSettings">
             {{ t "settingsNotifications.update" }}
         </button>
     </div>
-    <div class="card-body px-4 py-4">
+    <div class="card-body px-7 py-7">
         <form id="notificationSettings" novalidate>
 
             {{/* ── Delivery Channels ─────────────────────────────── */}}
-            <div class="mb-4">
+            <div class="mb-7">
                 <h3 class="h6 fw-semibold mb-1">{{ t "settingsNotifications.deliveryChannels" }}</h3>
-                <p class="text-secondary-custom small mb-3">{{ t "settingsNotifications.deliveryChannelsDesc" }}</p>
+                <p class="fg-secondary small mb-5">{{ t "settingsNotifications.deliveryChannelsDesc" }}</p>
 
-                <div class="list-group list-group-flush border rounded-3">
-                    <div class="list-group-item px-3 py-3">
-                        <div class="d-flex align-items-center justify-content-between gap-3">
+                <div class="list-group list-group-flush border rounded-5">
+                    <div class="list-group-item px-5 py-5">
+                        <div class="d-flex align-items-center justify-content-between gap-5">
                             <div>
                                 <div class="fw-medium small">{{ t "settingsNotifications.email" }}</div>
-                                <div class="text-secondary-custom small">{{ t "settingsNotifications.emailDesc" }}</div>
+                                <div class="fg-secondary small">{{ t "settingsNotifications.emailDesc" }}</div>
                             </div>
-                            <div class="form-check form-switch mb-0 flex-shrink-0">
-                                <input class="form-check-input" type="checkbox" role="switch"
+                            <div class="form-field mb-0 flex-shrink-0">
+                              <div class="switch">
+                                <input type="checkbox" role="switch"
                                        id="toggleEmailNotifications"
                                        {{if .User.NotificationPreferences.EmailEnabled}}checked{{end}}>
-                                <label class="visually-hidden" for="toggleEmailNotifications">{{ t "settingsNotifications.emailToggleLabel" }}</label>
+                                
+                              </div>
+                              <label class="visually-hidden" for="toggleEmailNotifications">{{ t "settingsNotifications.emailToggleLabel" }}</label>
+                            
                             </div>
                         </div>
                     </div>
-                    <div id="emailSettings" class="list-group-item px-3 py-3 bg-subtle{{if not .User.NotificationPreferences.EmailEnabled}} d-none{{end}}">
-                        <p class="small mb-3 text-secondary-custom">
+                    <div id="emailSettings" class="list-group-item px-5 py-5 bg-subtle{{if not .User.NotificationPreferences.EmailEnabled}} d-none{{end}}">
+                        <p class="small mb-5 fg-secondary">
                             <i class="bi bi-envelope me-1" aria-hidden="true"></i>
-                            {{ t "settingsNotifications.emailAlertsSentTo" }} <strong class="text-body">{{ .User.MailAddress }}</strong>{{ t "settingsNotifications.emailAlertsUpdate" }} <a href="#inputMailAddress" class="text-decoration-none">{{ t "settingsNotifications.personalDetails" }}</a>.
+                            {{ t "settingsNotifications.emailAlertsSentTo" }} <strong class="fg-body">{{ .User.MailAddress }}</strong>{{ t "settingsNotifications.emailAlertsUpdate" }} <a href="#inputMailAddress" class="text-decoration-none">{{ t "settingsNotifications.personalDetails" }}</a>.
                         </p>
                         <label for="inputNotificationThreshold" class="form-label fw-medium small">{{ t "settingsNotifications.thresholdLabel" }}</label>
-                        <p class="text-secondary-custom small mb-2">{{ t "settingsNotifications.thresholdHelpPrefix" }} <strong>{{ t "settingsNotifications.thresholdHelpBefore" }}</strong> {{ t "settingsNotifications.thresholdHelpSuffix" }}</p>
+                        <p class="fg-secondary small mb-3">{{ t "settingsNotifications.thresholdHelpPrefix" }} <strong>{{ t "settingsNotifications.thresholdHelpBefore" }}</strong> {{ t "settingsNotifications.thresholdHelpSuffix" }}</p>
                         <div class="input-group input-width-260">
                             <span class="input-group-text"><i class="bi bi-alarm"></i></span>
                             <input type="number" class="form-control" id="inputNotificationThreshold"
@@ -51,34 +55,38 @@
                         </div>
                         <div class="invalid-feedback" id="thresholdFeedback"></div>
                     </div>
-                    <div class="list-group-item px-3 py-3">
-                        <div class="d-flex align-items-center justify-content-between gap-3">
+                    <div class="list-group-item px-5 py-5">
+                        <div class="d-flex align-items-center justify-content-between gap-5">
                             <div>
                                 <div class="fw-medium small">ntfy.sh</div>
-                                <div class="text-secondary-custom small">{{ t "settingsNotifications.ntfyDesc" }}</div>
+                                <div class="fg-secondary small">{{ t "settingsNotifications.ntfyDesc" }}</div>
                             </div>
-                            <div class="form-check form-switch mb-0 flex-shrink-0">
-                                <input class="form-check-input" type="checkbox" role="switch"
+                            <div class="form-field mb-0 flex-shrink-0">
+                              <div class="switch">
+                                <input type="checkbox" role="switch"
                                        id="toggleNtfyNotifications"
                                        {{if .User.NotificationPreferences.NtfyEnabled}}checked{{end}}>
-                                <label class="visually-hidden" for="toggleNtfyNotifications">{{ t "settingsNotifications.ntfyToggleLabel" }}</label>
+                                
+                              </div>
+                              <label class="visually-hidden" for="toggleNtfyNotifications">{{ t "settingsNotifications.ntfyToggleLabel" }}</label>
+                            
                             </div>
                         </div>
                     </div>
-                    <div id="ntfySettings" class="list-group-item px-3 py-3 bg-subtle{{if not .User.NotificationPreferences.NtfyEnabled}} d-none{{end}}">
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                    <div id="ntfySettings" class="list-group-item px-5 py-5 bg-subtle{{if not .User.NotificationPreferences.NtfyEnabled}} d-none{{end}}">
+                        <div class="row g-3 mb-5">
+                            <div class="md:col-6">
                                 <label for="inputNtfyUrl" class="form-label fw-medium">
-                                    {{ t "settingsNotifications.ntfyUrlLabel" }} <span class="text-danger" aria-hidden="true">*</span>
+                                    {{ t "settingsNotifications.ntfyUrlLabel" }} <span class="fg-danger" aria-hidden="true">*</span>
                                 </label>
                                 <input type="text" class="form-control" id="inputNtfyUrl"
                                        placeholder="https://ntfy.sh" value="{{.User.NotificationPreferences.NtfyURL}}"
                                        autocomplete="off">
                                 <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "settingsNotifications.ntfyUrlRequired" }}</div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="md:col-6">
                                 <label for="inputNtfyTopic" class="form-label fw-medium">
-                                    {{ t "settingsNotifications.topicLabel" }} <span class="text-danger" aria-hidden="true">*</span>
+                                    {{ t "settingsNotifications.topicLabel" }} <span class="fg-danger" aria-hidden="true">*</span>
                                 </label>
                                 <input type="text" class="form-control" id="inputNtfyTopic"
                                        placeholder="your_topic" value="{{.User.NotificationPreferences.NtfyTopic}}"
@@ -88,89 +96,97 @@
                         </div>
                         <div>
                             <label for="inputNtfyToken" class="form-label fw-medium">
-                                {{ t "settingsNotifications.ntfyTokenLabel" }} <span class="text-secondary-custom fw-normal">{{ t "settingsNotifications.optional" }}</span>
+                                {{ t "settingsNotifications.ntfyTokenLabel" }} <span class="fg-secondary fw-normal">{{ t "settingsNotifications.optional" }}</span>
                             </label>
                             <input type="password" class="form-control input-width-360" id="inputNtfyToken"
                                    placeholder="{{ t "settingsNotifications.optionalTokenPlaceholder" }}" autocomplete="new-password">
                         </div>
                     </div>
-                    <div class="list-group-item px-3 py-3">
-                        <div class="d-flex align-items-center justify-content-between gap-3">
+                    <div class="list-group-item px-5 py-5">
+                        <div class="d-flex align-items-center justify-content-between gap-5">
                             <div>
                                 <div class="fw-medium small">Telegram</div>
-                                <div class="text-secondary-custom small">{{ t "settingsNotifications.telegramDesc" }}</div>
+                                <div class="fg-secondary small">{{ t "settingsNotifications.telegramDesc" }}</div>
                             </div>
-                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTelegramHelp"
-                                        data-bs-toggle="modal" data-bs-target="#telegramHelpModal"
+                            <div class="d-flex align-items-center gap-3 flex-shrink-0">
+                                <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnTelegramHelp"
+                                        data-bs-toggle="dialog" data-bs-target="#telegramHelpModal"
                                         aria-label="{{ t "settingsNotifications.telegramHelpAria" }}">
                                     <i class="bi bi-question-circle" aria-hidden="true"></i>
                                 </button>
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" role="switch"
+                                <div class="form-field mb-0">
+                                  <div class="switch">
+                                    <input type="checkbox" role="switch"
                                            id="toggleTelegramNotifications"
                                            {{if .User.NotificationPreferences.TelegramEnabled}}checked{{end}}>
-                                    <label class="visually-hidden" for="toggleTelegramNotifications">{{ t "settingsNotifications.telegramToggleLabel" }}</label>
+                                    
+                                  </div>
+                                  <label class="visually-hidden" for="toggleTelegramNotifications">{{ t "settingsNotifications.telegramToggleLabel" }}</label>
+                                
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div id="telegramSettings" class="list-group-item px-3 py-3 bg-subtle{{if not .User.NotificationPreferences.TelegramEnabled}} d-none{{end}}">
-                        <div class="mb-3">
+                    <div id="telegramSettings" class="list-group-item px-5 py-5 bg-subtle{{if not .User.NotificationPreferences.TelegramEnabled}} d-none{{end}}">
+                        <div class="mb-5">
                             <label class="form-label small fw-medium mb-1" for="inputTelegramBotToken">{{ t "settingsNotifications.botTokenLabel" }}</label>
                             <input type="text" class="form-control form-control-sm input-width-360" id="inputTelegramBotToken"
                                    placeholder="123456:ABC-DEF..." autocomplete="off"
                                    value="{{.User.NotificationPreferences.TelegramBotToken}}">
                             <div class="form-text">
                                 {{if .TelegramConfigured}}
-                                <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "settingsNotifications.botConfigured" }}</span>
+                                <span class="fg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "settingsNotifications.botConfigured" }}</span>
                                 {{ t "settingsNotifications.replaceToken" }}
                                 {{else}}
                                 {{ t "settingsNotifications.createBotPrefix" }} <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a> {{ t "settingsNotifications.createBotSuffix" }}
                                 {{end}}
                             </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="d-flex align-items-center gap-3 mb-3">
                             {{if .User.NotificationPreferences.TelegramLinked}}
-                            <span class="badge-status badge-fresh"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "settingsNotifications.linked" }}</span>
-                            <span class="text-secondary-custom small">{{ t "settingsNotifications.telegramConnected" }}</span>
+                            <span class="badge badge--fresh"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "settingsNotifications.linked" }}</span>
+                            <span class="fg-secondary small">{{ t "settingsNotifications.telegramConnected" }}</span>
                             {{else}}
-                            <span class="badge-status badge-nodate">{{ t "settingsNotifications.notLinked" }}</span>
-                            <span class="text-secondary-custom small">{{ t "settingsNotifications.linkHint" }}</span>
+                            <span class="badge badge--neutral">{{ t "settingsNotifications.notLinked" }}</span>
+                            <span class="fg-secondary small">{{ t "settingsNotifications.linkHint" }}</span>
                             {{end}}
                         </div>
-                        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnTelegramLink"
-                                data-bs-toggle="modal" data-bs-target="#telegramLinkModal"
+                        <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnTelegramLink"
+                                data-bs-toggle="dialog" data-bs-target="#telegramLinkModal"
                                 {{if not .TelegramConfigured}}disabled{{end}}>
                             <i class="bi bi-telegram me-1" aria-hidden="true"></i>
                             {{if .User.NotificationPreferences.TelegramLinked}}{{ t "settingsNotifications.relinkAccount" }}{{else}}{{ t "settingsNotifications.linkAccount" }}{{end}}
                         </button>
                     </div>
-                    <div class="list-group-item px-3 py-3">
-                        <div class="d-flex align-items-center justify-content-between gap-3">
+                    <div class="list-group-item px-5 py-5">
+                        <div class="d-flex align-items-center justify-content-between gap-5">
                             <div>
                                 <div class="fw-medium small">{{ t "settingsNotifications.pushNotifications" }}</div>
-                                <div class="text-secondary-custom small">{{ t "settingsNotifications.pushDesc" }}</div>
+                                <div class="fg-secondary small">{{ t "settingsNotifications.pushDesc" }}</div>
                             </div>
-                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnPushHelp"
-                                        data-bs-toggle="modal" data-bs-target="#pushHelpModal"
+                            <div class="d-flex align-items-center gap-3 flex-shrink-0">
+                                <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnPushHelp"
+                                        data-bs-toggle="dialog" data-bs-target="#pushHelpModal"
                                         aria-label="{{ t "settingsNotifications.pushHelpAria" }}">
                                     <i class="bi bi-question-circle" aria-hidden="true"></i>
                                 </button>
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" role="switch"
+                                <div class="form-field mb-0">
+                                  <div class="switch">
+                                    <input type="checkbox" role="switch"
                                            id="togglePushNotifications">
-                                    <label class="visually-hidden" for="togglePushNotifications">{{ t "settingsNotifications.pushNotifications" }}</label>
+                                    
+                                  </div>
+                                  <label class="visually-hidden" for="togglePushNotifications">{{ t "settingsNotifications.pushNotifications" }}</label>
+                                
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div id="pushSettings" class="list-group-item px-3 py-3 bg-subtle{{if not .User.NotificationPreferences.WebPushEnabled}} d-none{{end}}">
-                        <p class="small mb-0 text-secondary-custom">
+                    <div id="pushSettings" class="list-group-item px-5 py-5 bg-subtle{{if not .User.NotificationPreferences.WebPushEnabled}} d-none{{end}}">
+                        <p class="small mb-0 fg-secondary">
                             <i class="bi bi-bell me-1" aria-hidden="true"></i>
                             {{ t "settingsNotifications.pushActive" }}
-                            <button type="button" class="btn btn-sm btn-proviant-secondary ms-2" id="btnPushUnsubscribe">{{ t "settingsNotifications.disable" }}</button>
+                            <button type="button" class="btn btn-sm btn-outline theme-secondary ms-2" id="btnPushUnsubscribe">{{ t "settingsNotifications.disable" }}</button>
                         </p>
                     </div>
                 </div>
@@ -179,61 +195,65 @@
             {{/* ── Scheduled Reports ──────────────────────────────── */}}
             <div>
                 <h3 class="h6 fw-semibold mb-1">{{ t "settingsNotifications.scheduledReports" }}</h3>
-                <p class="text-secondary-custom small mb-3">{{ t "settingsNotifications.scheduledReportsDesc" }}</p>
+                <p class="fg-secondary small mb-5">{{ t "settingsNotifications.scheduledReportsDesc" }}</p>
 
-                <div class="list-group list-group-flush border rounded-3">
-                    <div class="list-group-item px-3 py-3">
-                        <div class="d-flex align-items-center justify-content-between gap-3">
+                <div class="list-group list-group-flush border rounded-5">
+                    <div class="list-group-item px-5 py-5">
+                        <div class="d-flex align-items-center justify-content-between gap-5">
                             <div>
                                 <div class="fw-medium small">{{ t "settingsNotifications.monthlyWasteReport" }}</div>
-                                <div class="text-secondary-custom small">
+                                <div class="fg-secondary small">
                                     <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>{{ t "settingsNotifications.monthlyWasteReportDesc" }}
                                 </div>
                             </div>
-                            <div class="form-check form-switch mb-0 flex-shrink-0">
-                                <input class="form-check-input" type="checkbox" role="switch"
+                            <div class="form-field mb-0 flex-shrink-0">
+                              <div class="switch">
+                                <input type="checkbox" role="switch"
                                        id="toggleMonthlyWasteReport"
                                        {{if .User.NotificationPreferences.MonthlyWasteReportEnabled}}checked{{end}}>
-                                <label class="visually-hidden" for="toggleMonthlyWasteReport">{{ t "settingsNotifications.monthlyWasteReport" }}</label>
+                                
+                              </div>
+                              <label class="visually-hidden" for="toggleMonthlyWasteReport">{{ t "settingsNotifications.monthlyWasteReport" }}</label>
+                            
                             </div>
                         </div>
                     </div>
-                    <div id="monthlyWasteReportSettings" class="list-group-item px-3 py-3 bg-subtle{{if not .User.NotificationPreferences.MonthlyWasteReportEnabled}} d-none{{end}}">
-                        <ul class="small text-secondary-custom mb-0 ps-3">
-                            <li>{{ t "settingsNotifications.wasteCoversPrefix" }} <strong class="text-body">{{ t "settingsNotifications.wasteCoversDeleted" }}</strong> {{ t "settingsNotifications.wasteCoversAnd" }} <strong class="text-body">{{ t "settingsNotifications.wasteCoversExpired" }}</strong> {{ t "settingsNotifications.wasteCoversSuffix" }}</li>
+                    <div id="monthlyWasteReportSettings" class="list-group-item px-5 py-5 bg-subtle{{if not .User.NotificationPreferences.MonthlyWasteReportEnabled}} d-none{{end}}">
+                        <ul class="small fg-secondary mb-0 ps-3">
+                            <li>{{ t "settingsNotifications.wasteCoversPrefix" }} <strong class="fg-body">{{ t "settingsNotifications.wasteCoversDeleted" }}</strong> {{ t "settingsNotifications.wasteCoversAnd" }} <strong class="fg-body">{{ t "settingsNotifications.wasteCoversExpired" }}</strong> {{ t "settingsNotifications.wasteCoversSuffix" }}</li>
                             <li>{{ t "settingsNotifications.wasteIncludes" }}</li>
                             <li>{{ t "settingsNotifications.wasteRecipients" }}</li>
                         </ul>
                     </div>
 
                     <!-- Expiry Digest -->
-                    <div class="list-group-item px-3 py-3">
-                        <div class="d-flex align-items-center justify-content-between gap-3">
+                    <div class="list-group-item px-5 py-5">
+                        <div class="d-flex align-items-center justify-content-between gap-5">
                             <div>
                                 <div class="fw-medium small">{{ t "settingsNotifications.expiryDigest" }}</div>
-                                <div class="text-secondary-custom small">
+                                <div class="fg-secondary small">
                                     <i class="bi bi-calendar2-week me-1" aria-hidden="true"></i>{{ t "settingsNotifications.expiryDigestDesc" }}
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="list-group-item px-3 py-3 bg-subtle">
-                        <p class="small mb-2 text-secondary-custom">{{ t "settingsNotifications.digestHelp" }}</p>
-                        <div class="d-flex gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestDisabled" value="disabled"
+                    <div class="list-group-item px-5 py-5 bg-subtle">
+                        <p class="small mb-3 fg-secondary">{{ t "settingsNotifications.digestHelp" }}</p>
+                        <div class="d-flex gap-5">
+                            <div class="form-field ">
+                              <input class="radio" type="radio" name="digestFrequency" id="digestDisabled" value="disabled"
                                     {{if eq .User.NotificationPreferences.MailDigestFrequency "disabled"}}checked{{end}}>
-                                <label class="form-check-label small" for="digestDisabled">{{ t "settingsNotifications.frequencyDisabled" }}</label>
+                              <label class="small" for="digestDisabled">{{ t "settingsNotifications.frequencyDisabled" }}</label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestDaily" value="daily"
+                            <div class="form-field ">
+                              <input class="radio" type="radio" name="digestFrequency" id="digestDaily" value="daily"
                                     {{if eq .User.NotificationPreferences.MailDigestFrequency "daily"}}checked{{end}}>
-                                <label class="form-check-label small" for="digestDaily">{{ t "settingsNotifications.frequencyDaily" }}</label>
+                              <label class="small" for="digestDaily">{{ t "settingsNotifications.frequencyDaily" }}</label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="digestFrequency" id="digestWeekly" value="weekly"
+                            <div class="form-field ">
+                              <input class="radio" type="radio" name="digestFrequency" id="digestWeekly" value="weekly"
                                     {{if eq .User.NotificationPreferences.MailDigestFrequency "weekly"}}checked{{end}}>
-                                <label class="form-check-label small" for="digestWeekly">{{ t "settingsNotifications.frequencyWeekly" }}</label>
+                              <label class="small" for="digestWeekly">{{ t "settingsNotifications.frequencyWeekly" }}</label>
                             </div>
                         </div>
                     </div>
@@ -244,62 +264,62 @@
     </div>
 </div>
 
-<div class="card card-section mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
-        <div class="d-flex align-items-center gap-2">
+<div class="card card-section mb-7">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-calendar"></i>
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "settingsNotifications.calendarSync" }}</h2>
         </div>
-        <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnCalendarRegenerate">
+        <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnCalendarRegenerate">
             {{ t "settingsNotifications.regenerateToken" }}
         </button>
     </div>
-    <div class="card-body px-4 py-4">
-        <p class="text-secondary-custom small mb-3">{{ t "settingsNotifications.calendarIntro" }}</p>
+    <div class="card-body px-7 py-7">
+        <p class="fg-secondary small mb-5">{{ t "settingsNotifications.calendarIntro" }}</p>
 
         <div id="calendarNoToken">
-            <i class="bi bi-calendar-x text-secondary-custom fs-1 mb-3 d-block"></i>
-            <p class="text-secondary-custom mb-3">{{ t "settingsNotifications.calendarNoToken" }}</p>
-            <button type="button" class="btn btn-proviant-primary" id="btnCalendarCreate">
+            <i class="bi bi-calendar-x fg-secondary fs-4xl mb-5 d-block"></i>
+            <p class="fg-secondary mb-5">{{ t "settingsNotifications.calendarNoToken" }}</p>
+            <button type="button" class="btn btn-solid theme-primary" id="btnCalendarCreate">
                 <i class="bi bi-plus-lg me-1"></i>{{ t "settingsNotifications.generateToken" }}
             </button>
         </div>
 
         <div id="calendarHasToken" class="d-none">
-            <div class="mb-3">
+            <div class="mb-5">
                 <label class="form-label fw-medium">{{ t "settingsNotifications.icalUrlLabel" }}</label>
                 <div class="input-group">
                     <input type="text" class="form-control font-monospace small" id="calendarUrl" readonly
                            value="">
-                    <button type="button" class="btn btn-proviant-secondary" id="btnCalendarCopy" title="{{ t "settingsNotifications.copyUrl" }}" aria-label="{{ t "settingsNotifications.copyUrl" }}">
+                    <button type="button" class="btn btn-outline theme-secondary" id="btnCalendarCopy" title="{{ t "settingsNotifications.copyUrl" }}" aria-label="{{ t "settingsNotifications.copyUrl" }}">
                         <i class="bi bi-clipboard" aria-hidden="true"></i>
                     </button>
-                    <button type="button" class="btn btn-proviant-secondary" id="btnCalendarDownload" title="{{ t "settingsNotifications.downloadIcsTitle" }}" aria-label="{{ t "settingsNotifications.downloadIcsAria" }}">
+                    <button type="button" class="btn btn-outline theme-secondary" id="btnCalendarDownload" title="{{ t "settingsNotifications.downloadIcsTitle" }}" aria-label="{{ t "settingsNotifications.downloadIcsAria" }}">
                         <i class="bi bi-download" aria-hidden="true"></i>
                     </button>
                 </div>
-                <div id="calendarUrlCopied" class="form-text text-success d-none">
+                <div id="calendarUrlCopied" class="form-text fg-success d-none">
                     <i class="bi bi-check-circle me-1"></i>{{ t "settingsNotifications.urlCopied" }}
                 </div>
             </div>
-            <div id="calendarExpirySection" class="mb-3 d-none">
-                <span id="calendarExpiryBadge" class="badge-status badge-soon mb-2 d-none">
+            <div id="calendarExpirySection" class="mb-5 d-none">
+                <span id="calendarExpiryBadge" class="badge badge--soon mb-3 d-none">
                     <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>{{ t "status.soon" }}
                 </span>
-                <div id="calendarExpiryDate" class="text-secondary-custom small"></div>
+                <div id="calendarExpiryDate" class="fg-secondary small"></div>
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
                 <label class="form-label fw-medium">{{ t "settingsNotifications.instructions" }}</label>
-                <ol class="text-secondary-custom small mb-0">
+                <ol class="fg-secondary small mb-0">
                     <li>{{ t "settingsNotifications.stepCopyUrl" }}</li>
                     <li>{{ t "settingsNotifications.stepOpenApp" }}</li>
                     <li>{{ t "settingsNotifications.stepAddSubscription" }}</li>
                     <li>{{ t "settingsNotifications.stepEventsAppear" }}</li>
                 </ol>
             </div>
-            <button type="button" class="btn btn-proviant-danger btn-sm" id="btnCalendarRemove">
+            <button type="button" class="btn btn-solid theme-danger btn-sm" id="btnCalendarRemove">
                 <i class="bi bi-trash me-1"></i>{{ t "settingsNotifications.removeCalendarSync" }}
             </button>
         </div>

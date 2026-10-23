@@ -1,53 +1,108 @@
 // ── Components ─────────────────────────────────────────────────────────────
 
-// Buttons — unified size regardless of btn-sm / btn-lg modifier
-.btn-proviant-primary,
-.btn-proviant-secondary,
-.btn-proviant-danger,
-.btn-proviant-warning {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.5;
-  border-radius: var(--radius-md);
+// Buttons — the design system's geometry: pill, 600, 0.04 em tracking,
+// 44 px (48 hero, 32 compact), the label in capitals.
+.btn {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-button);
+  border-radius: var(--radius-pill);
+  transition: background-color var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out);
 
   &.btn-sm {
-    padding: 5px 12px;
-    font-size: 12px;
+    min-height: 32px;
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-sm);
   }
   &.btn-lg {
-    padding: 11px 22px;
-    font-size: 15px;
+    min-height: 48px;
+    padding: var(--space-2) var(--space-5);
   }
-}
-
-.btn-proviant-primary {
-  color: var(--accent-fg);
-  background: var(--accent);
-  border: none;
-  box-shadow: 0 4px 12px oklch(50% .12 162deg / .35);
-  transition: background var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
-
-  &:hover {
-    color: var(--accent-fg);
-    background: var(--accent-hover);
-    box-shadow: 0 4px 16px oklch(50% .12 162deg / .5);
-  }
-  &:active {
-    color: var(--accent-fg);
-    background: var(--accent-active);
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
   }
   &:disabled {
     box-shadow: none;
-    opacity: .45;
   }
+}
+
+// The variants carry the brand colours. Bootstrap's own defaults are
+// replaced, so every button in the app speaks the same palette.
+.btn-primary {
+  --btn-color: var(--accent-on);
+  --btn-bg: var(--accent);
+  --btn-border-color: transparent;
+  --btn-hover-color: var(--accent-on);
+  --btn-hover-bg: var(--accent-hover);
+  --btn-hover-border-color: transparent;
+  --btn-active-color: var(--accent-on);
+  --btn-active-bg: var(--accent-active);
+  --btn-active-border-color: var(--accent-active);
+  --btn-disabled-color: var(--muted);
+  --btn-disabled-bg: var(--border);
+  --btn-disabled-border-color: var(--border);
+}
+
+.btn-outline-secondary {
+  --btn-color: var(--fg);
+  --btn-bg: var(--bg);
+  --btn-border-color: var(--border-strong);
+  --btn-hover-color: var(--fg);
+  --btn-hover-bg: var(--surface-warm);
+  --btn-hover-border-color: var(--muted);
+  --btn-active-color: var(--fg);
+  --btn-active-bg: var(--surface-warm);
+  --btn-active-border-color: var(--muted);
+  --btn-disabled-color: var(--muted);
+  --btn-disabled-bg: var(--border);
+  --btn-disabled-border-color: var(--border);
+  border-width: 1.5px;
+}
+
+.btn-danger {
+  --btn-color: var(--status-expired-on);
+  --btn-bg: var(--status-expired);
+  --btn-border-color: var(--status-expired);
+  --btn-hover-color: var(--status-expired-on);
+  --btn-hover-bg: var(--status-expired-hover);
+  --btn-hover-border-color: var(--status-expired-hover);
+  --btn-active-color: var(--status-expired-on);
+  --btn-active-bg: var(--status-expired-hover);
+  --btn-active-border-color: var(--status-expired-hover);
+  --btn-disabled-color: var(--muted);
+  --btn-disabled-bg: var(--border);
+  --btn-disabled-border-color: var(--border);
+}
+
+// The ghost variant: transparent, the ink only.
+.btn-link {
+  --btn-color: var(--fg-2);
+  --btn-hover-color: var(--fg);
+  --btn-active-color: var(--fg);
+  --btn-hover-bg: var(--surface-warm);
+  --btn-active-bg: var(--surface-warm);
+  --btn-disabled-color: var(--muted);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  text-decoration: none;
 }
 
 // Button loading state
 .btn-loading {
   display: none;
 }
-.btn-proviant-primary.loading,
+.btn-primary.loading,
 .btn-bulk.loading {
   .btn-text {
     display: none;
@@ -58,111 +113,60 @@
   }
 }
 
+// The bulk-action bar carries small pill buttons — the compact variant of
+// the secondary button.
 .btn-bulk {
   display: inline-flex;
-  gap: 5px;
+  gap: var(--space-1);
   align-items: center;
-  padding: 5px 10px;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: var(--fg-2);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
   cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-pill);
+  transition: background-color var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out);
 
+  &:hover {
+    color: var(--fg);
+    background: var(--surface-warm);
+  }
   &.danger {
-    color: var(--status-expired);
+    color: var(--status-expired-text);
     background: var(--status-expired-subtle);
     border-color: var(--status-expired-border);
   }
-
   &.active {
-    color: var(--accent);
-    background: var(--accent-subtle);
-    border-color: var(--accent-border);
-  }
-}
-
-.btn-proviant-secondary {
-  color: var(--fg);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  transition: background var(--duration-base) var(--ease-out);
-
-  &:hover {
-    color: var(--fg);
-    background: var(--bg-subtle);
-  }
-}
-
-.btn-proviant-danger {
-  color: white;
-  background: var(--status-expired);
-  border: none;
-
-  &:hover {
-    color: white;
-    background: var(--status-expired-hover);
-  }
-}
-
-.btn-proviant-warning {
-  color: var(--status-soon-fg);
-  background: var(--status-soon);
-  border: none;
-
-  &:hover {
-    color: var(--status-soon-fg);
-    background: var(--status-soon-hover);
-  }
-}
-
-.btn-ghost {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--fg-2);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  transition: background var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
-
-  &:hover {
-    color: var(--fg);
-    background: var(--bg-subtle);
-  }
-  &.btn-sm {
-    padding: 5px 12px;
-    font-size: 12px;
-  }
-  &.btn-lg {
-    padding: 11px 22px;
-    font-size: 15px;
+    color: var(--accent-on);
+    background: var(--accent);
+    border-color: var(--accent);
   }
 }
 
 // Form controls
-.form-control,
-.form-select {
-  font-family: var(--font-ui);
+.form-control {
+  min-height: 44px;
+  font-family: var(--font-body);
   font-size: var(--text-base);
   color: var(--fg);
   background: var(--surface);
   border-color: var(--border);
   border-radius: var(--radius-md);
-  transition: border-color var(--duration-base), box-shadow var(--duration-base);
+  transition: border-color var(--motion-base), box-shadow var(--motion-base);
 
   &:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .15);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 15%, transparent);
   }
 
   &.is-invalid {
     border-color: var(--status-expired);
   }
   &.is-invalid:focus {
-    box-shadow: 0 0 0 3px oklch(55% .2 25deg / .12);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--status-expired) 12%, transparent);
   }
 }
 
@@ -184,7 +188,7 @@
   th {
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
-    color: var(--fg-3);
+    color: var(--meta);
     text-transform: uppercase;
     letter-spacing: .06em;
   }
@@ -201,22 +205,55 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--elev-raised);
   transition: transform .06s ease, box-shadow .15s ease;
 
   &:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--elev-raised);
   }
+}
+
+// Bootstrap 6 turns .card-body into a flex column that spaces its children
+// with a gap of its own. The app spaces the card bodies with its own
+// utilities, so the body keeps the block layout it had in v5 — a flex column
+// would also stop the children's margins from collapsing.
+.card-body {
+  display: block;
+  --card-body-gap: 0;
 }
 
 // Settings section card — accent-tinted border + accent hover shadow
 .card-section {
-  border: 1px solid oklch(78% .08 162deg);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--duration-base) var(--ease-out);
+  border: 1px solid var(--accent-border);
+  box-shadow: var(--elev-raised);
+  transition: box-shadow var(--motion-base) var(--ease-out);
 
   &:hover {
-    box-shadow: 0 6px 18px oklch(50% .12 162deg / .12);
+    box-shadow: 0 6px 18px color-mix(in oklab, var(--accent) 12%, transparent);
+  }
+}
+
+// The danger zone: the one settings card that carries the expiry status as a
+// surface. Its ink follows the fill, and its hover does not glow in accent.
+.card--danger {
+  background: var(--status-expired-subtle);
+  border-color: var(--status-expired-border);
+
+  &:hover {
+    box-shadow: 0 6px 18px color-mix(in oklab, var(--status-expired) 12%, transparent);
+  }
+
+  .card-header {
+    background: var(--status-expired-subtle);
+    border-bottom-color: var(--status-expired-border);
+  }
+
+  .icon-chip {
+    background: color-mix(in oklab, var(--status-expired) 26%, var(--surface));
+
+    i {
+      color: var(--status-expired-text);
+    }
   }
 }
 
@@ -224,10 +261,10 @@
 .product-card {
   overflow: hidden;
   cursor: pointer;
-  transition: box-shadow var(--duration-slow) var(--ease-out), transform var(--duration-slow) var(--ease-out);
+  transition: box-shadow var(--motion-slow) var(--ease-out), transform var(--motion-slow) var(--ease-out);
 
   &:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--elev-raised);
     transform: translateY(-1px);
   }
 
@@ -245,8 +282,8 @@
     background:
       repeating-linear-gradient(
         45deg,
-        var(--bg-subtle),
-        var(--bg-subtle) 4px,
+        var(--surface-warm),
+        var(--surface-warm) 4px,
         white 4px,
         white 10px
       );
@@ -259,7 +296,7 @@
       object-fit: contain; // contain keeps full product visible; cover would crop
       background: var(--surface);
       opacity: 0;
-      transition: opacity var(--duration-slow) var(--ease-out);
+      transition: opacity var(--motion-slow) var(--ease-out);
     }
 
     .product-img-fallback {
@@ -269,171 +306,241 @@
       width: 100%;
       height: 100%;
       font-size: 2rem;
-      color: var(--fg-3);
+      color: var(--meta);
     }
   }
 
   .product-name {
     overflow: hidden;
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--fg);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .product-cat {
-    font-size: var(--text-sm);
-    color: var(--fg-3);
+    font-size: var(--text-xs);
+    color: var(--meta);
   }
   .product-meta {
     font-family: var(--font-mono);
     font-size: 10px;
-    color: var(--fg-3);
+    color: var(--meta);
   }
 }
 
-// Status badges
-.badge-status {
+// Status badges — the spec's chip: tinted background, darker ink, icon + text.
+.badge {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--space-1);
   align-items: center;
   padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
   border: 1px solid;
   border-radius: var(--radius-pill);
 }
 
-.badge-expired {
-  color: oklch(45% .2 25deg);
-  background: oklch(95% .05 25deg);
-  border-color: oklch(80% .12 25deg);
+.badge--expired {
+  color: var(--status-expired-text);
+  background: var(--status-expired-subtle);
+  border-color: var(--status-expired-border);
 }
-.badge-critical {
-  color: oklch(50% .18 45deg);
-  background: oklch(96% .05 45deg);
-  border-color: oklch(82% .12 45deg);
+.badge--critical {
+  color: var(--status-critical-text);
+  background: var(--status-critical-subtle);
+  border-color: var(--status-critical-border);
 }
-.badge-soon {
-  color: oklch(50% .16 80deg);
-  background: oklch(97% .05 80deg);
-  border-color: oklch(85% .1 80deg);
+.badge--soon {
+  color: var(--status-soon-text);
+  background: var(--status-soon-subtle);
+  border-color: var(--status-soon-border);
 }
-.badge-fresh {
-  color: oklch(38% .1 145deg);
-  background: oklch(94% .04 145deg);
-  border-color: oklch(78% .08 145deg);
+.badge--fresh {
+  color: var(--status-fresh-text);
+  background: var(--status-fresh-subtle);
+  border-color: var(--status-fresh-border);
 }
-.badge-nodate {
-  color: oklch(45% .01 70deg);
-  background: oklch(94% .006 70deg);
-  border-color: oklch(80% .008 70deg);
+.badge--neutral {
+  color: var(--status-neutral-text);
+  background: var(--status-neutral-subtle);
+  border-color: var(--status-neutral-border);
 }
-.badge-lowstock {
-  color: oklch(50% .16 80deg);
-  background: oklch(97% .05 80deg);
-  border-color: oklch(85% .1 80deg);
+.badge--lowstock {
+  color: var(--status-soon-text);
+  background: var(--status-soon-subtle);
+  border-color: var(--status-soon-border);
 }
-.badge-opened {
-  color: oklch(40% .12 280deg);
-  background: oklch(94% .03 280deg);
-  border-color: oklch(78% .08 280deg);
+.badge--opened {
+  color: var(--status-neutral-text);
+  background: var(--status-neutral-subtle);
+  border-color: var(--status-neutral-border);
+}
+
+// Toasts — the design system's feedback surface. Top right, a status border
+// on the left, and a dismiss button. An error stays until it is dismissed.
+.toast-stack {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 1090;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(360px, calc(100vw - 2 * var(--space-4)));
+  pointer-events: none;
+}
+
+.toast {
+  color: var(--fg);
+  pointer-events: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-overlay);
+
+  .toast-header {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    color: var(--fg);
+    background: transparent;
+    border-bottom: 0;
+  }
+
+  .toast-title {
+    flex: 1;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+
+  .toast-body {
+    padding: 0 var(--space-3) var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    white-space: pre-line;
+  }
+
+  .toast__icon {
+    font-size: var(--text-base);
+  }
+}
+
+.toast--success {
+  border-left-color: var(--status-fresh);
+
+  .toast__icon { color: var(--status-fresh-text); }
+}
+
+.toast--error {
+  border-left-color: var(--status-expired);
+
+  .toast__icon { color: var(--status-expired-text); }
+}
+
+.toast--warning {
+  border-left-color: var(--status-soon);
+
+  .toast__icon { color: var(--status-soon-text); }
+}
+
+.toast--info {
+  border-left-color: var(--info);
+
+  .toast__icon { color: var(--info); }
+}
+
+// The list item's own slots — Bootstrap's .list-group has no equivalent.
+// Leading carries the avatar or the checkbox, the body the title and the meta
+// line, the trailing the chip or the actions.
+.list-group-item__leading {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.list-group-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.list-group-item__title {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+.list-group-item__meta {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.list-group-item__trailing {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+// The status bar in front of a list row. It is never the only signal: the row
+// carries a status chip too.
+.list-group-item__stripe {
+  flex-shrink: 0;
+  width: 4px;
+  height: 28px;
+  background: var(--status-neutral);
+  border-radius: 2px;
+}
+
+.list-group-item__stripe--expired {
+  background: var(--status-expired);
+}
+
+.list-group-item__stripe--critical {
+  background: var(--status-critical);
+}
+
+.list-group-item__stripe--soon {
+  background: var(--status-soon);
+}
+
+.list-group-item__stripe--fresh {
+  background: var(--status-fresh);
 }
 
 // Sidebar nav
-.pv-sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  width: var(--sidebar-width);
-  min-height: 100vh;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-
-  .brand {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    padding: 14px 16px;
-    text-decoration: none;
-    border-bottom: 1px solid var(--border-subtle);
-
-    .brand-logo {
-      flex-shrink: 0;
-      width: 32px;
-      height: 32px;
-      object-fit: contain;
-    }
-
-    .brand-name {
-      font-size: 22px;
-      font-weight: 700;
-      line-height: 1;
-      color: var(--fg);
-      letter-spacing: -.02em;
-    }
-  }
-
-  .nav-items {
-    flex: 1;
-    padding: 10px 8px;
-  }
-}
-
-.pv-nav-item {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  padding: 8px 10px;
-  margin-bottom: 2px;
-  font-size: 13px;
-  color: var(--fg-2);
-  text-decoration: none;
-  border-radius: 7px;
-  transition: background 120ms, color 120ms;
-
-  &:hover {
-    color: var(--fg);
-    background: var(--bg-subtle);
-  }
-  &.active {
-    font-weight: 600;
-    color: var(--accent);
-    background: var(--accent-subtle);
-  }
-
-  i {
-    font-size: 16px;
-  }
-}
 
 // Modals
-.modal-content {
+.dialog {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--elev-overlay);
 }
-.modal-header {
+.dialog-header {
   gap: 12px;
   align-items: flex-start;
   padding: 20px 20px 0;
   border-bottom: none;
 }
-.modal-title {
-  font-size: 15px;
+.dialog-title {
+  font-size: 16px;
   font-weight: 600;
 }
-.modal-body {
+.dialog-body {
   padding: 16px 20px 20px;
 }
-.modal-footer {
+.dialog-footer {
   padding: 0 20px 20px;
   border-top: none;
 }
-.modal-icon {
+.dialog-icon {
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -458,7 +565,7 @@
   &.focused {
     padding: 13px 15px; // compensate 1px→2px border so content doesn't jump
     border: 2px solid var(--accent);
-    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .15);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 15%, transparent);
   }
   input {
     width: 100%;
@@ -471,9 +578,9 @@
     border: none;
     outline: none;
     &::placeholder {
-      font-family: var(--font-sans, inherit);
+      font-family: var(--font-body, inherit);
       font-size: 14px;
-      color: var(--fg-3);
+      color: var(--meta);
       letter-spacing: 0;
     }
     &::-webkit-inner-spin-button,
@@ -483,16 +590,16 @@
   }
 }
 
-#addProductModal .modal-header {
+#addProductModal .dialog-header {
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border);
 }
-#addProductModal .modal-body {
+#addProductModal .dialog-body {
   padding-top: 18px;
 }
-#addProductModal .modal-footer {
+#addProductModal .dialog-footer {
   padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border);
 }
 
 // Empty states
@@ -502,7 +609,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--elev-raised);
 }
 .empty-icon {
   display: flex;
@@ -512,8 +619,8 @@
   height: 52px;
   margin: 0 auto 14px;
   font-size: 22px;
-  color: var(--fg-3);
-  background: var(--bg-subtle);
+  color: var(--meta);
+  background: var(--surface-warm);
   border-radius: 12px;
 }
 .empty-title {
@@ -533,10 +640,10 @@
 .pv-toast {
   border-left: 3px solid;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elev-overlay);
 }
 .pv-toast.toast-success {
-  border-left-color: oklch(52% .1 145deg);
+  border-left-color: var(--status-fresh);
 }
 .pv-toast.toast-error {
   border-left-color: var(--status-expired);
@@ -545,29 +652,208 @@
   border-left-color: var(--status-critical);
 }
 
-// Constrain chart canvas height so charts don't balloon on large viewports
-.card-body canvas {
-  max-height: 220px;
+// Chart frames — a canvas with a definite height, so Chart.js fills the card
+// instead of sizing itself from its aspect ratio.
+.chart-frame {
+  position: relative;
+  width: 100%;
+  height: 200px;
 }
 
-// Metric tiles
-.metric-tile {
-  padding: 16px 18px;
+.chart-frame--lg {
+  height: 260px;
+}
+
+.chart-frame > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// The empty state takes the place of the canvas inside its frame.
+.chart-empty-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  margin: 0;
+}
+
+// A chart card speaks like a tile: an eyebrow and the number behind it.
+.chart-card__header {
+  display: flex;
+  // Bootstrap 6 makes .card-header a flex column; the chart header keeps its
+  // title and its icon on one line.
+  flex-direction: row;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.chart-card__headings {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chart-card__eyebrow {
+  font: var(--weight-semibold) var(--text-eyebrow) / var(--leading-tight) var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.chart-card__value {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+// KPI tiles — the spec's pattern: eyebrow, big number, optional delta.
+.kpi {
+  padding: var(--space-4);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+}
 
-  .metric-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--fg-2);
+.kpi__label {
+  font: var(--weight-semibold) var(--text-eyebrow) / var(--leading-tight) var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.kpi__value {
+  padding-bottom: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--text-display);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+}
+
+// The line under a tile: an icon and the share or the count behind the value.
+.kpi__sub {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+// The line under a tile carries the status, the accent or the muted ink.
+.kpi__sub--fresh {
+  color: var(--status-fresh);
+}
+
+.kpi__sub--soon {
+  color: var(--status-soon);
+}
+
+.kpi__sub--critical {
+  color: var(--status-critical);
+}
+
+.kpi__sub--accent {
+  color: var(--accent-text);
+}
+
+// The value carries the status when the tile is not filled.
+.kpi__value--danger {
+  color: var(--status-expired-text);
+}
+
+.kpi__value--warning {
+  color: var(--status-soon-text);
+}
+
+.kpi__value--success {
+  color: var(--status-fresh-text);
+}
+
+.kpi__value--accent {
+  color: var(--accent-text);
+}
+
+// The filled tile: the one card that carries a status as a surface. Its ink
+// follows the fill (--status-*-on), not the page.
+.kpi--fill-expired {
+  color: var(--status-expired-on);
+  background: var(--status-expired);
+  border-color: transparent;
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--status-expired) 33%, transparent);
+}
+
+.kpi--fill-expired .kpi__label {
+  color: color-mix(in oklab, var(--status-expired-on) 88%, transparent);
+}
+
+.kpi--fill-expired .kpi__value,
+.kpi--fill-expired .kpi__sub {
+  color: var(--status-expired-on);
+}
+
+// The hero tile — the one card on the dashboard that is filled dark. Its ink
+// follows the card, not the page.
+.kpi--hero {
+  background: var(--surface-deep);
+  border-color: color-mix(in oklab, var(--surface-deep-ink) 10%, var(--surface-deep));
+
+  .kpi__label {
+    color: var(--surface-deep-muted);
   }
-  .metric-value {
-    margin-top: 8px;
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -.02em;
+
+  .kpi__value {
+    font-family: var(--font-mono);
+    color: var(--surface-deep-ink);
   }
+}
+
+.kpi__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.kpi__chip {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--surface-deep);
+  background: var(--status-fresh);
+  border-radius: var(--radius-pill);
+}
+
+.kpi__chip--soon {
+  background: var(--status-soon);
+}
+
+.kpi__chip--expired {
+  color: var(--status-expired-on);
+  background: var(--status-expired);
+}
+
+// The dashboard's cards follow the screen sheets: the hero radius and a
+// flat rest, the accent card and the filled status card are the only
+// filled ones.
+.bento .kpi,
+.bento .card:not(.card-accent) {
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-flat);
+  transition: box-shadow var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out);
+}
+
+.bento .kpi:hover,
+.bento .card:not(.card-accent):hover {
+  box-shadow: var(--elev-raised);
 }

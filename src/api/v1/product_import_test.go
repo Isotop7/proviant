@@ -29,9 +29,10 @@ import (
 // stubDatasetGetter stands in for the Open Food Facts controller so the
 // barcode-only path is exercised without a network call.
 type stubDatasetGetter struct {
-	name  string
-	err   error
-	calls *int
+	name     string
+	packSize string
+	err      error
+	calls    *int
 }
 
 func (s stubDatasetGetter) GetDataset(barcode string) (dbModel.Product, error) {
@@ -44,7 +45,7 @@ func (s stubDatasetGetter) GetDataset(barcode string) (dbModel.Product, error) {
 	if s.name == "" {
 		return dbModel.Product{}, fmt.Errorf("no entry for %s", barcode)
 	}
-	return dbModel.Product{ProductName: s.name}, nil
+	return dbModel.Product{ProductName: s.name, PackSize: s.packSize}, nil
 }
 
 type importFixture struct {
@@ -133,7 +134,15 @@ func (f *importFixture) importRequestWithConfig(t *testing.T, body string, gette
 	return w, resp
 }
 
-const importHeader = "name,barcode,quantity,unit,category,storage_location,expiry_date,added_at\n"
+const importHeader = "name,barcode,quantity,pack_size,category,storage_location,expiry_date,added_at\n"
+
+// legacyImportHeader is the header of a file written before products were
+// counted in packs: it carries the net content and its unit.
+const legacyImportHeader = "name,barcode,quantity,unit,category,storage_location,expiry_date,added_at\n"
+
+// mixedImportHeader is a file that carries both: the net content of the old
+// format and the pack size of the new one.
+const mixedImportHeader = "name,barcode,quantity,unit,pack_size,category,storage_location,expiry_date,added_at\n"
 
 func (f *importFixture) activeProducts(t *testing.T) []dbModel.Product {
 	t.Helper()
@@ -148,9 +157,9 @@ func TestImportProducts(t *testing.T) {
 	t.Run("happy path creates every valid row", func(t *testing.T) {
 		f := newImportFixture(t)
 		body := importHeader +
-			"Milk,4006381333931,2,l,Dairy,Fridge,2026-12-31,\n" +
-			"Bread,4006381333948,1,pcs,Bakery,,2026-11-01,\n" +
-			"Coffee,4006381333955,3,pcs,Beverages,Freezer,,\n"
+			"Milk,4006381333931,2,1 l,Dairy,Fridge,2026-12-31,\n" +
+			"Bread,4006381333948,1,,Bakery,,2026-11-01,\n" +
+			"Coffee,4006381333955,3,,Beverages,Freezer,,\n"
 
 		w, resp := f.importRequest(t, body)
 
@@ -164,8 +173,8 @@ func TestImportProducts(t *testing.T) {
 		if len(products) != 3 {
 			t.Fatalf("stored products = %d, want 3", len(products))
 		}
-		if products[0].Amount != 2 || products[0].Unit != "l" || products[0].Categories != "Dairy" {
-			t.Errorf("first product = %+v, want amount 2 / unit l / category Dairy", products[0])
+		if products[0].Quantity != 2 || products[0].PackSize != "1 l" || products[0].Categories != "Dairy" {
+			t.Errorf("first product = %+v, want count 2 / pack size \"1 l\" / category Dairy", products[0])
 		}
 		if products[0].ExpireAt.IsZero() {
 			t.Error("expiry_date was not stored")
@@ -178,8 +187,8 @@ func TestImportProducts(t *testing.T) {
 	t.Run("re-importing an export rejects every row as a duplicate", func(t *testing.T) {
 		f := newImportFixture(t)
 		original := importHeader +
-			"Milk,4006381333931,2,l,Dairy,Fridge,2026-12-31,\n" +
-			"Bread,4006381333948,1,pcs,Bakery,Pantry,2026-11-01,\n"
+			"Milk,4006381333931,2,1 l,Dairy,Fridge,2026-12-31,\n" +
+			"Bread,4006381333948,1,,Bakery,Pantry,2026-11-01,\n"
 		if w, resp := f.importRequest(t, original); w.Code != http.StatusOK || resp.Imported != 2 {
 			t.Fatalf("setup import: status %d imported %d", w.Code, resp.Imported)
 		}
@@ -202,11 +211,66 @@ func TestImportProducts(t *testing.T) {
 		}
 	})
 
+	t.Run("a file written before packs is rejected", func(t *testing.T) {
+		f := newImportFixture(t)
+		body := legacyImportHeader +
+			"Flour,4006381333931,1000,g,Dry,Fridge,2026-12-31,\n"
+
+		w, _ := f.importRequest(t, body)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400; body=%s", w.Code, w.Body.String())
+		}
+		if !strings.Contains(w.Body.String(), "pack_size") {
+			t.Errorf("body = %s, want the message to name the pack_size column", w.Body.String())
+		}
+		if products := f.activeProducts(t); len(products) != 0 {
+			t.Errorf("stored products = %d, want 0", len(products))
+		}
+	})
+
+	t.Run("a file that carries the old unit column is rejected too", func(t *testing.T) {
+		f := newImportFixture(t)
+		body := mixedImportHeader +
+			"Flour,4006381333931,2,g,500 g,Dry,Fridge,2026-12-31,\n"
+
+		w, _ := f.importRequest(t, body)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400; body=%s", w.Code, w.Body.String())
+		}
+		if products := f.activeProducts(t); len(products) != 0 {
+			t.Errorf("stored products = %d, want 0", len(products))
+		}
+	})
+
+	t.Run("a barcode-only row keeps the pack size of the lookup", func(t *testing.T) {
+		f := newImportFixture(t)
+		body := importHeader +
+			",4006381333931,1,,Fridge,,\n"
+
+		w, resp := f.importRequestWithOFF(t, body, stubDatasetGetter{name: "Vollmilch", packSize: "500 g"})
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
+		}
+		if resp.Imported != 1 {
+			t.Fatalf("imported = %d, want 1", resp.Imported)
+		}
+		products := f.activeProducts(t)
+		if len(products) != 1 {
+			t.Fatalf("stored products = %d, want 1", len(products))
+		}
+		if products[0].PackSize != "500 g" {
+			t.Errorf("pack size = %q, want %q", products[0].PackSize, "500 g")
+		}
+	})
+
 	t.Run("archived barcodes are not duplicates", func(t *testing.T) {
 		f := newImportFixture(t)
 		archived := dbModel.Product{
 			ProductName: "Milk", Barcode: "4006381333931",
-			HouseholdID: f.houseID, UserID: f.userID, Amount: 1,
+			HouseholdID: f.houseID, UserID: f.userID, Quantity: 1,
 		}
 		if err := f.db.Create(&archived).Error; err != nil {
 			t.Fatalf("seed archived: %v", err)
@@ -215,7 +279,7 @@ func TestImportProducts(t *testing.T) {
 			t.Fatalf("archive product: %v", err)
 		}
 
-		w, resp := f.importRequest(t, importHeader+"Milk,4006381333931,1,l,Dairy,Fridge,,\n")
+		w, resp := f.importRequest(t, importHeader+"Milk,4006381333931,1,1 l,Dairy,Fridge,,\n")
 
 		if w.Code != http.StatusOK || resp.Imported != 1 {
 			t.Errorf("status %d imported %d, want 200/1 for a restorable archived barcode", w.Code, resp.Imported)
@@ -236,13 +300,13 @@ func TestImportProducts(t *testing.T) {
 
 	t.Run("bad quantity fails only its own row", func(t *testing.T) {
 		f := newImportFixture(t)
-		// Zero is accepted: the CSV export writes Amount verbatim and the model
-		// has no minimum, so an exported 0 has to re-import rather than vanish.
+		// Zero is accepted and clamped: a product always holds at least one
+		// pack, so an exported 0 has to re-import rather than vanish.
 		body := importHeader +
-			"Zero,4006381333931,0,pcs,,,,\n" +
-			"Negative,4006381333948,-1,pcs,,,,\n" +
-			"Text,4006381333955,abc,pcs,,,,\n" +
-			"Good,4006381333962,4,pcs,,,,\n"
+			"Zero,4006381333931,0,,,,,\n" +
+			"Negative,4006381333948,-1,,,,,\n" +
+			"Text,4006381333955,abc,,,,,\n" +
+			"Good,4006381333962,4,,,,,\n"
 
 		w, resp := f.importRequest(t, body)
 
@@ -258,17 +322,17 @@ func TestImportProducts(t *testing.T) {
 			}
 		}
 		products := f.activeProducts(t)
-		if len(products) != 2 || products[0].ProductName != "Zero" || products[0].Amount != 0 ||
-			products[1].ProductName != "Good" || products[1].Amount != 4 {
-			t.Errorf("stored products = %+v, want Zero(0) and Good(4)", products)
+		if len(products) != 2 || products[0].ProductName != "Zero" || products[0].Quantity != 1 ||
+			products[1].ProductName != "Good" || products[1].Quantity != 4 {
+			t.Errorf("stored products = %+v, want Zero(1) and Good(4)", products)
 		}
 	})
 
 	t.Run("bad expiry date fails only its own row", func(t *testing.T) {
 		f := newImportFixture(t)
 		body := importHeader +
-			"Bad,4006381333931,1,pcs,,,31-12-2026,\n" +
-			"Good,4006381333948,1,pcs,,,2026-12-31,\n"
+			"Bad,4006381333931,1,,,,31-12-2026,\n" +
+			"Good,4006381333948,1,,,,2026-12-31,\n"
 
 		w, resp := f.importRequest(t, body)
 
@@ -286,8 +350,8 @@ func TestImportProducts(t *testing.T) {
 	t.Run("duplicate barcode within one file fails the second row", func(t *testing.T) {
 		f := newImportFixture(t)
 		body := importHeader +
-			"First,4006381333931,1,pcs,,,,\n" +
-			"Second,4006381333931,1,pcs,,,,\n"
+			"First,4006381333931,1,,,,,\n" +
+			"Second,4006381333931,1,,,,,\n"
 
 		w, resp := f.importRequest(t, body)
 
@@ -304,8 +368,8 @@ func TestImportProducts(t *testing.T) {
 
 	t.Run("semicolon-delimited file parses", func(t *testing.T) {
 		f := newImportFixture(t)
-		body := "name;barcode;quantity;unit;category;storage_location;expiry_date;added_at\n" +
-			"Milch;4006381333931;2;l;Milchprodukte;Kühlschrank;2026-12-31;\n"
+		body := "name;barcode;quantity;pack_size;category;storage_location;expiry_date;added_at\n" +
+			"Milch;4006381333931;2;1 l;Milchprodukte;Kühlschrank;2026-12-31;\n"
 
 		w, resp := f.importRequest(t, body)
 
@@ -482,7 +546,7 @@ func TestImportProducts(t *testing.T) {
 
 	t.Run("column aliases from the issue are accepted", func(t *testing.T) {
 		f := newImportFixture(t)
-		body := "product_name,barcode,amount,categories\n" +
+		body := "product_name,barcode,quantity,categories\n" +
 			"Hafermilch,4006381333931,2,en:beverages\n"
 
 		w, resp := f.importRequest(t, body)
@@ -494,8 +558,8 @@ func TestImportProducts(t *testing.T) {
 		if len(products) != 1 {
 			t.Fatalf("stored products = %d, want 1", len(products))
 		}
-		if products[0].Amount != 2 || products[0].Categories != "en:beverages" {
-			t.Errorf("product = %+v, want amount 2 from the amount alias", products[0])
+		if products[0].Quantity != 2 || products[0].Categories != "en:beverages" {
+			t.Errorf("product = %+v, want a count of 2 and the categories from the alias", products[0])
 		}
 	})
 
@@ -598,7 +662,7 @@ func TestImportProducts(t *testing.T) {
 			t.Errorf("counts = imported %d / failed %d, want 1/1", resp.Imported, resp.Failed)
 		}
 		products := f.activeProducts(t)
-		if len(products) != 1 || products[0].Amount != 2 {
+		if len(products) != 1 || products[0].Quantity != 2 {
 			t.Errorf("stored products = %+v, want only the valid Milk", products)
 		}
 	})
@@ -746,7 +810,7 @@ func TestImportTemplateCSV(t *testing.T) {
 	if len(records) != 2 {
 		t.Fatalf("records = %d, want a header and one example row", len(records))
 	}
-	want := []string{"name", "barcode", "quantity", "unit", "category", "storage_location", "expiry_date", "added_at"}
+	want := []string{"name", "barcode", "quantity", "pack_size", "category", "storage_location", "expiry_date", "added_at"}
 	if strings.Join(records[0], ",") != strings.Join(want, ",") {
 		t.Errorf("header = %v, want %v", records[0], want)
 	}

@@ -45,6 +45,7 @@
   "mealPlan.addMeal": "Mahlzeit hinzufügen",
   "mealPlan.day": "Tag",
   "mealPlan.generateShoppingList": "Einkaufsliste erstellen",
+  "mealPlan.header.mealsPlanned": "geplante Mahlzeiten im gewählten Monat",
   "mealPlan.jumpToCurrentMonth": "Zum aktuellen Monat springen",
   "mealPlan.loadNextMonth": "Nächsten Monat laden",
   "mealPlan.loadPreviousMonth": "Vorherigen Monat laden",
@@ -54,6 +55,5 @@
   "mealPlan.noHouseholdTitle": "Noch kein Haushalt",
   "mealPlan.recipe": "Rezept",
   "mealPlan.servings": "Portionen",
-  "mealPlan.subtitle": "Planen Sie einen ganzen Monat und erstellen Sie Ihre Einkaufsliste",
   "mealPlan.today": "Heute"
 }

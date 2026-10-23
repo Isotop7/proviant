@@ -67,6 +67,22 @@ func getNotificationController(ctx *gin.Context) (*controllers.NotificationContr
 	return nc, ok
 }
 
+// secureCookie reports whether cookies of this deployment may carry the
+// Secure attribute. The server never terminates TLS itself, so the scheme of
+// the configured base URL is the only statement about the transport to the
+// browser.
+func secureCookie(ctx *gin.Context) bool {
+	proviantConfigVal, ok := ctx.Get(util.ContextKeyProviantConfig)
+	if !ok {
+		return false
+	}
+	proviantConfig, ok := proviantConfigVal.(*configuration.ProviantConfiguration)
+	if !ok {
+		return false
+	}
+	return util.IsHTTPSBaseURL(proviantConfig.Server.BaseURL)
+}
+
 func handleInviteAcceptance(repos *database.RepositoryContainer, signup *authentication.Signup, user *authentication.User, logger *zerolog.Logger) {
 	if signup.InviteToken == "" {
 		return

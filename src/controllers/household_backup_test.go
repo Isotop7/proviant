@@ -90,6 +90,43 @@ func TestRestoreHouseholdBackupRejectsUnsupportedVersion(t *testing.T) {
 	}
 }
 
+// TestRestoreProductFromRowReadsCounts covers the restore of a current
+// document: the pack count and the pack size are carried over as they are.
+func TestRestoreProductFromRowReadsCounts(t *testing.T) {
+	row := apiModel.ExportProductResponse{ProductName: "Flour", Barcode: "1234567890123", Quantity: 2, PackSize: "1 kg"}
+
+	product, err := restoreProductFromRow(&row, false, 1, map[string]uint{}, 1, map[string]uint{})
+	if err != nil {
+		t.Fatalf("restoreProductFromRow: %v", err)
+	}
+	if product.Quantity != 2 || product.PackSize != "1 kg" {
+		t.Errorf("count/pack size = %d %q, want 2 \"1 kg\"", product.Quantity, product.PackSize)
+	}
+}
+
+// TestRestoreProductFromRowReadsLegacyAmounts covers a backup written before
+// products were counted in packs: its measured rows describe one pack of that
+// size, its counted rows keep their count.
+func TestRestoreProductFromRowReadsLegacyAmounts(t *testing.T) {
+	measured := apiModel.ExportProductResponse{ProductName: "Flour", Barcode: "1234567890123", Amount: 2000, Unit: "g"}
+	product, err := restoreProductFromRow(&measured, false, 1, map[string]uint{}, 1, map[string]uint{})
+	if err != nil {
+		t.Fatalf("restoreProductFromRow: %v", err)
+	}
+	if product.Quantity != 1 || product.PackSize != "2000 g" {
+		t.Errorf("count/pack size = %d %q, want 1 \"2000 g\"", product.Quantity, product.PackSize)
+	}
+
+	counted := apiModel.ExportProductResponse{ProductName: "Eggs", Barcode: "1234567890124", Amount: 12, Unit: "pcs"}
+	product, err = restoreProductFromRow(&counted, false, 1, map[string]uint{}, 1, map[string]uint{})
+	if err != nil {
+		t.Fatalf("restoreProductFromRow: %v", err)
+	}
+	if product.Quantity != 12 || product.PackSize != "" {
+		t.Errorf("count/pack size = %d %q, want 12 and no pack size", product.Quantity, product.PackSize)
+	}
+}
+
 // TestBackupControllerRunOnceWritesVersionedDocuments covers the scheduled job's
 // storage contract: one JSON document per household, carrying the same schema
 // version as the export endpoint.

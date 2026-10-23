@@ -14,14 +14,16 @@ import (
 	"gorm.io/gorm"
 )
 
+// recipeIngredientInputsToModels stores the ingredient as written: the portion
+// states how much of something a dish needs, as free text, and is never
+// converted.
 func recipeIngredientInputsToModels(inputs []apiModel.RecipeIngredientInput) []dbModel.RecipeIngredient {
 	ingredients := make([]dbModel.RecipeIngredient, len(inputs))
 	for i := range inputs {
 		ingredients[i] = dbModel.RecipeIngredient{
 			ProductID: inputs[i].ProductID,
 			Name:      strings.TrimSpace(inputs[i].Name),
-			Amount:    inputs[i].Amount,
-			Unit:      inputs[i].Unit,
+			Portion:   strings.TrimSpace(inputs[i].Portion),
 			SortOrder: inputs[i].SortOrder,
 		}
 	}
@@ -258,12 +260,12 @@ func DeleteRecipe(ctx *gin.Context, appCtx *AppContext) {
 
 // CookRecipe consumes the ingredients of a saved recipe (cook workflow)
 // @Summary      Cook a saved recipe
-// @Description  Consumes the recipe's linked products by their scaled amounts. Unlinked ingredients and unit mismatches are reported as errors and skipped; an amount reaching the current stock fully consumes (archives) the product.
+// @Description  Consumes a pack of every product the recipe links; a cook for more servings than the recipe states takes more packs. Unlinked ingredients are reported as errors and skipped; a pack count that reaches the current stock fully consumes (archives) the product.
 // @Tags         recipes
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Recipe ID"
-// @Param        request body apiModel.CookRecipeRequest true "Servings to cook (0 = recipe servings)"
+// @Param        request body apiModel.CookRecipeRequest true "Servings to cook (scales the pack count)"
 // @Success      200 {object} apiModel.CookResponse
 // @Failure      400 {object} apiModel.CookResponse "Returned when no item was processed (invalid body or all ingredients failed)"
 // @Failure      404 {object} api.APIResponse

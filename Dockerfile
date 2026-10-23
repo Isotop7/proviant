@@ -1,14 +1,14 @@
-FROM docker.io/golang:1.26.9-alpine AS buildenv
+FROM docker.io/golang:1.26.10-alpine AS buildenv
 WORKDIR /app
 
 RUN apk add --no-cache --update g++ gcc go npm
 COPY ./src/go.mod ./src/go.sum ./
 RUN go mod download
 COPY ./ ./
-RUN npm ci && \
+RUN npm ci --ignore-scripts && \
     npm run css && \
     cp node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/ && \
-	cp node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/ && \
+	cp node_modules/@fontsource-variable/jost/files/jost-latin-wght-*.woff2 ./src/assets/fonts/ && \
     cp node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2 ./src/assets/fonts/ && \
     cp node_modules/bootstrap/dist/js/bootstrap.bundle.min.js* ./src/assets/js/ && \
     cp node_modules/html5-qrcode/html5-qrcode.min.js ./src/assets/js/ && \
@@ -38,9 +38,10 @@ ENV TZ=UTC
 EXPOSE 5114
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  # Loopback/container-internal probe only — never crosses a network boundary.
   CMD probe_host="${PROVIANT_SERVER_HOST:-127.0.0.1}"; \
     case "$probe_host" in ""|"::"|"0.0.0.0") probe_host=127.0.0.1 ;; *:*) probe_host="[$probe_host]" ;; esac; \
-    wget --quiet -O /dev/null "http://$probe_host:${PROVIANT_SERVER_PORT:-5114}/health" || exit 1
+    wget --quiet -O /dev/null "http://$probe_host:${PROVIANT_SERVER_PORT:-5114}/health" || exit 1 # NOSONAR
 
 USER proviant
 ENTRYPOINT [ "/app/proviant" ]

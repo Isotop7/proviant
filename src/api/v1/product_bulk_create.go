@@ -46,7 +46,7 @@ var bulkSideEffectBatches atomic.Int64
 // per-item and partial success is allowed: every submitted item reports its
 // own outcome, a failing item never blocks the others.
 // @Summary       Create multiple products
-// @Description   Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason.
+// @Description   Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack.
 // @Tags          product
 // @Accept        json
 // @Produce       json
@@ -211,6 +211,46 @@ func terminalBulkItem(index int, reason string) apiModel.BulkItemResult {
 	return apiModel.BulkItemResult{Index: index, Status: apiModel.BulkItemStatusFailed, Reason: reason, Terminal: true}
 }
 
+// draftQuantityAndPackSize reads the pack count and the pack size of a
+// draft. A draft written before products were counted in packs carries the
+// net content of one pack instead, and a queued draft from before that change
+// still carries it, so it is converted here. A count of zero means the draft
+// did not name one.
+func draftQuantityAndPackSize(draft *apiModel.BulkProductDraft) (int, string) {
+	if draft.Quantity > 0 {
+		return util.ClampProductQuantity(draft.Quantity), draft.PackSize
+	}
+	if draft.Amount > 0 {
+		quantity, packSize := util.PackSizeFromLegacyAmount(draft.Amount, draft.Unit)
+		return util.ClampProductQuantity(quantity), packSize
+	}
+	return util.ClampProductQuantity(0), draft.PackSize
+}
+
+// draftPrice reports the price a draft carries, whichever field it is in.
+func draftPrice(draft *apiModel.BulkProductDraft) *float64 {
+	if draft.Price != nil {
+		return draft.Price
+	}
+	return draft.PriceOverride
+}
+
+// draftPriceOverride turns the price of a draft into the price of one pack. A
+// draft that carries the price of the whole line is divided by the pack
+// count; a draft that only carries the deprecated per-pack override already
+// holds a per-pack price and is stored as it is.
+func draftPriceOverride(draft *apiModel.BulkProductDraft, quantity int) *float64 {
+	if draft.Price != nil {
+		perPack := *draft.Price / float64(quantity)
+		return &perPack
+	}
+	if draft.PriceOverride != nil {
+		perPack := *draft.PriceOverride
+		return &perPack
+	}
+	return nil
+}
+
 // bulkCreateItem validates one draft and creates it. Validation failures and
 // DB errors are item-level outcomes, never request-level ones. The created
 // product is returned for the caller's side-effect worker; nil on failure.
@@ -222,13 +262,7 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 	if productName == "" {
 		return nil, terminalBulkItem(index, "product name is missing")
 	}
-	amount := draft.Amount
-	if amount < 1 {
-		amount = 1
-	}
-	if amount > util.ReceiptItemMaxAmount {
-		amount = util.ReceiptItemMaxAmount
-	}
+	quantity, packSize := draftQuantityAndPackSize(draft)
 
 	expireAt := time.Time{}
 	if strings.TrimSpace(draft.ExpireAt) != "" {
@@ -244,10 +278,13 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 
 	// Mirrors the receipt scan clamp: a direct API client must not push an
 	// unbounded or negative price into the DB, where it would poison the
-	// savings calculations that sum PriceOverride * Amount.
-	if draft.PriceOverride != nil && (*draft.PriceOverride < 0 || *draft.PriceOverride > util.ReceiptItemMaxPrice) {
-		return nil, terminalBulkItem(index, fmt.Sprintf("invalid price %.2f (0 to %.0f allowed)", *draft.PriceOverride, util.ReceiptItemMaxPrice))
+	// savings calculations that sum PriceOverride * Quantity.
+	if price := draftPrice(draft); price != nil && (*price < 0 || *price > util.ReceiptItemMaxPrice) {
+		return nil, terminalBulkItem(index, fmt.Sprintf("invalid price %.2f (0 to %.0f allowed)", *price, util.ReceiptItemMaxPrice))
 	}
+	// The receipt prints the price of the whole line, the product carries the
+	// price of one pack.
+	priceOverride := draftPriceOverride(draft, quantity)
 
 	syncIDPtr := (*string)(nil)
 	if strings.TrimSpace(clientSyncID) != "" {
@@ -258,11 +295,11 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 		ClientSyncID:  syncIDPtr,
 		ProductName:   productName,
 		Barcode:       truncateDraftField(strings.TrimSpace(draft.Barcode), util.CsvImportMaxBarcodeLength),
-		Amount:        amount,
-		Unit:          truncateDraftField(strings.TrimSpace(draft.Unit), util.ReceiptItemMaxUnitLength),
+		Quantity:      quantity,
+		PackSize:      packSize,
 		Categories:    truncateDraftField(strings.TrimSpace(draft.Categories), util.ReceiptItemMaxCategoriesLength),
 		ExpireAt:      expireAt,
-		PriceOverride: draft.PriceOverride,
+		PriceOverride: priceOverride,
 		IsPrivate:     draft.IsPrivate,
 	}
 	if draft.StorageLocationID != nil {
@@ -294,8 +331,7 @@ func fireBulkProductCreated(appCtx *AppContext, product *dbModel.Product) {
 			"productName": product.ProductName,
 			"barcode":     product.Barcode,
 			"expireAt":    product.ExpireAt,
-			"amount":      product.Amount,
-			"unit":        product.Unit,
+			"quantity":    product.Quantity,
 			"householdId": product.HouseholdID,
 		})
 	}
@@ -319,7 +355,7 @@ func logBulkActivity(appCtx *AppContext, product *dbModel.Product, actor bulkAct
 		Action:      dbModel.ActivityActionAdd,
 		ProductID:   product.ID,
 		ProductName: product.ProductName,
-		Quantity:    product.Amount,
+		Quantity:    product.Quantity,
 		Timestamp:   time.Now(),
 	}
 	ctxBg, cancel := context.WithTimeout(context.Background(), 5*time.Second)

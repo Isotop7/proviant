@@ -26,6 +26,7 @@ export default [
         Html5QrcodeSupportedFormats: "readonly",
         Html5QrcodeScannerState: "readonly",
         proviant: "readonly",
+        proviantChart: "readonly",
         // Top-level function declarations in classic scripts become window
         // properties, so these are genuine cross-file globals at runtime:
         // clearBulkSelectionAndReload lives in proviant.js but is called from
@@ -43,6 +44,24 @@ export default [
     },
   },
   {
+    // The one ES module in src/assets/js: it re-exports the Bootstrap 6 bundle
+    // as the global the classic scripts expect. Bootstrap 6 ships ESM only,
+    // so this file has to be a module too.
+    ...js.configs.recommended,
+    files: ["src/assets/js/bootstrap-globals.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.browser,
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
+    },
+  },
+  {
     // Each file that *defines* one of the cross-file globals needs it off for
     // itself, or the definition trips no-redeclare — same reason as below.
     files: ["src/assets/js/proviant.js"],
@@ -54,6 +73,24 @@ export default [
     files: ["src/assets/js/products.js"],
     languageOptions: {
       globals: { updateBulkSelected: "off" },
+    },
+  },
+  {
+    // Build-time tooling lives in scripts/ and runs under Node as ES modules.
+    // It never ships to the browser, so it gets its own globals and its own
+    // source type.
+    ...js.configs.recommended,
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
     },
   },
   {

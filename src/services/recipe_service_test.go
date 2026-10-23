@@ -26,30 +26,44 @@ func newTestRecipeService(db *gorm.DB) *RecipeService {
 	return NewRecipeService(repos, &logger)
 }
 
-func TestScaleIngredientAmount(t *testing.T) {
-	t.Run("scales proportionally and rounds half up", func(t *testing.T) {
-		if got := scaleIngredientAmount(2, 4, 2); got != 4 {
-			t.Errorf("scaleIngredientAmount(2, 4, 2) = %d, want 4", got)
-		}
-		if got := scaleIngredientAmount(1, 2, 3); got != 1 {
-			t.Errorf("scaleIngredientAmount(1, 2, 3) = %d, want 1", got)
-		}
-		if got := scaleIngredientAmount(1, 1, 3); got != 0 {
-			t.Errorf("scaleIngredientAmount(1, 1, 3) = %d, want 0", got)
-		}
-	})
+// A cook of a recipe costs one pack of every linked ingredient: the stock is
+// counted in packs, and the servings scale the dish, not the stock.
+func TestRecipeService_CookRecipeScalesThePackCount(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	svc := newTestRecipeService(db)
+	household := testutil.CreateTestHousehold(db, 1)
+	user := testutil.CreateTestUser(db, household.ID)
 
-	t.Run("zero servings cooks the base serving count", func(t *testing.T) {
-		if got := scaleIngredientAmount(5, 0, 2); got != 5 {
-			t.Errorf("scaleIngredientAmount(5, 0, 2) = %d, want 5", got)
-		}
-	})
+	product := testutil.CreateTestProduct(db, household.ID, user.ID)
+	if err := db.Model(product).Update("quantity", 3).Error; err != nil {
+		t.Fatalf("seed product: %v", err)
+	}
+	recipe := &dbModel.Recipe{
+		HouseholdID: household.ID,
+		Name:        "Test Recipe",
+		Servings:    2,
+		CreatedBy:   user.ID,
+		Ingredients: []dbModel.RecipeIngredient{
+			{ProductID: &product.ID, Name: product.ProductName, Portion: "200 g"},
+		},
+	}
+	if err := db.Create(recipe).Error; err != nil {
+		t.Fatalf("create recipe: %v", err)
+	}
 
-	t.Run("invalid base servings is treated as one", func(t *testing.T) {
-		if got := scaleIngredientAmount(3, 2, 0); got != 6 {
-			t.Errorf("scaleIngredientAmount(3, 2, 0) = %d, want 6", got)
-		}
-	})
+	// Twice the serving count costs two packs: the stock is counted in packs,
+	// so the ratio of the requested servings to the recipe's own becomes the
+	// number of packs.
+	consumed, partial, errs, internalErr := svc.CookRecipe(recipe.ID, 4, user.ID)
+	if internalErr != nil {
+		t.Fatalf("internalErr = %v, want nil", internalErr)
+	}
+	if consumed != 0 || partial != 1 || len(errs) != 0 {
+		t.Errorf("consumed/partial/errs = %d/%d/%v, want 0/1/[]", consumed, partial, errs)
+	}
+	if reloaded := reloadProduct(t, db, product.ID); reloaded.Quantity != 1 {
+		t.Errorf("count = %d, want 1 (three packs - two cooked)", reloaded.Quantity)
+	}
 }
 
 func TestRecipeService_CookRecipe(t *testing.T) {
@@ -77,15 +91,15 @@ func TestRecipeService_CookRecipe(t *testing.T) {
 		return recipe
 	}
 
-	t.Run("scales ingredient amounts to the requested servings", func(t *testing.T) {
+	t.Run("cooks a pack of every linked ingredient", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"amount": 10, "unit": "g"})
+		db.Model(product).Updates(map[string]any{"quantity": 10})
 		recipe := seedRecipe(t, db, householdID, userID, 2, dbModel.RecipeIngredient{
-			ProductID: &product.ID, Name: product.ProductName, Amount: 2, Unit: "g",
+			ProductID: &product.ID, Name: product.ProductName, Portion: "2 g",
 		})
 
-		consumed, partial, errs, internalErr := svc.CookRecipe(recipe.ID, 4, userID)
+		consumed, partial, errs, internalErr := svc.CookRecipe(recipe.ID, 2, userID)
 
 		if internalErr != nil {
 			t.Fatalf("internalErr = %v, want nil", internalErr)
@@ -94,17 +108,61 @@ func TestRecipeService_CookRecipe(t *testing.T) {
 			t.Errorf("consumed/partial/errs = %d/%d/%v, want 0/1/[]", consumed, partial, errs)
 		}
 		reloaded := reloadProduct(t, db, product.ID)
-		if reloaded.Amount != 6 {
-			t.Errorf("product amount = %d, want 6 (10 - 2*4/2)", reloaded.Amount)
+		if reloaded.Quantity != 9 {
+			t.Errorf("product count = %d, want 9 (10 - one pack)", reloaded.Quantity)
+		}
+	})
+
+	t.Run("more servings than the recipe scales the pack count", func(t *testing.T) {
+		db, svc, householdID, userID := setup(t)
+		product := testutil.CreateTestProduct(db, householdID, userID)
+		db.Model(product).Updates(map[string]any{"quantity": 10})
+		recipe := seedRecipe(t, db, householdID, userID, 2, dbModel.RecipeIngredient{
+			ProductID: &product.ID, Name: product.ProductName, Portion: "2 g",
+		})
+
+		_, partial, _, internalErr := svc.CookRecipe(recipe.ID, 6, userID)
+
+		if internalErr != nil {
+			t.Fatalf("internalErr = %v, want nil", internalErr)
+		}
+		if partial != 1 {
+			t.Errorf("partial = %d, want 1", partial)
+		}
+		reloaded := reloadProduct(t, db, product.ID)
+		if reloaded.Quantity != 7 {
+			t.Errorf("product count = %d, want 7 (10 - three packs for three times the servings)", reloaded.Quantity)
+		}
+	})
+
+	t.Run("the ingredient unit is documentation and never blocks the cook", func(t *testing.T) {
+		db, svc, householdID, userID := setup(t)
+		product := testutil.CreateTestProduct(db, householdID, userID)
+		db.Model(product).Updates(map[string]any{"quantity": 3000})
+		recipe := seedRecipe(t, db, householdID, userID, 2, dbModel.RecipeIngredient{
+			ProductID: &product.ID, Name: product.ProductName, Portion: "1 kg",
+		})
+
+		consumed, partial, errs, internalErr := svc.CookRecipe(recipe.ID, 2, userID)
+
+		if internalErr != nil {
+			t.Fatalf("internalErr = %v, want nil", internalErr)
+		}
+		if consumed != 0 || partial != 1 || len(errs) != 0 {
+			t.Errorf("consumed/partial/errs = %d/%d/%v, want 0/1/[]", consumed, partial, errs)
+		}
+		reloaded := reloadProduct(t, db, product.ID)
+		if reloaded.Quantity != 2999 {
+			t.Errorf("product count = %d, want 2999 (3000 - one pack)", reloaded.Quantity)
 		}
 	})
 
 	t.Run("zero servings cooks the recipe serving count", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"amount": 10, "unit": "g"})
+		db.Model(product).Updates(map[string]any{"quantity": 10})
 		recipe := seedRecipe(t, db, householdID, userID, 2, dbModel.RecipeIngredient{
-			ProductID: &product.ID, Name: product.ProductName, Amount: 2, Unit: "g",
+			ProductID: &product.ID, Name: product.ProductName, Portion: "2 g",
 		})
 
 		_, partial, _, internalErr := svc.CookRecipe(recipe.ID, 0, userID)
@@ -116,21 +174,18 @@ func TestRecipeService_CookRecipe(t *testing.T) {
 			t.Errorf("partial = %d, want 1", partial)
 		}
 		reloaded := reloadProduct(t, db, product.ID)
-		if reloaded.Amount != 8 {
-			t.Errorf("product amount = %d, want 8 (10 - 2)", reloaded.Amount)
+		if reloaded.Quantity != 9 {
+			t.Errorf("product count = %d, want 9 (10 - one pack)", reloaded.Quantity)
 		}
 	})
 
-	t.Run("reports gaps for unlinked and unit-mismatched ingredients", func(t *testing.T) {
+	t.Run("reports gaps for unlinked ingredients", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"amount": 10, "unit": "g"})
-		other := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(other).Updates(map[string]any{"amount": 10, "unit": "ml"})
+		db.Model(product).Updates(map[string]any{"quantity": 10})
 		recipe := seedRecipe(t, db, householdID, userID, 2,
-			dbModel.RecipeIngredient{ProductID: &product.ID, Name: "Flour", Amount: 2, Unit: "g"},
-			dbModel.RecipeIngredient{Name: "Salt", Amount: 1, Unit: "g"},
-			dbModel.RecipeIngredient{ProductID: &other.ID, Name: "Cream", Amount: 2, Unit: "g"},
+			dbModel.RecipeIngredient{ProductID: &product.ID, Name: "Flour", Portion: "2 g"},
+			dbModel.RecipeIngredient{Name: "Salt", Portion: "1 g"},
 		)
 
 		consumed, partial, errs, internalErr := svc.CookRecipe(recipe.ID, 2, userID)
@@ -141,17 +196,17 @@ func TestRecipeService_CookRecipe(t *testing.T) {
 		if consumed != 0 || partial != 1 {
 			t.Errorf("consumed/partial = %d/%d, want 0/1", consumed, partial)
 		}
-		if len(errs) != 2 {
-			t.Errorf("errs = %v, want 2 gap entries", errs)
+		if len(errs) != 1 {
+			t.Errorf("errs = %v, want 1 gap entry", errs)
 		}
 	})
 
-	t.Run("ingredient without amount is reported as gap", func(t *testing.T) {
+	t.Run("an ingredient without an amount is still cooked", func(t *testing.T) {
 		db, svc, householdID, userID := setup(t)
 		product := testutil.CreateTestProduct(db, householdID, userID)
-		db.Model(product).Updates(map[string]any{"amount": 5, "unit": "g"})
+		db.Model(product).Updates(map[string]any{"quantity": 5})
 		recipe := seedRecipe(t, db, householdID, userID, 2, dbModel.RecipeIngredient{
-			ProductID: &product.ID, Name: "Salt", Amount: 0, Unit: "g",
+			ProductID: &product.ID, Name: "Salt", Portion: "0 g",
 		})
 
 		consumed, partial, errs, internalErr := svc.CookRecipe(recipe.ID, 2, userID)
@@ -159,15 +214,15 @@ func TestRecipeService_CookRecipe(t *testing.T) {
 		if internalErr != nil {
 			t.Fatalf("internalErr = %v, want nil", internalErr)
 		}
-		if consumed != 0 || partial != 0 {
-			t.Errorf("consumed/partial = %d/%d, want 0/0", consumed, partial)
+		if consumed != 0 || partial != 1 {
+			t.Errorf("consumed/partial = %d/%d, want 0/1", consumed, partial)
 		}
-		if len(errs) != 1 {
-			t.Errorf("errs = %v, want one gap entry", errs)
+		if len(errs) != 0 {
+			t.Errorf("errs = %v, want none", errs)
 		}
 		reloaded := reloadProduct(t, db, product.ID)
-		if reloaded.Amount != 5 {
-			t.Errorf("product amount = %d, want 5 (untouched)", reloaded.Amount)
+		if reloaded.Quantity != 4 {
+			t.Errorf("product count = %d, want 4 (five packs - one cooked)", reloaded.Quantity)
 		}
 	})
 

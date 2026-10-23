@@ -2,9 +2,9 @@
 document.addEventListener("click", function (event) {
     const target = event.target;
 
-    if (target.closest("#btnLogout")) {
+    if (target.closest("[data-logout]")) {
         event.preventDefault();
-        proviant.logoutUser().then(() => {
+        void proviant.logoutUser().then(() => {
             window.location.href = '/web';
         });
         return;
@@ -12,9 +12,6 @@ document.addEventListener("click", function (event) {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltipEls.forEach(function (el) { new bootstrap.Tooltip(el); });
-
     // Show offline banner immediately if page loaded from cache while offline
     updateOfflineBanner();
 
@@ -23,10 +20,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // would abort the rest of this handler and leave the banner permanently
     // blind to stuck changes.
     if (navigator.onLine && proviant._flushQueue) {
-        proviant._flushQueue();
+        void proviant._flushQueue();
     }
     if (proviant._updateOfflineBadge) {
-        proviant._updateOfflineBadge();
+        void proviant._updateOfflineBadge();
     }
 });
 
@@ -62,7 +59,7 @@ function setOfflineBannerText(offline, stuck) {
 window.addEventListener('offline', updateOfflineBanner);
 window.addEventListener('online', function () {
     updateOfflineBanner();
-    if (proviant._flushQueue) proviant._flushQueue();
+    if (proviant._flushQueue) void proviant._flushQueue();
 });
 
 if ('serviceWorker' in navigator) {

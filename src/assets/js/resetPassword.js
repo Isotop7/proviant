@@ -103,14 +103,14 @@ document.addEventListener("DOMContentLoaded", function () {
               '<div class="form-heading-title">' + proviant.t("js.auth.passwordResetTitle") + '</div>' +
               '<div class="form-heading-sub">' + proviant.t("js.auth.passwordResetHint") + '</div>' +
               "</div>" +
-              '<div class="alert alert-success" role="alert">' +
+              '<div class="alert alert theme-success" role="alert">' +
               '<i class="bi bi-check-circle me-2"></i>' +
               (result.data && result.data.message
                 ? result.data.message
                 : proviant.t("js.auth.passwordResetSuccess")) +
               "</div>" +
-              '<div class="text-center mt-3">' +
-              '<a href="' + routeAuth + '" class="btn btn-proviant-primary">' + proviant.t("auth.logIn") + '</a>' +
+              '<div class="text-center mt-5">' +
+              '<a href="' + routeAuth + '" class="btn btn-solid theme-primary">' + proviant.t("auth.logIn") + '</a>' +
               "</div>";
           }
           return;

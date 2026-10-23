@@ -1,0 +1,44 @@
+// ── Bootstrap utilities with v5 precedence ──────────────────────────────────
+//
+// Bootstrap 5 emitted every utility with `!important`:
+//   .d-lg-none { display: none !important; }
+//
+// Bootstrap 6 dropped that and moved the utilities into the `utilities`
+// cascade layer, while this app's own stylesheet stays unlayered. An
+// unlayered rule beats a layered one regardless of specificity, so the app's
+// component rules now override the utility of the same name — `.btn`'s own
+// `display: inline-flex` beats `.d-none`, and the button stays visible.
+//
+// The app relies on the v5 precedence in a few dozen places (hiding a button,
+// switching a flex direction, overriding a margin). The utilities are
+// therefore generated here with `important: true`, exactly as v5 did, instead
+// of being pulled in through `bootstrap/scss/utilities/api`.
+//
+// This mirrors Bootstrap's own `utilities/_api.scss`. The only piece it does
+// not reproduce is the keyframes for the decorative `.animation-shake` and
+// `.animation-pop` utilities, which the app does not use.
+
+@use "sass:map";
+@use "sass:meta";
+@use "bootstrap/scss/config" as *;
+@use "bootstrap/scss/mixins/utilities" as *;
+// The utilities map is only reachable unqualified: Bootstrap defines it in
+// scss/_utilities.scss, where it is an assignment to a variable that
+// scss/_config.scss owns.
+@use "bootstrap/scss/utilities" as *;
+
+$important-utilities: ();
+
+@each $key, $utility in $utilities {
+  @if meta.type-of($utility) == "map" {
+    $important-utilities: map.merge($important-utilities, ($key: map.merge($utility, (important: true))));
+  } @else {
+    $important-utilities: map.merge($important-utilities, ($key: $utility));
+  }
+}
+
+@include generate-utility-at-properties($important-utilities);
+
+@layer utilities {
+  @include generate-utilities-loop($important-utilities, $breakpoints);
+}

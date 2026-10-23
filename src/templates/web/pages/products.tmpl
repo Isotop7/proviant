@@ -1,30 +1,36 @@
 {{ define "content" }}
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">{{ t "nav.products" }}</h1>
-        <p class="page-header-subtitle">{{ tn "products.header.itemCount" .ProductCount }}</p>
+<header class="page-header">
+    <div class="page-header__lead">
+        <h1 class="eyebrow">{{ t "nav.products" }}</h1>
+        <div class="page-header__count">{{ .ProductCount }}</div>
+        <p class="page-header__sub">{{ t "products.header.itemsInHousehold" }}</p>
     </div>
-    <div class="d-flex gap-2">
-        {{ if .ReceiptScanEnabled }}
-        <a href="/web/products/scan-receipt" class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2">
-            <i class="bi bi-receipt"></i> {{ t "products.scanReceipt" }}
-        </a>
-        {{ end }}
-        <button class="btn btn-proviant-primary d-none d-md-flex align-items-center gap-2" id="btnOpenAddProductModal">
-            <i class="bi bi-plus-lg"></i> {{ t "products.addProduct" }}
-        </button>
+    <div class="page-header__aside">
+        <div class="page-header__meta">
+            {{ t "products.header.expiredCount" .ExpiredCount }} · {{ t "products.header.expiringSoonCount" .ExpiringSoonCount }}
+        </div>
+        <div class="d-flex gap-3">
+            {{ if .ReceiptScanEnabled }}
+            <a href="/web/products/scan-receipt" class="btn btn-outline theme-secondary d-none md:d-flex align-items-center gap-3">
+                <i class="bi bi-receipt"></i> {{ t "products.scanReceipt" }}
+            </a>
+            {{ end }}
+            <button class="btn btn-solid theme-primary d-none md:d-flex align-items-center gap-3" id="btnOpenAddProductModal">
+                <i class="bi bi-plus-lg"></i> {{ t "products.addProduct" }}
+            </button>
+        </div>
     </div>
-</div>
+</header>
 
 <div class="toolbar-sticky">
     <!-- Row 1: search (full width on mobile, with view toggle on desktop) -->
-    <div class="d-flex gap-2 align-items-center mb-2">
+    <div class="d-flex gap-3 align-items-center mb-3">
         <div class="flex-grow-1 min-w-0">
             {{ template "searchBar" . }}
         </div>
         <!-- View toggle buttons on desktop -->
-        <div class="d-none d-md-flex gap-1 align-items-center flex-shrink-0">
+        <div class="d-none md:d-flex gap-1 align-items-center flex-shrink-0">
             <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" aria-label="{{ t "products.listView" }}">
                 <i class="bi bi-list-ul" aria-hidden="true"></i>
             </a>
@@ -39,7 +45,7 @@
         <!-- Left side: view toggle on mobile, filters on desktop -->
         <div class="d-flex gap-1 align-items-center flex-shrink-0">
             <!-- View toggle: visible on mobile, hidden on desktop (already in Row 1 on desktop) -->
-            <div class="d-flex d-md-none gap-1">
+            <div class="d-flex md:d-none gap-1">
                 <a href="?{{ queryWith .Params "view" "list" }}" class="btn-view {{ if eq .View "list" }}active{{ end }}" title="{{ t "products.listView" }}" aria-label="{{ t "products.listView" }}">
                     <i class="bi bi-list-ul" aria-hidden="true"></i>
                 </a>
@@ -48,7 +54,7 @@
                 </a>
             </div>
             <!-- Desktop filters (hidden on mobile) -->
-            <div id="toolbarFilters" class="d-none d-md-flex gap-1 align-items-center">
+            <div id="toolbarFilters" class="d-none md:d-flex gap-1 align-items-center">
                 {{ range $s := stringSlice "all" "expired" "critical" "soon" "fresh" "nodate" "archived" }}
                 <a href="?{{ queryWith $.Params "status" $s }}"
                    class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
@@ -56,24 +62,23 @@
                     {{ if eq $s "all" }}{{ t "common.all" }}{{ else if eq $s "expired" }}{{ t "status.expired" }}{{ else if eq $s "critical" }}{{ t "status.critical" }}{{ else if eq $s "soon" }}{{ t "status.soon" }}{{ else if eq $s "fresh" }}{{ t "status.fresh" }}{{ else if eq $s "archived" }}{{ t "products.consumed" }}{{ else }}{{ t "status.noDate" }}{{ end }}
                 </a>
                 {{ end }}
-
-                <div class="filter-separator"></div>
-
-                {{ range $l := .StorageLocations }}
-                <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
-                   class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
-                    {{ $l.Name }}
-                </a>
-                {{ end }}
-                {{ if .StorageLocations }}
-                <a href="?{{ queryWith .Params "locationId" "" }}"
-                   class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">{{ t "common.all" }}</a>
-                {{ end }}
             </div>
         </div>
 
-        <!-- Right side: bulk actions + mobile filter dropdown -->
+        <!-- Right side: reset + advanced filters | bulk actions + mobile filter dropdown -->
         <div id="toolbarRight" class="ms-auto d-flex gap-1 align-items-center flex-wrap">
+            <button id="show-all-btn" class="filter-pill" type="button" title="{{ t "partial.searchBar.showAll" }}">
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                <span class="d-none sm:d-inline">{{ t "partial.searchBar.showAll" }}</span>
+            </button>
+            <button class="filter-pill" type="button"
+                data-bs-toggle="collapse" data-bs-target="#advanced-filters"
+                aria-expanded="false" aria-controls="advanced-filters"
+                title="{{ t "partial.searchBar.advancedFilters" }}">
+                <i class="bi bi-funnel" aria-hidden="true"></i>
+                <span class="d-none sm:d-inline">{{ t "partial.searchBar.filters" }}</span>
+            </button>
+
             <div id="bulkActions" class="bulk-actions-bar">
                 <span id="bulkCount" class="bulk-count"></span>
                 {{ if eq $.StatusFilter "archived" }}
@@ -86,7 +91,7 @@
                 </button>
                 <button data-bulk-action="cook" class="btn-bulk">
                     <span class="btn-text"><i class="bi bi-fire"></i> {{ t "products.cook" }}</span>
-                    <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
+                    <span class="btn-loading"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
                 </button>
                 {{ end }}
                 <button data-bulk-action="delete" class="btn-bulk danger">
@@ -95,41 +100,56 @@
             </div>
 
             <!-- Mobile filter/export button -->
-            <div class="d-block d-md-none">
+            <div class="d-block md:d-none">
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn-bulk dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
+                    <button type="button" class="btn-bulk" data-bs-toggle="menu" data-bs-placement="bottom-end" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
                         <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" id="mobileExportMenu">
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="offcanvas" data-bs-target="#mobileFiltersOffcanvas"><i class="bi bi-funnel me-2"></i>{{ t "products.filters" }}</a></li>
-                        {{ if .ReceiptScanEnabled }}
-                        <li><a class="dropdown-item" href="/web/products/scan-receipt"><i class="bi bi-receipt me-2"></i>{{ t "products.scanReceipt" }}</a></li>
-                        {{ end }}
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-import-csv"><i class="bi bi-upload me-2"></i>{{ t "products.importCsv" }}</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-import-template"><i class="bi bi-file-earmark-arrow-down me-2"></i>{{ t "products.downloadCsvTemplate" }}</a></li>
-                        {{ if .IsAdmin }}
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-restore-json"><i class="bi bi-arrow-counterclockwise me-2"></i>{{ t "products.restoreBackupJson" }}</a></li>
-                        {{ end }}
+                    <div class="menu" id="mobileExportMenu">
+                      <a class="menu-item" href="#" data-bs-toggle="drawer" data-bs-target="#mobileFiltersOffcanvas"><i class="bi bi-funnel me-2"></i>{{ t "products.filters" }}</a>
+{{ if .ReceiptScanEnabled }}
+                      <a class="menu-item" href="/web/products/scan-receipt"><i class="bi bi-receipt me-2"></i>{{ t "products.scanReceipt" }}</a>
+{{ end }}
+                      <hr class="menu-divider">
+                      <a class="menu-item" href="#" id="mobile-import-csv"><i class="bi bi-upload me-2"></i>{{ t "products.importCsv" }}</a>
+                      <a class="menu-item" href="#" id="mobile-import-template"><i class="bi bi-file-earmark-arrow-down me-2"></i>{{ t "products.downloadCsvTemplate" }}</a>
+{{ if .IsAdmin }}
+                      <hr class="menu-divider">
+                      <a class="menu-item" href="#" id="mobile-restore-json"><i class="bi bi-arrow-counterclockwise me-2"></i>{{ t "products.restoreBackupJson" }}</a>
+{{ end }}
                         {{ if .Products }}
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>{{ t "products.exportProductsCsv" }}</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-export-json"><i class="bi bi-filetype-json me-2"></i>{{ t "products.exportProductsJson" }}</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>{{ t "products.exportConsumptionHistoryCsv" }}</a></li>
-                        <li><a class="dropdown-item" href="#" id="mobile-export-full"><i class="bi bi-files me-2"></i>{{ t "products.exportFullJson" }}</a></li>
-                        {{ end }}
-                    </ul>
+                      <hr class="menu-divider">
+                      <a class="menu-item" href="#" id="mobile-export-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>{{ t "products.exportProductsCsv" }}</a>
+                      <a class="menu-item" href="#" id="mobile-export-json"><i class="bi bi-filetype-json me-2"></i>{{ t "products.exportProductsJson" }}</a>
+                      <a class="menu-item" href="#" id="mobile-archive-csv"><i class="bi bi-file-earmark-spreadsheet me-2"></i>{{ t "products.exportConsumptionHistoryCsv" }}</a>
+                      <a class="menu-item" href="#" id="mobile-export-full"><i class="bi bi-files me-2"></i>{{ t "products.exportFullJson" }}</a>
+{{ end }}
+                    
+                    </div>
                 </div>
             </div>
 
             {{ if .Products }}
-            <div class="toolbar-divider d-none d-md-flex"></div>
-            <div class="d-none d-md-flex">
+            <div class="toolbar-divider d-none md:d-flex"></div>
+            <div class="d-none md:d-flex">
                 {{ template "productOptionBar" . }}
             </div>
             {{ end }}
         </div>
+    </div>
+
+    <!-- The locations are the second axis: they get their own row below the states -->
+    <div id="toolbarLocations" class="d-none md:d-flex gap-1 align-items-center flex-shrink-0 mt-3 mb-3">
+        {{ if .StorageLocations }}
+        <a href="?{{ queryWith .Params "locationId" "" }}"
+           class="filter-pill {{ if eq .LocationFilter "" }}active{{ end }}">{{ t "partial.searchBar.allLocations" }}</a>
+        {{ range $l := .StorageLocations }}
+        <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
+           class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
+            {{ $l.Name }}
+        </a>
+        {{ end }}
+        {{ end }}
     </div>
 </div>
 
@@ -150,132 +170,132 @@
     <div id="skeletonRows" class="d-none">
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block skeleton-icon"></div>
+            <div class="skeleton skeleton--icon"></div>
           </div>
           <div class="col-product">
-            <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block skeleton-thumb"></div>
+            <div class="d-flex align-items-center gap-3">
+              <div class="skeleton skeleton--thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1 skeleton-line"></div>
-                <div class="skeleton-block skeleton-line-sm"></div>
+                <div class="skeleton mb-1 skeleton--line"></div>
+                <div class="skeleton skeleton--line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block skeleton-badge"></div>
+            <div class="skeleton skeleton--badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block skeleton-date"></div>
+            <div class="skeleton skeleton--date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block skeleton-location"></div>
+            <div class="skeleton skeleton--location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block skeleton-qty"></div>
+            <div class="skeleton skeleton--qty"></div>
           </div>
         </div>
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block skeleton-icon"></div>
+            <div class="skeleton skeleton--icon"></div>
           </div>
           <div class="col-product">
-            <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block skeleton-thumb"></div>
+            <div class="d-flex align-items-center gap-3">
+              <div class="skeleton skeleton--thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1 skeleton-line"></div>
-                <div class="skeleton-block skeleton-line-sm"></div>
+                <div class="skeleton mb-1 skeleton--line"></div>
+                <div class="skeleton skeleton--line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block skeleton-badge"></div>
+            <div class="skeleton skeleton--badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block skeleton-date"></div>
+            <div class="skeleton skeleton--date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block skeleton-location"></div>
+            <div class="skeleton skeleton--location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block skeleton-qty"></div>
+            <div class="skeleton skeleton--qty"></div>
           </div>
         </div>
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block skeleton-icon"></div>
+            <div class="skeleton skeleton--icon"></div>
           </div>
           <div class="col-product">
-            <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block skeleton-thumb"></div>
+            <div class="d-flex align-items-center gap-3">
+              <div class="skeleton skeleton--thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1 skeleton-line"></div>
-                <div class="skeleton-block skeleton-line-sm"></div>
+                <div class="skeleton mb-1 skeleton--line"></div>
+                <div class="skeleton skeleton--line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block skeleton-badge"></div>
+            <div class="skeleton skeleton--badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block skeleton-date"></div>
+            <div class="skeleton skeleton--date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block skeleton-location"></div>
+            <div class="skeleton skeleton--location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block skeleton-qty"></div>
+            <div class="skeleton skeleton--qty"></div>
           </div>
         </div>
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block skeleton-icon"></div>
+            <div class="skeleton skeleton--icon"></div>
           </div>
           <div class="col-product">
-            <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block skeleton-thumb"></div>
+            <div class="d-flex align-items-center gap-3">
+              <div class="skeleton skeleton--thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1 skeleton-line"></div>
-                <div class="skeleton-block skeleton-line-sm"></div>
+                <div class="skeleton mb-1 skeleton--line"></div>
+                <div class="skeleton skeleton--line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block skeleton-badge"></div>
+            <div class="skeleton skeleton--badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block skeleton-date"></div>
+            <div class="skeleton skeleton--date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block skeleton-location"></div>
+            <div class="skeleton skeleton--location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block skeleton-qty"></div>
+            <div class="skeleton skeleton--qty"></div>
           </div>
         </div>
         <div class="list-row skeleton-row">
           <div class="list-checkbox-col">
-            <div class="skeleton-block skeleton-icon"></div>
+            <div class="skeleton skeleton--icon"></div>
           </div>
           <div class="col-product">
-            <div class="d-flex align-items-center gap-2">
-              <div class="skeleton-block skeleton-thumb"></div>
+            <div class="d-flex align-items-center gap-3">
+              <div class="skeleton skeleton--thumb"></div>
               <div class="flex-grow-1">
-                <div class="skeleton-block mb-1 skeleton-line"></div>
-                <div class="skeleton-block skeleton-line-sm"></div>
+                <div class="skeleton mb-1 skeleton--line"></div>
+                <div class="skeleton skeleton--line-sm"></div>
               </div>
             </div>
           </div>
           <div class="col-status">
-            <div class="skeleton-block skeleton-badge"></div>
+            <div class="skeleton skeleton--badge"></div>
           </div>
           <div class="col-expiry">
-            <div class="skeleton-block skeleton-date"></div>
+            <div class="skeleton skeleton--date"></div>
           </div>
           <div class="col-location">
-            <div class="skeleton-block skeleton-location"></div>
+            <div class="skeleton skeleton--location"></div>
           </div>
           <div class="col-qty">
-            <div class="skeleton-block skeleton-qty"></div>
+            <div class="skeleton skeleton--qty"></div>
           </div>
         </div>
     </div>
@@ -308,12 +328,12 @@
             </div>
         </div>
         <div class="col-status">
-            <span class="badge-status badge-{{ expiryStatusClass .ExpireAt }}">
+            <span class="badge badge--{{ expiryStatusClass .ExpireAt }}">
                 <i class="bi bi-{{ expiryStatusIcon .ExpireAt }}"></i>
                 {{ expiryStatusLabel .ExpireAt }}
             </span>
-            {{ if and (gt .MinStockAmount 0) (lt .Amount .MinStockAmount) }}
-            <span class="badge-status badge-lowstock">
+            {{ if and (gt .MinStockAmount 0) (lt .Quantity .MinStockAmount) }}
+            <span class="badge badge--lowstock">
                 <i class="bi bi-exclamation-triangle-fill"></i>
                 {{ t "products.lowStock" }}
             </span>
@@ -322,8 +342,8 @@
         {{ $urgency := expiryUrgencyText .ExpireAt }}
         {{ if $urgency }}
         <div class="col-expiry expiry-text status-{{ expiryStatusClass .ExpireAt }}">
-            <span class="urgency-full d-none d-sm-inline">{{ $urgency }}</span>
-            <span class="urgency-days d-inline d-sm-none">{{ expiryDays .ExpireAt }}</span>
+            <span class="urgency-full d-none sm:d-inline">{{ $urgency }}</span>
+            <span class="urgency-days d-inline sm:d-none">{{ expiryDays .ExpireAt }}</span>
         </div>
         {{ else }}
         <div class="col-expiry expiry-text status-{{ expiryStatusClass .ExpireAt }}">—</div>
@@ -333,13 +353,16 @@
         </div>
         <div class="col-qty">
             {{ if eq $.StatusFilter "archived" }}
-            <span class="qty-static">{{ .Amount }}</span>
+            <span class="qty-static">{{ quantityLabel .Quantity }}</span>
             {{ else }}
-            <div class="qty-stepper">
+            <div class="qty-stepper qty-stepper-flat">
                 <button type="button" data-qty-action="dec" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.decreaseQuantity" .ProductName }}">−</button>
-                <span id="qty-{{ .Model.ID }}">{{ .Amount }}</span>
+                <span id="qty-{{ .Model.ID }}" class="qty-amount" data-quantity="{{ .Quantity }}">{{ quantityLabel .Quantity }}</span>
                 <button type="button" data-qty-action="inc" data-product-id="{{ .Model.ID }}" aria-label="{{ t "products.table.increaseQuantity" .ProductName }}">+</button>
             </div>
+            {{ end }}
+            {{ with .PackSize }}
+            <span class="pack-size">{{ . }}</span>
             {{ end }}
         </div>
         <div class="col-actions">
@@ -351,7 +374,7 @@
     {{ end }}
 </div>
 {{ else }}
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-3">
+<div class="row row-cols-1 md:row-cols-2 lg:row-cols-3 g-4 mb-5">
     {{ range .Products }}
     {{ template "productCard" . }}
     {{ end }}
@@ -377,19 +400,23 @@
 </nav>
 {{ end }}
 {{ else }}
+{{ if eq .StatusFilter "archived" }}
+{{ template "emptyArchive" . }}
+{{ else }}
 {{ template "noproducts" . }}
+{{ end }}
 {{ end }}
 
 <!-- Mobile filter offcanvas (hidden by default) -->
-<div class="offcanvas offcanvas-bottom" id="mobileFiltersOffcanvas" tabindex="-1" aria-labelledby="mobileFiltersOffcanvasLabel">
-  <div class="offcanvas-header">
-    <h5 class="offcanvas-title" id="mobileFiltersOffcanvasLabel">{{ t "products.filterProducts" }}</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{{ t "a11y.close" }}"></button>
+<dialog class="drawer drawer-bottom" id="mobileFiltersOffcanvas" aria-labelledby="mobileFiltersOffcanvasLabel">
+  <div class="drawer-header">
+    <h5 class="drawer-title" id="mobileFiltersOffcanvasLabel">{{ t "products.filterProducts" }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="{{ t "a11y.close" }}"></button>
   </div>
-  <div class="offcanvas-body">
-    <div class="mb-3">
+  <div class="drawer-body">
+    <div class="mb-5">
       <label class="form-label fw-semibold small">{{ t "products.status" }}</label>
-      <div class="d-flex flex-wrap gap-2">
+      <div class="d-flex flex-wrap gap-3">
         {{ range $s := stringSlice "all" "expired" "critical" "soon" "fresh" "nodate" "archived" }}
         <a href="?{{ queryWith $.Params "status" $s }}"
            class="filter-pill {{ if eq $.StatusFilter $s }}active status-{{ $s }}{{ end }}">
@@ -400,27 +427,27 @@
       </div>
     </div>
     {{ if $.StorageLocations }}
-    <div class="mb-3">
+    <div class="mb-5">
       <label class="form-label fw-semibold small">{{ t "products.storageLocation" }}</label>
-      <div class="d-flex flex-wrap gap-2">
+      <div class="d-flex flex-wrap gap-3">
+        <a href="?{{ queryWith .Params "locationId" "" }}" class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">{{ t "partial.searchBar.allLocations" }}</a>
         {{ range $l := .StorageLocations }}
         <a href="?{{ queryWith $.Params "locationId" (printf "%d" $l.ID) }}"
            class="filter-pill {{ if eq $.LocationFilter (printf "%d" $l.ID) }}active{{ end }}">
           {{ $l.Name }}
         </a>
         {{ end }}
-        <a href="?{{ queryWith .Params "locationId" "" }}" class="filter-pill {{ if eq $.LocationFilter "" }}active{{ end }}">{{ t "common.all" }}</a>
       </div>
     </div>
     {{ end }}
   </div>
-</div>
+</dialog>
 
 <!-- Mobile bulk actions bar (fixed, shown only when items selected) -->
 <div id="mobileBulkActions" class="mobile-bulk-actions">
   <div class="bulk-actions-inner">
     <span id="mobileBulkCount" class="bulk-count"></span>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-3">
       {{ if eq $.StatusFilter "archived" }}
       <button data-bulk-action="restore" class="btn-bulk">
         <i class="bi bi-arrow-counterclockwise"></i> {{ t "products.restore" }}
@@ -431,7 +458,7 @@
       </button>
       <button data-bulk-action="cook" class="btn-bulk">
         <span class="btn-text"><i class="bi bi-fire"></i> {{ t "products.cook" }}</span>
-        <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
+        <span class="btn-loading"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
       </button>
       {{ end }}
       <button data-bulk-action="delete" class="btn-bulk danger">
@@ -441,26 +468,22 @@
   </div>
 </div>
 
-<!-- Add product modal (desktop only — hidden on mobile via JS) -->
-<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+<!-- Add product dialog (desktop only — hidden on mobile via JS) -->
+<dialog class="dialog" id="addProductModal" aria-labelledby="addProductModalLabel">
 
-            <div class="modal-header">
-                <div class="modal-icon modal-icon-accent" id="addProductModalIcon">
+            <div class="dialog-header">
+                <div class="dialog-icon dialog-icon-accent" id="addProductModalIcon">
                     <i class="bi bi-upc-scan"></i>
+                </div><h5 class="dialog-title mb-0" id="addProductModalLabel">{{ t "products.addProduct" }}</h5>
+                    <div id="addProductModalSubtitle" class="dialog-subtitle">{{ t "products.modalSubtitle" }}
                 </div>
-                <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="addProductModalLabel">{{ t "products.addProduct" }}</h5>
-                    <div id="addProductModalSubtitle" class="modal-subtitle">{{ t "products.modalSubtitle" }}</div>
-                </div>
-                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
 
             <!-- Step 1: Barcode input -->
-            <div id="modalStepScan" class="modal-body">
+            <div id="modalStepScan" class="dialog-body">
                 <!-- Mode tabs -->
                 <div class="tab-switcher">
                     <button id="tabManualInput" type="button" class="tab-switcher-btn active">
@@ -473,7 +496,7 @@
 
                 <!-- Manual input section -->
                 <div id="manualInputSection">
-                    <div class="field-label">{{ t "products.barcode" }}</div>
+                    <div class="form-label">{{ t "products.barcode" }}</div>
                     <div class="barcode-input-wrap" data-focus-target="barcode">
                         <i class="bi bi-upc-scan barcode-scan-icon"></i>
 <input id="barcode" type="text" inputmode="numeric" pattern="[0-9]{13}"
@@ -481,11 +504,11 @@
 			autocomplete="off" spellcheck="false" aria-label="{{ t "products.barcode" }}">
                         <span class="kbd-hint">↵</span>
                     </div>
-    <div class="input-hint">
+    <div class="form-text">
         <i class="bi bi-keyboard"></i> {{ t "products.barcodeHint" }}
     </div>
-    <div id="barcodeLookupLoading" class="d-none mt-2">
-        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    <div id="barcodeLookupLoading" class="d-none mt-3">
+        <span class="spinner-border spinner-sm" role="status" aria-hidden="true"></span>
         <span class="ms-1">{{ t "products.searching" }}</span>
     </div>
 </div>
@@ -495,49 +518,43 @@
                      <div id="barcode-reader-wrapper" class="barcode-camera-wrap" style="display:none;">
                          <div id="barcode-reader"></div>
                      </div>
-                     <div class="input-hint">
+                     <div class="form-text">
                          <i class="bi bi-camera"></i> {{ t "products.aimCamera" }}
                      </div>
                  </div>
 
                   <!-- OCR Camera Modal (for expiry date) -->
-                  <div class="modal fade" id="ocrCameraModal" tabindex="-1" aria-labelledby="ocrCameraModalLabel" aria-hidden="true">
-                      <div class="modal-dialog modal-dialog-centered">
-                          <div class="modal-content">
-                              <div class="modal-header">
-                                  <div class="modal-icon modal-icon-accent">
+                  <dialog class="dialog" id="ocrCameraModal" aria-labelledby="ocrCameraModalLabel">
+                              <div class="dialog-header">
+                                  <div class="dialog-icon dialog-icon-accent">
                                       <i class="bi bi-camera"></i>
+                                  </div><h5 class="dialog-title mb-0" id="ocrCameraModalLabel">{{ t "products.scanExpiryDate" }}</h5>
+                                      <div class="dialog-subtitle">{{ t "products.scanExpirySubtitle" }}
                                   </div>
-                                  <div class="modal-header-body">
-                                      <h5 class="modal-title mb-0" id="ocrCameraModalLabel">{{ t "products.scanExpiryDate" }}</h5>
-                                      <div class="modal-subtitle">{{ t "products.scanExpirySubtitle" }}</div>
-                                  </div>
-                                  <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+                                  <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
                                       <i class="bi bi-x"></i>
                                   </button>
                               </div>
-                              <div class="modal-body text-center">
+                              <div class="dialog-body text-center">
                                   <div class="camera-preview-wrapper">
                                       <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
                                   </div>
-                                  <p class="text-secondary-custom small mt-2">{{ t "products.captureHint" }}</p>
+                                  <p class="fg-secondary small mt-3">{{ t "products.captureHint" }}</p>
                               </div>
-                              <div class="modal-footer">
-                                  <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-                                  <button type="button" class="btn btn-proviant-primary" id="btnCaptureExpiry">
+                              <div class="dialog-footer">
+                                  <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+                                  <button type="button" class="btn btn-solid theme-primary" id="btnCaptureExpiry">
                                       <i class="bi bi-camera"></i> {{ t "products.capture" }}
                                   </button>
                               </div>
-                          </div>
-                      </div>
-                  </div>
+                          </dialog>
 
                 <!-- Required by productsCreate.js click delegation — triggered programmatically -->
                 <button type="button" id="btnScan" data-action="scan" class="d-none"></button>
             </div>
 
             <!-- Step 2: Product form (revealed when productsCreate.js finds barcode) -->
-            <div id="modalStepForm" class="modal-body">
+            <div id="modalStepForm" class="dialog-body">
                 <!-- Scan result banner -->
                 <div id="scanResultBanner" class="scan-result-banner">
                     <i class="bi bi-check-circle-fill scan-result-icon"></i>
@@ -547,34 +564,34 @@
                     </div>
                 </div>
                 <div id="productData" class="d-none">
-                    <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-5 mb-5">
                         <div class="flex-shrink-0">
                             <img id="productInfoImage" src="" alt=""
                                  class="rounded product-thumb-sm">
                         </div>
                         <div class="flex-grow-1">
                             <div id="productInfoName" class="fw-semibold"></div>
-                            <div id="productInfoGenericName" class="text-secondary-custom small"></div>
+                            <div id="productInfoGenericName" class="fg-secondary small"></div>
                         </div>
                     </div>
 
-                    <select class="form-select mb-3 d-none" id="instanceDropdown" aria-label="{{ t "products.selectInstance" }}"></select>
+                    <select class="form-control mb-5 d-none" id="instanceDropdown" aria-label="{{ t "products.selectInstance" }}"></select>
 
-                    <form id="formExpireAt" class="needs-validation" novalidate>
-                        <label class="form-label">{{ t "products.amount" }}</label>
-                        <div class="d-flex align-items-center gap-2 mb-3">
-                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountDec" aria-label="{{ t "products.amountDecrease" }}">−</button>
-                            <span id="amountDisplay" class="fs-5 px-2">1</span>
-                            <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnAmountInc" aria-label="{{ t "products.amountIncrease" }}">+</button>
+                    <form id="formExpireAt" data-bs-validate novalidate>
+                        <label class="form-label">{{ t "products.quantity" }}</label>
+                        <div class="d-flex align-items-center gap-3 mb-5">
+                            <button type="button" class="btn btn-outline theme-secondary btn-sm" id="btnQuantityDec" aria-label="{{ t "products.quantityDecrease" }}">−</button>
+                            <span id="quantityDisplay" class="fs-lg px-3" aria-live="polite">1</span>
+                            <button type="button" class="btn btn-outline theme-secondary btn-sm" id="btnQuantityInc" aria-label="{{ t "products.quantityIncrease" }}">+</button>
                         </div>
-                        <input type="hidden" id="amount" value="1">
+                        <input type="hidden" id="quantity" value="1">
                         <label for="expireAt" class="form-label">
-                            {{ t "products.expiryDateField" }} <span class="text-danger" aria-hidden="true">*</span>
+                            {{ t "products.expiryDateField" }} <span class="fg-danger" aria-hidden="true">*</span>
                         </label>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-3">
                             <input type="date" class="form-control flex-grow-1" id="expireAt"
                                    value="{{ today }}" required aria-required="true">
-                            <button type="button" class="btn btn-sm btn-proviant-secondary" id="btnScanExpiry" title="{{ t "products.scanExpiryFromPhoto" }}" aria-label="{{ t "products.scanExpiryFromPhoto" }}">
+                            <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnScanExpiry" title="{{ t "products.scanExpiryFromPhoto" }}" aria-label="{{ t "products.scanExpiryFromPhoto" }}">
                                 <i class="bi bi-camera" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -582,37 +599,37 @@
                             <i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "products.expiryRequired" }}
                         </div>
                         {{ if .Locations }}
-                        <label for="modalStorageLocation" class="form-label mt-2">{{ t "products.storageLocationTitle" }}</label>
-                        <select class="form-select" id="modalStorageLocation" aria-label="{{ t "products.storageLocation" }}">
+                        <label for="modalStorageLocation" class="form-label mt-3">{{ t "products.storageLocationTitle" }}</label>
+                        <select class="form-control" id="modalStorageLocation" aria-label="{{ t "products.storageLocation" }}">
                             <option value="">{{ t "products.noneOption" }}</option>
                             {{ range .Locations }}
                             <option value="{{ .ID }}">{{ .Icon }} {{ .Name }}</option>
                             {{ end }}
                         </select>
-                        <small id="storageHint" class="text-secondary-custom d-none mb-2"></small>
+                        <small id="storageHint" class="fg-secondary d-none mb-3"></small>
                         {{ end }}
                     </form>
 
-                    <div class="btn-group w-100 mb-3" role="group" aria-label="{{ t "products.quickExpiryShortcuts" }}">
-                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd3">{{ t "products.plus3Days" }}</button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd7">{{ t "products.plus7Days" }}</button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm" id="btnExpireAdd1m">{{ t "products.plus1Month" }}</button>
+                    <div class="btn-group w-100 mb-5" role="group" aria-label="{{ t "products.quickExpiryShortcuts" }}">
+                        <button type="button" class="btn btn-outline theme-secondary btn-sm" id="btnExpireAdd3">{{ t "products.plus3Days" }}</button>
+                        <button type="button" class="btn btn-outline theme-secondary btn-sm" id="btnExpireAdd7">{{ t "products.plus7Days" }}</button>
+                        <button type="button" class="btn btn-outline theme-secondary btn-sm" id="btnExpireAdd1m">{{ t "products.plus1Month" }}</button>
                     </div>
 
-                    <div class="d-flex gap-2 mb-2" id="foundBarcode">
-                        <button id="btnShowProduct" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+                    <div class="d-flex gap-3 mb-3" id="foundBarcode">
+                        <button id="btnShowProduct" type="button" class="btn btn-sm btn-outline theme-secondary flex-fill" disabled>
                             <i class="bi bi-eye me-1" aria-hidden="true"></i>{{ t "products.view" }}
                         </button>
-                        <button id="btnShowProducts" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+                        <button id="btnShowProducts" type="button" class="btn btn-sm btn-outline theme-secondary flex-fill" disabled>
                             <i class="bi bi-collection me-1" aria-hidden="true"></i>{{ t "products.allInstances" }}
                         </button>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-proviant-secondary flex-fill" disabled>
+                    <div class="d-flex gap-3">
+                        <button id="btnArchiveProductModal" type="button" class="btn btn-sm btn-outline theme-secondary flex-fill" disabled>
                             <i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "products.consumed" }}
                         </button>
-                        <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-proviant-danger flex-fill" disabled>
+                        <button id="btnDeleteProductModal" type="button" class="btn btn-sm btn-solid theme-danger flex-fill" disabled>
                             <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ t "common.delete" }}
                         </button>
                     </div>
@@ -620,119 +637,105 @@
             </div>
 
             <!-- Step 3: Success -->
-            <div id="modalStepSuccess" class="modal-body">
-                <div class="modal-success-banner">
-                    <div class="modal-success-icon">
+            <div id="modalStepSuccess" class="dialog-body">
+                <div class="dialog-success-banner">
+                    <div class="dialog-success-icon">
                         <i class="bi bi-check-lg"></i>
                     </div>
                     <div class="flex-fill">
-                        <div id="modalSuccessName" class="modal-success-name"></div>
-                        <div class="modal-success-sub">{{ t "products.addedToPantry" }}</div>
+                        <div id="modalSuccessName" class="dialog-success-name"></div>
+                        <div class="dialog-success-sub">{{ t "products.addedToPantry" }}</div>
                     </div>
-                    <button type="button" class="btn btn-proviant-primary btn-sm" id="btnModalScanAnother">
+                    <button type="button" class="btn btn-solid theme-primary btn-sm" id="btnModalScanAnother">
                         <i class="bi bi-plus-lg me-1"></i>{{ t "products.addAnother" }}
                     </button>
                 </div>
-                <button type="button" class="btn btn-proviant-secondary w-100" data-bs-dismiss="modal">{{ t "common.close" }}</button>
+                <button type="button" class="btn btn-outline theme-secondary w-100" data-bs-dismiss="dialog">{{ t "common.close" }}</button>
             </div>
 
-            <div class="modal-footer">
+            <div class="dialog-footer">
                 <div id="modalFooterScan">
-                    <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
+                    <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
                 </div>
                 <div id="modalFooterForm">
-                    <button type="button" class="btn btn-proviant-secondary" id="btnModalBack">
+                    <button type="button" class="btn btn-outline theme-secondary" id="btnModalBack">
                         <i class="bi bi-arrow-left"></i> {{ t "common.back" }}
                     </button>
-                    <button type="button" class="btn btn-proviant-primary" id="btnAddProduct">
+                    <button type="button" class="btn btn-solid theme-primary" id="btnAddProduct">
                         <span class="btn-text"><i class="bi bi-plus-lg me-1"></i>{{ t "products.addToPantry" }}</span>
-                        <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.adding" }}</span>
+                        <span class="btn-loading"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.adding" }}</span>
                     </button>
                 </div>
                 <div id="modalFooterSuccess"></div>
             </div>
 
-        </div>
-    </div>
-</div>
+        </dialog>
 
 <!-- OCR Result Modal -->
-<div class="modal fade" id="ocrResultModal" tabindex="-1" aria-labelledby="ocrResultModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon modal-icon-accent">
+<dialog class="dialog" id="ocrResultModal" aria-labelledby="ocrResultModalLabel">
+            <div class="dialog-header">
+                <div class="dialog-icon dialog-icon-accent">
                     <i class="bi bi-camera"></i>
+                </div><h5 class="dialog-title mb-0" id="ocrResultModalLabel">{{ t "products.expiryDateScan" }}</h5>
+                    <div class="dialog-subtitle">{{ t "products.checkDetectedDate" }}
                 </div>
-                <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="ocrResultModalLabel">{{ t "products.expiryDateScan" }}</h5>
-                    <div class="modal-subtitle">{{ t "products.checkDetectedDate" }}</div>
-                </div>
-                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
-            <div class="modal-body">
+            <div class="dialog-body">
                 <!-- Image preview -->
-                <div id="ocrPreviewImage" class="mb-3 text-center"></div>
+                <div id="ocrPreviewImage" class="mb-5 text-center"></div>
 
                 <!-- Detected date -->
-                <div class="mb-3" id="ocrDetectedDate"></div>
+                <div class="mb-5" id="ocrDetectedDate"></div>
 
                 <!-- Confidence bar -->
-                <div class="progress mb-2" style="height: 8px;">
+                <div class="progress mb-3" style="height: 8px;">
                     <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
                 </div>
-                <small class="text-secondary-custom" id="ocrConfidenceLabel">{{ t "products.confidenceLabel" }}</small>
+                <small class="fg-secondary" id="ocrConfidenceLabel">{{ t "products.confidenceLabel" }}</small>
 
                 <!-- Raw text fallback -->
-                <div id="ocrRawTextWrapper" class="mt-3 d-none">
+                <div id="ocrRawTextWrapper" class="mt-5 d-none">
                     <label class="form-label">{{ t "products.rawOcrText" }}</label>
                     <textarea id="ocrRawText" class="form-control" rows="3" readonly></textarea>
                     <div class="form-text">{{ t "products.ocrFallbackHelp" }}</div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" id="btnRecaptureExpiry">
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" id="btnRecaptureExpiry">
                     <i class="bi bi-camera"></i> {{ t "products.retake" }}
                 </button>
-                <button type="button" class="btn btn-proviant-primary" id="btnConfirmExpiry">
+                <button type="button" class="btn btn-solid theme-primary" id="btnConfirmExpiry">
                     <i class="bi bi-check"></i> {{ t "common.confirm" }}
                 </button>
             </div>
-        </div>
-    </div>
-</div>
+        </dialog>
 
-<!-- Cook modal: per-product amount inputs for partial consumption -->
-<div class="modal fade" id="cookModal" tabindex="-1" aria-labelledby="cookModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon modal-icon-accent">
+<!-- Cook dialog: per-product count inputs for the packs used -->
+<dialog class="dialog" id="cookModal" aria-labelledby="cookModalLabel">
+            <div class="dialog-header">
+                <div class="dialog-icon dialog-icon-accent">
                     <i class="bi bi-fire"></i>
+                </div><h5 class="dialog-title mb-0" id="cookModalLabel">{{ t "products.cookModalTitle" }}</h5>
+                    <div class="dialog-subtitle">{{ t "products.cookModalSubtitle" }}
                 </div>
-                <div class="modal-header-body">
-                    <h5 class="modal-title mb-0" id="cookModalLabel">{{ t "products.cookModalTitle" }}</h5>
-                    <div class="modal-subtitle">{{ t "products.cookModalSubtitle" }}</div>
-                </div>
-                <button type="button" class="btn-modal-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
-            <div class="modal-body">
+            <div class="dialog-body">
                 <div id="cookModalItems"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-                <button type="button" class="btn btn-proviant-primary" id="btnCookConfirm">
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+                <button type="button" class="btn btn-solid theme-primary" id="btnCookConfirm">
                     <span class="btn-text"><i class="bi bi-fire me-1"></i>{{ t "products.cook" }}</span>
-                    <span class="btn-loading"><span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
+                    <span class="btn-loading"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
                 </button>
             </div>
-        </div>
-    </div>
-</div>
+        </dialog>
 
 <!-- Hidden file input backing the CSV import menu entries -->
 <input type="file" id="csvImportFile" accept=".csv,text/csv" class="d-none" aria-hidden="true" tabindex="-1">

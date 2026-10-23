@@ -1,314 +1,173 @@
-// ── Themes ─────────────────────────────────────────────────────────────────
+// ── Themes ───────────────────────────────────────────────────────────────────────
+//
+// The dark tokens come from the design system: design-system/_tokens-dark.scss
+// is the single source. What follows is only the translation into the
+// component variables Bootstrap expects.
 
-// Light mode surface polish — ensure card and navbar surfaces use the pale green palette
+@use "../../../design-system/tokens-dark";
+
+// Light mode surface polish — card and navbar surfaces use the warm surface
 [data-bs-theme="light"] {
-  --bs-tertiary-bg: #f0ece6; // --bg-subtle warm off-white — used by bg-body-tertiary (auth pages, offcanvas)
+  --bg-3: var(--surface-warm); // used by bg-body-tertiary (auth pages, drawer)
 }
 
 // Dark theme — warm dark palette
 [data-bs-theme="dark"] {
-  color-scheme: dark;
+  /* App slots the design system does not define. */
+  --text-disabled: #6f6f6f;
+  --overlay-subtle: rgba(255, 255, 255, .06);
 
-  /* Base palette — warm dark */
-  --bg: oklch(22% .012 75deg);
-  --bg-subtle: oklch(26% .01 75deg);
-  --surface: oklch(28% .01 75deg);
-  --surface-raised: oklch(32% .01 75deg);
-
-  --fg: oklch(92% .008 75deg);
-  --fg-2: oklch(72% .012 70deg);
-  --fg-3: oklch(55% .01 70deg);
-  --fg-inverse: oklch(18% .022 70deg);
-
-  --border: oklch(38% .01 75deg);
-  --border-strong: oklch(48% .012 70deg);
-  --border-subtle: oklch(33% .008 75deg);
-
-  /* Accent — slightly brighter for dark bg */
-  --accent: oklch(58% .12 162deg);
-  --accent-hover: oklch(64% .12 162deg);
-  --accent-active: oklch(68% .12 162deg);
-  --accent-subtle: oklch(32% .06 162deg);
-  --accent-fg: oklch(18% .022 70deg);
-
-  /* Brand secondary */
-  --brand-slate: oklch(62% .08 245deg);
-  --brand-slate-subtle: oklch(30% .04 245deg);
-
-  /* Status: Expired */
-  --status-expired: oklch(62% .18 25deg);
-  --status-expired-hover: oklch(68% .18 25deg);
-  --status-expired-subtle: oklch(28% .06 25deg);
-  --status-expired-border: oklch(45% .12 25deg);
-  --status-expired-fg: oklch(92% .008 75deg);
-  --status-expired-bar: oklch(62% .18 25deg);
-  --status-expired-dot: oklch(62% .18 25deg);
-
-  /* Status: Critical */
-  --status-critical: oklch(70% .16 45deg);
-  --status-critical-hover: oklch(75% .16 45deg);
-  --status-critical-subtle: oklch(30% .06 45deg);
-  --status-critical-border: oklch(50% .12 45deg);
-  --status-critical-fg: oklch(18% .022 70deg);
-  --status-critical-bar: oklch(70% .16 45deg);
-  --status-critical-dot: oklch(70% .16 45deg);
-
-  /* Status: Soon */
-  --status-soon: oklch(78% .14 80deg);
-  --status-soon-hover: oklch(82% .14 80deg);
-  --status-soon-subtle: oklch(30% .06 80deg);
-  --status-soon-border: oklch(52% .1 80deg);
-  --status-soon-fg: oklch(18% .022 70deg);
-  --status-soon-bar: oklch(78% .14 80deg);
-  --status-soon-dot: oklch(78% .14 80deg);
-
-  /* Status: Fresh */
-  --status-fresh: oklch(58% .1 150deg);
-  --status-fresh-hover: oklch(64% .1 145deg);
-  --status-fresh-subtle: oklch(30% .05 145deg);
-  --status-fresh-border: oklch(45% .08 145deg);
-  --status-fresh-fg: oklch(18% .022 70deg);
-  --status-fresh-bar: oklch(58% .12 162deg);
-  --status-fresh-dot: oklch(58% .12 162deg);
-
-  /* Status: No date */
-  --status-nodate: oklch(55% .01 70deg);
-  --status-nodate-hover: oklch(60% .01 70deg);
-  --status-nodate-subtle: oklch(30% .006 70deg);
-  --status-nodate-border: oklch(42% .008 70deg);
-  --status-nodate-fg: oklch(92% .008 75deg);
-  --status-nodate-bar: oklch(55% .01 70deg);
-  --status-nodate-dot: oklch(55% .01 70deg);
-
-  --accent-border: oklch(45% .08 162deg);
-
-  /* Semantic feedback */
-  --color-success: var(--status-fresh);
-  --color-success-subtle: var(--status-fresh-subtle);
-  --color-warning: var(--status-soon);
-  --color-warning-subtle: var(--status-soon-subtle);
-  --color-danger: var(--status-expired);
-  --color-danger-subtle: var(--status-expired-subtle);
-  --color-info: oklch(65% .12 240deg);
-  --color-info-subtle: oklch(30% .05 240deg);
-
-  /* Text hierarchy — light text on dark */
-  --text-primary: oklch(92% .008 75deg);
-  --text-secondary: oklch(68% .012 70deg);
-  --text-tertiary: oklch(52% .01 70deg);
-  --text-disabled: oklch(42% .008 70deg);
-
-  /* Overlay / decorative */
-  --overlay-subtle: oklch(100% 0 0deg / .06);
-  --hero-decorative: oklch(100% 0 0deg / .08);
-  --hero-decorative-2: oklch(100% 0 0deg / .06);
-  --hero-label-fg: oklch(100% 0 0deg / .6);
-  --hero-title-fg: oklch(100% 0 0deg);
-  --hero-sub-fg: oklch(100% 0 0deg / .65);
-  --hero-pill-fg: oklch(100% 0 0deg);
-  --hero-pill-bg: oklch(0% 0 0deg / .3);
-
-  /* Shadows — darker, more pronounced */
-  --shadow-xs: 0 1px 2px oklch(0% 0 0deg / .3);
-  --shadow-sm: 0 1px 3px oklch(0% 0 0deg / .4), 0 1px 2px oklch(0% 0 0deg / .3);
-  --shadow-md: 0 4px 12px oklch(0% 0 0deg / .5), 0 2px 4px oklch(0% 0 0deg / .4);
-  --shadow-lg: 0 10px 30px oklch(0% 0 0deg / .6), 0 4px 8px oklch(0% 0 0deg / .4);
-  --shadow-xl: 0 20px 60px oklch(0% 0 0deg / .7);
-
-  /* Component aliases */
-  --btn-secondary-bg: var(--surface);
-  --btn-secondary-border: var(--border);
-  --btn-secondary-fg: var(--fg);
-
-  --input-bg: var(--surface);
-  --input-border: var(--border);
-  --input-fg: var(--fg);
-  --input-placeholder: var(--fg-3);
-
-  --nav-bg: var(--surface);
-  --nav-border: var(--border);
-  --nav-item-active-bg: var(--accent-subtle);
-  --nav-item-active-fg: var(--accent);
-  --nav-item-fg: var(--fg-2);
-  --nav-item-fg-hover: var(--fg);
+  /* The hero and the auth brand panel are accent-filled surfaces, so their
+     ink follows --accent-on, which flips to dark ink in this theme. */
+  --hero-decorative: rgba(0, 0, 0, .08);
+  --hero-decorative-2: rgba(0, 0, 0, .06);
+  --hero-label-fg: rgba(30, 26, 20, .7);
+  --hero-title-fg: #1e1a14;
+  --hero-sub-fg: rgba(30, 26, 20, .75);
+  --hero-pill-fg: #1e1a14;
+  --hero-pill-bg: rgba(0, 0, 0, .25);
 
   /* Bootstrap root-level overrides */
-  --bs-body-bg: var(--bg);
-  --bs-body-color: var(--fg);
-  --bs-body-bg-rgb: 42, 38, 32;
-  --bs-body-color-rgb: 235, 230, 220;
-  --bs-tertiary-bg: var(--bg-subtle);
-  --bs-border-color: var(--border);
-  --bs-secondary-color: var(--fg-2);
-  --bs-tertiary-color: var(--fg-3);
-  --bs-emphasis-color: var(--fg);
-  --bs-emphasis-color-rgb: 235, 230, 220;
-  --bs-secondary-bg: var(--surface-raised);
-  --bs-heading-color: var(--fg);
-  --bs-border-color-translucent: oklch(100% 0 0deg / .15);
-  --bs-link-color: var(--accent);
-  --bs-link-hover-color: var(--accent-hover);
-  --bs-code-color: var(--status-soon);
-  --bs-highlight-color: var(--fg);
-  --bs-highlight-bg: var(--surface-raised);
+  --bg-body: var(--bg);
+  --fg-body: var(--fg);
+  --bg-3: var(--surface-warm);
+  --border-color: var(--border);
+  --fg-3: var(--meta);
+  --bg-1: var(--surface);
+  --heading-color: var(--fg);
+  --border-color-translucent: color-mix(in oklab, #fff 15%, transparent);
+  --link-color: var(--accent-text);
+  --link-hover-color: var(--accent-hover);
+  --code-color: var(--status-soon-text);
+  --mark-color: var(--fg);
+  --mark-bg: var(--surface);
 
   /* Component-scoped overrides — Bootstrap sets these on component elements,
      so they must be overridden with equal or higher specificity */
   .card {
-    --bs-card-bg: var(--surface);
-    --bs-card-cap-bg: var(--surface-raised);
-    --bs-card-cap-color: var(--fg);
-    --bs-card-border-color: var(--border);
-    --bs-card-color: var(--fg);
-    --bs-card-title-color: var(--fg);
-    --bs-card-subtitle-color: var(--fg-2);
+    --card-bg: var(--surface);
+    --card-cap-bg: var(--surface);
+    --card-cap-color: var(--fg);
+    --card-border-color: var(--border);
+    --card-color: var(--fg);
+    --card-subtitle-color: var(--fg-2);
   }
 
   .list-group {
-    --bs-list-group-bg: var(--surface);
-    --bs-list-group-color: var(--fg);
-    --bs-list-group-border-color: var(--border);
-    --bs-list-group-action-color: var(--fg-2);
-    --bs-list-group-action-hover-color: var(--fg);
-    --bs-list-group-action-hover-bg: var(--surface-raised);
-    --bs-list-group-active-bg: var(--accent);
-    --bs-list-group-active-color: var(--accent-fg);
-    --bs-list-group-active-border-color: var(--accent);
-    --bs-list-group-disabled-color: var(--fg-3);
-    --bs-list-group-disabled-bg: var(--surface);
+    --list-group-bg: var(--surface);
+    --list-group-color: var(--fg);
+    --list-group-border-color: var(--border);
+    --list-group-action-color: var(--fg-2);
+    --list-group-action-hover-color: var(--fg);
+    --list-group-action-hover-bg: var(--surface);
+    --list-group-active-bg: var(--accent);
+    --list-group-active-color: var(--accent-on);
+    --list-group-active-border-color: var(--accent);
+    --list-group-disabled-color: var(--meta);
+    --list-group-disabled-bg: var(--surface);
   }
 
-  .modal-content {
-    --bs-modal-bg: var(--surface);
-    --bs-modal-color: var(--fg);
-    --bs-modal-border-color: var(--border);
-    --bs-modal-header-border-color: var(--border);
-    --bs-modal-footer-bg: var(--surface-raised);
-    --bs-modal-footer-border-color: var(--border);
+  .dialog {
+    --dialog-bg: var(--surface);
+    --dialog-color: var(--fg);
+    --dialog-border-color: var(--border);
+    --dialog-header-border-color: var(--border);
+    --dialog-footer-border-color: var(--border);
   }
 
-  .dropdown-menu {
-    --bs-dropdown-bg: var(--surface-raised);
-    --bs-dropdown-color: var(--fg);
-    --bs-dropdown-border-color: var(--border);
-    --bs-dropdown-link-color: var(--fg);
-    --bs-dropdown-link-hover-color: var(--fg);
-    --bs-dropdown-link-hover-bg: var(--surface);
-    --bs-dropdown-link-active-bg: var(--accent);
-    --bs-dropdown-link-active-color: var(--accent-fg);
-    --bs-dropdown-link-disabled-color: var(--fg-3);
-    --bs-dropdown-header-color: var(--fg-3);
-    --bs-dropdown-divider-bg: var(--border);
+  .menu {
+    --menu-bg: var(--surface);
+    --menu-color: var(--fg);
+    --menu-item-color: var(--fg);
+    --menu-item-hover-color: var(--fg);
+    --menu-item-hover-bg: var(--surface);
+    --menu-item-active-bg: var(--accent);
+    --menu-item-active-color: var(--accent-on);
+    --menu-item-disabled-color: var(--meta);
+    --menu-header-color: var(--meta);
+    --menu-divider-bg: var(--border);
   }
 
-  .offcanvas {
-    --bs-offcanvas-bg: var(--surface);
-    --bs-offcanvas-color: var(--fg);
-    --bs-offcanvas-border-color: var(--border);
+  .drawer {
+    --drawer-bg: var(--surface);
+    --drawer-color: var(--fg);
+    --drawer-border-color: var(--border);
   }
 
   .table {
-    --bs-table-bg: var(--surface);
-    --bs-table-color: var(--fg);
-    --bs-table-border-color: var(--border);
-    --bs-table-striped-bg: var(--surface-raised);
-    --bs-table-striped-color: var(--fg);
-    --bs-table-hover-bg: var(--surface-raised);
-    --bs-table-hover-color: var(--fg);
-    --bs-table-active-bg: var(--surface-raised);
-    --bs-table-active-color: var(--fg);
+    --table-bg: var(--surface);
+    --table-color: var(--fg);
+    --table-border-color: var(--border);
+    --table-striped-bg: var(--surface);
+    --table-striped-color: var(--fg);
+    --table-hover-bg: var(--surface);
+    --table-hover-color: var(--fg);
+    --table-active-bg: var(--surface);
+    --table-active-color: var(--fg);
   }
 
   .form-control {
-    --bs-body-color: var(--fg);
-    --bs-body-bg: var(--surface);
-    --bs-border-color: var(--border);
-    --bs-form-control-bg: var(--surface);
-    --bs-form-control-color: var(--fg);
-    --bs-form-control-border-color: var(--border);
-    --bs-form-control-disabled-bg: var(--surface-raised);
-    --bs-form-control-disabled-color: var(--fg-3);
-    --bs-input-bg: var(--surface);
-    --bs-input-color: var(--fg);
-    --bs-input-border-color: var(--border);
-    --bs-input-disabled-bg: var(--surface-raised);
-    --bs-input-disabled-color: var(--fg-3);
-    --bs-input-placeholder-color: var(--fg-3);
-    --bs-input-focus-bg: var(--surface);
-    --bs-input-focus-color: var(--fg);
-    --bs-input-focus-border-color: var(--accent);
+    --fg-body: var(--fg);
+    --bg-body: var(--surface);
+    --border-color: var(--border);
+    --control-bg: var(--surface);
+    --control-fg: var(--fg);
+    --control-border-color: var(--border);
+    --control-disabled-bg: var(--surface);
+    --control-disabled-color: var(--meta);
+    --control-placeholder-color: var(--meta);
+    --control-active-border-color: var(--accent);
+    --control-select-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a09880' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
   }
 
-  .form-select {
-    --bs-body-color: var(--fg);
-    --bs-body-bg: var(--surface);
-    --bs-border-color: var(--border);
-    --bs-form-select-bg: var(--surface);
-    --bs-form-select-color: var(--fg);
-    --bs-form-select-border-color: var(--border);
-    --bs-form-select-disabled-bg: var(--surface-raised);
-    --bs-form-select-disabled-color: var(--fg-3);
-    --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a09880' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-  }
-
-  .form-check-input {
-    --bs-border-color: var(--border);
+  .check {
+    --border-color: var(--border);
     background-color: var(--surface);
     border-color: var(--border);
   }
 
-  .form-check-label {
-    color: var(--fg);
-  }
-
   .toast {
-    --bs-toast-bg: var(--surface-raised);
-    --bs-toast-color: var(--fg);
-    --bs-toast-header-bg: var(--surface);
-    --bs-toast-header-color: var(--fg);
+    --toast-bg: var(--surface);
+    --toast-color: var(--fg);
+    --toast-header-bg: var(--surface);
+    --toast-header-color: var(--fg);
   }
 
   .tooltip {
-    --bs-tooltip-bg: var(--surface-raised);
-    --bs-tooltip-color: var(--fg);
+    --tooltip-bg: var(--surface);
+    --tooltip-color: var(--fg);
   }
 
   .popover {
-    --bs-popover-bg: var(--surface-raised);
-    --bs-popover-body-color: var(--fg);
-    --bs-popover-header-bg: var(--surface);
-    --bs-popover-header-color: var(--fg);
-    --bs-popover-border-color: var(--border);
+    --popover-bg: var(--surface);
+    --popover-body-color: var(--fg);
+    --popover-header-bg: var(--surface);
+    --popover-header-color: var(--fg);
+    --popover-border-color: var(--border);
   }
 
   .page-link {
-    --bs-pagination-bg: var(--surface);
-    --bs-pagination-color: var(--fg-2);
-    --bs-pagination-border-color: var(--border);
-    --bs-pagination-hover-bg: var(--surface-raised);
-    --bs-pagination-hover-color: var(--fg);
-    --bs-pagination-hover-border-color: var(--border);
-    --bs-pagination-active-bg: var(--accent);
-    --bs-pagination-active-color: var(--accent-fg);
-    --bs-pagination-active-border-color: var(--accent);
-    --bs-pagination-disabled-bg: var(--surface);
-    --bs-pagination-disabled-color: var(--fg-3);
-    --bs-pagination-disabled-border-color: var(--border);
+    --pagination-bg: var(--surface);
+    --pagination-color: var(--fg-2);
+    --pagination-border-color: var(--border);
+    --pagination-hover-bg: var(--surface);
+    --pagination-hover-color: var(--fg);
+    --pagination-hover-border-color: var(--border);
+    --pagination-active-bg: var(--accent);
+    --pagination-active-color: var(--accent-on);
+    --pagination-active-border-color: var(--accent);
+    --pagination-disabled-bg: var(--surface);
+    --pagination-disabled-color: var(--meta);
+    --pagination-disabled-border-color: var(--border);
   }
 
   .accordion {
-    --bs-accordion-bg: var(--surface);
-    --bs-accordion-color: var(--fg);
-    --bs-accordion-border-color: var(--border);
-    --bs-accordion-btn-color: var(--fg);
-    --bs-accordion-btn-bg: var(--surface);
-    --bs-accordion-active-bg: var(--surface-raised);
-    --bs-accordion-active-color: var(--fg);
-    --bs-accordion-button-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e8e4dc'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
-    --bs-accordion-button-active-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e8e4dc'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
-  }
-
-  .btn-close {
-    --bs-btn-close-filter: invert(1) grayscale(100%) brightness(200%);
+    --accordion-bg: var(--surface);
+    --accordion-color: var(--fg);
+    --accordion-border-color: var(--border);
+    --accordion-btn-color: var(--fg);
+    --accordion-btn-bg: var(--surface);
+    --accordion-active-bg: var(--surface);
+    --accordion-active-color: var(--fg);
   }
 }

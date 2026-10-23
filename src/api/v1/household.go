@@ -1,9 +1,9 @@
 package v1
 
 import (
+	"errors"
 	"github.com/Isotop7/proviant/audit"
 	apperrors "github.com/Isotop7/proviant/errors"
-	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -242,7 +242,7 @@ func UpdateHouseholdName(ctx *gin.Context, appCtx *AppContext) {
 
 // GetHouseholdSettings returns the caller's household settings.
 // @Summary      Gets household settings
-// @Description  Returns the monthly waste goal settings of the caller's household
+// @Description  Returns the monthly waste goal and the language of the caller's household
 // @Tags         household
 // @Produce      json
 // @Success      200 {object} apiModel.HouseholdSettingsResponse
@@ -270,9 +270,10 @@ func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	})
 }
 
-// UpdateHouseholdSettings updates monthly waste goal for the caller's household (admin only).
+// UpdateHouseholdSettings updates the monthly waste goal and language of the
+// caller's household (admin only).
 // @Summary      Updates household settings
-// @Description  Updates the monthly waste goal of the caller's household (admin only)
+// @Description  Updates the monthly waste goal and language of the caller's household (admin only)
 // @Tags         household
 // @Accept       json
 // @Produce      json

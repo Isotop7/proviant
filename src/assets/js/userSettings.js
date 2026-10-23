@@ -4,7 +4,7 @@ function setButtonLoading(btn, loading) {
   if (loading) {
     btn.disabled = true;
     btn.dataset.originalHtml = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' + proviant.t("common.saving");
+    btn.innerHTML = '<span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>' + proviant.t("common.saving");
   } else {
     btn.disabled = false;
     btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
@@ -17,7 +17,7 @@ function ShowSuccessModal(message, btnFunction) {
 
 function validatePasswordRequirements(password) {
     const pwInput = document.getElementById("inputPassword");
-    const minLen = pwInput ? parseInt(pwInput.dataset.minLength || "12", 10) : 12;
+    const minLen = pwInput ? Number.parseInt(pwInput.dataset.minLength || "12", 10) : 12;
     const requirements = {
         length: password.length >= minLen,
         upper: /[A-Z]/.test(password),
@@ -38,10 +38,10 @@ function validatePasswordRequirements(password) {
         const icon = el.querySelector("i");
         if (!icon) continue;
         icon.className = satisfied
-            ? "bi bi-check-circle text-success me-1"
-            : "bi bi-x-circle text-danger me-1";
-        el.classList.toggle("text-success", satisfied);
-        el.classList.toggle("text-danger", !satisfied);
+            ? "bi bi-check-circle fg-success me-1"
+            : "bi bi-x-circle fg-danger me-1";
+        el.classList.toggle("fg-success", satisfied);
+        el.classList.toggle("fg-danger", !satisfied);
     }
 }
 
@@ -81,6 +81,9 @@ function UpdateSettings() {
         proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.updateFailed", response.message));
         break;
     }
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -100,7 +103,7 @@ function UpdatePassword() {
     inputUsername.classList.add("is-invalid");
     formIsValid = false;
   }
-  const minLength = parseInt(inputPassword.dataset.minLength || "12", 10);
+  const minLength = Number.parseInt(inputPassword.dataset.minLength || "12", 10);
   if (!password) {
     inputPassword.classList.add("is-invalid");
     formIsValid = false;
@@ -131,7 +134,7 @@ function UpdatePassword() {
           proviant.t("js.settings.passwordUpdateComplete"),
           function (event) {
             event.preventDefault();
-            proviant.logoutUser();
+            void proviant.logoutUser();
             location.reload();
           },
         );
@@ -143,6 +146,9 @@ function UpdatePassword() {
         proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.updateFailed", response.message));
         break;
     }
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -164,7 +170,7 @@ function saveMonthlyGoal() {
   let percent = null;
   if (type === "count") {
     const raw = document.getElementById("inputMonthlyGoalCount")?.value;
-    const parsed = raw === undefined || raw === "" ? NaN : parseInt(raw, 10);
+    const parsed = raw === undefined || raw === "" ? Number.NaN : Number.parseInt(raw, 10);
     if (Number.isNaN(parsed) || parsed < 0) {
       proviant.showFeedback("error", proviant.t("js.settings.invalidGoalTitle"), proviant.t("js.settings.goalCountError"));
       return;
@@ -172,7 +178,7 @@ function saveMonthlyGoal() {
     count = parsed;
   } else if (type === "percent") {
     const raw = document.getElementById("inputMonthlyGoalPercent")?.value;
-    const parsed = raw === undefined || raw === "" ? NaN : parseFloat(raw);
+    const parsed = raw === undefined || raw === "" ? Number.NaN : Number.parseFloat(raw);
     if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
       proviant.showFeedback("error", proviant.t("js.settings.invalidGoalTitle"), proviant.t("js.settings.goalPercentError"));
       return;
@@ -311,6 +317,8 @@ function handleCopyTelegramCommand() {
       copiedEl.classList.remove("d-none");
       setTimeout(() => copiedEl.classList.add("d-none"), 2000);
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -335,8 +343,8 @@ function UpdateNotificationSettings() {
     }
   }
 
-  const thresholdDays = inputNotificationThreshold ? parseInt(inputNotificationThreshold.value, 10) : 0;
-  if (isNaN(thresholdDays) || thresholdDays < 0) {
+  const thresholdDays = inputNotificationThreshold ? Number.parseInt(inputNotificationThreshold.value, 10) : 0;
+  if (Number.isNaN(thresholdDays) || thresholdDays < 0) {
     if (inputNotificationThreshold) inputNotificationThreshold.classList.add("is-invalid");
     return;
   }
@@ -517,6 +525,8 @@ function handleLeaveHousehold() {
         } else {
           proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
         }
+      }).catch((err) => {
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
       });
     },
     proviant.t("household.leave"),
@@ -542,13 +552,15 @@ function handleCreateHousehold() {
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
 /* Apply to join household */
 function handleApplyHousehold() {
   const idInput = document.getElementById("inputApplyHouseholdID");
-  const householdID = idInput ? parseInt(idInput.value, 10) : NaN;
+  const householdID = idInput ? Number.parseInt(idInput.value, 10) : Number.NaN;
   if (!householdID || householdID < 1) {
     if (idInput) idInput.classList.add("is-invalid");
     return;
@@ -564,6 +576,8 @@ function handleApplyHousehold() {
     } else {
       proviant.showFeedback('error', proviant.t("js.settings.applyFailedTitle"), proviant.t("js.settings.errorWithMessage", response.message));
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -577,6 +591,8 @@ function handleApproveApplication(btn) {
      } else {
        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
      }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -590,6 +606,8 @@ function handleRejectApplication(btn) {
      } else {
        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
      }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -608,6 +626,8 @@ function handleUpdateHouseholdName() {
     } else {
       proviant.showFeedback('error', proviant.t("js.settings.renameFailedTitle"), proviant.t("js.settings.errorWithMessage", response.message));
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -622,6 +642,8 @@ function handleCancelApplication(btn) {
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
     }
+    }).catch((err) => {
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
     });
   });
 }
@@ -637,6 +659,8 @@ function handleRemoveMember(btn) {
       } else {
         proviant.showFeedback('error', proviant.t("common.error"), response.message || proviant.t("js.settings.couldNotRemoveMember"));
       }
+    }).catch((err) => {
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
     });
   });
 }
@@ -665,6 +689,8 @@ function handleSendInvitation() {
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -683,20 +709,20 @@ function renderAdminUserRow(user, currentUserID, currentUserIsAdmin, householdAd
     <li class="list-group-item d-flex justify-content-between align-items-center" id="admin-user-${user.id}">
       <span>
         <i class="bi bi-person me-2"></i>${user.username}
-        <span class="text-secondary-custom ms-1">&lt;${user.mailAddress || ""}&gt;</span>
+        <span class="fg-secondary ms-1">&lt;${user.mailAddress || ""}&gt;</span>
         ${isSelf ? '<span class="badge bg-secondary ms-1">' + proviant.t("js.settings.you") + '</span>' : ""}
         <span class="badge ${roleBadgeClass} ms-1"><i class="bi ${roleIcon} me-1"></i>${roleLabel}</span>
       </span>
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-3">
         ${!isSelf ? `
-          <button type="button" class="btn btn-outline-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" data-role="${user.role || 'member'}" data-is-admin="${isAdmin}" data-is-self="${isSelf}" title="${proviant.t("js.settings.editUserTitle")}">
+          <button type="button" class="btn btn-outline theme-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" data-role="${user.role || 'member'}" data-is-admin="${isAdmin}" data-is-self="${isSelf}" title="${proviant.t("js.settings.editUserTitle")}">
             <i class="bi bi-pencil"></i>
           </button>` : ""}
-          <button type="button" class="btn btn-outline-warning btn-reset-password" data-id="${user.id}" title="${proviant.t("js.settings.resetPasswordTooltip")}">
+          <button type="button" class="btn btn-outline theme-warning btn-reset-password" data-id="${user.id}" title="${proviant.t("js.settings.resetPasswordTooltip")}">
             <i class="bi bi-key"></i>
           </button>
           ${!isSelf ? `
-          <button type="button" class="btn btn-outline-danger btn-delete-user" data-id="${user.id}" title="${proviant.t("js.settings.deleteUserTitle")}">
+          <button type="button" class="btn btn-outline theme-danger btn-delete-user" data-id="${user.id}" title="${proviant.t("js.settings.deleteUserTitle")}">
             <i class="bi bi-trash"></i>
           </button>` : ""}
         </div>
@@ -717,22 +743,24 @@ function loadAdminUsers() {
     if (response.code === 200) {
       const users = response.message;
       if (!users || !Array.isArray(users) || users.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noUsers") + '</li>';
+        list.innerHTML = '<li class="list-group-item text-center fg-secondary py-5">' + proviant.t("js.settings.noUsers") + '</li>';
         return;
       }
-      const currentUserID = parseInt(list.dataset.currentUserId || "0", 10) || 0;
-      const householdAdminID = parseInt(list.dataset.adminId || "0", 10) || 0;
+      const currentUserID = Number.parseInt(list.dataset.currentUserId || "0", 10) || 0;
+      const householdAdminID = Number.parseInt(list.dataset.adminId || "0", 10) || 0;
       const rendered = users.map((u) => renderAdminUserRow(u, currentUserID, currentUserID === householdAdminID, householdAdminID)).join("");
       if (!rendered) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noUsers") + '</li>';
+        list.innerHTML = '<li class="list-group-item text-center fg-secondary py-5">' + proviant.t("js.settings.noUsers") + '</li>';
         return;
       }
       list.innerHTML = rendered;
     } else if (response.code === 403) {
-      list.innerHTML = '<li class="list-group-item text-danger py-3">' + proviant.t("js.settings.accessDenied") + '</li>';
+      list.innerHTML = '<li class="list-group-item fg-danger py-5">' + proviant.t("js.settings.accessDenied") + '</li>';
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.unknownError")));
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -760,7 +788,7 @@ function handleEditUser(btn) {
   }
   const modalEl = document.getElementById("editUserModal");
   if (window.bootstrap) {
-    const modal = new bootstrap.Modal(modalEl);
+    const modal = new bootstrap.Dialog(modalEl);
     modal.show();
   }
 }
@@ -816,18 +844,21 @@ function doSaveUserEdit(userID, username, email, newRole) {
           if (roleResponse.code === 200) {
             const modalEl = document.getElementById("editUserModal");
             if (window.bootstrap) {
-              bootstrap.Modal.getInstance(modalEl)?.hide();
+              bootstrap.Dialog.getInstance(modalEl)?.hide();
             }
             loadAdminUsers();
           } else {
             proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.userUpdatedRoleFailed", roleResponse.message));
           }
+        }).catch((err) => {
+          setButtonLoading(btn, false);
+          proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
         });
       } else {
         setButtonLoading(btn, false);
         const modalEl = document.getElementById("editUserModal");
         if (window.bootstrap) {
-          bootstrap.Modal.getInstance(modalEl)?.hide();
+          bootstrap.Dialog.getInstance(modalEl)?.hide();
         }
         loadAdminUsers();
       }
@@ -835,6 +866,9 @@ function doSaveUserEdit(userID, username, email, newRole) {
       setButtonLoading(btn, false);
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
     }
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -850,6 +884,8 @@ function handleResetPassword(btn) {
         } else {
           proviant.showFeedback("error", proviant.t("common.error"), response.message || proviant.t("js.settings.couldNotResetPassword"));
         }
+      }).catch((err) => {
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
       });
     },
     proviant.t("js.settings.reset"),
@@ -870,6 +906,8 @@ function handleDeleteUser(btn) {
         } else {
           proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message));
         }
+      }).catch((err) => {
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
       });
     },
     proviant.t("common.delete"),
@@ -886,9 +924,9 @@ function renderPATRow(pat) {
     <li class="list-group-item d-flex justify-content-between align-items-center" id="pat-${pat.id}">
       <span>
         <i class="bi bi-key me-2"></i>${pat.name}
-        <small class="text-secondary-custom d-block">${lastUsedText} · ${expiresText}</small>
+        <small class="fg-secondary d-block">${lastUsedText} · ${expiresText}</small>
       </span>
-      <button type="button" class="btn btn-sm btn-outline-danger btn-delete-pat" data-id="${pat.id}" title="${proviant.t("js.settings.deleteTokenTitle")}">
+      <button type="button" class="btn btn-sm btn-outline theme-danger btn-delete-pat" data-id="${pat.id}" title="${proviant.t("js.settings.deleteTokenTitle")}">
         <i class="bi bi-trash"></i>
       </button>
     </li>
@@ -907,13 +945,15 @@ function loadPATs() {
     if (response.code === 200) {
       const pats = response.message;
       if (!pats || !Array.isArray(pats) || pats.length === 0) {
-        list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-3">' + proviant.t("js.settings.noTokens") + '</li>';
+        list.innerHTML = '<li class="list-group-item text-center fg-secondary py-5">' + proviant.t("js.settings.noTokens") + '</li>';
         return;
       }
       list.innerHTML = pats.map((p) => renderPATRow(p)).join("");
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.unknownError")));
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -930,7 +970,7 @@ function handleCreatePAT() {
   tokenValue.textContent = "";
 
   if (window.bootstrap) {
-    const modal = new bootstrap.Modal(modalEl);
+    const modal = new bootstrap.Dialog(modalEl);
     modal.show();
   }
 }
@@ -966,6 +1006,9 @@ function handleSavePAT() {
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.failedToCreateToken")));
     }
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -982,6 +1025,8 @@ function handleDeletePAT(btn) {
         } else {
           proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.couldNotDeleteToken")));
         }
+      }).catch((err) => {
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
       });
     },
     proviant.t("common.delete"),
@@ -1000,6 +1045,8 @@ function LoadWebhooks() {
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToLoadWebhooks", response.message));
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -1008,7 +1055,7 @@ function RenderWebhookList() {
   if (!container) return;
 
   if (currentWebhooks.length === 0) {
-    container.innerHTML = '<div class="text-center text-secondary-custom py-4">' + proviant.t("js.settings.noWebhooks") + '</div>';
+    container.innerHTML = '<div class="text-center fg-secondary py-7">' + proviant.t("js.settings.noWebhooks") + '</div>';
     return;
   }
 
@@ -1017,22 +1064,26 @@ function RenderWebhookList() {
     const eventsList = wh.events.join(', ');
     const toggleChecked = wh.active ? 'checked' : '';
     html += `
-      <div class="card mb-3 webhook-card" data-id="${wh.id}">
+      <div class="card mb-5 webhook-card" data-id="${wh.id}">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex justify-content-between align-items-start mb-3">
             <div>
               <h6 class="mb-1">${escapeHtml(wh.url)}</h6>
-              <small class="text-secondary-custom">${proviant.t("js.settings.webhookEvents", escapeHtml(eventsList))}</small>
+              <small class="fg-secondary">${proviant.t("js.settings.webhookEvents", escapeHtml(eventsList))}</small>
             </div>
-            <div class="form-check form-switch">
-              <input class="form-check-input webhook-toggle-active" type="checkbox" ${toggleChecked} data-id="${wh.id}">
-              <label class="form-check-label">${proviant.t("js.settings.webhookActive")}</label>
+            <div class="form-field">
+              <div class="switch">
+                <input class="webhook-toggle-active" type="checkbox" ${toggleChecked} data-id="${wh.id}">
+              
+              </div>
+              <label class="">${proviant.t("js.settings.webhookActive")}</label>
+            
             </div>
           </div>
           <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-primary btn-view-deliveries" data-id="${wh.id}">${proviant.t("js.settings.viewDeliveries")}</button>
-            <button type="button" class="btn btn-outline-secondary btn-copy-secret" data-id="${wh.id}">${proviant.t("js.settings.copySecret")}</button>
-            <button type="button" class="btn btn-outline-danger btn-delete-webhook" data-id="${wh.id}">${proviant.t("common.delete")}</button>
+            <button type="button" class="btn btn-outline theme-primary btn-view-deliveries" data-id="${wh.id}">${proviant.t("js.settings.viewDeliveries")}</button>
+            <button type="button" class="btn btn-outline theme-secondary btn-copy-secret" data-id="${wh.id}">${proviant.t("js.settings.copySecret")}</button>
+            <button type="button" class="btn btn-outline theme-danger btn-delete-webhook" data-id="${wh.id}">${proviant.t("common.delete")}</button>
           </div>
         </div>
       </div>
@@ -1045,7 +1096,7 @@ function RenderWebhookList() {
 function attachWebhookEventHandlers() {
   document.querySelectorAll('.webhook-toggle-active').forEach(function(toggle) {
     toggle.addEventListener('change', function() {
-      const id = parseInt(this.dataset.id);
+      const id = Number.parseInt(this.dataset.id);
       const wh = currentWebhooks.find(w => w.id === id);
       if (wh) {
         ToggleWebhookActive(id, !wh.active);
@@ -1055,21 +1106,21 @@ function attachWebhookEventHandlers() {
 
   document.querySelectorAll('.btn-view-deliveries').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      const id = parseInt(this.dataset.id);
+      const id = Number.parseInt(this.dataset.id);
       ShowWebhookDeliveries(id);
     });
   });
 
   document.querySelectorAll('.btn-copy-secret').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      const id = parseInt(this.dataset.id);
+      const id = Number.parseInt(this.dataset.id);
       CopyWebhookSecret(id);
     });
   });
 
   document.querySelectorAll('.btn-delete-webhook').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      const id = parseInt(this.dataset.id);
+      const id = Number.parseInt(this.dataset.id);
       DeleteWebhook(id);
     });
   });
@@ -1087,6 +1138,8 @@ function ToggleWebhookActive(id, active) {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToUpdateWebhook", response.message));
       RenderWebhookList();
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -1097,6 +1150,8 @@ function ShowWebhookDeliveries(id) {
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToLoadDeliveries", response.message));
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -1104,23 +1159,23 @@ function ShowDeliveriesModal(deliveries) {
   let html = '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>' + proviant.t("js.settings.colTime") + '</th><th>' + proviant.t("js.settings.colAttempt") + '</th><th>' + proviant.t("js.settings.colStatus") + '</th><th>' + proviant.t("js.settings.colResponse") + '</th><th>' + proviant.t("common.error") + '</th></tr></thead><tbody>';
 
   if (deliveries.length === 0) {
-    html += '<tr><td colspan="5" class="text-center text-secondary-custom">' + proviant.t("js.settings.noDeliveries") + '</td></tr>';
+    html += '<tr><td colspan="5" class="text-center fg-secondary">' + proviant.t("js.settings.noDeliveries") + '</td></tr>';
   } else {
     for (const d of deliveries) {
-      const statusClass = d.statusCode >= 200 && d.statusCode < 300 ? 'text-success' : 'text-danger';
+      const statusClass = d.statusCode >= 200 && d.statusCode < 300 ? 'fg-success' : 'fg-danger';
       html += `<tr>
         <td>${escapeHtml(d.createdAt)}</td>
         <td>${d.attempt}</td>
         <td class="${statusClass}">${d.statusCode || '-'}</td>
         <td><small>${escapeHtml(d.responseBody || '-')}</small></td>
-        <td><small class="text-danger">${escapeHtml(d.error || '')}</small></td>
+        <td><small class="fg-danger">${escapeHtml(d.error || '')}</small></td>
       </tr>`;
     }
   }
   html += '</tbody></table></div>';
 
   document.getElementById('deliveriesModalBody').innerHTML = html;
-  const modal = new bootstrap.Modal(document.getElementById('webhookDeliveriesModal'));
+  const modal = new bootstrap.Dialog(document.getElementById('webhookDeliveriesModal'));
   modal.show();
 }
 
@@ -1128,7 +1183,7 @@ function CopyWebhookSecret(id) {
   const wh = currentWebhooks.find(w => w.id === id);
   if (!wh) return;
   document.getElementById('webhookSecretCopy').value = wh.secret || '';
-  const modal = new bootstrap.Modal(document.getElementById('webhookSecretModal'));
+  const modal = new bootstrap.Dialog(document.getElementById('webhookSecretModal'));
   modal.show();
 }
 
@@ -1145,6 +1200,8 @@ function DeleteWebhook(id) {
         } else {
           proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToDeleteWebhook", response.message));
         }
+      }).catch((err) => {
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
       });
     },
     proviant.t("common.delete"),
@@ -1187,6 +1244,9 @@ function CreateWebhook() {
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.failedToCreateWebhook", response.message));
     }
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -1214,15 +1274,15 @@ function escapeHtml(str) {
 /* ── Audit Log (Admin) ───────────────────────────────────────────── */
 
 const AUDIT_ACTION_ICONS = {
-  login_success: "bi bi-check-circle text-success",
-  login_failure: "bi bi-x-circle text-danger",
-  password_change: "bi bi-key text-primary",
-  password_change_failed: "bi bi-x-octagon text-danger",
-  member_added: "bi bi-person-plus text-success",
-  member_removed: "bi bi-person-dash text-warning",
-  member_left: "bi bi-box-arrow-left text-muted",
-  admin_changed: "bi bi-shield-check text-primary",
-  account_deleted: "bi bi-trash text-danger",
+  login_success: "bi bi-check-circle fg-success",
+  login_failure: "bi bi-x-circle fg-danger",
+  password_change: "bi bi-key fg-primary",
+  password_change_failed: "bi bi-x-octagon fg-danger",
+  member_added: "bi bi-person-plus fg-success",
+  member_removed: "bi bi-person-dash fg-warning",
+  member_left: "bi bi-box-arrow-left fg-secondary",
+  admin_changed: "bi bi-shield-check fg-primary",
+  account_deleted: "bi bi-trash fg-danger",
 };
 
 const AUDIT_ACTION_LABELS = {
@@ -1238,26 +1298,26 @@ const AUDIT_ACTION_LABELS = {
 };
 
 function renderAuditLogRow(log) {
-  const iconClass = AUDIT_ACTION_ICONS[log.action] || "bi bi-shield text-secondary";
+  const iconClass = AUDIT_ACTION_ICONS[log.action] || "bi bi-shield fg-secondary";
   const label = AUDIT_ACTION_LABELS[log.action] ? proviant.t(AUDIT_ACTION_LABELS[log.action]) : (log.action || proviant.t("js.settings.unknown"));
   const time = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "";
   const userText = log.userId ? `#${log.userId}` : proviant.t("js.settings.system");
   const details = log.details ? escapeHtml(log.details) : "";
 
   return `
-    <li class="list-group-item px-4 py-2">
-      <div class="d-flex align-items-start gap-2">
+    <li class="list-group-item px-7 py-3">
+      <div class="d-flex align-items-start gap-3">
         <i class="${iconClass}" aria-hidden="true" style="margin-top: 2px;"></i>
         <div class="flex-grow-1 min-w-0">
-          <div class="d-flex justify-content-between align-items-start gap-2">
+          <div class="d-flex justify-content-between align-items-start gap-3">
             <span class="fw-medium small">${label}</span>
-            <small class="text-secondary-custom flex-shrink-0" style="font-size: var(--text-xs);">${time}</small>
+            <small class="fg-secondary flex-shrink-0" style="font-size: var(--text-xs);">${time}</small>
           </div>
-          <div class="d-flex gap-2 mt-1">
-            <small class="text-secondary-custom" style="font-size: var(--text-xs);">${proviant.t("js.settings.userLabel", userText)}</small>
-            ${log.ipAddress ? `<small class="text-secondary-custom" style="font-size: var(--text-xs);">· ${escapeHtml(log.ipAddress)}</small>` : ""}
+          <div class="d-flex gap-3 mt-1">
+            <small class="fg-secondary" style="font-size: var(--text-xs);">${proviant.t("js.settings.userLabel", userText)}</small>
+            ${log.ipAddress ? `<small class="fg-secondary" style="font-size: var(--text-xs);">· ${escapeHtml(log.ipAddress)}</small>` : ""}
           </div>
-          ${details ? `<small class="text-secondary-custom d-block mt-1" style="font-size: var(--text-xs);">${details}</small>` : ""}
+          ${details ? `<small class="fg-secondary d-block mt-1" style="font-size: var(--text-xs);">${details}</small>` : ""}
         </div>
       </div>
     </li>
@@ -1273,7 +1333,7 @@ function renderAuditLog(logs) {
   if (loading) loading.remove();
 
   if (!logs || logs.length === 0) {
-    list.innerHTML = '<li class="list-group-item text-center text-secondary-custom py-4">' + proviant.t("js.settings.noActivity") + '</li>';
+    list.innerHTML = '<li class="list-group-item text-center fg-secondary py-7">' + proviant.t("js.settings.noActivity") + '</li>';
     if (meta) meta.textContent = "";
     return;
   }
@@ -1289,8 +1349,8 @@ function loadAuditLog(date) {
   if (!list) return;
 
   if (loading) {
-    list.innerHTML = `<li class="list-group-item text-center text-secondary-custom py-4" id="auditLogLoading">
-      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+    list.innerHTML = `<li class="list-group-item text-center fg-secondary py-7" id="auditLogLoading">
+      <span class="spinner-border spinner-sm me-2" role="status" aria-hidden="true"></span>
       <span>${proviant.t("common.loading")}</span>
     </li>`;
   }
@@ -1299,13 +1359,13 @@ function loadAuditLog(date) {
     if (response.code === 200) {
       renderAuditLog(response.message);
     } else {
-      list.innerHTML = `<li class="list-group-item text-danger text-center py-4">${proviant.t("js.settings.failedToLoadAuditLog")}</li>`;
+      list.innerHTML = `<li class="list-group-item fg-danger text-center py-7">${proviant.t("js.settings.failedToLoadAuditLog")}</li>`;
       if (document.getElementById("auditLogMeta")) {
         document.getElementById("auditLogMeta").textContent = proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.unknown"));
       }
     }
   }).catch(() => {
-    list.innerHTML = `<li class="list-group-item text-danger text-center py-4">${proviant.t("js.settings.networkError")}</li>`;
+    list.innerHTML = `<li class="list-group-item fg-danger text-center py-7">${proviant.t("js.settings.networkError")}</li>`;
   });
 }
 
@@ -1482,6 +1542,8 @@ document.addEventListener("click", function (event) {
         } else {
           proviant.showFeedback('error', proviant.t("common.error"), response.message || proviant.t("js.settings.couldNotCancelInvitation"));
         }
+      }).catch((err) => {
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
       });
     });
     return;
@@ -1547,6 +1609,8 @@ document.addEventListener("click", function (event) {
       if (success) {
         proviant.showFeedback('success', proviant.t("js.settings.copiedTitle"), proviant.t("js.settings.secretCopied"));
       }
+    }).catch((err) => {
+      proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
     });
     return;
   }
@@ -1603,7 +1667,7 @@ document.addEventListener("click", function (event) {
   // Push notification — unsubscribe button
   if (target.closest("#btnPushUnsubscribe")) {
     event.preventDefault();
-    handleWebPushUnsubscribe();
+    void handleWebPushUnsubscribe();
     return;
   }
 });
@@ -1630,7 +1694,7 @@ document.addEventListener("input", function (event) {
       break;
     case "inputPassword": {
       if (target.dataset.touched) {
-        const minLen = parseInt(target.dataset.minLength || "12", 10);
+        const minLen = Number.parseInt(target.dataset.minLength || "12", 10);
         const valid = target.value.length >= minLen;
         target.classList.toggle("is-invalid", !valid);
         target.classList.toggle("is-valid", valid);
@@ -1708,7 +1772,7 @@ document.addEventListener("change", function (event) {
   }
   if (event.target.id === "togglePushNotifications") {
     toggleWebPushSettings();
-    handleWebPushToggle();
+    void handleWebPushToggle();
   }
 
   if (event.target.id === "toggleReceiptScanOverride") {
@@ -1723,7 +1787,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadPATs();
   loadCalendarTokenStatus();
   LoadWebhooks();
-  initWebPushNotifications();
+  void initWebPushNotifications();
 
   const auditLogSection = document.getElementById("auditLogSection");
   if (auditLogSection) {
@@ -1743,7 +1807,7 @@ document.addEventListener("focusout", function (event) {
       break;
     }
     case "inputPassword": {
-      const minLen = parseInt(target.dataset.minLength || "12", 10);
+      const minLen = Number.parseInt(target.dataset.minLength || "12", 10);
       const valid = target.value.length >= minLen;
       target.dataset.touched = "1";
       target.classList.toggle("is-invalid", !valid);
@@ -1801,6 +1865,8 @@ function loadCalendarTokenStatus() {
         hasTokenEl.classList.add("d-none");
       }
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -1826,6 +1892,9 @@ function handleCalendarCreate() {
     } else {
       proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.failedToCreateCalendarToken")));
     }
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -1862,6 +1931,9 @@ function handleCalendarRegenerate() {
         } else {
           proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.failedToRegenerateCalendarToken")));
         }
+      }).catch((err) => {
+        setButtonLoading(btn, false);
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
       });
     },
     proviant.t("js.settings.regenerate"),
@@ -1883,6 +1955,8 @@ function handleCalendarCopy() {
         }, 3000);
       }
     }
+  }).catch((err) => {
+    proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
   });
 }
 
@@ -1916,6 +1990,8 @@ function handleCalendarRemove() {
         } else {
           proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.errorWithMessage", response.message || proviant.t("js.settings.failedToRemoveCalendarToken")));
         }
+      }).catch((err) => {
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
       });
     },
     proviant.t("js.settings.remove"),
@@ -1947,7 +2023,7 @@ function openStorageLocationModal(data) {
     if (titleEl)    titleEl.textContent = proviant.t("js.settings.addStorageLocation");
   }
 
-  const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const bsModal = bootstrap.Dialog.getOrCreateInstance(modalEl);
   bsModal.show();
 }
 
@@ -1967,7 +2043,7 @@ function saveStorageLocation() {
   const id        = idInput ? idInput.value.trim() : "";
   const name      = nameInput.value.trim();
   const icon      = iconInput ? iconInput.value.trim() : "";
-  const sortOrder = sortInput ? parseInt(sortInput.value, 10) || 0 : 0;
+  const sortOrder = sortInput ? Number.parseInt(sortInput.value, 10) || 0 : 0;
 
   setButtonLoading(saveBtn, true);
 
@@ -1992,7 +2068,7 @@ function saveStorageLocation() {
         const locSort = loc.sortOrder != null ? loc.sortOrder : (loc.SortOrder != null ? loc.SortOrder : sortOrder);
 
         const modalEl = document.getElementById("storageLocationModal");
-        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        if (modalEl) bootstrap.Dialog.getOrCreateInstance(modalEl).hide();
 
         const list = document.getElementById("storageLocationList");
         if (!list) { location.reload(); return; }
@@ -2004,12 +2080,12 @@ function saveStorageLocation() {
         li.innerHTML = `
           <span>${locIcon} <strong>${locName}</strong></span>
           <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-proviant-secondary btn-edit-sl"
+            <button type="button" class="btn btn-outline theme-secondary btn-edit-sl"
                     data-id="${locId}" data-name="${locName}" data-icon="${locIcon}"
                     data-sortorder="${locSort}" aria-label="${proviant.t("household.editStorageLocationAria", locName)}">
               <i class="bi bi-pencil" aria-hidden="true"></i>
             </button>
-            <button type="button" class="btn btn-proviant-danger btn-delete-sl"
+            <button type="button" class="btn btn-solid theme-danger btn-delete-sl"
                     data-id="${locId}" data-name="${locName}" aria-label="${proviant.t("household.deleteStorageLocationAria", locName)}">
               <i class="bi bi-trash" aria-hidden="true"></i>
             </button>

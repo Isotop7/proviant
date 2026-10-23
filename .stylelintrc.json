@@ -5,6 +5,20 @@
     "selector-no-qualifying-type": null,
     "selector-id-pattern": null,
     "color-named": null,
-    "declaration-no-important": null
-  }
+    "declaration-no-important": null,
+    "selector-class-pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$"
+  },
+  "overrides": [
+    {
+      "files": ["design-system/**/*.scss"],
+      "rules": {
+        "@stylistic/color-hex-case": null,
+        "color-hex-length": null,
+        "@stylistic/number-leading-zero": null,
+        "@stylistic/number-no-trailing-zeros": null,
+        "@stylistic/declaration-colon-space-after": null,
+        "value-keyword-case": null
+      }
+    }
+  ]
 }

@@ -16,6 +16,7 @@ func TestOpenFoodFactsAPIDatasetStruct(t *testing.T) {
 				Countries              string       `json:"countries"`
 				GenericName            string       `json:"generic_name"`
 				ImageURL               string       `json:"image_url"`
+				Quantity               string       `json:"quantity"`
 				EcoscoreData           EcoscoreData `json:"ecoscore_data"`
 				ConservationConditions string       `json:"conservation_conditions"`
 			}{
@@ -113,6 +114,7 @@ func TestOpenFoodFactsAPIDatasetWithPartialData(t *testing.T) {
 				Countries              string       `json:"countries"`
 				GenericName            string       `json:"generic_name"`
 				ImageURL               string       `json:"image_url"`
+				Quantity               string       `json:"quantity"`
 				EcoscoreData           EcoscoreData `json:"ecoscore_data"`
 				ConservationConditions string       `json:"conservation_conditions"`
 			}{
@@ -184,4 +186,94 @@ func contains(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// TestFlexibleFloat64Unmarshal verifies the Agribalyse CO2 field accepts the
+// number and numeric-string forms OpenFoodFacts exports in turn.
+func TestFlexibleFloat64Unmarshal(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   string
+		want    float64
+		wantErr bool
+	}{
+		{name: "number", input: "1.5", want: 1.5},
+		{name: "string", input: `"1.5"`, want: 1.5},
+		{name: "integer", input: "2", want: 2},
+		{name: "empty string", input: `""`, want: 0},
+		{name: "null", input: "null", want: 0},
+		{name: "whitespace", input: "  3.25  ", want: 3.25},
+		{name: "not a number", input: `"unknown"`, wantErr: true},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var value FlexibleFloat64
+			err := json.Unmarshal([]byte(testCase.input), &value)
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatalf("Unmarshal(%s) = nil, want error", testCase.input)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unmarshal(%s): %v", testCase.input, err)
+			}
+			if float64(value) != testCase.want {
+				t.Errorf("value = %v, want %v", float64(value), testCase.want)
+			}
+		})
+	}
+}
+
+// TestAgribalyseDataStringCO2 verifies the dump-shaped nesting unmarshals when
+// co2_total is a string, which previously aborted a whole import.
+func TestAgribalyseDataStringCO2(t *testing.T) {
+	payload := `{"ecoscore_data":{"agribalyse":{"co2_total":"7.564940134"}}}`
+	var product OpenFoodFactsDumpProduct
+	if err := json.Unmarshal([]byte(payload), &product); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if got := float64(product.EcoscoreData.Agribalyse.CO2Total); got != 7.564940134 {
+		t.Errorf("CO2Total = %v, want 7.564940134", got)
+	}
+}
+
+// TestFlexibleStringUnmarshal verifies the barcode field accepts the string and
+// number forms OpenFoodFacts exports, and rejects types that would store a
+// garbage barcode.
+func TestFlexibleStringUnmarshal(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{name: "string", input: `"1234567890123"`, want: "1234567890123"},
+		{name: "number", input: "1234567890123", want: "1234567890123"},
+		{name: "empty string", input: `""`, want: ""},
+		{name: "null", input: "null", want: ""},
+		{name: "object", input: `{"unexpected":"object"}`, wantErr: true},
+		{name: "array", input: `[1,2]`, wantErr: true},
+		{name: "boolean", input: "true", wantErr: true},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var value FlexibleString
+			err := json.Unmarshal([]byte(testCase.input), &value)
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatalf("Unmarshal(%s) = nil, want error", testCase.input)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unmarshal(%s): %v", testCase.input, err)
+			}
+			if string(value) != testCase.want {
+				t.Errorf("value = %q, want %q", string(value), testCase.want)
+			}
+		})
+	}
 }

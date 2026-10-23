@@ -275,20 +275,20 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 		return 0, 0, nil, householdErr
 	}
 
-	// Merge duplicate product entries by summing their amounts, so two
+	// Merge duplicate product entries by summing their counts, so two
 	// rows for the same product cook as one combined consume instead of
 	// the second one failing with "not found" after the first archived it.
 	merged := make([]apiModel.CookItemAPIModel, 0, len(items))
 	mergedIndex := make(map[uint]int, len(items))
 	for _, item := range items {
 		if idx, ok := mergedIndex[item.ProductID]; ok {
-			// Overflow-safe sum: a merged amount can never wrap to a
+			// Overflow-safe sum: a merged count can never wrap to a
 			// negative value, which the repository would treat as a
 			// full consume.
-			if merged[idx].Amount > math.MaxInt-item.Amount {
-				merged[idx].Amount = math.MaxInt
+			if merged[idx].Quantity > math.MaxInt-item.Quantity {
+				merged[idx].Quantity = math.MaxInt
 			} else {
-				merged[idx].Amount += item.Amount
+				merged[idx].Quantity += item.Quantity
 			}
 			s.logger.Debug().Msgf("CookProducts: merged duplicate entry for product %d", item.ProductID)
 			continue
@@ -314,7 +314,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 			continue
 		}
 
-		consumedAmount, fullyConsumed, cookErr := s.repos.Products.ConsumeProductPartial(&product, item.Amount)
+		consumedQuantity, fullyConsumed, cookErr := s.repos.Products.ConsumeProductPartial(&product, item.Quantity)
 		// The repo retries guarded writes once internally; a second
 		// optimistic-lock failure means the row is still hot. Re-attempting
 		// against the same product pointer is safe — the repo re-reads
@@ -322,7 +322,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 		// the whole cook only after every attempt lost the race.
 		for retry := 1; cookErr == errors.ErrProductConcurrentModification && retry < cookMaxConsumeAttempts; retry++ {
 			s.logger.Debug().Msgf("CookProducts: product %d changed concurrently, retrying (%d/%d)", item.ProductID, retry, cookMaxConsumeAttempts-1)
-			consumedAmount, fullyConsumed, cookErr = s.repos.Products.ConsumeProductPartial(&product, item.Amount)
+			consumedQuantity, fullyConsumed, cookErr = s.repos.Products.ConsumeProductPartial(&product, item.Quantity)
 		}
 		if cookErr != nil {
 			if cookErr == gorm.ErrRecordNotFound || cookErr == errors.ErrProductConcurrentModification {
@@ -339,17 +339,18 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 
 		if fullyConsumed {
 			consumed++
-			// Record savings against the actually archived amount, not the
-			// caller's read: the repo re-reads stock inside its transaction,
-			// so a concurrent reduction would otherwise overstate the
-			// SavingsRecord amount, price and CO2 figures.
-			product.Amount = consumedAmount
-			go s.recordSavingsEvent(userID, &product, "consumed")
 		} else {
 			partial++
 		}
+		// Record savings against the packs that actually left the stock, not
+		// the caller's read: the repo re-reads stock inside its transaction,
+		// so a concurrent reduction would otherwise overstate the
+		// SavingsRecord amount, price and CO2 figures. Every cooked pack is
+		// accounted for, so the ledger counts each pack exactly once.
+		product.Quantity = consumedQuantity
+		go s.recordSavingsEvent(userID, &product, "consumed")
 
-		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionCook, item.ProductID, product.ProductName, consumedAmount)
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionCook, item.ProductID, product.ProductName, consumedQuantity)
 	}
 	return consumed, partial, errs, internalErr
 }

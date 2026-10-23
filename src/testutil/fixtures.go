@@ -70,7 +70,7 @@ func CreateTestRecipe(db *gorm.DB, householdID uint, userID ...uint) *dbModel.Re
 		Servings:     2,
 		CreatedBy:    uid,
 		Ingredients: []dbModel.RecipeIngredient{
-			{Name: "Test Product", Amount: 1, Unit: "pcs", SortOrder: 0},
+			{Name: "Test Product", Portion: "1 pcs", SortOrder: 0},
 		},
 	}
 	db.Create(&recipe)
@@ -130,7 +130,7 @@ func CreateTestEmailVerification(db *gorm.DB, userID uint, token string) *dbMode
 // SeedConsumedProduct creates a product, soft-deletes it with the given
 // removalReason, and pins the deleted_at to a specific timestamp. It is
 // shared by the consumption-service and consumption-handler test suites.
-func SeedConsumedProduct(t *testing.T, db *gorm.DB, householdID, userID uint, isPrivate bool, barcode, name, unit string, amount int, deletedAt time.Time) {
+func SeedConsumedProduct(t *testing.T, db *gorm.DB, householdID, userID uint, isPrivate bool, barcode, name string, quantity int, deletedAt time.Time) {
 	t.Helper()
 	p := dbModel.Product{
 		ProductName:   name,
@@ -138,8 +138,7 @@ func SeedConsumedProduct(t *testing.T, db *gorm.DB, householdID, userID uint, is
 		HouseholdID:   householdID,
 		UserID:        userID,
 		IsPrivate:     isPrivate,
-		Amount:        amount,
-		Unit:          unit,
+		Quantity:      quantity,
 		RemovalReason: dbModel.RemovalReasonConsumed,
 	}
 	if err := db.Create(&p).Error; err != nil {

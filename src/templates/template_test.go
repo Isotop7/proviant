@@ -59,7 +59,7 @@ func TestExpiryStatusClass(t *testing.T) {
 		t    time.Time
 		want string
 	}{
-		{"zero", time.Time{}, "nodate"},
+		{"zero", time.Time{}, "neutral"},
 		{"expired", now.Add(-24 * time.Hour), "expired"},
 		{"critical", now.Add(2 * 24 * time.Hour), "critical"},
 		{"soon", now.Add(5 * 24 * time.Hour), "soon"},
@@ -113,63 +113,6 @@ func TestExpiryStatusLabel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := expiryStatusLabel(i18n.LanguageEN, tt.t); got != tt.want {
 				t.Errorf("expiryStatusLabel() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestExpiryBadgeClass(t *testing.T) {
-	now := time.Now()
-	tests := []struct {
-		name string
-		t    time.Time
-		want string
-	}{
-		{"zero", time.Time{}, "bg-secondary"},
-		{"expired", now.Add(-24 * time.Hour), "bg-danger"},
-		{"critical", now.Add(2 * 24 * time.Hour), "bg-danger"},
-		{"soon", now.Add(5 * 24 * time.Hour), "bg-warning"},
-		{"fresh", now.Add(30 * 24 * time.Hour), "bg-success"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := expiryBadgeClass(tt.t); got != tt.want {
-				t.Errorf("expiryBadgeClass() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestExpiryTextClass(t *testing.T) {
-	now := time.Now()
-	if got := expiryTextClass(time.Time{}); got != "text-secondary" {
-		t.Errorf("expiryTextClass(zero) = %q, want text-secondary", got)
-	}
-	if got := expiryTextClass(now.Add(2 * 24 * time.Hour)); got != "text-danger" {
-		t.Errorf("expiryTextClass(critical) = %q, want text-danger", got)
-	}
-	if got := expiryTextClass(now.Add(5 * 24 * time.Hour)); got != "text-warning" {
-		t.Errorf("expiryTextClass(soon) = %q, want text-warning", got)
-	}
-}
-
-func TestExpiryColor(t *testing.T) {
-	now := time.Now()
-	tests := []struct {
-		name string
-		t    time.Time
-		want string
-	}{
-		{"zero", time.Time{}, "var(--fg-3)"},
-		{"expired", now.Add(-24 * time.Hour), "var(--status-expired)"},
-		{"critical", now.Add(2 * 24 * time.Hour), "var(--status-critical)"},
-		{"soon", now.Add(5 * 24 * time.Hour), "var(--status-soon)"},
-		{"fresh", now.Add(30 * 24 * time.Hour), "var(--fg-2)"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := expiryColor(tt.t); got != tt.want {
-				t.Errorf("expiryColor() = %q, want %q", got, tt.want)
 			}
 		})
 	}

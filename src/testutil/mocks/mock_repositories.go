@@ -37,7 +37,7 @@ type MockProductRepository struct {
 	// CreateErr overrides Err for CreateProduct only, so a test can make the
 	// sync id lookup miss while the insert fails.
 	CreateErr error
-	// MutationDeltas records the clientMutationID of every UpdateProductAmount
+	// MutationDeltas records the clientMutationID of every UpdateProductQuantity
 	// call, so a test can assert the handler forwarded the idempotency token.
 	MutationDeltas []*string
 
@@ -122,9 +122,15 @@ func (m *MockProductRepository) CreateProductsBulk(userID uint, rows []database.
 func (m *MockProductRepository) UpdateProduct(productID uint, userID uint, product *dbModel.ProductDTOPatch) error {
 	return m.Err
 }
-func (m *MockProductRepository) UpdateProductAmount(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error) {
+func (m *MockProductRepository) UpdateProductQuantity(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error) {
 	m.MutationDeltas = append(m.MutationDeltas, mutationID)
 	return m.BoolResult, true, m.Err
+}
+func (m *MockProductRepository) ListProductsWithoutPackSize(afterID uint, limit int) ([]dbModel.Product, error) {
+	return nil, m.Err
+}
+func (m *MockProductRepository) SetProductPackSize(productID uint, packSize string) error {
+	return m.Err
 }
 func (m *MockProductRepository) DeleteProduct(productID uint, userID uint, archiveOnly bool) error {
 	return m.Err
@@ -331,7 +337,7 @@ func (m *MockUserRepository) GetUserByID(userID uint) (authentication.User, erro
 func (m *MockUserRepository) GetUserHouseholdByID(userID uint) (uint, error) {
 	return m.HouseholdID, m.Err
 }
-func (m *MockUserRepository) GetUserLanguagePreferencesByID(userID uint) (string, string, error) {
+func (m *MockUserRepository) GetUserDisplayPreferencesByID(userID uint) (string, string, error) {
 	return m.User.Language, "", m.Err
 }
 func (m *MockUserRepository) GetUserHouseholdRole(userID uint) (string, error) {
@@ -351,6 +357,9 @@ func (m *MockUserRepository) UpdateUser(userID uint, user *authentication.User) 
 	return m.Err
 }
 func (m *MockUserRepository) UpdateUserReceiptScanSettings(userID uint, prefs authentication.ReceiptScanPreferences, apiKey *string) error {
+	return m.Err
+}
+func (m *MockUserRepository) UpdateUserDashboardLayout(userID uint, layout string) error {
 	return m.Err
 }
 func (m *MockUserRepository) UpdateAdminUserFields(userID uint, username, mailAddress string) error {

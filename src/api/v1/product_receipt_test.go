@@ -218,8 +218,8 @@ func TestScanReceipt(t *testing.T) {
 		if len(resp.Items) != 1 {
 			t.Fatalf("items = %d, want 1 (empty name dropped)", len(resp.Items))
 		}
-		if resp.Items[0].Name != "Milk" || resp.Items[0].Amount != 1 || resp.Items[0].Unit != "l" {
-			t.Errorf("item = %+v, want clamped Milk/1/l", resp.Items[0])
+		if resp.Items[0].Name != "Milk" || resp.Items[0].Quantity != 1 || resp.Items[0].PackSize != "1 l" {
+			t.Errorf("item = %+v, want clamped Milk/one pack of 1 l", resp.Items[0])
 		}
 		if resp.Items[0].Price == nil || *resp.Items[0].Price != 2.49 {
 			t.Errorf("price = %v, want 2.49", resp.Items[0].Price)
@@ -341,8 +341,8 @@ func TestScanReceiptStreamed(t *testing.T) {
 		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		if len(resp.Items) != 1 || resp.Items[0].Name != "Milk" || resp.Items[0].Amount != 2 || resp.Items[0].Unit != "l" {
-			t.Errorf("items = %+v, want Milk/2/l", resp.Items)
+		if len(resp.Items) != 1 || resp.Items[0].Name != "Milk" || resp.Items[0].Quantity != 1 || resp.Items[0].PackSize != "2 l" {
+			t.Errorf("items = %+v, want Milk/one pack of 2 l", resp.Items)
 		}
 	})
 }
@@ -363,7 +363,7 @@ func TestParseReceiptItems(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(items) != 1 || items[0].Name != "Butter" || items[0].Amount != 2 {
+		if len(items) != 1 || items[0].Name != "Butter" || items[0].Quantity != 2 {
 			t.Errorf("items = %+v, want one Butter/2", items)
 		}
 	})
@@ -379,8 +379,11 @@ func TestParseReceiptItems(t *testing.T) {
 		if len(items[0].Name) != util.ReceiptItemMaxNameLength {
 			t.Errorf("name length = %d, want %d", len(items[0].Name), util.ReceiptItemMaxNameLength)
 		}
-		if items[0].Amount != util.ReceiptItemMaxAmount {
-			t.Errorf("amount = %d, want %d", items[0].Amount, util.ReceiptItemMaxAmount)
+		if items[0].Quantity != 1 {
+			t.Errorf("count = %d, want 1 (a measured line is one pack)", items[0].Quantity)
+		}
+		if items[0].PackSize != "999 kilogramm" {
+			t.Errorf("pack size = %q, want the clamped amount and its unit", items[0].PackSize)
 		}
 		if items[0].Price != nil {
 			t.Errorf("negative price must be dropped, got %v", items[0].Price)
@@ -408,16 +411,18 @@ func TestParseReceiptItems(t *testing.T) {
 		if len(items) != 3 {
 			t.Fatalf("items = %d, want 3: %+v", len(items), items)
 		}
-		if items[0].Name != "Milk 1.2 oz" || items[0].Amount != 1 || items[0].Price == nil || *items[0].Price != 1.2 {
-			t.Errorf("item 0 = %+v, want Milk amount=1 price=1.2", items[0])
+		if items[0].Name != "Milk 1.2 oz" || items[0].Quantity != 1 || items[0].PackSize != "1 oz" || items[0].Price == nil || *items[0].Price != 1.2 {
+			t.Errorf("item 0 = %+v, want Milk, one pack of 1 oz, price 1.2", items[0])
 		}
-		if items[1].Name != "Bread 1 pack 2.79" || items[1].Unit != "pack" {
-			t.Errorf("item 1 = %+v", items[1])
+		// "pack" counts items, so the line is three packs and carries no
+		// separate pack size.
+		if items[1].Name != "Bread 1 pack 2.79" || items[1].Quantity != 3 || items[1].PackSize != "" {
+			t.Errorf("item 1 = %+v, want Bread, three packs and no pack size", items[1])
 		}
 	})
 
 	t.Run("salvages complete items from truncated output", func(t *testing.T) {
-		truncated := `{"items": [{"name": "Milk", "amount": 1, "unit": "l"}, {"name": "Bread", "amount": 1, "unit": "pcs"}, {"name": "Butte`
+		truncated := `{"items": [{"name": "Milk", "quantity": 1, "unit": "l"}, {"name": "Bread", "quantity": 1, "unit": "pcs"}, {"name": "Butte`
 		items, err := controllers.ParseReceiptItems(truncated)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -433,7 +438,7 @@ func TestParseReceiptItems(t *testing.T) {
 	// A pattern like `"\s*\{` also occurs inside a string literal (name with
 	// an escaped quote before a brace); repair must not corrupt it.
 	t.Run("repair does not touch patterns inside string literals", func(t *testing.T) {
-		broken := `{"items": [{"name": "2\" {inch hose", "amount": 1} {"name": "Bread", "amount": 1}]}`
+		broken := `{"items": [{"name": "2\" {inch hose", "quantity": 1} {"name": "Bread", "quantity": 1}]}`
 		items, err := controllers.ParseReceiptItems(broken)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

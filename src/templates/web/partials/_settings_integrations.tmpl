@@ -1,127 +1,131 @@
 {{ define "_settings_integrations" }}
 {{ if .IsAdmin }}
-<div class="card card-section mb-4" id="householdIntegrationsCard">
-    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
-        <div class="d-flex align-items-center gap-2">
+<div class="card card-section mb-7" id="householdIntegrationsCard">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-arrow-left-right"></i>
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "integrations.title" }}</h2>
         </div>
         {{ if .ShoppingListSyncEnabled }}
-        <span class="badge-status badge-fresh">{{ t "integrations.enabled" }}</span>
+        <span class="badge badge--fresh">{{ t "integrations.enabled" }}</span>
         {{ else }}
-        <span class="badge-status badge-nodate">{{ t "integrations.disabledOnServer" }}</span>
+        <span class="badge badge--neutral">{{ t "integrations.disabledOnServer" }}</span>
         {{ end }}
     </div>
-    <div class="card-body px-4 py-4">
-        <p class="text-secondary-custom small mb-3">
+    <div class="card-body px-7 py-7">
+        <p class="fg-secondary small mb-5">
             {{ t "integrations.intro" }}
         </p>
 
-        <div class="list-group list-group-flush border rounded-3">
-            <div class="list-group-item px-3 py-3" id="integrationSection-bring">
-                <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+        <div class="list-group list-group-flush border rounded-5">
+            <div class="list-group-item px-5 py-5" id="integrationSection-bring">
+                <div class="d-flex align-items-center justify-content-between gap-5 mb-3">
                     <div>
-                        <div class="fw-medium small d-flex align-items-center gap-2">
+                        <div class="fw-medium small d-flex align-items-center gap-3">
                             <span>Bring!</span>
                             {{ if not .BringSyncEnabled }}
-                            <span class="badge-status badge-nodate">{{ t "integrations.disabledInConfig" }}</span>
+                            <span class="badge badge--neutral">{{ t "integrations.disabledInConfig" }}</span>
                             {{ else if .BringIntegration.AccessTokenConfigured }}
-                            <span class="badge-status badge-fresh" id="badgeConfigured-bring">{{ t "integrations.credentialsConfigured" }}</span>
+                            <span class="badge badge--fresh" id="badgeConfigured-bring">{{ t "integrations.credentialsConfigured" }}</span>
                             {{ end }}
                         </div>
-                        <div class="text-secondary-custom small">{{ t "integrations.bringDesc" }}</div>
+                        <div class="fg-secondary small">{{ t "integrations.bringDesc" }}</div>
                     </div>
-                    <div class="form-check form-switch mb-0 flex-shrink-0">
+                    <div class="form-field mb-0 flex-shrink-0">
+                      <div class="switch">
                         {{ if .BringSyncEnabled }}
-                        <input class="form-check-input" type="checkbox" role="switch"
+                        <input type="checkbox" role="switch"
                                id="toggleIntegration-bring"
                                data-integration-toggle="bring"
                                {{if .BringIntegration.Enabled}}checked{{end}}>
                         {{ else }}
-                        <input class="form-check-input" type="checkbox" role="switch"
+                        <input type="checkbox" role="switch"
                                id="toggleIntegration-bring"
                                data-integration-toggle="bring"
                                disabled>
                         {{ end }}
-                        <label class="visually-hidden" for="toggleIntegration-bring">{{ t "integrations.bringToggleLabel" }}</label>
+                        
+                      </div>
+                      <label class="visually-hidden" for="toggleIntegration-bring">{{ t "integrations.bringToggleLabel" }}</label>
+                    
                     </div>
                 </div>
 
-                <div id="integrationFields-bring" class="pt-2{{ if not .BringIntegration.Enabled }} d-none{{ end }}">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                <div id="integrationFields-bring" class="pt-3{{ if not .BringIntegration.Enabled }} d-none{{ end }}">
+                    <div class="row g-3 mb-5">
+                        <div class="md:col-6">
                             <label for="inputIntegrationEmail-bring" class="form-label fw-medium small">{{ t "integrations.accountEmailLabel" }}</label>
                             <input type="email" class="form-control" id="inputIntegrationEmail-bring"
                                    placeholder="family@example.com"
                                    value="{{ .BringIntegration.AccountEmail }}"
                                    autocomplete="off">
                         </div>
-                        <div class="col-md-6">
-                            <label for="inputIntegrationListId-bring" class="form-label fw-medium small">{{ t "integrations.bringListIdLabel" }} <span class="text-danger" aria-hidden="true">*</span></label>
+                        <div class="md:col-6">
+                            <label for="inputIntegrationListId-bring" class="form-label fw-medium small">{{ t "integrations.bringListIdLabel" }} <span class="fg-danger" aria-hidden="true">*</span></label>
                             <input type="text" class="form-control" id="inputIntegrationListId-bring"
                                    placeholder="{{ t "integrations.bringListIdPlaceholder" }}"
                                    value="{{ .BringIntegration.ListID }}"
                                    autocomplete="off">
                         </div>
-                        <div class="col-md-6">
+                        <div class="md:col-6">
                             <label for="inputIntegrationListName-bring" class="form-label fw-medium small">{{ t "integrations.bringListNameLabel" }}</label>
                             <input type="text" class="form-control" id="inputIntegrationListName-bring"
                                    placeholder="{{ t "integrations.bringListNamePlaceholder" }}"
                                    value="{{ .BringIntegration.ListName }}"
                                    autocomplete="off">
                         </div>
-                        <div class="col-md-6">
+                        <div class="md:col-6">
                             <label for="inputIntegrationToken-bring" class="form-label fw-medium small">{{ t "integrations.bringTokenLabel" }}</label>
                             <input type="password" class="form-control" id="inputIntegrationToken-bring"
                                    placeholder="{{ t "integrations.keepCurrentPlaceholder" }}"
                                    autocomplete="new-password">
-                            <div class="form-text text-secondary-custom" id="tokenHint-bring">
+                            <div class="form-text fg-secondary" id="tokenHint-bring">
                                 {{ if .BringIntegration.AccessTokenConfigured }}
-                                <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "integrations.tokenStored" }}</span> {{ t "integrations.tokenReplace" }}
+                                <span class="fg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "integrations.tokenStored" }}</span> {{ t "integrations.tokenReplace" }}
                                 {{ else }}
                                 {{ t "integrations.tokenNone" }}
                                 {{ end }}
                             </div>
-                            <div class="form-check mt-1">
-                                <input class="form-check-input" type="checkbox" id="clearIntegrationToken-bring">
-                                <label class="form-check-label small" for="clearIntegrationToken-bring">{{ t "integrations.clearToken" }}</label>
+                            <div class="form-field mt-1">
+                              <input class="check" type="checkbox" id="clearIntegrationToken-bring">
+                              <label class="small" for="clearIntegrationToken-bring">{{ t "integrations.clearToken" }}</label>
                             </div>
                         </div>
                     </div>
 
-                    <div id="integrationStatus-bring" class="small mb-3" aria-live="polite">
+                    <div id="integrationStatus-bring" class="small mb-5" aria-live="polite">
                         {{ if .BringIntegration.LastSyncAt }}
-                        <div class="text-secondary-custom"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ t "integrations.lastSynced" (humanDateTime .BringIntegration.LastSyncAt) }}</div>
+                        <div class="fg-secondary"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ t "integrations.lastSynced" (humanDateTime .BringIntegration.LastSyncAt) }}</div>
                         {{ end }}
                         {{ if .BringIntegration.LastError }}
-                        <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small" role="alert">
+                        <div class="alert alert theme-danger py-3 px-5 mt-3 mb-0 small" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ .BringIntegration.LastError }}
                         </div>
                         {{ end }}
                     </div>
 
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-proviant-primary btn-sm"
+                    <div class="d-flex flex-wrap gap-3">
+                        <button type="button" class="btn btn-solid theme-primary btn-sm"
                                 data-integration-action="save" data-provider="bring"
                                 id="btnSaveIntegration-bring"
                                 {{ if not .BringSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-save me-1" aria-hidden="true"></i>{{ t "common.save" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                        <button type="button" class="btn btn-outline theme-secondary btn-sm"
                                 data-integration-action="test" data-provider="bring"
                                 id="btnTestIntegration-bring"
                                 {{ if not .BringSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-plug me-1" aria-hidden="true"></i>{{ t "integrations.testConnection" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                        <button type="button" class="btn btn-outline theme-secondary btn-sm"
                                 data-integration-action="sync" data-provider="bring"
                                 id="btnSyncIntegration-bring"
                                 {{ if not .BringSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{ t "integrations.syncNow" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-danger btn-sm"
+                        <button type="button" class="btn btn-solid theme-danger btn-sm"
                                 data-integration-action="delete" data-provider="bring"
                                 id="btnDeleteIntegration-bring">
                             <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ t "integrations.disconnect" }}
@@ -130,101 +134,105 @@
                 </div>
             </div>
 
-            <div class="list-group-item px-3 py-3" id="integrationSection-todoist">
-                <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+            <div class="list-group-item px-5 py-5" id="integrationSection-todoist">
+                <div class="d-flex align-items-center justify-content-between gap-5 mb-3">
                     <div>
-                        <div class="fw-medium small d-flex align-items-center gap-2">
+                        <div class="fw-medium small d-flex align-items-center gap-3">
                             <span>Todoist</span>
                             {{ if not .TodoistSyncEnabled }}
-                            <span class="badge-status badge-nodate">{{ t "integrations.disabledInConfig" }}</span>
+                            <span class="badge badge--neutral">{{ t "integrations.disabledInConfig" }}</span>
                             {{ else if .TodoistIntegration.AccessTokenConfigured }}
-                            <span class="badge-status badge-fresh" id="badgeConfigured-todoist">{{ t "integrations.credentialsConfigured" }}</span>
+                            <span class="badge badge--fresh" id="badgeConfigured-todoist">{{ t "integrations.credentialsConfigured" }}</span>
                             {{ end }}
                         </div>
-                        <div class="text-secondary-custom small">{{ t "integrations.todoistDesc" }}</div>
+                        <div class="fg-secondary small">{{ t "integrations.todoistDesc" }}</div>
                     </div>
-                    <div class="form-check form-switch mb-0 flex-shrink-0">
+                    <div class="form-field mb-0 flex-shrink-0">
+                      <div class="switch">
                         {{ if .TodoistSyncEnabled }}
-                        <input class="form-check-input" type="checkbox" role="switch"
+                        <input type="checkbox" role="switch"
                                id="toggleIntegration-todoist"
                                data-integration-toggle="todoist"
                                {{if .TodoistIntegration.Enabled}}checked{{end}}>
                         {{ else }}
-                        <input class="form-check-input" type="checkbox" role="switch"
+                        <input type="checkbox" role="switch"
                                id="toggleIntegration-todoist"
                                data-integration-toggle="todoist"
                                disabled>
                         {{ end }}
-                        <label class="visually-hidden" for="toggleIntegration-todoist">{{ t "integrations.todoistToggleLabel" }}</label>
+                        
+                      </div>
+                      <label class="visually-hidden" for="toggleIntegration-todoist">{{ t "integrations.todoistToggleLabel" }}</label>
+                    
                     </div>
                 </div>
 
-                <div id="integrationFields-todoist" class="pt-2{{ if not .TodoistIntegration.Enabled }} d-none{{ end }}">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                <div id="integrationFields-todoist" class="pt-3{{ if not .TodoistIntegration.Enabled }} d-none{{ end }}">
+                    <div class="row g-3 mb-5">
+                        <div class="md:col-6">
                             <label for="inputIntegrationListId-todoist" class="form-label fw-medium small">{{ t "integrations.todoistProjectIdLabel" }}</label>
                             <input type="text" class="form-control" id="inputIntegrationListId-todoist"
                                    placeholder="{{ t "integrations.todoistProjectIdPlaceholder" }}"
                                    value="{{ .TodoistIntegration.ListID }}"
                                    autocomplete="off">
                         </div>
-                        <div class="col-md-6">
+                        <div class="md:col-6">
                             <label for="inputIntegrationListName-todoist" class="form-label fw-medium small">{{ t "integrations.todoistProjectNameLabel" }}</label>
                             <input type="text" class="form-control" id="inputIntegrationListName-todoist"
                                    placeholder="{{ t "integrations.todoistProjectNamePlaceholder" }}"
                                    value="{{ .TodoistIntegration.ListName }}"
                                    autocomplete="off">
                         </div>
-                        <div class="col-md-6">
+                        <div class="md:col-6">
                             <label for="inputIntegrationToken-todoist" class="form-label fw-medium small">{{ t "integrations.todoistTokenLabel" }}</label>
                             <input type="password" class="form-control" id="inputIntegrationToken-todoist"
                                    placeholder="{{ t "integrations.keepCurrentPlaceholder" }}"
                                    autocomplete="new-password">
-                            <div class="form-text text-secondary-custom" id="tokenHint-todoist">
+                            <div class="form-text fg-secondary" id="tokenHint-todoist">
                                 {{ if .TodoistIntegration.AccessTokenConfigured }}
-                                <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "integrations.tokenStored" }}</span> {{ t "integrations.tokenReplace" }}
+                                <span class="fg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "integrations.tokenStored" }}</span> {{ t "integrations.tokenReplace" }}
                                 {{ else }}
                                 {{ t "integrations.tokenNone" }}
                                 {{ end }}
                             </div>
-                            <div class="form-check mt-1">
-                                <input class="form-check-input" type="checkbox" id="clearIntegrationToken-todoist">
-                                <label class="form-check-label small" for="clearIntegrationToken-todoist">{{ t "integrations.clearToken" }}</label>
+                            <div class="form-field mt-1">
+                              <input class="check" type="checkbox" id="clearIntegrationToken-todoist">
+                              <label class="small" for="clearIntegrationToken-todoist">{{ t "integrations.clearToken" }}</label>
                             </div>
                         </div>
                     </div>
 
-                    <div id="integrationStatus-todoist" class="small mb-3" aria-live="polite">
+                    <div id="integrationStatus-todoist" class="small mb-5" aria-live="polite">
                         {{ if .TodoistIntegration.LastSyncAt }}
-                        <div class="text-secondary-custom"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ t "integrations.lastSynced" (humanDateTime .TodoistIntegration.LastSyncAt) }}</div>
+                        <div class="fg-secondary"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ t "integrations.lastSynced" (humanDateTime .TodoistIntegration.LastSyncAt) }}</div>
                         {{ end }}
                         {{ if .TodoistIntegration.LastError }}
-                        <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small" role="alert">
+                        <div class="alert alert theme-danger py-3 px-5 mt-3 mb-0 small" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ .TodoistIntegration.LastError }}
                         </div>
                         {{ end }}
                     </div>
 
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-proviant-primary btn-sm"
+                    <div class="d-flex flex-wrap gap-3">
+                        <button type="button" class="btn btn-solid theme-primary btn-sm"
                                 data-integration-action="save" data-provider="todoist"
                                 id="btnSaveIntegration-todoist"
                                 {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-save me-1" aria-hidden="true"></i>{{ t "common.save" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                        <button type="button" class="btn btn-outline theme-secondary btn-sm"
                                 data-integration-action="test" data-provider="todoist"
                                 id="btnTestIntegration-todoist"
                                 {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-plug me-1" aria-hidden="true"></i>{{ t "integrations.testConnection" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-secondary btn-sm"
+                        <button type="button" class="btn btn-outline theme-secondary btn-sm"
                                 data-integration-action="sync" data-provider="todoist"
                                 id="btnSyncIntegration-todoist"
                                 {{ if not .TodoistSyncEnabled }}disabled{{ end }}>
                             <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{ t "integrations.syncNow" }}
                         </button>
-                        <button type="button" class="btn btn-proviant-danger btn-sm"
+                        <button type="button" class="btn btn-solid theme-danger btn-sm"
                                 data-integration-action="delete" data-provider="todoist"
                                 id="btnDeleteIntegration-todoist">
                             <i class="bi bi-trash me-1" aria-hidden="true"></i>{{ t "integrations.disconnect" }}

@@ -8,11 +8,11 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: var(--accent-subtle);
+  background: var(--accent-soft);
   border-radius: 7px;
 
   i {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--accent);
   }
 }
@@ -25,7 +25,7 @@
   height: 64px;
   background: var(--accent);
   border-radius: 16px;
-  box-shadow: 0 6px 18px oklch(50% .12 162deg / .35);
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--accent) 35%, transparent);
 
   i {
     font-size: 28px;
@@ -36,35 +36,69 @@
 .empty-icon-accent {
   color: white;
   background: var(--accent);
-  box-shadow: 0 2px 8px oklch(50% .12 162deg / .35);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
-// Page header title / subtitle
-.page-header-title {
-  margin: 0;
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
+// The eyebrow — a small uppercase label above a value. The design system
+// declares it as a shared utility.
+.eyebrow {
+  font: var(--weight-semibold) var(--text-eyebrow) / var(--leading-tight) var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+// The page header's parts. The eyebrow carries the page name, the count is
+// the hero, the sub explains it and the meta frames it from the right.
+.page-header__lead {
+  min-width: 0;
+}
+
+.page-header__count {
+  margin-top: var(--space-1);
+  font-size: var(--text-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  color: var(--fg);
   letter-spacing: var(--tracking-tight);
 }
 
-.page-header-subtitle {
-  margin: 2px 0 0;
-  font-size: var(--text-xs);
-  color: var(--fg-3);
+.page-header__sub {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
 }
 
-@media (max-width: 767.98px) {
-  body {
-    --offline-banner-left: 0px;
-  }
+.page-header__meta {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.page-header__title {
+  margin: 0;
+  font-size: var(--text-h1);
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: var(--tracking-tight);
+}
+
+.page-header__aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-end;
 }
 
 // Offline banner
 .offline-banner {
   position: fixed;
-  top: 0;
+  top: var(--topbar-height);
   right: 0;
-  left: var(--offline-banner-left, var(--sidebar-width));
+  left: 0;
   z-index: 99;
   padding: 8px 16px;
   font-size: var(--text-sm);
@@ -81,14 +115,14 @@
 // SW update banner
 .sw-update-banner {
   position: fixed;
-  top: 0;
+  top: var(--topbar-height);
   right: 0;
   left: var(--offline-banner-left, var(--sidebar-width));
   z-index: 99;
   padding: 8px 16px;
   font-size: var(--text-sm);
   text-align: center;
-  background: var(--accent-subtle);
+  background: var(--accent-soft);
   border-bottom: 1px solid var(--accent-border);
 
   .sw-update-reload {
@@ -98,31 +132,14 @@
 }
 
 // Modal header extensions
-.modal-icon-danger {
-  color: oklch(45% .2 25deg);
-  background: oklch(95% .05 25deg);
+.dialog-icon-danger {
+  color: var(--status-expired-text);
+  background: var(--status-expired-subtle);
 }
 
-.modal-header-body {
-  flex: 1;
-  padding-top: 6px;
-}
-
-.modal-subtitle {
+.dialog-subtitle {
   font-size: var(--text-xs);
-  color: var(--fg-3);
-}
-
-.btn-modal-close {
-  display: flex;
-  flex-shrink: 0;
-  padding: 4px;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--fg-3);
-  cursor: pointer;
-  background: none;
-  border: none;
+  color: var(--meta);
 }
 
 // Mode tab switcher
@@ -131,7 +148,7 @@
   gap: 4px;
   padding: 3px;
   margin-bottom: 16px;
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   border-radius: 8px;
 }
 
@@ -144,29 +161,27 @@
   padding: 6px 10px;
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  color: var(--fg-3);
+  color: var(--meta);
   cursor: pointer;
   background: transparent;
   border: none;
   border-radius: 6px;
   box-shadow: none;
-  transition: all var(--duration-base);
+  transition: all var(--motion-base);
 
   &.active {
     color: var(--fg);
     background: var(--surface);
-    box-shadow: 0 1px 3px oklch(0% 0 0deg / .1);
+    box-shadow: 0 1px 3px color-mix(in oklab, #000 10%, transparent);
   }
 }
 
 // Input / field helpers
-.field-label {
-  margin-bottom: 8px;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  color: var(--fg-3);
-  text-transform: uppercase;
-  letter-spacing: .06em;
+.form-label {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
 }
 
 .kbd-hint {
@@ -174,18 +189,18 @@
   padding: 3px 7px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--fg-3);
-  background: var(--bg-subtle);
+  color: var(--meta);
+  background: var(--surface-warm);
   border-radius: 5px;
 }
 
-.input-hint {
+.form-text {
   display: flex;
   gap: 6px;
   align-items: center;
   margin-top: 8px;
   font-size: var(--text-xs);
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 // Barcode camera wrapper
@@ -235,8 +250,8 @@
   align-items: center;
   padding: 12px 14px;
   margin-bottom: 16px;
-  background: var(--accent-subtle);
-  border: 1px solid oklch(78% .08 162deg);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
   border-radius: 10px;
 }
 
@@ -248,7 +263,7 @@
 .scan-result-code {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--fg-3);
+  color: var(--meta);
 }
 .scan-result-icon {
   flex-shrink: 0;
@@ -256,14 +271,14 @@
   color: var(--accent);
 }
 
-.modal-icon-subtle {
+.dialog-icon-subtle {
   color: var(--fg-2);
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
 }
 
-.modal-icon-accent {
+.dialog-icon-accent {
   color: var(--accent);
-  background: var(--accent-subtle);
+  background: var(--accent-soft);
 }
 
 // Product thumbnail images
@@ -271,35 +286,35 @@
   width: 64px;
   height: 64px;
   object-fit: contain;
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
 }
 .product-thumb-sm {
   width: 56px;
   height: 56px;
   object-fit: contain;
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
 }
 
 // Modal success banner (add-product step 3)
-.modal-success-banner {
+.dialog-success-banner {
   display: flex;
   gap: 14px;
   align-items: center;
   padding: 16px 18px;
   margin-bottom: 12px;
-  background: var(--accent-subtle);
-  border: 1px solid oklch(78% .08 162deg);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
   border-radius: 12px;
 }
 
-.modal-success-icon {
+.dialog-success-icon {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: oklch(40% .1 162deg);
+  background: var(--accent-text);
   border-radius: var(--radius-pill);
 
   i {
@@ -308,18 +323,18 @@
   }
 }
 
-.modal-success-name {
+.dialog-success-name {
   font-size: 14px;
   font-weight: var(--weight-semibold);
   color: var(--fg);
 }
-.modal-success-sub {
+.dialog-success-sub {
   font-size: var(--text-xs);
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 // Add-product modal — dialog width + JS-toggled step/footer visibility
-#addProductModal .modal-dialog {
+#addProductModal .dialog {
   max-width: 500px;
 }
 
@@ -350,14 +365,10 @@
 }
 
 // Nav sidebar extensions
-.nav-footer-section {
-  padding: 8px;
-  border-top: 1px solid var(--border-subtle);
-}
 .nav-footer-meta {
   padding: 12px 16px;
   margin-top: auto;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border);
 }
 
 .nav-version {
@@ -367,11 +378,11 @@
 }
 
 .nav-version-link {
-  font-size: 11px;
-  color: var(--fg-3);
+  font-size: 12px;
+  color: var(--meta);
   text-decoration: none;
   &:hover {
-    color: var(--fg-1);
+    color: var(--fg);
   }
 }
 
@@ -379,33 +390,17 @@
   display: flex;
   gap: 6px;
   align-items: center;
-  font-size: 11px;
-  color: var(--fg-3);
+  font-size: 12px;
+  color: var(--meta);
   text-decoration: none;
-}
 
-button.pv-nav-item {
-  text-align: left;
-  cursor: pointer;
-  background: none;
-  border: none;
-}
-
-.pv-nav-item-danger {
-  color: var(--status-expired);
   &:hover {
-    color: var(--status-expired-hover);
+    color: var(--fg);
   }
-}
-
-// Auth page toast
-.toast-success-icon {
-  font-size: 16px;
-  color: oklch(52% .1 145deg);
-}
-.toast-body-text {
-  flex: 1;
-  font-size: var(--text-sm);
+  &.active {
+    font-weight: 600;
+    color: var(--accent);
+  }
 }
 
 // Scan page — product data panel
@@ -421,5 +416,5 @@ button.pv-nav-item {
 
 // Card with accent border (onboarding completion)
 .card-section-accent {
-  border: 1px solid oklch(78% .08 162deg);
+  border: 1px solid var(--accent-border);
 }

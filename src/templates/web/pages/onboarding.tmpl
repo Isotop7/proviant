@@ -3,14 +3,14 @@
 <div class="container vh-100 d-flex justify-content-center align-items-center">
     <main class="onboarding-wizard">
         <!-- Header -->
-        <div class="text-center mb-4">
-            <img src="/assets/icons/hero.png" class="img-fluid mb-3 onboarding-hero" alt="proviant">
-            <h2 class="fw-bold">{{ t "onboarding.welcome" .Username }}</h2>
-            <p class="text-secondary-custom">{{ t "onboarding.subtitle" }}</p>
+        <div class="text-center mb-7">
+            <img src="/assets/icons/hero.png" class="img-fluid mb-5 onboarding-hero" alt="proviant">
+            <h1 class="fw-bold">{{ t "onboarding.welcome" .Username }}</h1>
+            <p class="fg-secondary">{{ t "onboarding.subtitle" }}</p>
         </div>
 
         <!-- Progress Steps -->
-        <div class="d-flex justify-content-center align-items-start mb-4">
+        <div class="d-flex justify-content-center align-items-start mb-7">
             <div class="step-indicator" id="stepIndicator1">
                 <div class="step-circle">1</div>
                 <small>{{ t "onboarding.step.profile" }}</small>
@@ -31,17 +31,17 @@
         <div class="onboarding-step" id="step1">
             <div class="card">
                 <div class="card-body">
-                    <p class="text-secondary-custom small mb-2">{{ t "onboarding.step.progress" 1 3 }}</p>
+                    <p class="fg-secondary small mb-3">{{ t "onboarding.step.progress" 1 3 }}</p>
                     <h5 class="card-title"><i class="bi bi-person me-2"></i>{{ t "onboarding.profileTitle" }}</h5>
-                    <p class="card-text text-secondary-custom">{{ t "onboarding.profileDesc" }}</p>
-                    <div class="mb-3">
+                    <p class="card-text fg-secondary">{{ t "onboarding.profileDesc" }}</p>
+                    <div class="mb-5">
                         <input type="text" id="inputDisplayName" class="form-control" placeholder="{{ t "onboarding.displayNamePlaceholder" }}" maxlength="64" value="{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Username}}{{end}}">
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button id="btnSaveProfile" class="btn btn-proviant-primary">
+                    <div class="d-flex align-items-center gap-3">
+                        <button id="btnSaveProfile" class="btn btn-solid theme-primary">
                             <i class="bi bi-arrow-right me-1"></i>{{ t "onboarding.continue" }}
                         </button>
-                        <button id="btnSkipProfile" class="btn btn-ghost btn-sm">{{ t "onboarding.skipForNow" }}</button>
+                        <button id="btnSkipProfile" class="btn btn-link btn-sm">{{ t "onboarding.skipForNow" }}</button>
                     </div>
                 </div>
             </div>
@@ -51,48 +51,48 @@
         <div class="onboarding-step d-none" id="step2">
             <div class="card">
                 <div class="card-body">
-                    <p class="text-secondary-custom small mb-2">{{ t "onboarding.step.progress" 2 3 }}</p>
+                    <p class="fg-secondary small mb-3">{{ t "onboarding.step.progress" 2 3 }}</p>
                     <h5 class="card-title"><i class="bi bi-people me-2"></i>{{ t "onboarding.householdTitle" }}</h5>
-                    <p class="card-text text-secondary-custom">{{ t "onboarding.householdDesc" }}</p>
+                    <p class="card-text fg-secondary">{{ t "onboarding.householdDesc" }}</p>
 
                     <!-- Mode switcher -->
-                    <div class="btn-group w-100 mb-3" role="group" aria-label="{{ t "onboarding.householdOptions" }}">
-                        <button type="button" id="btnHouseholdModeBrowse" class="btn btn-proviant-secondary btn-sm">
+                    <div class="btn-group w-100 mb-5" role="group" aria-label="{{ t "onboarding.householdOptions" }}">
+                        <button type="button" id="btnHouseholdModeBrowse" class="btn btn-outline theme-secondary btn-sm">
                             <i class="bi bi-search me-1"></i>{{ t "onboarding.browse" }}
                         </button>
-                        <button type="button" id="btnHouseholdModeCreate" class="btn btn-proviant-secondary btn-sm">
+                        <button type="button" id="btnHouseholdModeCreate" class="btn btn-outline theme-secondary btn-sm">
                             <i class="bi bi-plus-lg me-1"></i>{{ t "onboarding.createNew" }}
                         </button>
-                        <button type="button" id="btnHouseholdModeInvite" class="btn btn-proviant-secondary btn-sm">
+                        <button type="button" id="btnHouseholdModeInvite" class="btn btn-outline theme-secondary btn-sm">
                             <i class="bi bi-envelope me-1"></i>{{ t "onboarding.useInviteCode" }}
                         </button>
                     </div>
 
                     <!-- Browse sub-mode -->
                     <div id="householdModeBrowse" class="d-none">
-                        <div id="householdListLoading" class="text-center text-secondary-custom d-none">
-                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <div id="householdListLoading" class="text-center fg-secondary d-none">
+                            <div class="spinner-border spinner-sm" role="status"></div>
                             <span class="ms-2">{{ t "onboarding.loadingHouseholds" }}</span>
                         </div>
-                        <div id="householdList" class="list-group mb-2 d-none"></div>
+                        <div id="householdList" class="list-group mb-3 d-none"></div>
                     </div>
 
                     <!-- Create sub-mode -->
                     <div id="householdModeCreate" class="d-none">
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <input type="text" id="inputNewHouseholdName" class="form-control" placeholder="{{ t "onboarding.householdNamePlaceholder" }}" maxlength="64">
                         </div>
-                        <button id="btnCreateHousehold" class="btn btn-proviant-primary btn-sm">
+                        <button id="btnCreateHousehold" class="btn btn-solid theme-primary btn-sm">
                             <i class="bi bi-plus-lg me-1"></i>{{ t "onboarding.createHousehold" }}
                         </button>
                     </div>
 
                     <!-- Invite sub-mode -->
                     <div id="householdModeInvite" class="d-none">
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <input type="text" id="inputInviteToken" class="form-control" placeholder="{{ t "onboarding.inviteTokenPlaceholder" }}">
                         </div>
-                        <button id="btnJoinByInvite" class="btn btn-proviant-primary btn-sm">
+                        <button id="btnJoinByInvite" class="btn btn-solid theme-primary btn-sm">
                             <i class="bi bi-box-arrow-in-right me-1"></i>{{ t "onboarding.joinHousehold" }}
                         </button>
                     </div>
@@ -104,13 +104,13 @@
         <div class="onboarding-step d-none" id="step3">
             <div class="card">
                 <div class="card-body">
-                    <p class="text-secondary-custom small mb-2">{{ t "onboarding.step.progress" 3 3 }}</p>
+                    <p class="fg-secondary small mb-3">{{ t "onboarding.step.progress" 3 3 }}</p>
                     <h5 class="card-title"><i class="bi bi-bell me-2"></i>{{ t "onboarding.notificationsTitle" }}</h5>
-                    <p class="card-text text-secondary-custom">{{ t "onboarding.notificationsDesc" }}</p>
-                    <button id="btnConfigureNotifications" class="btn btn-proviant-primary">
+                    <p class="card-text fg-secondary">{{ t "onboarding.notificationsDesc" }}</p>
+                    <button id="btnConfigureNotifications" class="btn btn-solid theme-primary">
                         <i class="bi bi-gear me-1"></i>{{ t "onboarding.configureNotifications" }}
                     </button>
-                    <button id="btnSkipNotifications" class="btn btn-ghost btn-sm ms-2">{{ t "onboarding.skipForNow" }}</button>
+                    <button id="btnSkipNotifications" class="btn btn-link btn-sm ms-2">{{ t "onboarding.skipForNow" }}</button>
                 </div>
             </div>
         </div>
@@ -122,9 +122,9 @@
                     <div class="icon-chip-lg">
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                     </div>
-                    <h5 class="card-title mt-3">{{ t "onboarding.completeTitle" }}</h5>
-                    <p class="card-text text-secondary-custom">{{ t "onboarding.completeDesc" }}</p>
-                    <button id="btnFinishOnboarding" class="btn btn-proviant-primary">
+                    <h5 class="card-title mt-5">{{ t "onboarding.completeTitle" }}</h5>
+                    <p class="card-text fg-secondary">{{ t "onboarding.completeDesc" }}</p>
+                    <button id="btnFinishOnboarding" class="btn btn-solid theme-primary">
                         <i class="bi bi-arrow-right me-1"></i>{{ t "onboarding.goToProviant" }}
                     </button>
                 </div>
@@ -132,10 +132,10 @@
         </div>
 
         <!-- Quick Start Guide -->
-        <div class="card mt-4">
+        <div class="card mt-7">
             <div class="card-body">
                 <h6 class="card-title"><i class="bi bi-lightbulb me-2"></i>{{ t "onboarding.quickStartTitle" }}</h6>
-                <ul class="mb-0 small text-secondary-custom">
+                <ul class="mb-0 small fg-secondary">
                     <li><strong>{{ t "onboarding.quickStart.addProducts" }}</strong> — {{ t "onboarding.quickStart.addProductsDesc" }}</li>
                     <li><strong>{{ t "onboarding.quickStart.trackExpiration" }}</strong> — {{ t "onboarding.quickStart.trackExpirationDesc" }}</li>
                     <li><strong>{{ t "onboarding.quickStart.shareHousehold" }}</strong> — {{ t "onboarding.quickStart.shareHouseholdDesc" }}</li>
@@ -145,8 +145,8 @@
         </div>
 
         <!-- Navigation -->
-        <div class="d-flex justify-content-end mt-4">
-            <button id="btnNextStep" class="btn btn-proviant-primary d-none">
+        <div class="d-flex justify-content-end mt-7">
+            <button id="btnNextStep" class="btn btn-solid theme-primary d-none">
                 {{ t "common.next" }} <i class="bi bi-arrow-right ms-1"></i>
             </button>
         </div>

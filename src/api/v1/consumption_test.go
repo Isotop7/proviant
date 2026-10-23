@@ -45,14 +45,13 @@ func TestGetConsumptionRate(t *testing.T) {
 
 		product := dbModel.Product{
 			ProductName: "Milk", Barcode: "1111111111111",
-			HouseholdID: hh.ID, UserID: admin.ID, Amount: 1, Unit: "L",
-			ExpireAt: time.Now().Add(7 * 24 * time.Hour),
+			HouseholdID: hh.ID, UserID: admin.ID, Quantity: 1, ExpireAt: time.Now().Add(7 * 24 * time.Hour),
 		}
 		db.Create(&product)
 
 		now := time.Now()
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "1111111111111", "Milk", "L", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "1111111111111", "Milk", "L", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "1111111111111", "Milk", 1, now.Add(-14*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "1111111111111", "Milk", 1, now.Add(-7*24*time.Hour))
 
 		ctx, w := testutil.SetupGinContext(db)
 		ctx.Params = gin.Params{{Key: "id", Value: "1"}}
@@ -73,9 +72,6 @@ func TestGetConsumptionRate(t *testing.T) {
 		if resp.SampleCount != 2 {
 			t.Errorf("SampleCount = %d, want 2", resp.SampleCount)
 		}
-		if resp.Unit != "L" {
-			t.Errorf("Unit = %q, want L", resp.Unit)
-		}
 		if resp.Display == "" {
 			t.Errorf("Display = empty, want non-empty")
 		}
@@ -92,11 +88,10 @@ func TestGetConsumptionRate(t *testing.T) {
 
 		product := dbModel.Product{
 			ProductName: "Yogurt", Barcode: "2222222222222",
-			HouseholdID: hh.ID, UserID: admin.ID, Amount: 1, Unit: "pcs",
-			ExpireAt: time.Now().Add(7 * 24 * time.Hour),
+			HouseholdID: hh.ID, UserID: admin.ID, Quantity: 1, ExpireAt: time.Now().Add(7 * 24 * time.Hour),
 		}
 		db.Create(&product)
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "2222222222222", "Yogurt", "pcs", 1, time.Now().Add(-2*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "2222222222222", "Yogurt", 1, time.Now().Add(-2*24*time.Hour))
 
 		ctx, w := testutil.SetupGinContext(db)
 		ctx.Params = gin.Params{{Key: "id", Value: "1"}}
@@ -168,14 +163,13 @@ func TestGetRestockSuggestion(t *testing.T) {
 
 		product := dbModel.Product{
 			ProductName: "Milk", Barcode: "3333333333333",
-			HouseholdID: hh.ID, UserID: admin.ID, Amount: 0, Unit: "L",
-			ExpireAt: time.Now().Add(7 * 24 * time.Hour),
+			HouseholdID: hh.ID, UserID: admin.ID, Quantity: 0, ExpireAt: time.Now().Add(7 * 24 * time.Hour),
 		}
 		db.Create(&product)
 
 		now := time.Now()
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "3333333333333", "Milk", "L", 1, now.Add(-14*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "3333333333333", "Milk", "L", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "3333333333333", "Milk", 1, now.Add(-14*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "3333333333333", "Milk", 1, now.Add(-7*24*time.Hour))
 
 		ctx, w := testutil.SetupGinContext(db)
 		ctx.Params = gin.Params{{Key: "id", Value: "1"}}
@@ -219,8 +213,7 @@ func TestGetRestockSuggestion(t *testing.T) {
 
 		product := dbModel.Product{
 			ProductName: "Flour", Barcode: "4444444444444",
-			HouseholdID: hh.ID, UserID: admin.ID, Amount: 1, Unit: "kg",
-			MinStockAmount: 3, ExpireAt: time.Now().Add(7 * 24 * time.Hour),
+			HouseholdID: hh.ID, UserID: admin.ID, Quantity: 1, MinStockAmount: 3, ExpireAt: time.Now().Add(7 * 24 * time.Hour),
 		}
 		db.Create(&product)
 
@@ -257,8 +250,7 @@ func TestGetRestockSuggestion(t *testing.T) {
 
 		product := dbModel.Product{
 			ProductName: "Sugar", Barcode: "5555555555555",
-			HouseholdID: hh.ID, UserID: admin.ID, Amount: 5, Unit: "kg",
-			MinStockAmount: 5, ExpireAt: time.Now().Add(7 * 24 * time.Hour),
+			HouseholdID: hh.ID, UserID: admin.ID, Quantity: 5, MinStockAmount: 5, ExpireAt: time.Now().Add(7 * 24 * time.Hour),
 		}
 		db.Create(&product)
 
@@ -295,8 +287,7 @@ func TestGetRestockSuggestion(t *testing.T) {
 
 		product := dbModel.Product{
 			ProductName: "Salt", Barcode: "6666666666666",
-			HouseholdID: hh.ID, UserID: admin.ID, Amount: 5, Unit: "g",
-			ExpireAt: time.Now().Add(7 * 24 * time.Hour),
+			HouseholdID: hh.ID, UserID: admin.ID, Quantity: 5, ExpireAt: time.Now().Add(7 * 24 * time.Hour),
 		}
 		db.Create(&product)
 

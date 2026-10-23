@@ -1,262 +1,127 @@
 /* ─────────────────────────────────────────────────────────────────────────
  * design-system/tokens.dark.css
- * proviant — Dark theme overlay.
- * Umfassend in DESIGN.md § 2.5 beschrieben; überschreibt die hellen Tokens
- * aus tokens.css für [data-theme="dark"] und prefers-color-scheme: dark.
- * Verwendung:
- *   <html data-theme="dark">   (oder "light"; Auto via @media)
  *
- * Selbst-gehostete Fonts bleiben unverändert — diese Datei verändert
- * ausschließlich Semantik/Slot-Farben und Shadow-Wärme.
+ * GENERATED FILE — do not edit.
+ * Source: design-system/_tokens-dark.scss  (regenerate with `task design-tokens`)
+ *
+ * Opt-in via <html data-bs-theme="dark">, mit Fallback auf
+ * prefers-color-scheme: dark. theme.js setzt data-bs-theme immer explizit.
  * ─────────────────────────────────────────────────────────────────── */
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    /* pass-through handled below */
-  }
-}
-
-[data-theme="dark"],
-:root[data-theme="dark"] {
+[data-bs-theme="dark"] {
   color-scheme: dark;
 
-  /* Schema-Slots */
-  --bg:          #1F1A14;   /* dunkles Crème-Papier */
-  --surface:     #2B2520;   /* Karten, Panels */
-  --fg:          #EDE7DC;   /* Primäre Tinte, Überschriften */
-  --muted:       #9B9387;   /* Sekundärtext, Meta */
-  --border:      #4A4339;   /* Standard-Rahmen */
-  --accent:      #7FA296;   /* heller Salwei, primäre Aktion */
+  /* Surfaces */
+  --bg:           #1E1A14;
+  --surface:      #2C2823;
+  --surface-warm: #2F2A23;
 
-  /* Erweiterte Slots */
-  --surface-warm:#3A332C;   /* Auth-Brand-Panel */
-  --fg-2:        #BDB3A3;   /* Sekundäre Tinte */
-  --meta:        #7A7268;   /* Tertiärer Text */
-  --border-strong:#6A6258;  /* Verstärkter Rahmen */
-  --accent-soft: #324038;   /* Salwei getintet */
-  --accent-on:   #16120E;   /* Text auf Salwei */
-  --shadow-warm: rgba(0,0,0,0.32);
+  /* Ink */
+  --fg:    #F2EDE4;
+  --fg-2:  #D6CFC4;
+  --muted: #A79E92;
+  --meta:  #9A9184;
 
-  /* Status-Quadrupel (auf dunklem Grund heller) */
-  --status-fresh:   #7FA296;
-  --status-soon:    #D4B25C;
-  --status-critical:#D68A62;
-  --status-expired: #C07070;
+  /* Lines */
+  --border:        #3A342C;
+  --border-strong: #4A4238;
+
+  /* Accent */
+  --accent:      #59A388;
+  --accent-text: #7FC0A5;
+  --accent-soft: #24362F;
+  --accent-on:   #1E1A14;
+
+  /* Vorratsstatus */
+  --status-fresh:    #59A388;
+  --status-soon:     #D9B963;
+  --status-critical: #DE9268;
+  --status-expired:  #C97A7A;
+  --status-neutral:  #8A8177;
+
+  --status-fresh-text:    #7FC0A5;
+  --status-soon-text:     #E0C377;
+  --status-critical-text: #E8A98A;
+  --status-expired-text:  #D79090;
+  --status-neutral-text:  #A89F92;
+
+  --status-fresh-on:    #1E1A14;
+  --status-soon-on:     #1E1A14;
+  --status-critical-on: #1E1A14;
+  --status-expired-on:  #1E1A14;
+  --status-neutral-on:  #1E1A14;
 
   /* Semantische Aliase */
-  --success: var(--status-fresh);
-  --warn:    var(--status-soon);
-  --danger:  var(--status-expired);
-  --info:    #6FA2B2;
+  --success: #59A388;
+  --warn:    #D9B963;
+  --danger:  #C97A7A;
+  --info:    #7E9DAE;
 
-  /* (Color tokens consumed by refresh plan's oklch palette are mapped
-   * in tokens.dark.css consumer — see append below.) */
+  /* Schatten */
+  --shadow-warm: rgba(0, 0, 0, 0.45);
+  --elev-raised:  0 1px 2px rgba(0, 0, 0, 0.30), 0 4px 12px rgba(0, 0, 0, 0.36);
+  --elev-overlay: 0 8px 24px rgba(0, 0, 0, 0.48), 0 24px 48px rgba(0, 0, 0, 0.40);
+  --elev-inset:   inset 0 0 0 1px var(--border);
+  --elev-focus:   inset 0 0 0 1px var(--accent);
+  --focus-ring:   0 0 0 3px var(--accent-soft);
 }
 
-/* ── Same dark theme keyed to the desired-screen oklch tokens ───── */
-:root[data-theme="dark"] {
-  --bg:               oklch(22% .012 145deg);
-  --bg-subtle:        oklch(18% .010 145deg);
-  --bg-2:             oklch(20% .008 145deg);
-  --surface:          oklch(22% .012 145deg);
-  --surface-raised:   oklch(26% .008 145deg);
-
-  --fg:               oklch(92% .008 145deg);
-  --fg-2:             oklch(72% .012 145deg);
-  --fg-3:             oklch(55% .014 145deg);
-  --fg-4:             oklch(45% .010 145deg);
-
-  --border:           oklch(32% .012 145deg);
-  --border-strong:    oklch(38% .014 145deg);
-  --border-subtle:    oklch(28% .010 145deg);
-
-  --accent:           oklch(60% .12 155deg);
-  --accent-hover:     oklch(66% .12 155deg);
-  --accent-active:    oklch(72% .12 155deg);
-  --accent-subtle:    oklch(26% .06 155deg);
-  --accent-muted:     oklch(94% .03 155deg); /* light variant kept; invert if used on fg */
-  --accent-fg:        oklch(18% .022 145deg);
-
-  --status-expired:    oklch(62% .18 25deg);
-  --status-critical:   oklch(70% .16 45deg);
-  --status-soon:       oklch(78% .14 80deg);
-  --status-fresh:     oklch(58% .12 150deg);
-  --status-nodate:     oklch(55% .010 70deg);
-
-  --color-success:     var(--status-fresh);
-  --color-warning:     var(--status-soon);
-  --color-danger:      var(--status-expired);
-  --color-info:        oklch(65% .12 240deg);
-
-  /* Shadows — darker on dark */
-  --shadow-sm:  0 1px 3px oklch(0% 0 0deg / .4);
-  --shadow-md:  0 4px 12px oklch(0% 0 0deg / .5);
-  --shadow-lg:  0 10px 30px oklch(0% 0 0deg / .6);
-  --shadow-sm2: 0 0 0;
-
-  /* Bootstrap overrides (dark) */
-  --bs-body-bg:  var(--bg);
-  --bs-body-color: var(--fg);
-  --bs-border-color: var(--border);
-}
-
-/* Auto mode follows OS preference unless explicitly set */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg:               oklch(22% .012 145deg);
-    --surface:          oklch(22% .012 145deg);
-    --fg:               oklch(92% .008 145deg);
-    --border:           oklch(32% .012 145deg);
-    --accent:           oklch(60% .12 155deg);
-    --accent-subtle:    oklch(26% .06 155deg);
-    --accent-fg:        oklch(18% .022 145deg);
-    --fg-2:             oklch(72% .012 145deg);
-    --fg-3:             oklch(55% .014 145deg);
-    --bg-subtle:        oklch(18% .010 145deg);
-    --bg-2:             oklch(20% .008 145deg);
-    --border-subtle:    oklch(28% .010 145deg);
-    --border-strong:    oklch(38% .014 145deg);
-    --shadow-sm:        0 1px 3px oklch(0% 0 0deg / .4);
-    --shadow-md:        0 4px 12px oklch(0% 0 0deg / .5);
+  :root:not([data-bs-theme="light"]) {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg:           #1E1A14;
+  --surface:      #2C2823;
+  --surface-warm: #2F2A23;
+
+  /* Ink */
+  --fg:    #F2EDE4;
+  --fg-2:  #D6CFC4;
+  --muted: #A79E92;
+  --meta:  #9A9184;
+
+  /* Lines */
+  --border:        #3A342C;
+  --border-strong: #4A4238;
+
+  /* Accent */
+  --accent:      #59A388;
+  --accent-text: #7FC0A5;
+  --accent-soft: #24362F;
+  --accent-on:   #1E1A14;
+
+  /* Vorratsstatus */
+  --status-fresh:    #59A388;
+  --status-soon:     #D9B963;
+  --status-critical: #DE9268;
+  --status-expired:  #C97A7A;
+  --status-neutral:  #8A8177;
+
+  --status-fresh-text:    #7FC0A5;
+  --status-soon-text:     #E0C377;
+  --status-critical-text: #E8A98A;
+  --status-expired-text:  #D79090;
+  --status-neutral-text:  #A89F92;
+
+  --status-fresh-on:    #1E1A14;
+  --status-soon-on:     #1E1A14;
+  --status-critical-on: #1E1A14;
+  --status-expired-on:  #1E1A14;
+  --status-neutral-on:  #1E1A14;
+
+  /* Semantische Aliase */
+  --success: #59A388;
+  --warn:    #D9B963;
+  --danger:  #C97A7A;
+  --info:    #7E9DAE;
+
+  /* Schatten */
+  --shadow-warm: rgba(0, 0, 0, 0.45);
+  --elev-raised:  0 1px 2px rgba(0, 0, 0, 0.30), 0 4px 12px rgba(0, 0, 0, 0.36);
+  --elev-overlay: 0 8px 24px rgba(0, 0, 0, 0.48), 0 24px 48px rgba(0, 0, 0, 0.40);
+  --elev-inset:   inset 0 0 0 1px var(--border);
+  --elev-focus:   inset 0 0 0 1px var(--accent);
+  --focus-ring:   0 0 0 3px var(--accent-soft);
   }
-}
-
-/* ── structural overrides for screen-level hardcoded light colors ── */
-[data-theme="dark"] nav.topnav {
-  background: oklch(24% .012 145deg / .85);
-}
-[data-theme="dark"] nav.bottomtab {
-  background: oklch(24% .012 145deg / .92);
-}
-[data-theme="dark"] .card,
-[data-theme="dark"] .bento-card,
-[data-theme="dark"] .metric-card,
-[data-theme="dark"] .modal-content,
-[data-theme="dark"] .offcanvas {
-  background: var(--bg);
-}
-[data-theme="dark"] .badge-soon {
-  background: oklch(58% .14 80deg / .18);
-  color: var(--fg);
-}
-[data-theme="dark"] .badge-fresh {
-  color: var(--fg);
-}
-[data-theme="dark"] .badge-critical,
-[data-theme="dark"] .badge-expired {
-  color: var(--fg);
-}
-[data-theme="dark"] .bsh-delta,
-[data-theme="dark"] .bsh-delta *,
-[data-theme="dark"] .recipe-chip {
-  color: var(--fg);
-}
-
-/* neutralise inline dark-text colours on dark bg */
-[data-theme="dark"] [style*="oklch(0.55"],
-[data-theme="dark"] [style*="oklch(0.38"],
-[data-theme="dark"] [style*="oklch(20%"] ,
-[data-theme="dark"] [style*="oklch(20% 0."] {
-  color: var(--fg) !important;
-}
-
-/* recipe pills on dark */
-[data-theme="dark"] .recipe-chip {
-  background: var(--bg-subtle) !important;
-  color: var(--fg) !important;
-  border: 1px solid var(--border-subtle);
-}
-
-/* broad component-level dark override for hand-tuned light fills */
-[data-theme="dark"] [class*="chip"],
-[data-theme="dark"] [class*="badge"],
-[data-theme="dark"] .bsh-delta,
-[data-theme="dark"] .recipe-chip,
-[data-theme="dark"] .ingredient-chip {
-  background: var(--bg-subtle) !important;
-  color: var(--fg) !important;
-  border-color: var(--border-subtle);
-}
-
-/* restore visible tinted chips/pills in dark mode */
-[data-theme="dark"] .badge-expired {
-  background: oklch(28% .06 25deg) !important;
-  color: var(--fg) !important;
-}
-[data-theme="dark"] .badge-critical {
-  background: oklch(30% .06 45deg) !important;
-  color: var(--fg) !important;
-}
-[data-theme="dark"] .badge-soon {
-  background: oklch(30% .06 80deg) !important;
-  color: var(--fg) !important;
-}
-[data-theme="dark"] .badge-fresh {
-  background: oklch(28% .06 155deg) !important;
-  color: var(--fg) !important;
-}
-[data-theme="dark"] .recipe-chip,
-[data-theme="dark"] .ingredient-chip {
-  background: oklch(26% .02 145deg) !important;
-  border: 1px solid var(--border) !important;
-  color: var(--fg) !important;
-}
-
-/* restore colored dot inside badges */
-[data-theme="dark"] .badge-expired .badge-dot { background: var(--status-expired) !important; }
-[data-theme="dark"] .badge-critical .badge-dot { background: var(--status-critical) !important; }
-[data-theme="dark"] .badge-soon .badge-dot { background: var(--status-soon) !important; }
-[data-theme="dark"] .badge-fresh .badge-dot { background: var(--status-fresh) !important; }
-/* recipe/ingredient chips keep their own colored dot (inline status) */
-[data-theme="dark"] .recipe-chip .badge-dot,
-[data-theme="dark"] .recipe-chip span,
-[data-theme="dark"] .ingredient-chip span {
-  background: inherit !important;
-}
-
-/* repair chip dots that became invisible */
-[data-theme="dark"] .chip-dot[style*="status-expired"] { background: var(--status-expired) !important; }
-[data-theme="dark"] .chip-dot[style*="status-critical"] { background: var(--status-critical) !important; }
-[data-theme="dark"] .chip-dot[style*="status-soon"] { background: var(--status-soon) !important; }
-[data-theme="dark"] .chip-dot[style*="status-fresh"] { background: var(--status-fresh) !important; }
-
-/* danger zone */
-[data-theme="dark"] [style*="oklch(0.98 0.01 25)"] { background: oklch(24% .06 25deg) !important; }
-[data-theme="dark"] [style*="oklch(0.95 0.04 25)"] { background: oklch(30% .06 25deg) !important; }
-[data-theme="dark"] [style*="oklch(0.88 0.03 25)"] { border-color: oklch(38% .06 25deg) !important; }
-
-/* shopping list low-stock badge */
-[data-theme="dark"] .badge-lowstock {
-  background: oklch(28% .06 45deg) !important;
-  color: var(--status-critical) !important;
-}
-[data-theme="dark"] .badge-lowstock .badge-dot {
-  background: var(--status-critical) !important;
-}
-
-/* product detail opened pill */
-[data-theme="dark"] .badge-opened {
-  background: oklch(26% .06 280deg) !important;
-  color: oklch(80% .10 280deg) !important;
-}
-[data-theme="dark"] .badge-opened .badge-dot {
-  background: oklch(80% .10 280deg) !important;
-}
-
-/* login/reset diagonal lines subtler on dark */
-[data-theme="dark"] [style*="repeating-linear-gradient(45deg,transparent,transparent 40px,oklch(0.93 0.006 75 / 0.4)"] {
-  background: repeating-linear-gradient(45deg, transparent, transparent 40px, oklch(0.18 0.006 145 / 0.4) 40px, oklch(0.18 0.006 145 / 0.4) 41px) !important;
-}
-
-/* restore selected chip highlight */
-[data-theme="dark"] .chip.active {
-  background: var(--accent) !important;
-  color: var(--accent-fg) !important;
-  border-color: var(--accent) !important;
-}
-
-
-[data-theme="dark"] .metric-row .mcv {
-  color: var(--fg) !important;
 }

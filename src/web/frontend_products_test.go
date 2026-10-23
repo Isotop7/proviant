@@ -22,6 +22,27 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// elementText returns the trimmed text of the first tag in body carrying marker
+// (e.g. `id="qty-7"`), scoping an assertion to that row and freeing it from the
+// order of the tag's other attributes.
+func elementText(t *testing.T, body, marker string) string {
+	t.Helper()
+	start := strings.Index(body, marker)
+	if start < 0 {
+		t.Fatalf("marker %s not found in body", marker)
+	}
+	open := strings.Index(body[start:], ">")
+	if open < 0 {
+		t.Fatalf("tag carrying %s is incomplete", marker)
+	}
+	rest := body[start+open+1:]
+	end := strings.Index(rest, "<")
+	if end < 0 {
+		t.Fatalf("tag carrying %s has no closing tag", marker)
+	}
+	return strings.TrimSpace(rest[:end])
+}
+
 func candidateRows(n int) []dbModel.Product {
 	products := make([]dbModel.Product, n)
 	for i := range products {
@@ -237,6 +258,124 @@ func TestProductsHandlerOmitsPagerOnASinglePage(t *testing.T) {
 	}
 	if strings.Contains(w.Body.String(), "products-pagination") {
 		t.Errorf("single-page list rendered a pager")
+	}
+}
+
+// TestProductsHandlerShowsOnePackageForMeasuredProducts pins the package display
+// on the list view: every row shows the pack count the same way, and the pack
+// size stays out of the list.
+func TestProductsHandlerShowsThePackCount(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	pasta := testutil.CreateTestProduct(db, household.ID, user.ID)
+	pasta.ProductName = "Pasta"
+	pasta.Quantity = 2
+	pasta.PackSize = "500 g"
+	if err := db.Save(pasta).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	eggs := testutil.CreateTestProduct(db, household.ID, user.ID)
+	eggs.ProductName = "Eggs"
+	eggs.Quantity = 6
+	if err := db.Save(eggs).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	yogurt := testutil.CreateTestProduct(db, household.ID, user.ID)
+	yogurt.ProductName = "Yogurt"
+	yogurt.Quantity = 1
+	if err := db.Save(yogurt).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+
+	(&Frontend{TemplateCache: cache}).Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if got := elementText(t, body, `id="qty-`+fmtUint(pasta.ID)+`"`); got != "2 qty" {
+		t.Errorf("row = %q, want %q", got, "2 qty")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(eggs.ID)+`"`); got != "6 qty" {
+		t.Errorf("multi count row = %q, want %q", got, "6 qty")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(yogurt.ID)+`"`); got != "1 qty" {
+		t.Errorf("single count row = %q, want %q", got, "1 qty")
+	}
+	// The pack size is the only size information a product carries, so the
+	// list shows it next to the count.
+	if !strings.Contains(body, "500 g") {
+		t.Errorf("list view does not show the pack size")
+	}
+}
+
+// The grid card is invoked with the product as its root, so it cannot read the
+// page's language; render it to pin that the handler-computed count label
+// reaches the card.
+func TestProductsGridShowsThePackCount(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	pasta := testutil.CreateTestProduct(db, household.ID, user.ID)
+	pasta.ProductName = "Pasta"
+	pasta.Quantity = 2
+	pasta.PackSize = "500 g"
+	if err := db.Save(pasta).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	yogurt := testutil.CreateTestProduct(db, household.ID, user.ID)
+	yogurt.ProductName = "Yogurt"
+	yogurt.Quantity = 1
+	if err := db.Save(yogurt).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products?view=grid", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+
+	(&Frontend{TemplateCache: cache}).Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if got := elementText(t, body, `id="qty-`+fmtUint(pasta.ID)+`"`); got != "2 qty" {
+		t.Errorf("card = %q, want %q", got, "2 qty")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(yogurt.ID)+`"`); got != "1 qty" {
+		t.Errorf("card = %q, want %q", got, "1 qty")
+	}
+	// The pack size is the only size information a product carries, so the
+	// card shows it next to the count.
+	if !strings.Contains(body, "500 g") {
+		t.Errorf("grid view does not show the pack size")
 	}
 }
 

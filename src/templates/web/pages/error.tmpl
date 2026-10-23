@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="{{ .Lang }}" data-bs-theme="light" class="h-100">
+<html lang="{{ .Lang }}" class="h-100">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ if .TitleText }}{{ .TitleText}}{{ else }}proviant{{ end }}</title>
+  <script src="/assets/js/theme.js"></script>
   <link rel="stylesheet" href="/assets/css/main.css">
 </head>
 
@@ -14,9 +15,9 @@
       <div class="empty-icon empty-icon-danger">
         <i class="bi bi-bug-fill"></i>
       </div>
-      <div class="empty-title empty-title-lg">{{ t "error.oopsTitle" }}</div>
+      <h1 class="empty-title empty-title-lg">{{ t "error.oopsTitle" }}</h1>
       <div class="empty-desc">{{ t "error.oopsDesc" }}</div>
-      <a href="/" class="btn btn-proviant-primary">{{ t "error.returnHome" }}</a>
+      <a href="/" class="btn btn-solid theme-primary">{{ t "error.returnHome" }}</a>
     </div>
   </main>
   <script src="/assets/js/bootstrap.bundle.min.js"></script>

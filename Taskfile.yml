@@ -5,6 +5,9 @@ vars:
     sh: command -v podman 2>/dev/null || command -v docker 2>/dev/null || echo ""
   GOLANGCI_VERSION: "v2.14.0"
   TRIVY_IMAGE: "docker.io/aquasec/trivy@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa"
+  # Stufe der Design-System-Migration. 1 = Token-Vertrag, 2 = kompiliertes CSS,
+  # 3 = alte Klassen und JS-Farben, 6 = Spec-Sheets. Wird pro PR erhöht.
+  DESIGN_PHASE: "6"
 
 tasks:
   default:
@@ -46,8 +49,15 @@ tasks:
 
   test-js:
     desc: Run frontend (vitest) tests
+    deps: [test-fixtures]
     cmds:
       - npm run test-js
+
+  test-fixtures:
+    desc: Check the JS unit-table fixtures against the Go tables (uncached)
+    dir: src
+    cmds:
+      - go test -count=1 -run TestFrontendUnit ./util/...
 
   i18n:
     desc: Validate message catalogs (load, key parity, referenced keys)
@@ -163,7 +173,7 @@ tasks:
     desc: Copy font files to assets
     cmds:
       - cp ./node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff* ./src/assets/fonts/
-      - cp ./node_modules/@fontsource-variable/vend-sans/files/vend-sans-latin-wght-*.woff2 ./src/assets/fonts/
+      - cp ./node_modules/@fontsource-variable/jost/files/jost-latin-wght-*.woff2 ./src/assets/fonts/
       - cp ./node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2 ./src/assets/fonts/
 
   icons:
@@ -176,6 +186,16 @@ tasks:
       - cp ./res/icons/header_transparent.png ./src/assets/icons/hero.png
       - magick ./res/icons/proviant_logo_256.png -resize 192x192 ./src/assets/icons/proviant_logo_192.png
       - cp ./res/icons/header*.png ./src/assets/icons/
+
+  design-tokens:
+    desc: Regenerate the design-system token artifacts from the canonical SCSS source
+    cmds:
+      - node scripts/design-tokens.mjs
+
+  design-check:
+    desc: Verify the design token contract, contrast targets and manifest counts
+    cmds:
+      - node scripts/check-design-tokens.mjs --phase {{.DESIGN_PHASE}}
 
   css:
     desc: Compile SCSS to CSS
@@ -207,9 +227,14 @@ tasks:
     cmds:
       - npm run lint-html
 
+  lint-selectors:
+    desc: Check that every class the JavaScript queries still exists
+    cmds:
+      - python3 scripts/check-js-class-selectors.py
+
   lint:
     desc: Run all frontend linters (CSS, JS, HTML)
-    deps: [lint-css, lint-js, lint-html]
+    deps: [lint-css, lint-js, lint-html, lint-selectors]
 
   vuln-go:
     desc: Scan Go dependencies for vulnerabilities
@@ -257,23 +282,10 @@ tasks:
     cmds:
       - ./scripts/sonarqube-export.sh --duplications
 
-  sonar-scan:
-    desc: Run SonarCloud scan locally and save output to sonar-report.txt (requires SONAR_TOKEN)
-    preconditions:
-      - sh: '[ -n "{{.CONTAINER_RUNTIME}}" ]'
-        msg: "No container runtime found. Please install podman or docker."
-      - sh: '[ -n "$SONAR_TOKEN" ]'
-        msg: "SONAR_TOKEN env var is not set."
-    vars:
-      BRANCH: 'develop'
+  seed-products:
+    desc: "Fill the pack size of the demo products from Open Food Facts. Usage: task seed-products [-- --dry-run]"
     cmds:
-      - |
-        {{.CONTAINER_RUNTIME}} run --rm \
-          -e SONAR_TOKEN="$SONAR_TOKEN" \
-          -v ./:/usr/src:Z \
-          docker.io/sonarsource/sonar-scanner-cli \
-          -Dsonar.branch.name="{{.BRANCH}}" \
-          2>&1 | tee sonar-report.txt
+      - python3 scripts/seed-products.py {{if .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
 
   seed:
     desc: "Seed demo products from seed-products.csv into SQLite. Usage: task seed -- <username>"
@@ -291,13 +303,16 @@ tasks:
         db_path, username, csv_path = sys.argv[1], sys.argv[2], sys.argv[3]
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
-        cur.execute("SELECT household_id FROM users WHERE username=? AND deleted_at IS NULL LIMIT 1", (username,))
+        cur.execute("SELECT id, household_id FROM users WHERE username=? AND deleted_at IS NULL LIMIT 1", (username,))
         row = cur.fetchone()
-        if not row or not row[0]:
+        if not row or not row[1]:
             print(f"Error: user '{username}' not found or has no household.", file=sys.stderr)
             sys.exit(1)
-        household_id = row[0]
+        user_id, household_id = row[0], row[1]
         print(f"Seeding as user='{username}' (household_id={household_id})")
+        # The CSV names a storage location; the column stores its id.
+        cur.execute("SELECT id, name FROM storage_locations WHERE household_id=? AND deleted_at IS NULL", (household_id,))
+        locations = {name.strip().lower(): loc_id for loc_id, name in cur.fetchall()}
         now = datetime.datetime.utcnow()
         inserted = 0
         with open(csv_path, newline='') as f:
@@ -311,11 +326,13 @@ tasks:
                 scanned_at = (now + datetime.timedelta(days=scanned_days)).isoformat()
                 archived = p.get('archived', '').strip().lower() == 'true'
                 deleted_at = now.isoformat() if archived else None
+                location_name = (p.get('storage_location') or '').strip()
+                location_id = locations.get(location_name.lower())
                 cur.execute(
-                    "INSERT INTO products (created_at, updated_at, deleted_at, barcode, product_name, categories, countries, image_url, expire_at, scanned_at, notified_at, household_id, amount, unit, storage_location) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?,?,?)",
+                    "INSERT INTO products (created_at, updated_at, deleted_at, barcode, product_name, categories, countries, image_url, expire_at, scanned_at, notified_at, household_id, user_id, quantity, pack_size, storage_location_id) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?,?,?,?)",
                     (now.isoformat(), now.isoformat(), deleted_at,
                      p['barcode'], p['product_name'], p['categories'], p['countries'], p['image_url'],
-                     expire_at, scanned_at, household_id, int(p['amount']), p['unit'], p['storage_location'])
+                     expire_at, scanned_at, household_id, user_id, int(p.get('quantity') or 1), p.get('pack_size', ''), location_id)
                 )
                 label = ' (archived)' if archived else ''
                 print(f"  + {p['product_name']}{label}")

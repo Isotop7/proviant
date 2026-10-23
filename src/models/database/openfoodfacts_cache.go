@@ -12,4 +12,5 @@ type OpenFoodFactsCache struct {
 	ImageURL    string   `json:"imageUrl"`
 	CO2KgPerKg  *float64 `gorm:"default:null" json:"co2KgPerKg,omitempty"`
 	StorageHint string   `json:"storageHint,omitempty"`
+	PackSize    string   `json:"packSize,omitempty"`
 }

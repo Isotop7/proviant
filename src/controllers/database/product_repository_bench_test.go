@@ -59,8 +59,7 @@ func seedTestData(t *testing.T, db *gorm.DB) (userIDs []uint) {
 				Barcode:           string(rune('0'+j%10)) + string(rune('0'+(j/10)%10)) + string(rune('0'+(j/100)%10)) + "000000000",
 				ExpireAt:          time.Now().AddDate(0, 0, j%30),
 				ScannedAt:         time.Now(),
-				Amount:            1,
-				Unit:              "pcs",
+				Quantity:          1,
 				StorageLocationID: &storageLoc.ID,
 			}
 			if err := db.Create(&product).Error; err != nil {

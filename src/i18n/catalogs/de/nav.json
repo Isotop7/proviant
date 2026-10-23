@@ -1,7 +1,9 @@
 {
   "nav.dashboard": "Dashboard",
+  "nav.licenses": "Lizenzen",
   "nav.logout": "Abmelden",
   "nav.mealPlan": "Essensplan",
+  "nav.more": "Mehr",
   "nav.notifications": "Benachrichtigungen",
   "nav.products": "Produkte",
   "nav.recipes": "Rezepte",

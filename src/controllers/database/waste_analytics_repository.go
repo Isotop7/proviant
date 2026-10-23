@@ -40,6 +40,7 @@ func (r *WasteAnalyticsRepository) GetConsumedVsWasted(householdID uint, since t
 		Table("savings_records").
 		Select("event_type AS event_type, COUNT(*) AS count, COALESCE(SUM(price_eur), 0) AS eur, COALESCE(SUM(co2_kg), 0) AS co2").
 		Where("household_id = ? AND created_at >= ?", householdID, since).
+		Where("legacy = ?", false).
 		Group("event_type").
 		Scan(&aggs).Error; err != nil {
 		return row, err
@@ -75,6 +76,7 @@ func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since t
 		Table("savings_records").
 		Select("created_at AS created_at, event_type AS event_type, price_eur AS price_eur, co2_kg AS co2_kg").
 		Where("household_id = ? AND created_at >= ?", householdID, since).
+		Where("legacy = ?", false).
 		Scan(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -152,6 +154,7 @@ func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, sin
 		Select("s.product_id AS product_id, s.price_eur AS price_eur, s.co2_kg AS co2_kg, p.categories AS categories").
 		Joins("LEFT JOIN products p ON p.id = s.product_id").
 		Where("s.household_id = ? AND s.event_type = 'wasted' AND s.created_at >= ?", householdID, since).
+		Where("s.legacy = ?", false).
 		Scan(&raws).Error; err != nil {
 		return nil, err
 	}
@@ -200,6 +203,7 @@ func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int) 
 		Table("savings_records").
 		Select("created_at AS created_at").
 		Where("household_id = ? AND event_type = 'wasted' AND created_at >= ?", householdID, since).
+		Where("legacy = ?", false).
 		Scan(&createdAts).Error; err != nil {
 		return nil, err
 	}
@@ -325,6 +329,7 @@ func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since
 		Select("s.product_id AS product_id, s.product_name AS product_name, s.price_eur AS price_eur, s.co2_kg AS co2_kg, p.categories AS categories").
 		Joins("LEFT JOIN products p ON p.id = s.product_id").
 		Where("s.household_id = ? AND s.event_type = 'wasted' AND s.created_at >= ?", householdID, since).
+		Where("s.legacy = ?", false).
 		Scan(&raws).Error; err != nil {
 		return nil, err
 	}

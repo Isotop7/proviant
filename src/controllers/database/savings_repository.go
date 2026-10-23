@@ -58,7 +58,8 @@ func (r *SavingsRepository) MatchCategory(categories string) (*dbModel.ProductCa
 // RecordSavingsEvent writes a SavingsRecord for a consume or waste action.
 // eventType must be "consumed" or "wasted".
 // CO2 priority: per-product Agribalyse rate (product.CO2KgPerKg) > seeded category fallback.
-// Price priority: product.PriceOverride > seeded category average.
+// Price priority: product.PriceOverride > seeded category average. The override is
+// the price of one pack, so it is multiplied by the number of packs.
 func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error {
 	catPrice, err := r.MatchCategory(product.Categories)
 	if err != nil {
@@ -72,16 +73,16 @@ func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbMode
 
 	var co2Kg float64
 	if product.CO2KgPerKg != nil {
-		co2Kg = *product.CO2KgPerKg * weightKg * float64(product.Amount)
+		co2Kg = *product.CO2KgPerKg * weightKg * float64(product.Quantity)
 	} else if catPrice != nil {
-		co2Kg = catPrice.CO2KgPerKg * weightKg * float64(product.Amount)
+		co2Kg = catPrice.CO2KgPerKg * weightKg * float64(product.Quantity)
 	}
 
 	var priceEUR float64
 	if product.PriceOverride != nil {
-		priceEUR = *product.PriceOverride * float64(product.Amount)
+		priceEUR = *product.PriceOverride * float64(product.Quantity)
 	} else if catPrice != nil {
-		priceEUR = catPrice.AvgPriceEUR * float64(product.Amount)
+		priceEUR = catPrice.AvgPriceEUR * float64(product.Quantity)
 	}
 
 	record := dbModel.SavingsRecord{
@@ -91,12 +92,16 @@ func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbMode
 		EventType:   eventType,
 		PriceEUR:    priceEUR,
 		CO2Kg:       co2Kg,
-		Amount:      product.Amount,
+		Amount:      product.Quantity,
 	}
 	return r.DB.Create(&record).Error
 }
 
-// GetSavingsStats returns savings and waste totals for the current calendar month and all time.
+// GetSavingsStats returns savings and waste totals for the current calendar
+// month and all time. The records written before the count model are left out:
+// their money and CO2 were scaled by the net content of the product, so they
+// are not comparable with the ones after the cutover. Their number is
+// reported so the gap can be explained.
 func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error) {
 	now := time.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
@@ -105,12 +110,13 @@ func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsS
 	var monthRecords []dbModel.SavingsRecord
 	if err := r.DB.
 		Where("household_id = ? AND created_at >= ? AND created_at <= ?", householdID, monthStart, monthEnd).
+		Where("legacy = ?", false).
 		Find(&monthRecords).Error; err != nil {
 		return apiModel.SavingsStatsResponse{}, err
 	}
 
 	var allRecords []dbModel.SavingsRecord
-	if err := r.DB.Where(util.QueryHouseholdId, householdID).Find(&allRecords).Error; err != nil {
+	if err := r.DB.Where(util.QueryHouseholdId, householdID).Where("legacy = ?", false).Find(&allRecords).Error; err != nil {
 		return apiModel.SavingsStatsResponse{}, err
 	}
 
@@ -135,6 +141,15 @@ func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsS
 			resp.WastedCO2KgLifetime += allRecords[idx].CO2Kg
 		}
 	}
+
+	var legacyCount int64
+	if err := r.DB.Model(&dbModel.SavingsRecord{}).
+		Where(util.QueryHouseholdId, householdID).
+		Where("legacy IS NULL OR legacy = ?", true).
+		Count(&legacyCount).Error; err != nil {
+		return apiModel.SavingsStatsResponse{}, err
+	}
+	resp.LegacyEvents = int(legacyCount)
 
 	resp.CO2Source = "Agribalyse LCA database via Open Food Facts ecoscore_data"
 	return resp, nil

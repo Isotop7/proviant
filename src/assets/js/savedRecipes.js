@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", function () {
-    loadSavedRecipes();
+    void loadSavedRecipes();
 });
 
 document.addEventListener("proviant:save-recipe-suggestion", function (e) {
-    openEditorFromSuggestion(e.detail);
+    void openEditorFromSuggestion(e.detail);
 });
 
 document.addEventListener("click", function (e) {
@@ -12,7 +12,7 @@ document.addEventListener("click", function (e) {
 
     if (target.closest("#btnNewRecipe") || target.closest("#btnNewRecipeMobile") || target.closest("#btnNewRecipeEmpty")) {
         e.preventDefault();
-        openRecipeEditor(null);
+        void openRecipeEditor(null);
         return;
     }
     if (target.closest("#btnCancelRecipe")) {
@@ -22,7 +22,7 @@ document.addEventListener("click", function (e) {
     }
     if (target.closest("#btnSaveRecipe")) {
         e.preventDefault();
-        saveRecipe();
+        void saveRecipe();
         return;
     }
     if (target.closest("#btnAddIngredient")) {
@@ -40,19 +40,19 @@ document.addEventListener("click", function (e) {
     const editButton = target.closest("[data-recipe-edit]");
     if (editButton) {
         e.preventDefault();
-        editRecipe(parseInt(editButton.getAttribute("data-recipe-edit"), 10));
+        void editRecipe(Number.parseInt(editButton.getAttribute("data-recipe-edit"), 10));
         return;
     }
     const deleteButton = target.closest("[data-recipe-delete]");
     if (deleteButton) {
         e.preventDefault();
-        confirmDeleteRecipe(parseInt(deleteButton.getAttribute("data-recipe-delete"), 10), deleteButton.getAttribute("data-recipe-name") || proviant.t("js.savedRecipes.thisRecipe"));
+        confirmDeleteRecipe(Number.parseInt(deleteButton.getAttribute("data-recipe-delete"), 10), deleteButton.getAttribute("data-recipe-name") || proviant.t("js.savedRecipes.thisRecipe"));
         return;
     }
     const cookButton = target.closest("[data-recipe-cook]");
     if (cookButton) {
         e.preventDefault();
-        confirmCookRecipe(parseInt(cookButton.getAttribute("data-recipe-cook"), 10), cookButton.getAttribute("data-recipe-name") || proviant.t("js.savedRecipes.thisRecipe"));
+        confirmCookRecipe(Number.parseInt(cookButton.getAttribute("data-recipe-cook"), 10), cookButton.getAttribute("data-recipe-name") || proviant.t("js.savedRecipes.thisRecipe"));
     }
 });
 
@@ -66,20 +66,30 @@ function escapeRecipeHtml(text) {
     return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// SUGGESTION_UNITS are the tokens that end the portion of a suggested
+// ingredient text ("200 g flour"). The list only tells the parser where the
+// name starts; the portion itself is kept as free text.
 const SUGGESTION_UNITS = ["g", "kg", "mg", "l", "ml", "el", "tl", "tbsp", "tsp", "cup", "cups", "oz", "lb", "pkg", "pack", "pinch", "pcs", "pc", "piece", "pieces", "bunch", "slice", "slices", "clove", "cloves", "can", "cans", "tin", "bag", "bags", "bottle", "bottles", "handful"];
 
+// parseSuggestionIngredient splits a suggested ingredient text into the
+// portion and the name. The portion keeps the wording of the suggestion, so
+// nothing about it is converted or rounded.
 function parseSuggestionIngredient(raw) {
     const text = (raw || "").trim();
-    const match = text.match(/^(\d+(?:[.,]\d+)?)\s*([A-Za-zäöüß]+)?\s+(.+)$/);
-    if (!match) {
-        return { name: text, amount: 0, unit: "", productId: null };
+    const amountMatch = text.match(/^(\d+(?:[.,]\d+)?)\s+/);
+    if (!amountMatch) {
+        return { name: text, portion: "", productId: null };
     }
-    const amount = Math.round(parseFloat(match[1].replace(",", "."))) || 0;
-    const unit = (match[2] || "").toLowerCase();
-    if (unit && SUGGESTION_UNITS.indexOf(unit) !== -1) {
-        return { name: match[3].trim().replace(/^of\s+/i, ""), amount: amount, unit: unit, productId: null };
+    const rest = text.slice(amountMatch[0].length);
+    const unitMatch = rest.match(/^([A-Za-zäöüß]+)\s+/);
+    if (unitMatch && SUGGESTION_UNITS.indexOf(unitMatch[1].toLowerCase()) !== -1) {
+        return {
+            name: rest.slice(unitMatch[0].length).trim().replace(/^of\s+/i, ""),
+            portion: amountMatch[1] + " " + unitMatch[1].toLowerCase(),
+            productId: null,
+        };
     }
-    return { name: ((match[2] || "") + " " + match[3]).trim(), amount: amount, unit: "", productId: null };
+    return { name: rest.trim(), portion: amountMatch[1], productId: null };
 }
 
 async function openEditorFromSuggestion(suggestion) {
@@ -119,23 +129,20 @@ function ingredientRowHtml(ingredient, products) {
     }).join("");
     return `
         <div class="row g-2 mb-1" data-ingredient-row>
-            <div class="col-12 col-md-4">
-                <select class="form-select form-select-sm" data-ingredient-product aria-label="${proviant.t("js.savedRecipes.linkedProduct")}">
+            <div class="col-12 md:col-4">
+                <select class="form-control form-control-sm" data-ingredient-product aria-label="${proviant.t("js.savedRecipes.linkedProduct")}">
                     <option value="">${proviant.t("js.savedRecipes.noProduct")}</option>
                     ${options}
                 </select>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 md:col-3">
                 <input type="text" class="form-control form-control-sm" data-ingredient-name maxlength="255" placeholder="${proviant.t("js.savedRecipes.namePlaceholder")}" aria-label="${proviant.t("js.savedRecipes.ingredientName")}" value="${escapeRecipeHtml(ingredient ? ingredient.name : "")}">
             </div>
-            <div class="col-3 col-md-2">
-                <input type="number" class="form-control form-control-sm" data-ingredient-amount min="0" placeholder="${proviant.t("js.savedRecipes.amount")}" aria-label="${proviant.t("js.savedRecipes.amount")}" value="${ingredient ? ingredient.amount : ""}">
+            <div class="col-6 md:col-4">
+                <input type="text" class="form-control form-control-sm" data-ingredient-portion maxlength="40" placeholder="${proviant.t("js.savedRecipes.portion")}" aria-label="${proviant.t("js.savedRecipes.portionLabel")}" value="${escapeRecipeHtml(ingredient ? ingredient.portion : "")}">
             </div>
-            <div class="col-3 col-md-2">
-                <input type="text" class="form-control form-control-sm" data-ingredient-unit maxlength="20" placeholder="${proviant.t("js.savedRecipes.unit")}" aria-label="${proviant.t("js.savedRecipes.unit")}" value="${escapeRecipeHtml(ingredient ? ingredient.unit : "")}">
-            </div>
-            <div class="col-12 col-md-1 d-flex align-items-center">
-                <button type="button" class="btn-icon text-danger" data-ingredient-remove aria-label="${proviant.t("js.savedRecipes.removeIngredient")}">
+            <div class="col-12 md:col-1 d-flex align-items-center">
+                <button type="button" class="btn-icon fg-danger" data-ingredient-remove aria-label="${proviant.t("js.savedRecipes.removeIngredient")}">
                     <i class="bi bi-trash3" aria-hidden="true"></i>
                 </button>
             </div>
@@ -192,12 +199,10 @@ function collectRecipePayload() {
     const editor = document.getElementById("recipeEditor");
     const ingredients = Array.from(document.querySelectorAll("#ingredientRows [data-ingredient-row]")).map(function (row, index) {
         const productRaw = row.querySelector("[data-ingredient-product]").value;
-        const amount = parseInt(row.querySelector("[data-ingredient-amount]").value, 10);
         return {
-            productId: productRaw ? parseInt(productRaw, 10) : null,
+            productId: productRaw ? Number.parseInt(productRaw, 10) : null,
             name: row.querySelector("[data-ingredient-name]").value.trim(),
-            amount: Number.isFinite(amount) && amount > 0 ? amount : 0,
-            unit: row.querySelector("[data-ingredient-unit]").value.trim(),
+            portion: row.querySelector("[data-ingredient-portion]").value.trim(),
             sortOrder: index,
         };
     }).filter(function (ingredient) {
@@ -207,7 +212,7 @@ function collectRecipePayload() {
         name: document.getElementById("recipeName").value.trim(),
         description: document.getElementById("recipeDescription").value.trim(),
         instructions: document.getElementById("recipeInstructions").value.trim(),
-        servings: parseInt(document.getElementById("recipeServings").value, 10) || 1,
+        servings: Number.parseInt(document.getElementById("recipeServings").value, 10) || 1,
         sourceUrl: document.getElementById("recipeSourceUrl").value.trim(),
         imageUrl: editor ? (editor.dataset.imageUrl || "") : "",
         ingredients: ingredients,
@@ -230,7 +235,7 @@ async function saveRecipe() {
         }
         proviant.showFeedback("success", proviant.t("js.savedRecipes.savedTitle"), proviant.t("js.savedRecipes.savedBody", payload.name));
         closeRecipeEditor();
-        loadSavedRecipes();
+        void loadSavedRecipes();
     } catch (error) {
         proviant.showFeedback("error", proviant.t("js.savedRecipes.notSavedTitle"), error.message);
     }
@@ -240,7 +245,7 @@ function confirmDeleteRecipe(recipeID, recipeName) {
     proviant.showConfirm(
         proviant.t("js.savedRecipes.deleteConfirmTitle"),
         proviant.t("js.savedRecipes.deleteConfirmBody", recipeName),
-        function () { deleteRecipe(recipeID); },
+        function () { void deleteRecipe(recipeID); },
         proviant.t("common.delete"),
         "danger"
     );
@@ -255,7 +260,7 @@ async function deleteRecipe(recipeID) {
         }
         proviant.showFeedback("success", proviant.t("js.savedRecipes.deletedTitle"), proviant.t("js.savedRecipes.deletedBody"));
         if (editingRecipeID === recipeID) closeRecipeEditor();
-        loadSavedRecipes();
+        void loadSavedRecipes();
     } catch (error) {
         proviant.showFeedback("error", proviant.t("js.savedRecipes.notDeletedTitle"), error.message);
     }
@@ -265,7 +270,7 @@ function confirmCookRecipe(recipeID, recipeName) {
     proviant.showConfirm(
         proviant.t("js.savedRecipes.cookConfirmTitle"),
         proviant.t("js.savedRecipes.cookConfirmBody", recipeName),
-        function () { cookRecipe(recipeID); },
+        function () { void cookRecipe(recipeID); },
         proviant.t("js.savedRecipes.cook"),
         "warning"
     );
@@ -335,30 +340,30 @@ function renderSavedRecipes(recipes) {
                 </div>
                 <div class="empty-title">${proviant.t("js.savedRecipes.emptyTitle")}</div>
                 <div class="empty-desc">${proviant.t("js.savedRecipes.emptyDesc")}</div>
-                <button class="btn btn-proviant-primary" id="btnNewRecipeEmpty" type="button">
+                <button class="btn btn-solid theme-primary" id="btnNewRecipeEmpty" type="button">
                     <i class="bi bi-plus-lg me-1"></i> ${proviant.t("js.savedRecipes.newRecipe")}
                 </button>
             </div>`;
         return;
     }
     container.innerHTML = `
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div class="row row-cols-1 md:row-cols-2 lg:row-cols-3 g-4">
             ${recipes.map(function (recipe) {
                 return `
                 <div class="col">
                     <div class="card h-100 recipe-card shadow-sm">
                         <div class="card-body d-flex flex-column">
                             <h3 class="h6">${escapeRecipeHtml(recipe.name)}</h3>
-                            <p class="mp-entry-meta mb-2">${proviant.tn("js.savedRecipes.servings", recipe.servings)}</p>
-                            ${recipe.description ? `<p class="small text-secondary-custom">${escapeRecipeHtml(recipe.description)}</p>` : ""}
-                            <div class="mt-auto d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-proviant-primary btn-sm" data-recipe-cook="${recipe.id}" data-recipe-name="${escapeRecipeHtml(recipe.name)}">
+                            <p class="mp-entry-meta mb-3">${proviant.tn("js.savedRecipes.servings", recipe.servings)}</p>
+                            ${recipe.description ? `<p class="small fg-secondary">${escapeRecipeHtml(recipe.description)}</p>` : ""}
+                            <div class="mt-auto d-flex flex-wrap gap-3">
+                                <button type="button" class="btn btn-solid theme-primary btn-sm" data-recipe-cook="${recipe.id}" data-recipe-name="${escapeRecipeHtml(recipe.name)}">
                                     <i class="bi bi-fire me-1" aria-hidden="true"></i> ${proviant.t("js.savedRecipes.cook")}
                                 </button>
-                                <button type="button" class="btn btn-proviant-secondary btn-sm" data-recipe-edit="${recipe.id}" aria-label="${proviant.t("js.savedRecipes.editLabel", escapeRecipeHtml(recipe.name))}">
+                                <button type="button" class="btn btn-outline theme-secondary btn-sm" data-recipe-edit="${recipe.id}" aria-label="${proviant.t("js.savedRecipes.editLabel", escapeRecipeHtml(recipe.name))}">
                                     <i class="bi bi-pencil" aria-hidden="true"></i> ${proviant.t("common.edit")}
                                 </button>
-                                <button type="button" class="btn btn-proviant-secondary btn-sm text-danger" data-recipe-delete="${recipe.id}" data-recipe-name="${escapeRecipeHtml(recipe.name)}" aria-label="${proviant.t("js.savedRecipes.deleteLabel", escapeRecipeHtml(recipe.name))}">
+                                <button type="button" class="btn btn-outline theme-secondary btn-sm fg-danger" data-recipe-delete="${recipe.id}" data-recipe-name="${escapeRecipeHtml(recipe.name)}" aria-label="${proviant.t("js.savedRecipes.deleteLabel", escapeRecipeHtml(recipe.name))}">
                                     <i class="bi bi-trash3" aria-hidden="true"></i> ${proviant.t("common.delete")}
                                 </button>
                             </div>

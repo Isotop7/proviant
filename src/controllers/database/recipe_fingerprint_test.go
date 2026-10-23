@@ -79,7 +79,7 @@ func TestGetProductSetFingerprint_IgnoresQuantityChanges(t *testing.T) {
 		t.Fatalf("GetProductSetFingerprint() error = %v", err)
 	}
 
-	if err := db.Model(product).Update("amount", 7).Error; err != nil {
+	if err := db.Model(product).Update("quantity", 7).Error; err != nil {
 		t.Fatalf("quantity update failed: %v", err)
 	}
 

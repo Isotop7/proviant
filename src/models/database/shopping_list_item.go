@@ -10,8 +10,11 @@ type ShoppingListItem struct {
 	Name        string `json:"name"`
 	Category    string `json:"category"`
 	Quantity    int    `json:"quantity"`
-	Unit        string `json:"unit"`
 	Checked     bool   `gorm:"default:false" json:"checked"`
 	Notes       string `json:"notes"`
 	CreatedBy   uint   `gorm:"not null;default:0" json:"createdBy"`
+
+	// PackSize is the size of one pack of the linked product. It is display
+	// metadata copied from the product, not a column of its own.
+	PackSize string `gorm:"-" json:"packSize,omitempty"`
 }

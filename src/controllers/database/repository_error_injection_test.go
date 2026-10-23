@@ -181,8 +181,8 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if err := repo.UpdateProduct(product.ID, user.ID, &dbModel.ProductDTOPatch{ProductName: "Patched"}); err == nil {
 			t.Error("UpdateProduct() error = nil")
 		}
-		if _, _, err := repo.UpdateProductAmount(product.ID, user.ID, 1, nil); err == nil {
-			t.Error("UpdateProductAmount() error = nil")
+		if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err == nil {
+			t.Error("UpdateProductQuantity() error = nil")
 		}
 		if err := repo.RestoreProduct(product.ID, user.ID); err == nil {
 			t.Error("RestoreProduct() error = nil")
@@ -257,7 +257,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	seed := func(t *testing.T, amount int) dbModel.Product {
 		t.Helper()
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
-		product.Amount = amount
+		product.Quantity = amount
 		if err := db.Save(product).Error; err != nil {
 			t.Fatalf("save product: %v", err)
 		}
@@ -277,7 +277,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 		// partial-reduce branch; the guarded UPDATE then fails.
 		product := seed(t, 5)
 		stale := product
-		stale.Amount = 3
+		stale.Quantity = 3
 		failUpdatesOnTable(t, db, "products")
 		if _, _, err := repo.ConsumeProductPartial(&stale, 3); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
@@ -302,7 +302,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	t.Run("concurrent modification of the guarded write is reported", func(t *testing.T) {
 		product := seed(t, 5)
 		stale := product
-		stale.Amount = 3
+		stale.Quantity = 3
 		// Simulate a concurrent request claiming the row between the
 		// transactional re-read and the guarded UPDATE: set a removal reason
 		// so the unclaimed-row precondition fails on every attempt.

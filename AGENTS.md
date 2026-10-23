@@ -4,6 +4,12 @@ Agent coding guidelines for Proviant codebase.
 
 **Keep accurate.** Cite symbols not line numbers (`AutoMigrate` in `proviant.go`, not "line 188") — they rot. Cite durable code + docs not issue numbers — `#123` closes, means nothing later; state rule. Exception: underivable exact facts — pinned digests, advisory IDs, version strings — live in script they govern, not here.
 
+## Search order (mandatory)
+
+1. Architecture, relationships, "what calls this", blast radius, onboarding: search the codebase before reading, and never guess at call relationships.
+2. Finding an implementation or a name you don't know: search for it, then read the returned file and lines. When a feature exists in more than one place, look for the similar code elsewhere.
+3. `grep` only for exhaustive literal occurrences (rename, config key, flag) or after 1–2 failed searches. `glob` only for path patterns.
+
 ## Workflow
 
 1. Locate code with search before reading; read a full file only when the located excerpt lacks context.
@@ -119,7 +125,7 @@ Helpers in `src/testutil/`: `SetupTestDB(t)` (in-memory SQLite, all migrations),
 
 ### Frontend Tests
 
-Vitest + jsdom, specs in `tests/js/`, run via `task test-js` (wired into the `frontend-check` CI job). Shipped JS is classic `<script src>` bundles — **no file in `src/assets/js` contains `export`** — so `tests/js/helpers/loadScript.js` injects the file as a `<script>` and returns the requested identifiers:
+Vitest + jsdom, specs in `tests/js/`, run via `task test-js` (wired into the `frontend-check` CI job). Shipped JS is classic `<script src>` bundles — **no file in `src/assets/js` contains `export`**, with one exception: `src/assets/js/bootstrap-globals.js` is an ES module (see *Bootstrap 6* below) and no test loads it. So `tests/js/helpers/loadScript.js` injects the file as a `<script>` and returns the requested identifiers:
 
 ```js
 const { exports: { proviant }, realm } = loadClassicScript("proviant.js", ["proviant"], {
@@ -140,10 +146,23 @@ Four constraints, each verified empirically (not assumed):
 ### Frontend / Assets
 
 - SCSS in `src/templates/scss/` compiles to `src/assets/css/`; **run `task css` after any `.scss` change** or the served CSS is stale. JS lives in `src/assets/js/`.
-- **Bootstrap 5** for layout/styling and **Bootstrap Icons**. **Consult Context7 before any HTML/CSS/template work** — no memorized patterns: `/websites/getbootstrap` (components, grid, utilities, `data-bs-*` JS plugin options) and `/twbs/icons` (icon names, SVG/font usage). Then implement the documented pattern.
+- **Bootstrap 6** for layout/styling and **Bootstrap Icons**. **Consult Context7 before any HTML/CSS/template work** — no memorized patterns: `/websites/getbootstrap` (components, grid, utilities, `data-bs-*` JS plugin options) and `/twbs/icons` (icon names, SVG/font usage). Then implement the documented pattern.
 - **No inline `style="…"` in templates** — use classes in `src/templates/scss/main.scss` (inline only for truly dynamic values, e.g. a template-computed `width`).
 - **Event delegation always**: `document.addEventListener("click", …)` + `event.target.closest()`, and query the DOM inside the handler. Never capture element refs at script load — they go stale after navigation/DOM updates.
-- After a `.scss`/font/icon change: `task css` **and** bump `CACHE_NAME` in `src/assets/js/sw.js`. The service worker caches CSS + non-JS `/assets/` cache-first; JS is network-first (no bump needed).
+- After a `.scss`/font/icon change: `task css` **and** bump `CACHE_NAME` in `src/assets/js/sw.js`. The service worker caches CSS + non-JS `/assets/` cache-first; JS is network-first (no bump needed). A forgotten bump leaves every browser on the previous stylesheet — the symptom is "the fix is in the repo but the screen did not change".
+
+### Bootstrap 6
+
+Bootstrap 6 (currently `6.0.0-alpha.1`) renames whole component families and drops the `--bs-` prefix from every custom property it emits. Four things differ from v5 and bite in practice:
+
+- **The bundle is ESM-only.** `src/assets/js/bootstrap-globals.js` is the single ES module in `src/assets/js`: it imports `bootstrap.bundle.min.js` and assigns `window.bootstrap`, so the classic scripts keep reaching for `bootstrap.Dialog`, `bootstrap.Menu`, `bootstrap.Toast`. The layouts load it with `<script type="module">`. Module scripts are deferred, so it runs before `DOMContentLoaded` — every Bootstrap call in the app happens from an event handler or a `DOMContentLoaded` listener, both of which see the global.
+- **Renamed components**: Modal → `Dialog` (a native `<dialog>`, no `.modal-dialog`/`.modal-content` wrappers, `data-bs-toggle="dialog"`), Offcanvas → `Drawer` (also a native `<dialog>`), Dropdown → `Menu` (no `.dropdown` wrapper, no `.dropdown-toggle`, the list flattens to plain children), Accordion → native `<details>`/`<summary>`. The JS names follow: `bootstrap.Dialog`, `bootstrap.Menu`, and the events `shown.bs.dialog` / `hidden.bs.dialog`.
+- **Unprefixed custom properties.** Bootstrap 6 emits `--fg-*`, `--bg-*`, `--border-*`; the `--bs-` prefix only exists in the prebuilt dist CSS. `src/templates/scss/main.scss` configures Bootstrap's token maps (`$theme-colors`, `$theme-bgs`, `$theme-fgs`, `$root-tokens`) from the design system's Sass variables, so both layers read one source. The five names that collide with the design system are aligned by hand — see `design-system/deviations.md` #38–#40.
+- **New utility spellings**: `btn-primary` → `btn-solid theme-primary`, `text-body-secondary` → `fg-secondary`, `d-md-flex` → `md:d-flex`, `col-md-6` → `md:col-6`, `form-select` → `form-control` on the `<select>`, `form-check-input` → `check`/`radio` (switches keep a `.switch` wrapper), `needs-validation` → `data-bs-validate` on the `<form>`.
+- **Utilities lost their `!important`.** v5 emitted every utility with `!important`; v6 dropped that and moved the utilities into the `utilities` cascade layer, while this app's stylesheet stays unlayered — so an app rule now beats a utility of the same specificity (`.btn`'s own `display: inline-flex` beats `.d-none`, and the button stays visible). The app relies on the v5 precedence in a few dozen places, so `src/templates/scss/_bootstrap-utilities.scss` generates the utilities with `important: true` instead of pulling in `bootstrap/scss/utilities/api`. Do not switch back to the upstream API without re-checking every display utility.
+- **`.card-header` and `.card-body` are flex columns.** A card header that carries a title and a button needs an explicit `flex-row`; a card body that the app spaces with its own utilities stays a block (see `deviations.md` #42).
+
+`task lint-selectors` (`scripts/check-js-class-selectors.py`) checks that every class the JavaScript queries still exists in a template, a stylesheet or Bootstrap itself. A stale selector does not fail loudly — `querySelector` returns null and the code path quietly stops working. Run it after renaming anything in the markup.
 
 ### Documentation
 - godoc per the Comments policy; Swagger annotations (`@Summary`, `@Description`, `@Tags`, `@Router`) on **every** API and web handler — add the comment in `src/router/router.go` the moment you add the handler.
@@ -188,9 +207,15 @@ Home (`/web/`) is fully client-side: `web/frontend.go → Root` passes only `Has
 
 ## UI/UX Standards
 
-- **Color**: theme via CSS custom properties (Bootstrap vars), no raw hex; primary color for primary CTAs only; WCAG AA ≥4.5:1 for normal text.
-- **Layout**: 4/8pt spacing via Bootstrap utilities (`p-2`, `m-3`, `gap-2`); touch targets ≥44×44px.
-- **Type**: ≤5 font sizes; hierarchy via weight + size, not color alone.
+The design system lives in `design-system/` and is binding. Read
+`design-system/DESIGN.md` before touching markup or styles, and record every
+departure in `design-system/deviations.md`.
+
+- **Tokens**: `design-system/_tokens.scss` is the only source. Change it there, run `task design-tokens`, never edit `design-system/tokens.css` or `tokens.json` by hand. `task design-check` fails a stale artifact, a missing token or a contrast below its target.
+- **Color**: theme via the design system's CSS custom properties, no raw hex and no `oklch()` in the app's own styles. `--accent` fills, `--accent-text` writes; the status colours carry a `-text` variant for labels and the plain value for icons, dots and bars.
+- **Components**: Bootstrap 6 first. `.btn`, `.badge`, `.form-control`, `.list-group` and their modifiers carry the brand; own classes only where Bootstrap has none (`.kpi`, `.toast-stack`, `.list-group-item__*`, `.bento*`).
+- **Layout**: 4/8pt spacing via the spacing tokens or Bootstrap utilities; touch targets ≥44×44px; the app shell is `.app` with `.app__sidebar` and `.app__topbar`.
+- **Type**: Jost for the interface, DMMono for numbers and codes; hierarchy via weight and size, not colour alone.
 - **Guidance**: async >500ms → loading indicator + disable the trigger; inline validation on blur, page-level feedback at submit; empty states carry a clear CTA; confirm before irreversible actions.
-- **Feedback**: `proviant.showFeedback()` for page-level async results; inline alerts for field/section errors — no global banner for a local problem.
-- **Accessibility**: `<html lang>` matches the active UI language; icon-only buttons get an `aria-label`; everything keyboard-navigable (`tabindex`, `focus-visible`); populate `aria-live` after dynamic updates.
+- **Feedback**: `proviant.showFeedback()` shows a toast, not a modal; field and section errors stay inline. A toast's callback fires when it goes — the auto-hiding types after their timeout, an error when it is dismissed.
+- **Accessibility**: `<html lang>` matches the active UI language; the page header carries the page's only `h1` — the topnav is navigation; icon-only buttons get an `aria-label`; everything keyboard-navigable (`tabindex`, `focus-visible`); populate `aria-live` after dynamic updates.

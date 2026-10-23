@@ -1,7 +1,9 @@
 {
   "nav.dashboard": "Dashboard",
+  "nav.licenses": "Licenses",
   "nav.logout": "Logout",
   "nav.mealPlan": "Meal Plan",
+  "nav.more": "More",
   "nav.notifications": "Notifications",
   "nav.products": "Products",
   "nav.recipes": "Recipes",

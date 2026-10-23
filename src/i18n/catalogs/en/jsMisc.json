@@ -1,5 +1,4 @@
 {
-  "js.savedRecipes.amount": "Amount",
   "js.savedRecipes.cook": "Cook",
   "js.savedRecipes.cookConfirmBody": "This will consume the linked ingredients of \"%s\" from your stock. This cannot be undone.",
   "js.savedRecipes.cookConfirmTitle": "Cook recipe",
@@ -37,6 +36,8 @@
   "js.savedRecipes.notLoadedTitle": "Recipe not loaded",
   "js.savedRecipes.notSavedTitle": "Recipe not saved",
   "js.savedRecipes.partiallyCookedTitle": "Partially cooked",
+  "js.savedRecipes.portion": "Portion, e.g. 200 g",
+  "js.savedRecipes.portionLabel": "Portion",
   "js.savedRecipes.prefilledBody": "Review the imported ingredients, then save.",
   "js.savedRecipes.prefilledTitle": "Recipe prefilled",
   "js.savedRecipes.removeIngredient": "Remove ingredient",
@@ -47,7 +48,6 @@
   "js.savedRecipes.servings_one": "%s serving",
   "js.savedRecipes.servings_other": "%s servings",
   "js.savedRecipes.thisRecipe": "this recipe",
-  "js.savedRecipes.unit": "Unit",
   "js.syncSettings.connectedTitle": "Connected",
   "js.syncSettings.connectionFailedTitle": "Connection Failed",
   "js.syncSettings.connectionSucceeded": "%s connection succeeded.",
@@ -71,5 +71,10 @@
   "js.syncSettings.syncSucceeded": "%s shopping list synchronized.",
   "js.syncSettings.syncedTitle": "Synced",
   "js.syncSettings.tokenStored": "Token stored. Enter a new token to replace it.",
-  "js.tagInput.addPlaceholder": "Add…"
+  "js.tagInput.addPlaceholder": "Add…",
+  "js.waste.consumedShare": "%d%% consumed",
+  "js.waste.itemsWasted": "%d items wasted",
+  "js.waste.wastedItems": "%d items wasted",
+  "js.waste.wastedShare": "%d%% wasted",
+  "js.waste.wastedThisMonth": "%d items this month"
 }

@@ -79,7 +79,11 @@ const CAPTURE = "__proviantCaptured";
 export function loadClassicScript(fileName, exportNames, options = {}) {
   const { prelude = "", globals = {} } = options;
   const catalog = loadMessageCatalog();
-  const environment = { proviantI18n: catalog, proviantLang: "en", ...globals };
+  const environment = {
+    proviantI18n: catalog,
+    proviantLang: "en",
+    ...globals,
+  };
   if (environment.proviant && typeof environment.proviant === "object") {
     environment.proviant = { ...createTranslator(catalog), ...environment.proviant };
   }

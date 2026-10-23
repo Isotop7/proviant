@@ -34,13 +34,57 @@ func (r *ShoppingListItemRepositoryImpl) GetByID(id, householdID uint) (*databas
 	if err != nil {
 		return nil, err
 	}
+	r.fillPackSizes([]*database.ShoppingListItem{&item})
 	return &item, nil
 }
 
 func (r *ShoppingListItemRepositoryImpl) ListByHousehold(householdID uint) ([]database.ShoppingListItem, error) {
 	var items []database.ShoppingListItem
 	err := r.DB.Where("household_id = ?", householdID).Order("category ASC, name ASC").Find(&items).Error
-	return items, err
+	if err != nil {
+		return nil, err
+	}
+	pointers := make([]*database.ShoppingListItem, len(items))
+	for i := range items {
+		pointers[i] = &items[i]
+	}
+	r.fillPackSizes(pointers)
+	return items, nil
+}
+
+// fillPackSizes copies the pack size of the linked product onto every item
+// that points at one. The size is display metadata of the product, so it is
+// read with the items instead of being looked up by every consumer. A failed
+// lookup leaves the size empty rather than failing the whole list.
+func (r *ShoppingListItemRepositoryImpl) fillPackSizes(items []*database.ShoppingListItem) {
+	productIDs := make([]uint, 0, len(items))
+	seen := make(map[uint]bool, len(items))
+	for _, item := range items {
+		if item.ProductID == nil || seen[*item.ProductID] {
+			continue
+		}
+		seen[*item.ProductID] = true
+		productIDs = append(productIDs, *item.ProductID)
+	}
+	if len(productIDs) == 0 {
+		return
+	}
+	var products []database.Product
+	if err := r.DB.Select("id, pack_size").Where("id IN ?", productIDs).Find(&products).Error; err != nil {
+		return
+	}
+	sizes := make(map[uint]string, len(products))
+	for i := range products {
+		if products[i].PackSize != "" {
+			sizes[products[i].ID] = products[i].PackSize
+		}
+	}
+	for _, item := range items {
+		if item.ProductID == nil {
+			continue
+		}
+		item.PackSize = sizes[*item.ProductID]
+	}
 }
 
 func (r *ShoppingListItemRepositoryImpl) Update(item *database.ShoppingListItem) error {

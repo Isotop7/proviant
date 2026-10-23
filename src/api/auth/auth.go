@@ -169,7 +169,7 @@ func Logout(ctx *gin.Context) {
 
 	// Expire the HttpOnly JWT cookie so the browser discards it immediately.
 	ctx.SetSameSite(http.SameSiteStrictMode)
-	ctx.SetCookie("jwt", "", -1, "/", "", false, true)
+	ctx.SetCookie("jwt", "", -1, "/", "", secureCookie(ctx), true)
 
 	ctx.JSON(http.StatusOK, api.APIResponse{Message: "Logged out successfully"})
 }

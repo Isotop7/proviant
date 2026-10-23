@@ -184,7 +184,7 @@ func TestNotificationRepository_GetWasteStatsForHousehold(t *testing.T) {
 
 	// Deleted last month: previous-month denominator/numerator only.
 	lastMonth := monthStart.Add(-time.Hour)
-	testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "9999999999999", "Old", "pcs", 1, lastMonth)
+	testutil.SeedConsumedProduct(t, db, household.ID, user.ID, false, "9999999999999", "Old", 1, lastMonth)
 	var oldProduct dbModel.Product
 	if err := db.Unscoped().Where("barcode = ?", "9999999999999").First(&oldProduct).Error; err != nil {
 		t.Fatalf("reload old product: %v", err)

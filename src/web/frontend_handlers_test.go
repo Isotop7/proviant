@@ -264,6 +264,50 @@ func TestShoppingListHandler(t *testing.T) {
 	})
 }
 
+// TestShoppingListHandlerShowsThePackCount pins the shopping list display:
+// every row shows the pack count the same way.
+func TestShoppingListHandlerShowsThePackCount(t *testing.T) {
+	env := newHandlerEnv(t)
+	household, user := seedHouseholdUser(t, env.db)
+
+	items := []dbModel.ShoppingListItem{
+		{HouseholdID: household.ID, Name: "Pasta", Quantity: 2, CreatedBy: user.ID},
+		{HouseholdID: household.ID, Name: "Eggs", Quantity: 6, CreatedBy: user.ID},
+		{HouseholdID: household.ID, Name: "Yogurt", Quantity: 1, CreatedBy: user.ID},
+	}
+	for i := range items {
+		if err := env.db.Create(&items[i]).Error; err != nil {
+			t.Fatalf("failed to create shopping list item: %v", err)
+		}
+	}
+
+	w := env.run(user.ID, "/web/shopping-list", nil, env.frontend.ShoppingList)
+	requireStatus(t, w, http.StatusOK)
+
+	body := w.Body.String()
+	if got := elementText(t, body, `id="qty-`+fmtUint(items[0].ID)+`"`); got != "2 qty" {
+		t.Errorf("row = %q, want %q", got, "2 qty")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(items[1].ID)+`"`); got != "6 qty" {
+		t.Errorf("multi count row = %q, want %q", got, "6 qty")
+	}
+	if got := elementText(t, body, `id="qty-`+fmtUint(items[2].ID)+`"`); got != "1 qty" {
+		t.Errorf("single count row = %q, want %q", got, "1 qty")
+	}
+	// The rows carry the same flat stepper the products list uses.
+	if !strings.Contains(body, `class="qty-stepper qty-stepper-flat"`) {
+		t.Errorf("the shopping list rows do not use the products list stepper")
+	}
+	// The add form picks the count with the same stepper the product edit page
+	// uses, not a bare number field.
+	if !strings.Contains(body, `data-item-quantity-step="-1"`) || !strings.Contains(body, `data-item-quantity-step="1"`) {
+		t.Errorf("the add form has no quantity stepper")
+	}
+	if !strings.Contains(body, `<input type="number" id="inputItemQuantity"`) {
+		t.Errorf("the add form has no quantity input")
+	}
+}
+
 func TestProductsScanHandler(t *testing.T) {
 	env := newHandlerEnv(t)
 	w := env.run(0, "/web/products/scan", nil, env.frontend.ProductsScan)
@@ -329,6 +373,34 @@ func TestProductsEditHandler(t *testing.T) {
 		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
 		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
 		requireStatus(t, w, http.StatusOK)
+	})
+
+	// The quick-info panel mirrors the list: the count of the product.
+	t.Run("shows the pack count", func(t *testing.T) {
+		household, user := seedHouseholdUser(t, env.db)
+		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
+		if err := env.db.Model(product).Updates(map[string]any{"quantity": 3}).Error; err != nil {
+			t.Fatalf("set the count: %v", err)
+		}
+		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
+		requireStatus(t, w, http.StatusOK)
+		requireContains(t, w, `class="font-mono fw-semibold">3 qty<`)
+	})
+
+	// The pack size is display metadata: it shows next to the count and is
+	// never editable.
+	t.Run("shows the pack size as read-only metadata", func(t *testing.T) {
+		household, user := seedHouseholdUser(t, env.db)
+		product := testutil.CreateTestProduct(env.db, household.ID, user.ID)
+		if err := env.db.Model(product).Updates(map[string]any{"quantity": 2, "pack_size": "1 l"}).Error; err != nil {
+			t.Fatalf("set the pack size: %v", err)
+		}
+		w := env.runWithParams(user.ID, nil, gin.Params{{Key: "id", Value: fmtUint(product.ID)}}, env.frontend.ProductsEdit)
+		requireStatus(t, w, http.StatusOK)
+		requireContains(t, w, "1 l")
+		if strings.Contains(w.Body.String(), `id="inputUnit"`) {
+			t.Errorf("the edit page still offers a unit picker")
+		}
 	})
 }
 
@@ -521,7 +593,7 @@ func TestProductExpiryStatus(t *testing.T) {
 		expireAt time.Time
 		want     string
 	}{
-		{"no expiry date", time.Time{}, "nodate"},
+		{"no expiry date", time.Time{}, "neutral"},
 		{"already expired", now.Add(-24 * time.Hour), "expired"},
 		{"critical window", now.Add(2 * 24 * time.Hour), "critical"},
 		{"soon window", now.Add(5 * 24 * time.Hour), "soon"},

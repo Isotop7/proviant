@@ -2,7 +2,6 @@
 
 const pe = {
     editProduct: null,
-    searchParam: null,
     searchQuery: null,
     sortParam: null,
     sortOrder: null,
@@ -21,12 +20,22 @@ const pe = {
 // with nothing to retry, so it has to reach them — a console line in a failed
 // enqueue is invisible on a phone. Every other failure keeps its existing
 // console-only handling: the delta either reached the server or is queued.
-function reportAmountChangeFailed(response) {
+function reportQuantityChangeFailed(response) {
     if (response.queued === false) {
         proviant.showFeedback('error', response.message);
         return;
     }
     console.error(response.message);
+}
+
+// readQuantity reads the pack count of a quantity label. The count lives in
+// the data attribute; the text is the rendered label ("2 Stk.") and must not
+// be parsed, because a locale that does not separate the number from the noun
+// would yield NaN.
+function readQuantity(element) {
+    if (!element) return 0;
+    const parsed = Number.parseInt(element.dataset.quantity, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function handleCardClickEffect(cardId) {
@@ -60,51 +69,53 @@ document.addEventListener("click", function (event) {
     }
 
     // Delete (Wasted) product button
-    // Amount increment button
-    if (target.closest(".btn-amount-inc")) {
+    // Quantity increment button
+    if (target.closest(".btn-qty-inc")) {
         event.preventDefault();
         event.stopPropagation();
-        const btn = target.closest(".btn-amount-inc");
+        const btn = target.closest(".btn-qty-inc");
         const productID = btn.dataset.productId;
-        proviant.updateProductAmount(productID, 1).then((response) => {
+        const qtyEl = document.getElementById(`qty-${productID}`);
+        proviant.updateProductQuantity(productID, 1).then((response) => {
             if (response.code === 200) {
-                const amountEl = document.getElementById(`amount-${productID}`);
-                if (amountEl) {
-                    amountEl.textContent = parseInt(amountEl.textContent, 10) + 1;
-                    amountEl.classList.add('amount-updated');
-                    setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
+                if (qtyEl) {
+                    qtyEl.dataset.quantity = String(readQuantity(qtyEl) + 1);
+                    proviant.renderQuantityLabel(qtyEl);
+                    qtyEl.classList.add('qty-updated');
+                    setTimeout(() => qtyEl.classList.remove('qty-updated'), 800);
                 }
             } else {
-                reportAmountChangeFailed(response);
+                reportQuantityChangeFailed(response);
             }
-        });
+        }).catch((err) => proviant.showFeedback('error', proviant.t("common.error"), err.message));
         return;
     }
 
-    // Amount decrement button
-    if (target.closest(".btn-amount-dec")) {
+    // Quantity decrement button
+    if (target.closest(".btn-qty-dec")) {
         event.preventDefault();
         event.stopPropagation();
-        const btn = target.closest(".btn-amount-dec");
+        const btn = target.closest(".btn-qty-dec");
         const productID = btn.dataset.productId;
-        proviant.updateProductAmount(productID, -1).then((response) => {
+        const qtyEl = document.getElementById(`qty-${productID}`);
+        proviant.updateProductQuantity(productID, -1).then((response) => {
             if (response.code === 200) {
                 if (response.deleted) {
                     const card = document.getElementById(`card-${productID}`);
                     if (card) card.closest(".col").remove();
                 } else {
-                    const amountEl = document.getElementById(`amount-${productID}`);
-                    if (amountEl) {
-                        const newVal = Math.max(0, parseInt(amountEl.textContent, 10) - 1);
-                        amountEl.textContent = newVal;
-                        amountEl.classList.add('amount-updated');
-                        setTimeout(() => amountEl.classList.remove('amount-updated'), 800);
+                    if (qtyEl) {
+                        const newVal = Math.max(0, readQuantity(qtyEl) - 1);
+                        qtyEl.dataset.quantity = String(newVal);
+                        proviant.renderQuantityLabel(qtyEl);
+                        qtyEl.classList.add('qty-updated');
+                        setTimeout(() => qtyEl.classList.remove('qty-updated'), 800);
                     }
                 }
             } else {
-                reportAmountChangeFailed(response);
+                reportQuantityChangeFailed(response);
             }
-        });
+        }).catch((err) => proviant.showFeedback('error', proviant.t("common.error"), err.message));
         return;
     }
 
@@ -121,7 +132,7 @@ document.addEventListener("click", function (event) {
                 clearBulkSelectionAndReload();
             } else if (response.conflict && response.openedAt) {
                 const previous = new Date(response.openedAt);
-                const formatted = isNaN(previous.getTime()) ? response.openedAt : previous.toLocaleString();
+                const formatted = Number.isNaN(previous.getTime()) ? response.openedAt : previous.toLocaleString();
                 proviant.showConfirm(
                     proviant.t("js.products.alreadyOpened"),
                     proviant.t("js.products.resetOpenedConfirm", formatted),
@@ -132,8 +143,8 @@ document.addEventListener("click", function (event) {
             } else {
                 proviant.showFeedback('error', proviant.t("js.products.markOpenedFailed"), proviant.t("js.products.pleaseTryAgain"));
             }
-        });
-        sendOpen(false);
+        }).catch((err) => proviant.showFeedback('error', proviant.t("js.products.markOpenedFailed"), err.message));
+        void sendOpen(false);
         return;
     }
 
@@ -146,15 +157,25 @@ document.addEventListener("click", function (event) {
         if (checkbox) {
             checkbox.checked = !checkbox.checked;
             card.classList.toggle('border-info');
-            handleSelected();
+            void handleSelected();
             handleCardClickEffect(cardId);
         }
         return;
     }
 
-    // Search button
-    if (target.closest("#search-btn")) {
+    // Search field selector
+    var scopeToggle = target.closest(".search-scope__toggle");
+    if (scopeToggle) {
         event.preventDefault();
+        selectSearchScope(scopeToggle.dataset.scope);
+        performSearch();
+        return;
+    }
+
+    // Clear the search
+    if (target.closest("#search-clear")) {
+        event.preventDefault();
+        if (pe.searchQuery) pe.searchQuery.value = "";
         performSearch();
         return;
     }
@@ -164,13 +185,13 @@ document.addEventListener("click", function (event) {
     if (addToListBtn) {
         event.preventDefault();
         var productId = addToListBtn.dataset.productId;
-        proviant.runWithButtonBusyState(
+        void proviant.runWithButtonBusyState(
             addToListBtn,
             async function () {
                 const res = await fetch('/api/v1/shopping-list', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ productId: parseInt(productId, 10) })
+                    body: JSON.stringify({ productId: Number.parseInt(productId, 10) })
                 });
                 if (!res.ok) {
                     const body = await res.json().catch(function () { return {}; });
@@ -250,18 +271,18 @@ document.addEventListener("click", function (event) {
         if (!ids.length) return;
         var action = bulkBtn.dataset.bulkAction;
         if (action === 'cook') {
-            openCookModal(ids, bulkBtn);
+            void openCookModal(ids, bulkBtn);
             return;
         }
         var opts = action === 'delete' ? { confirm: true, confirmTitle: proviant.t("js.products.markAsWasted"), confirmMsg: proviant.tn("js.products.markWastedBulkConfirm", ids.length) } : {};
-        proviant.bulkAction(action, ids, opts);
+        void proviant.bulkAction(action, ids, opts);
         return;
     }
 
     // Cook modal confirm button
     if (target.closest('#btnCookConfirm')) {
         event.preventDefault();
-        submitCook();
+        void submitCook();
         return;
     }
 
@@ -269,7 +290,7 @@ document.addEventListener("click", function (event) {
     var qtyBtn = target.closest('[data-qty-action]');
     if (qtyBtn) {
         event.preventDefault();
-        var id = parseInt(qtyBtn.dataset.productId, 10);
+        var id = Number.parseInt(qtyBtn.dataset.productId, 10);
         var delta = qtyBtn.dataset.qtyAction === 'inc' ? 1 : -1;
         changeQty(id, delta);
         return;
@@ -322,10 +343,24 @@ document.addEventListener("keypress", function (event) {
     }
 });
 
+// The field selector is a pair of toggles inside the search field; the
+// pressed one names the field the query runs against.
+function activeSearchScope() {
+    const pressed = document.querySelector('.search-scope__toggle[aria-pressed="true"]');
+    return pressed ? pressed.dataset.scope : "product_name";
+}
+
+function selectSearchScope(scope) {
+    document.querySelectorAll('.search-scope__toggle').forEach(function (el) {
+        el.setAttribute('aria-pressed', String(el.dataset.scope === scope));
+        el.classList.toggle('active', el.dataset.scope === scope);
+    });
+}
+
 // Function to perform search
 function performSearch() {
     const params = {
-        queryParam: pe.searchParam ? pe.searchParam.value || "product_name" : "product_name",
+        queryParam: activeSearchScope(),
         queryValue: pe.searchQuery ? pe.searchQuery.value || "" : "",
         sort: pe.sortParam ? pe.sortParam.value || "created_at" : "created_at",
         order: pe.sortOrder ? pe.sortOrder.value || "asc" : "asc",
@@ -340,13 +375,13 @@ function performSearch() {
 
 /* ── Add-product modal ───────────────────────────────────────────────────────
    Bootstrap is loaded after content scripts, so init must wait for
-   DOMContentLoaded before calling bootstrap.Modal.
+   DOMContentLoaded before calling bootstrap.Dialog.
 ─────────────────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
     const modalEl = document.getElementById('addProductModal');
     if (!modalEl) return;
 
-    const bsModal         = new bootstrap.Modal(modalEl);
+    const bsModal         = new bootstrap.Dialog(modalEl);
     const barcodeInput    = document.getElementById('barcode');
     const productData     = document.getElementById('productData');
     const inputWrap       = document.querySelector('#modalStepScan .barcode-input-wrap');
@@ -357,7 +392,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const manualSection   = document.getElementById('manualInputSection');
     const cameraSection   = document.getElementById('cameraSection');
     const editProduct     = document.getElementById('edit-product');
-    const searchParam     = document.getElementById('search-param');
     const searchQuery     = document.getElementById('search-query');
     const sortParam       = document.getElementById('sort-param');
     const sortOrder       = document.getElementById('sort-order');
@@ -369,7 +403,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectedAll       = document.getElementById('selectAll');
 
     pe.editProduct = editProduct;
-    pe.searchParam = searchParam;
     pe.searchQuery = searchQuery;
     pe.sortParam = sortParam;
     pe.sortOrder = sortOrder;
@@ -396,13 +429,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const isCamera = mode === 'camera';
         if (tabManualInput) {
             tabManualInput.style.background  = isCamera ? 'transparent' : 'white';
-            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px oklch(0 0 0 / 0.10)';
-            tabManualInput.style.color       = isCamera ? 'var(--fg-3)' : 'var(--fg)';
+            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)';
+            tabManualInput.style.color       = isCamera ? 'var(--meta)' : 'var(--fg)';
         }
         if (tabCamera) {
             tabCamera.style.background  = isCamera ? 'white' : 'transparent';
-            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px oklch(0 0 0 / 0.10)' : 'none';
-            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--fg-3)';
+            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)' : 'none';
+            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--meta)';
         }
         if (manualSection) manualSection.style.display = isCamera ? 'none' : 'block';
         if (cameraSection) cameraSection.style.display = isCamera ? 'block' : 'none';
@@ -419,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (tabCamera)      tabCamera.addEventListener('click',      function () { setActiveTab('camera'); });
 
     function showModalStep(step) {
-        const footerEl = document.querySelector('#addProductModal .modal-footer');
+        const footerEl = document.querySelector('#addProductModal .dialog-footer');
         ['scan', 'form', 'success'].forEach(function (s) {
             document.getElementById('modalStep' + cap(s)).style.display   = s === step ? 'block' : 'none';
             document.getElementById('modalFooter' + cap(s)).style.display = s === step ? 'flex'  : 'none';
@@ -473,12 +506,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    modalEl.addEventListener('shown.bs.modal', function () {
+    modalEl.addEventListener('shown.bs.dialog', function () {
         modalIsOpen = true;
         resetToScan();
     });
 
-    modalEl.addEventListener('hidden.bs.modal', function () {
+    modalEl.addEventListener('hidden.bs.dialog', function () {
         modalIsOpen = false;
         stopCameraIfRunning();
     });
@@ -562,8 +595,8 @@ function getCookModal() {
     if (!cookModalInstance) {
         var el = document.getElementById('cookModal');
         if (!el || typeof bootstrap === 'undefined') return null;
-        cookModalInstance = new bootstrap.Modal(el);
-        el.addEventListener('hidden.bs.modal', resetCookModal);
+        cookModalInstance = new bootstrap.Dialog(el);
+        el.addEventListener('hidden.bs.dialog', resetCookModal);
         // Clamp on change/blur (not per keystroke): corrects out-of-range
         // values without fighting the user while typing. Prevents a stray
         // value from falling through to 0, which the backend treats as a
@@ -571,11 +604,11 @@ function getCookModal() {
         el.addEventListener('change', function (event) {
             var input = event.target.closest('.cook-item-row input');
             if (!input) return;
-            var max = parseInt(input.closest('.cook-item-row').dataset.maxAmount, 10) || 1;
-            var amount = parseInt(input.value, 10) || 1;
-            if (amount < 1) amount = 1;
-            if (amount > max) amount = max;
-            input.value = String(amount);
+            var max = Number.parseInt(input.closest('.cook-item-row').dataset.maxQuantity, 10) || 1;
+            var quantity = Number.parseInt(input.value, 10) || 1;
+            if (quantity < 1) quantity = 1;
+            if (quantity > max) quantity = max;
+            input.value = String(quantity);
         });
     }
     return cookModalInstance;
@@ -592,8 +625,8 @@ function resetCookModal() {
 }
 
 // Fetches fresh stock for the selected products before opening the modal.
-// Page-rendered data-amount attributes go stale when another tab, device or
-// a background amount change reduces stock — without this, the modal shows a
+// Page-rendered data-quantity attributes go stale when another tab, device or
+// a background stock change reduces it — without this, the modal shows a
 // max above real stock and an overshoot submit silently archives the product.
 // Fetches only the selected IDs via the ?ids= filter. Any failure (server
 // error or network) blocks cooking: cooking against unknown stock can
@@ -639,7 +672,7 @@ async function openCookModal(ids, triggerBtn) {
 async function openCookModalInner(ids, container) {
     var freshMap = await fetchFreshProducts(ids);
     if (!freshMap) {
-        // Fetch failure must not degrade to stale DOM amounts — cooking
+        // Fetch failure must not degrade to stale DOM counts — cooking
         // against unknown stock can silently archive products.
         proviant.showFeedback('error', proviant.t("js.products.cookUnavailable"), proviant.t("js.products.cookStockLoadFailed"));
         return;
@@ -657,37 +690,31 @@ async function openCookModalInner(ids, container) {
             skipped++;
             return;
         }
-        var amount = parseInt(fp.amount, 10) || 0;
-        var unit = fp.unit || '';
+        var quantity = Number.parseInt(fp.quantity, 10) || 0;
         var name = fp.productName || ('#' + id);
-        if (amount < 1) {
+        if (quantity < 1) {
             skipped++;
             return;
         }
 
         var row = document.createElement('div');
-        row.className = 'cook-item-row d-flex align-items-center gap-2 py-1';
+        row.className = 'cook-item-row d-flex align-items-center gap-3 py-1';
         row.dataset.productId = id;
-        row.dataset.maxAmount = String(amount);
+        row.dataset.maxQuantity = String(quantity);
 
         var nameSpan = document.createElement('span');
         nameSpan.className = 'cook-item-name flex-grow-1 text-truncate';
         nameSpan.textContent = name;
 
-        var unitSpan = document.createElement('span');
-        unitSpan.className = 'text-secondary-custom small flex-shrink-0';
-        unitSpan.textContent = unit;
-
         var input = document.createElement('input');
         input.type = 'number';
         input.className = 'form-control form-control-sm cook-item-input';
         input.min = '1';
-        input.max = String(amount);
-        input.value = String(amount);
-        input.setAttribute('aria-label', proviant.t("js.products.cookAmountAria", name));
+        input.max = String(quantity);
+        input.value = String(quantity);
+        input.setAttribute('aria-label', proviant.t("js.products.cookQuantityAria", name));
 
         row.appendChild(nameSpan);
-        if (unit) row.appendChild(unitSpan);
         row.appendChild(input);
         container.appendChild(row);
         added++;
@@ -695,7 +722,7 @@ async function openCookModalInner(ids, container) {
 
     if (skipped) {
         var note = document.createElement('div');
-        note.className = 'text-secondary-custom small py-1';
+        note.className = 'fg-secondary small py-1';
         note.textContent = proviant.tn("js.products.cookSkippedNote", skipped);
         container.appendChild(note);
     }
@@ -719,13 +746,13 @@ async function submitCook() {
     var items = [];
     document.querySelectorAll('#cookModalItems .cook-item-row').forEach(function (row) {
         var input = row.querySelector('input');
-        var max = parseInt(row.dataset.maxAmount, 10) || 1;
-        var amount = input ? parseInt(input.value, 10) : NaN;
+        var max = Number.parseInt(row.dataset.maxQuantity, 10) || 1;
+        var quantity = input ? Number.parseInt(input.value, 10) : Number.NaN;
         // An invalid or out-of-range value must never fall through to 0 —
         // the backend clamps 0 to a full consume and would archive the product.
-        if (isNaN(amount) || amount > max) amount = max;
-        if (amount < 1) amount = 1;
-        items.push({ productId: +row.dataset.productId, amount: amount });
+        if (Number.isNaN(quantity) || quantity > max) quantity = max;
+        if (quantity < 1) quantity = 1;
+        items.push({ productId: +row.dataset.productId, quantity: quantity });
     });
     if (!items.length) return;
 
@@ -741,11 +768,9 @@ async function submitCook() {
         var modal = getCookModal();
         if (modal) modal.hide();
         if (res.errors.length) {
-            // Partial failure: keep the failure details on screen until the
-            // user dismisses, then reload — an 800ms auto-reload would hide
-            // them before they can be read.
-            // Single-line details: #proviantFeedbackMessage is a plain <p>,
-            // so \n would collapse into one unreadable run-on line anyway.
+            // Partial failure: the toast stays up for six seconds, then the
+            // list reloads. An 800ms auto-reload would hide the details
+            // before they can be read.
             msg += proviant.t("js.products.cookErrorsSuffix", res.errors.length, res.errors.join('; '));
             proviant.showFeedback('warning', proviant.t("js.products.cookedWithErrors"), msg, clearBulkSelectionAndReload);
             return;
@@ -761,23 +786,24 @@ async function submitCook() {
 
 // ── List view: qty stepper ──────────────────────────────────────
 function changeQty(id, delta) {
-    proviant.updateProductAmount(id, delta).then((response) => {
+    const span = document.getElementById('qty-' + id);
+    proviant.updateProductQuantity(id, delta).then((response) => {
         if (response.code === 200) {
             if (response.deleted) {
                 const row = document.querySelector(`.list-row[data-id="${id}"]`);
                 if (row) row.remove();
             } else {
-                const span = document.getElementById('qty-' + id);
                 if (span) {
-                    span.textContent = Math.max(0, parseInt(span.textContent, 10) + delta);
-                    span.classList.add('amount-updated');
-                    setTimeout(() => span.classList.remove('amount-updated'), 800);
+                    span.dataset.quantity = String(Math.max(0, readQuantity(span) + delta));
+                    proviant.renderQuantityLabel(span);
+                    span.classList.add('qty-updated');
+                    setTimeout(() => span.classList.remove('qty-updated'), 800);
                 }
             }
         } else {
-            reportAmountChangeFailed(response);
+            reportQuantityChangeFailed(response);
         }
-    });
+    }).catch((err) => proviant.showFeedback('error', proviant.t("common.error"), err.message));
 }
 
 // Skeleton loading functions for filter/search operations

@@ -1,0 +1,145 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// design-system/_tokens-dark.scss
+//
+// CANONICAL SOURCE for the proviant design tokens (dark theme).
+//
+// Overrides the light tokens from design-system/_tokens.scss. The app applies
+// the theme through `data-bs-theme` on <html> (src/assets/js/theme.js), which
+// always resolves "system" to an explicit light|dark before first paint. The
+// prefers-color-scheme block keeps dark mode working without JavaScript.
+//
+// The status hues keep their identity and only move in lightness. The accent
+// is the same hue as the light theme (168°), lifted to L 0.66, so a control
+// reads as the same colour in both themes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Surfaces ────────────────────────────────────────────────────────────────
+$bg:            #1E1A14;   // Crème-Papier, invertiert
+$surface:       #2C2823;   // Karten, Panels
+$surface-warm:  #2F2A23;   // Auth-Brand-Panel, Sidebar
+
+// ── Ink ─────────────────────────────────────────────────────────────────────
+$fg:            #F2EDE4;
+$fg-2:          #D6CFC4;
+$muted:         #A79E92;
+$meta:          #9A9184;
+
+// ── Lines ───────────────────────────────────────────────────────────────────
+$border:        #3A342C;
+$border-strong: #4A4238;
+
+// ── Accent (Salbei, aufgehellt) ────────────────────────────────────────────
+$accent:        #59A388;
+$accent-text:   #7FC0A5;
+$accent-soft:   #24362F;
+$accent-on:     #1E1A14;   // dunkler Text auf dem hellen Akzent
+
+// ── Vorratsstatus ──────────────────────────────────────────────────────────
+$status-fresh:    #59A388;
+$status-soon:     #D9B963;
+$status-critical: #DE9268;
+$status-expired:  #C97A7A;
+$status-neutral:  #8A8177;
+
+$status-fresh-text:    #7FC0A5;
+$status-soon-text:     #E0C377;
+$status-critical-text: #E8A98A;
+$status-expired-text:  #D79090;
+$status-neutral-text:  #A89F92;
+
+// Tinte auf einer soliden Statusflaeche: der Akzent ist im Dark Theme hell,
+// also traegt die Flaeche dunkle Tinte.
+$status-fresh-on:    #1E1A14;
+$status-soon-on:     #1E1A14;
+$status-critical-on: #1E1A14;
+$status-expired-on:  #1E1A14;
+$status-neutral-on:  #1E1A14;
+
+// ── Semantische Aliase ─────────────────────────────────────────────────────
+$success: #59A388;
+$warn:    #D9B963;
+$danger:  #C97A7A;
+$info:    #7E9DAE;
+
+// ── Schatten (Sepia, im Dark Theme neutraler) ──────────────────────────────
+$shadow-warm: rgba(0, 0, 0, 0.45);
+$elev-raised:  0 1px 2px rgba(0, 0, 0, 0.30), 0 4px 12px rgba(0, 0, 0, 0.36);
+$elev-overlay: 0 8px 24px rgba(0, 0, 0, 0.48), 0 24px 48px rgba(0, 0, 0, 0.40);
+$elev-inset:   inset 0 0 0 1px var(--border);
+$elev-focus:   inset 0 0 0 1px var(--accent);
+$focus-ring:   0 0 0 3px var(--accent-soft);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Runtime custom properties
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin proviant-dark-tokens {
+  color-scheme: dark;
+
+  // Surfaces
+  --bg:           #{$bg};
+  --surface:      #{$surface};
+  --surface-warm: #{$surface-warm};
+
+  // Ink
+  --fg:    #{$fg};
+  --fg-2:  #{$fg-2};
+  --muted: #{$muted};
+  --meta:  #{$meta};
+
+  // Lines
+  --border:        #{$border};
+  --border-strong: #{$border-strong};
+
+  // Accent
+  --accent:      #{$accent};
+  --accent-text: #{$accent-text};
+  --accent-soft: #{$accent-soft};
+  --accent-on:   #{$accent-on};
+
+  // Vorratsstatus
+  --status-fresh:    #{$status-fresh};
+  --status-soon:     #{$status-soon};
+  --status-critical: #{$status-critical};
+  --status-expired:  #{$status-expired};
+  --status-neutral:  #{$status-neutral};
+
+  --status-fresh-text:    #{$status-fresh-text};
+  --status-soon-text:     #{$status-soon-text};
+  --status-critical-text: #{$status-critical-text};
+  --status-expired-text:  #{$status-expired-text};
+  --status-neutral-text:  #{$status-neutral-text};
+
+  --status-fresh-on:    #{$status-fresh-on};
+  --status-soon-on:     #{$status-soon-on};
+  --status-critical-on: #{$status-critical-on};
+  --status-expired-on:  #{$status-expired-on};
+  --status-neutral-on:  #{$status-neutral-on};
+
+  // Semantische Aliase
+  --success: #{$success};
+  --warn:    #{$warn};
+  --danger:  #{$danger};
+  --info:    #{$info};
+
+  // Schatten
+  --shadow-warm: #{$shadow-warm};
+  --elev-raised:  #{$elev-raised};
+  --elev-overlay: #{$elev-overlay};
+  --elev-inset:   #{$elev-inset};
+  --elev-focus:   #{$elev-focus};
+  --focus-ring:   #{$focus-ring};
+}
+
+[data-bs-theme="dark"] {
+  @include proviant-dark-tokens();
+}
+
+// Ohne JavaScript folgt das Theme der Systemeinstellung. theme.js setzt
+// data-bs-theme immer explizit, daher greift dieser Block nur, wenn die
+// Einstellung fehlt.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-bs-theme="light"]) {
+    @include proviant-dark-tokens();
+  }
+}

@@ -16,6 +16,8 @@ document.addEventListener("submit", function (event) {
       } else {
         proviant.showFeedback('error', proviant.t('js.auth.invitationAcceptFailed'), response.message || proviant.t('js.auth.unknownError'));
       }
+    }).catch(() => {
+      proviant.showFeedback('error', proviant.t('js.auth.invitationAcceptFailed'), proviant.t('js.auth.networkError'));
     });
   }
 });

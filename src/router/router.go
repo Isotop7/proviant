@@ -276,6 +276,8 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI.POST("/notification-preferences", v1.WrapHandler(v1.UpdateUserNotificationPreferences))
 	protectedUserAPI.GET("/receipt-scan-settings", v1.WrapHandler(v1.GetUserReceiptScanSettings))
 	protectedUserAPI.POST("/receipt-scan-settings", v1.WrapHandler(v1.UpdateUserReceiptScanSettings))
+	protectedUserAPI.GET("/dashboard-layout", v1.WrapHandler(v1.GetUserDashboardLayout))
+	protectedUserAPI.PUT("/dashboard-layout", v1.WrapHandler(v1.UpdateUserDashboardLayout))
 	protectedUserAPI.POST("/telegram-link-token", v1.WrapHandler(v1.GenerateTelegramLinkToken))
 	protectedUserAPI.POST("/household/leave", v1.WrapHandler(v1.LeaveHousehold))
 	protectedUserAPI.POST("/household/create", v1.WrapHandler(v1.CreateHousehold))
@@ -398,7 +400,14 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedProductMemberAPI := protectedProductAPI.Group("")
 	protectedProductMemberAPI.Use(RequireHouseholdRole(authentication.RoleAdmin, authentication.RoleMember))
 	protectedProductMemberAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateProduct))
-	protectedProductMemberAPI.PATCH("/:id/amount", v1.WrapHandler(v1.UpdateProductAmount))
+	// PATCH merges the fields the request carries, PUT replaces the whole
+	// product. A client that has not migrated sends a full body and expects
+	// the absent fields to be cleared, so the old contract keeps a verb.
+	protectedProductMemberAPI.PUT("/:id", v1.WrapHandler(v1.UpdateProductReplace))
+	protectedProductMemberAPI.PATCH("/:id/quantity", v1.WrapHandler(v1.UpdateProductQuantity))
+	// The endpoint moved from /amount to /quantity. The old path stays as an
+	// alias so a client that has not migrated keeps working.
+	protectedProductMemberAPI.PATCH("/:id/amount", v1.WrapHandler(v1.UpdateProductAmount)) //nolint:staticcheck // the alias is the point of the deprecated handler
 	protectedProductMemberAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteProduct))
 	protectedProductMemberAPI.POST("/:id/restore", v1.WrapHandler(v1.RestoreProduct))
 	protectedProductMemberAPI.POST("/:id/expire", v1.WrapHandler(v1.SetExpireAt))
@@ -491,6 +500,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicWebFrontend.GET("/mealplan", webFrontendHandler.MealPlan)
 	publicWebFrontend.GET("/waste-analytics", webFrontendHandler.WasteAnalytics)
 	publicWebFrontend.GET("/shopping-list", webFrontendHandler.ShoppingList)
+	publicWebFrontend.GET("/licenses", webFrontendHandler.Licenses)
 
 	// Public invite acceptance page (no auth required)
 	engine.GET("/web/invite/accept", LanguageMiddleware(), webFrontendHandler.AcceptInvite)

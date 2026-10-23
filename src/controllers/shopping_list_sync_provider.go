@@ -214,14 +214,9 @@ func (p *TodoistSyncProvider) client() *http.Client {
 func formatTodoistTaskContent(item *ShoppingListSyncPayload) string {
 	var b strings.Builder
 	b.WriteString(item.Name)
-	unit := strings.TrimSpace(item.Unit)
-	if item.Quantity > 1 || unit != "" {
+	if item.Quantity > 1 {
 		b.WriteString(" (")
 		b.WriteString(strconv.Itoa(max(1, item.Quantity)))
-		if unit != "" {
-			b.WriteByte(' ')
-			b.WriteString(unit)
-		}
 		b.WriteByte(')')
 	}
 	return b.String()
@@ -527,13 +522,8 @@ func (p *BringSyncProvider) client() *http.Client {
 
 func formatBringSpecification(item *ShoppingListSyncPayload) string {
 	var parts []string
-	unit := strings.TrimSpace(item.Unit)
-	if item.Quantity > 1 || unit != "" {
-		qtyStr := strconv.Itoa(max(1, item.Quantity))
-		if unit != "" {
-			qtyStr += " " + unit
-		}
-		parts = append(parts, qtyStr)
+	if item.Quantity > 1 {
+		parts = append(parts, strconv.Itoa(max(1, item.Quantity)))
 	}
 	if notes := strings.TrimSpace(item.Notes); notes != "" {
 		parts = append(parts, notes)

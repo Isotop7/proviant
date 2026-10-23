@@ -189,6 +189,43 @@ func TestCSRFMiddleware(t *testing.T) {
 			t.Errorf("cookie MaxAge = %d, want 3600", found.MaxAge)
 		}
 	})
+
+	t.Run("cookie is secure only on an https deployment", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			baseURL string
+			want    bool
+		}{
+			{name: "https deployment", baseURL: "https://proviant.local.de", want: true},
+			{name: "http deployment", baseURL: "http://127.0.0.1:5114", want: false},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				cfg := csrfTestConfig()
+				cfg.Server.BaseURL = test.baseURL
+				engine := buildCSRFRouter(cfg)
+				w := httptest.NewRecorder()
+				engine.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/web", nil))
+
+				var found *http.Cookie
+				for _, c := range w.Result().Cookies() {
+					if c.Name == "csrf_token" {
+						found = c
+					}
+				}
+				if found == nil {
+					t.Fatalf("csrf_token cookie not set; cookies: %v", w.Result().Cookies())
+				}
+				if found.Secure != test.want {
+					t.Errorf("cookie Secure = %v, want %v", found.Secure, test.want)
+				}
+				if found.HttpOnly {
+					t.Error("cookie is HttpOnly, but the frontend has to read it")
+				}
+			})
+		}
+	})
 }
 
 // TestCSRFMiddleware_RejectionStopsChain guards the abort: RespondError writes a

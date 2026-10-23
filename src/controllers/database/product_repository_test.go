@@ -70,9 +70,9 @@ func TestProductRepository(t *testing.T) {
 		// The projection deliberately leaves everything else zero so a caller
 		// reading an unselected column gets an obviously wrong value instead of
 		// a plausible one.
-		if row.Amount != 0 || row.Barcode != "" || !row.ExpireAt.IsZero() {
+		if row.Quantity != 0 || row.Barcode != "" || !row.ExpireAt.IsZero() {
 			t.Errorf("unselected columns are not zero: amount=%d barcode=%q expireAt=%v",
-				row.Amount, row.Barcode, row.ExpireAt)
+				row.Quantity, row.Barcode, row.ExpireAt)
 		}
 	})
 

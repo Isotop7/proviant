@@ -13,7 +13,7 @@ import (
 
 // GetAutoShoppingList returns the products whose stock fell below their minimum amount
 // @Summary      Gets auto shopping list
-// @Description  Returns all products of the caller whose amount is below their minimum stock amount
+// @Description  Returns all products of the caller whose pack count is below their minimum stock amount
 // @Tags         shopping-list
 // @Produce      json
 // @Success      200 {array} apiModel.ProductResponse
@@ -37,7 +37,7 @@ func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext) {
 // @Tags         shopping-list
 // @Accept       json
 // @Produce      json
-// @Param        request body apiModel.CreateShoppingListItemRequest true "Item: productId or name, optional category, quantity, unit, notes"
+// @Param        request body apiModel.CreateShoppingListItemRequest true "Item: productId or name, optional category, quantity, notes"
 // @Success      201 {object} apiModel.ShoppingListItemResponse
 // @Failure      400 {object} api.APIResponse
 // @Failure      500 {object} api.APIResponse
@@ -81,7 +81,6 @@ func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 		Name:        req.Name,
 		Category:    req.Category,
 		Quantity:    req.Quantity,
-		Unit:        req.Unit,
 		Notes:       req.Notes,
 		CreatedBy:   appCtx.UserID,
 	}
@@ -124,12 +123,12 @@ func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext) {
 
 // UpdateShoppingListItem updates a shopping list item of the caller's household
 // @Summary      Updates a shopping list item
-// @Description  Updates name, category, quantity, unit, checked state and notes of a shopping list item
+// @Description  Updates name, category, quantity, checked state and notes of a shopping list item
 // @Tags         shopping-list
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Shopping list item ID"
-// @Param        request body apiModel.UpdateShoppingListItemRequest true "Fields to update: name, category, quantity, unit, checked, notes"
+// @Param        request body apiModel.UpdateShoppingListItemRequest true "Fields to update: name, category, quantity, checked, notes"
 // @Success      200 {object} apiModel.ShoppingListItemResponse
 // @Failure      400 {object} api.APIResponse
 // @Failure      404 {object} api.APIResponse
@@ -168,10 +167,8 @@ func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext) {
 		item.Category = *req.Category
 	}
 	if req.Quantity != nil {
-		item.Quantity = *req.Quantity
-	}
-	if req.Unit != nil {
-		item.Unit = *req.Unit
+		// A row always stands for at least one pack.
+		item.Quantity = max(1, *req.Quantity)
 	}
 	if req.Checked != nil {
 		item.Checked = *req.Checked
@@ -310,12 +307,11 @@ func ImportAutoListToShoppingList(ctx *gin.Context, appCtx *AppContext) {
 			ProductID:   &product.ID,
 			Name:        product.ProductName,
 			Category:    product.Categories,
-			Quantity:    product.MinStockAmount - product.Amount,
+			Quantity:    product.MinStockAmount - product.Quantity,
 		}
 		if item.Quantity <= 0 {
 			item.Quantity = 1
 		}
-		item.Unit = product.Unit
 		item.CreatedBy = appCtx.UserID
 
 		if err := appCtx.Repos.ShoppingListItems.Create(item); err != nil {

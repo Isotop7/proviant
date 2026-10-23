@@ -94,10 +94,10 @@ describe("proviant.js CSRF interceptor", () => {
 });
 
 describe("proviant.js offline queue", () => {
-  it("sends an amount delta straight through", async () => {
+  it("sends an quantity delta straight through", async () => {
     const { proviant, calls } = freshProviant({ online: true });
 
-    const result = await proviant.updateProductAmount(9, 4);
+    const result = await proviant.updateProductQuantity(9, 4);
 
     expect(result.queued).toBeUndefined();
     expect(result.code).toBe(200);
@@ -112,7 +112,7 @@ describe("proviant.js offline queue", () => {
       return { status: 200, json: async () => ({ message: "ok" }) };
     };
 
-    await proviant._sendAmountDelta(9, -1, "mutation-7");
+    await proviant._sendQuantityDelta(9, -1, "mutation-7");
 
     expect(sentBodies[0]).toEqual({ delta: -1, clientMutationId: "mutation-7" });
   });
@@ -123,7 +123,7 @@ describe("proviant.js offline queue", () => {
       throw new TypeError("Failed to fetch");
     };
 
-    const err = await proviant._sendAmountDelta(9, -1, "m-1").then(() => null, (e) => e);
+    const err = await proviant._sendQuantityDelta(9, -1, "m-1").then(() => null, (e) => e);
 
     expect(err.transport).toBe(true);
     expect(err.message).toBe("Failed to fetch");
@@ -144,7 +144,7 @@ describe("proviant.js offline queue", () => {
       },
     });
 
-    const err = await proviant._sendAmountDelta(9, -1, "m-1").then(() => null, (e) => e);
+    const err = await proviant._sendQuantityDelta(9, -1, "m-1").then(() => null, (e) => e);
 
     expect(err.transport).toBeUndefined();
     expect(err.message).toBe("Unexpected token < in JSON");
@@ -162,6 +162,23 @@ describe("proviant.js offline queue", () => {
     await proviant.createProduct("4006381333931", "2030-01-01", 2, null, false, "sync-42");
 
     expect(sentBodies[0]).toMatchObject({ barcode: "4006381333931", clientSyncId: "sync-42" });
+  });
+
+  it("sends the pack count and no unit on a create", async () => {
+    // The stock is counted in packs: the body carries the count, and a unit
+    // would be a field the server no longer knows.
+    const { proviant, realm } = freshProviant({ online: true });
+    const sentBodies = [];
+    realm.fetch = async (url, options) => {
+      sentBodies.push(JSON.parse(options.body));
+      return { status: 201, json: async () => ({}) };
+    };
+
+    await proviant.createProduct("4006381333931", "2030-01-01", 3, null, false, null);
+
+    expect(sentBodies[0]).toMatchObject({ quantity: 3 });
+    expect(sentBodies[0]).not.toHaveProperty("amount");
+    expect(sentBodies[0]).not.toHaveProperty("unit");
   });
 });
 
@@ -282,6 +299,38 @@ describe("proviant.js pure helpers", () => {
 
     it("marks a future date as primary", () => {
       expect(proviant.colorExpiry("2030-01-01")).toBe("bg-primary");
+    });
+  });
+
+  // Every quantity surface renders the pack count the same way: the count and
+  // the localized pack noun.
+  describe("quantityLabel", () => {
+    it("renders the count with the pack noun", () => {
+      expect(proviant.quantityLabel(1)).toBe("1 qty");
+      expect(proviant.quantityLabel(2)).toBe("2 qty");
+      expect(proviant.quantityLabel(6)).toBe("6 qty");
+    });
+
+    it("renders the count of a label element", () => {
+      const { proviant: fresh, realm } = freshProviant();
+      const element = realm.document.createElement("span");
+      element.dataset.quantity = "1";
+
+      fresh.renderQuantityLabel(element);
+      expect(element.textContent).toBe("1 qty");
+
+      element.dataset.quantity = "2";
+      fresh.renderQuantityLabel(element);
+      expect(element.textContent).toBe("2 qty");
+    });
+
+    it("leaves an element without a count alone", () => {
+      const { proviant: fresh, realm } = freshProviant();
+      const element = realm.document.createElement("span");
+      element.textContent = "2 qty";
+
+      fresh.renderQuantityLabel(element);
+      expect(element.textContent).toBe("2 qty");
     });
   });
 });

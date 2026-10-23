@@ -1,94 +1,76 @@
 // ── Shopping list & waste pages ────────────────────────────────────────────
 
-// Shopping list styles — matches product list layout
-.sl-list-header {
-  display: grid;
-  grid-template-columns: 32px 1fr 80px 60px;
-  gap: 10px;
-  padding: 8px 16px;
-  background: var(--bg-subtle);
-  border-bottom: 1px solid var(--border);
-
-  > div {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--fg-3);
-    text-transform: uppercase;
-    letter-spacing: .06em;
-  }
+// The shopping list follows the design system's list pattern: a card with
+// a header row and a list group whose items carry the leading, body and
+// trailing slots.
+.shopping-list {
+  overflow: hidden;
 }
 
-.sl-list-row {
+.shopping-list__header,
+.shopping-list__item {
   display: grid;
-  grid-template-columns: 32px 1fr 80px 60px;
-  gap: 10px;
+  grid-template-columns: 32px 1fr 140px;
+  gap: var(--space-2);
   align-items: center;
-  padding: 9px 16px;
-  cursor: default;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background 120ms;
+}
+
+.shopping-list__header {
+  padding: var(--space-2) var(--space-4);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+.shopping-list__item {
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  transition: background-color var(--motion-fast) var(--ease-out);
 
   &:hover {
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
 
   &.checked {
     opacity: .6;
 
-    .sl-item-name {
-      color: var(--fg-3);
+    .list-group-item__title {
+      color: var(--meta);
       text-decoration: line-through;
     }
   }
 }
 
-.sl-category-header {
-  padding: 8px 16px 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--fg-3);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  background: var(--bg-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.sl-product-col {
+.shopping-list__cell--trailing {
   display: flex;
+  gap: var(--space-2);
   align-items: center;
-  min-width: 0;
-
-  .sl-item-content {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .sl-item-name {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--fg);
-  }
+  justify-content: space-between;
 }
 
-.sl-qty-col {
+.shopping-list__actions {
   display: flex;
+  gap: var(--space-1);
   align-items: center;
 }
 
-.sl-actions-col {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  justify-content: center;
-}
-
-.sl-notes-row {
+.shopping-list__notes {
   display: none;
-  padding: 8px 16px 8px 52px;
+  grid-column: 1 / -1;
+  padding-bottom: var(--space-2);
 
   &.expanded {
     display: block;
+  }
+
+  input {
+    max-width: 320px;
   }
 
   input.notes-saved {
@@ -99,22 +81,22 @@
 @keyframes notes-saved-animation {
   0% {
     border-color: var(--success);
-    box-shadow: 0 0 0 0 oklch(63% .2 142deg / .3);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 30%, transparent);
   }
   30% {
     border-color: var(--success);
-    box-shadow: 0 0 0 4px oklch(63% .2 142deg / .15);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--success) 15%, transparent);
   }
   100% {
     border-color: var(--border);
-    box-shadow: 0 0 0 0 oklch(63% .2 142deg / 0);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 0%, transparent);
   }
 }
 
 //  Shopping list styles
 .shopping-list-import-banner {
   overflow: hidden;
-  background: var(--accent-subtle);
+  background: var(--accent-soft);
   border: 1px solid var(--accent-border);
   border-radius: 8px;
 
@@ -127,55 +109,25 @@
     user-select: none;
 
     &:hover {
-      background: oklch(92% .04 162deg / .5);
+      background: color-mix(in oklab, var(--accent-soft) 50%, transparent);
     }
   }
 
   .import-banner-body {
     padding: 10px 14px;
-    border-top: 1px solid var(--border-subtle);
+    border-top: 1px solid var(--border);
   }
 }
 
 .shopping-list-category-header {
   padding: 8px 16px 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--fg-3);
+  color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: .06em;
-  background: var(--bg-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.shopping-list-item {
-  .item-name {
-    font-weight: 500;
-    color: var(--fg);
-  }
-
-  .item-notes {
-    display: block;
-    margin-top: 2px;
-  }
-
-  &.checked {
-    opacity: .6;
-
-    .item-name {
-      color: var(--fg-3);
-      text-decoration: line-through;
-    }
-  }
-}
-
-.shopping-list-item-notes-row {
-  display: none;
-  padding: 0 16px 8px 52px;
-
-  &.expanded {
-    display: block;
-  }
+  letter-spacing: var(--tracking-eyebrow);
+  background: var(--surface-warm);
+  border-bottom: 1px solid var(--border);
 }
 
 .add-item-form-inner {
@@ -189,7 +141,7 @@
 
   .form-control {
     height: 36px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   #inputItemName {
@@ -197,16 +149,20 @@
     min-width: 0;
   }
 
+  // The count is a stepper, so it carries the same height as the fields
+  // beside it.
+  .qty-stepper {
+    flex-shrink: 0;
+    height: 36px;
+
+    button,
+    input {
+      height: 36px;
+    }
+  }
+
   #inputItemQuantity {
-    width: 60px;
-  }
-
-  #inputItemUnit {
-    width: 60px;
-  }
-
-  #inputItemCategory {
-    width: 100px;
+    width: 48px;
   }
 
   #btnAddItem {
@@ -231,11 +187,11 @@
   transition: all 120ms;
 
   &:hover {
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
 
   &.text-danger:hover {
-    color: var(--status-expired);
+    color: var(--status-expired-text);
     background: var(--status-expired-subtle);
   }
 }
@@ -243,12 +199,38 @@
 //  Waste analytics — nested products list inside expanded category accordion items
 .waste-category-product-list {
   padding-left: 1.25rem;
-  font-size: .875rem;
+  font-size: var(--text-sm);
+}
+
+// A category of the waste screen: the stripe on the left, the name with the
+// count under it and the cost in the waste colour.
+.waste-cat__stripe {
+  flex-shrink: 0;
+  width: 3px;
+  height: 26px;
+  background: var(--status-expired);
+  border-radius: var(--radius-pill);
+}
+
+.waste-cat__name {
+  display: block;
+  font-weight: 600;
+}
+
+.waste-cat__meta {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.waste-cat__cost {
+  font-weight: 700;
+  color: var(--status-expired-text);
 }
 
 .waste-category-product-list-item {
   padding: .25rem 0;
-  border-bottom: 1px solid var(--bs-border-color-translucent, var(--overlay-subtle));
+  border-bottom: 1px solid var(--border-color-translucent, var(--overlay-subtle));
 
   &:last-child {
     border-bottom: 0;
@@ -261,7 +243,7 @@
   padding: .5rem 1rem;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--bs-list-group-border-color);
+  border-bottom: 1px solid var(--list-group-border-color);
   border-radius: 0;
 }
 
@@ -274,7 +256,7 @@
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.4;
-  color: var(--bs-body-color);
+  color: var(--fg-body);
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -282,7 +264,7 @@
 
   &:hover,
   &:focus {
-    background: var(--bs-tertiary-bg);
+    background: var(--bg-3);
     box-shadow: none;
   }
 

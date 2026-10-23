@@ -127,7 +127,7 @@ func LanguageMiddleware() gin.HandlerFunc {
 		if raw, ok := ctx.Get(util.ContextKeyUserID); ok {
 			if userID, ok := raw.(uint); ok && userID > 0 {
 				if repos, reposOk := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer); reposOk {
-					if userLang, householdLang, err := repos.Users.GetUserLanguagePreferencesByID(userID); err == nil {
+					if userLang, householdLang, err := repos.Users.GetUserDisplayPreferencesByID(userID); err == nil {
 						userLanguage, householdLanguage = userLang, householdLang
 					}
 				}
@@ -369,6 +369,7 @@ func JWTMiddleware(
 		TimeFunc:       time.Now,
 		SendCookie:     true,
 		CookieHTTPOnly: true,
+		SecureCookie:   util.IsHTTPSBaseURL(proviantConfiguration.Server.BaseURL),
 		CookieSameSite: http.SameSiteStrictMode,
 		// Generate claims and return it to payload
 		PayloadFunc: func(data any) jwt.MapClaims {

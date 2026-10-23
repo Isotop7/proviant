@@ -1,5 +1,8 @@
 ---
 server:
+  # Public URL of this deployment. The scheme also decides whether the session
+  # and CSRF cookies carry the Secure attribute: they do over https, and must
+  # not over http, or the browser drops them.
   baseURL: "https://proviant.local.de"
   port: 5114
   # Bind address. Empty means every interface (needed in a container). Set to
@@ -90,6 +93,17 @@ openfoodfacts:
   cacheEnabled: true
   imageCacheEnabled: false
   imageCachePath: "data/images"
+  # Bulk dump import for offline barcode lookup. Off by default: the full dump is
+  # a multi-gigabyte download. MariaDB needs the schema created by
+  # scripts/mariadb-init.sql before enabling; SQLite uses data/<dumpDatabase>.db.
+  dumpImportEnabled: false
+  dumpImportExpiryDays: 7
+  dumpUrl: https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz
+  dumpDeltaWindowDays: 14
+  # Directory the full dump is staged in before import; makes an interrupted
+  # download/import resumable. Needs room for the multi-gigabyte dump.
+  dumpStagingPath: data
+  dumpDatabase: off_dump
 
 ocr:
   enabled: true

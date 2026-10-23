@@ -1,6 +1,6 @@
 // ── Password policy (read from data attributes set by Go template) ────────────
 const pwdInput = document.getElementById('auth-password');
-const PWD_MIN_LENGTH        = parseInt(pwdInput?.dataset.minLength || '12', 10);
+const PWD_MIN_LENGTH        = Number.parseInt(pwdInput?.dataset.minLength || '12', 10);
 const PWD_REQUIRE_UPPERCASE = pwdInput?.dataset.requireUppercase === 'true';
 const PWD_REQUIRE_DIGIT     = pwdInput?.dataset.requireDigit     === 'true';
 const PWD_REQUIRE_SPECIAL   = pwdInput?.dataset.requireSpecial   === 'true';
@@ -34,7 +34,7 @@ function updateStrengthMeter(value) {
     });
     if (label) {
         label.textContent  = score > 0 ? proviant.t(STRENGTH_LABEL_KEYS[score - 1]) : '';
-        label.style.color  = score > 0 ? STRENGTH_COLORS[score - 1] : 'var(--fg-3)';
+        label.style.color  = score > 0 ? STRENGTH_COLORS[score - 1] : 'var(--meta)';
     }
 }
 
@@ -162,7 +162,7 @@ function showEmailVerificationModal(email) {
     if (!modal) return;
     const addressEl = document.getElementById('emailVerificationAddress');
     if (addressEl) addressEl.textContent = email || proviant.t('js.auth.yourEmailAddress');
-    new bootstrap.Modal(modal).show();
+    new bootstrap.Dialog(modal).show();
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
@@ -250,7 +250,7 @@ function Signup() {
     if (!email) {
         showFieldError('auth-email', proviant.t('js.auth.emailRequired'));
         valid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         showFieldError('auth-email', proviant.t('js.auth.emailInvalid'));
         valid = false;
     }
@@ -341,9 +341,9 @@ document.getElementById('authForm')?.addEventListener('submit', (event) => {
 
 // Logout button (present on other pages but auth.js is auth-only; kept for safety)
 document.addEventListener('click', (event) => {
-    if (event.target.closest('#btnLogout')) {
+    if (event.target.closest('[data-logout]')) {
         event.preventDefault();
-        proviant.logoutUser().then(() => {
+        void proviant.logoutUser().then(() => {
             window.location.href = '/web';
         });
     }

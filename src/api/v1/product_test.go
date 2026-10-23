@@ -320,6 +320,46 @@ func TestCreateProduct(t *testing.T) {
 			t.Errorf("GetProductBySyncID called %d times, want 1 — only the pre-check, not a second one after the validation failure", m.Products.SyncIDLookups)
 		}
 	})
+
+	// Mass amounts are stored in the canonical base unit, so a "kg" entry
+	// lands as grams and stock math needs no unit lookup at read time.
+	t.Run("normalizes mass amount to grams", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		ctx.Set("offacntrl", &MockOpenFoodFactsAPIController{
+			MockGetDataset: func(barcode string) (dbModel.Product, error) {
+				return dbModel.Product{}, errors.ErrProductSearchInvalidQuery
+			},
+		})
+
+		productData := dbModel.Product{ProductName: "Flour", Barcode: "0000000000000", Quantity: 2}
+		body, _ := json.Marshal(productData)
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		CreateProduct(ctx, appCtx)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("Status = %v, want %v; body: %s", w.Code, http.StatusCreated, w.Body.String())
+		}
+		var response apiModel.ProductResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+		if response.Quantity != 2 {
+			t.Errorf("count = %d, want 2", response.Quantity)
+		}
+	})
 }
 
 func intPtr(v int) *int { return &v }
@@ -333,8 +373,7 @@ func TestUpdateProduct(t *testing.T) {
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		updateData := dbModel.ProductDTOPatch{ProductName: "Updated Product"}
-		body, _ := json.Marshal(updateData)
+		body, _ := json.Marshal(map[string]any{"productName": "Updated Product"})
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
 			Header:        make(http.Header),
@@ -355,14 +394,50 @@ func TestUpdateProduct(t *testing.T) {
 		}
 	})
 
+	// The patch carries the pack count as it is: no unit is converted any more.
+	t.Run("keeps the pack count", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		// The answer carries the stored product, so the mock holds the
+		// product the patch leaves behind.
+		m.Products.Product = dbModel.Product{ProductName: "Milk", Quantity: 2}
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+
+		body, _ := json.Marshal(map[string]any{"productName": "Milk", "quantity": 2})
+		ctx.Request = &http.Request{
+			Body:          io.NopCloser(bytes.NewBuffer(body)),
+			Header:        make(http.Header),
+			ContentLength: int64(len(body)),
+		}
+		ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
+		ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		appCtx := &AppContext{
+			Logger: &zerolog.Logger{},
+			Repos:  m.ToRepositoryContainer(),
+			UserID: 1,
+		}
+		UpdateProduct(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Status = %v, want %v; body: %s", w.Code, http.StatusOK, w.Body.String())
+		}
+		var response dbModel.ProductDTOPatch
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+		if response.Quantity != 2 {
+			t.Errorf("count = %d, want 2", response.Quantity)
+		}
+	})
+
 	t.Run("update product not found", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
 		m.Products.Err = gorm.ErrRecordNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		updateData := dbModel.ProductDTOPatch{ProductName: "Updated Product"}
-		body, _ := json.Marshal(updateData)
+		body, _ := json.Marshal(map[string]any{"productName": "Updated Product"})
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
 			Header:        make(http.Header),
@@ -392,8 +467,7 @@ func TestUpdateProduct(t *testing.T) {
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		updateData := dbModel.ProductDTOPatch{ProductName: "Updated Product"}
-		body, _ := json.Marshal(updateData)
+		body, _ := json.Marshal(map[string]any{"productName": "Updated Product"})
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
 			Header:        make(http.Header),
@@ -420,8 +494,7 @@ func TestUpdateProduct(t *testing.T) {
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
-		updateData := dbModel.ProductDTOPatch{ProductName: "Updated Product"}
-		body, _ := json.Marshal(updateData)
+		body, _ := json.Marshal(map[string]any{"productName": "Updated Product"})
 		ctx.Request = &http.Request{
 			Body:          io.NopCloser(bytes.NewBuffer(body)),
 			Header:        make(http.Header),
@@ -801,8 +874,8 @@ func TestCookProducts(t *testing.T) {
 
 		cookRequest := apiModel.CookProductsAPIModel{
 			Items: []apiModel.CookItemAPIModel{
-				{ProductID: 1, Amount: 2},
-				{ProductID: 2, Amount: 0},
+				{ProductID: 1, Quantity: 2},
+				{ProductID: 2, Quantity: 0},
 			},
 		}
 		body, _ := json.Marshal(cookRequest)
@@ -882,7 +955,7 @@ func TestCookProducts(t *testing.T) {
 
 		cookRequest := apiModel.CookProductsAPIModel{}
 		for i := 1; i <= 101; i++ {
-			cookRequest.Items = append(cookRequest.Items, apiModel.CookItemAPIModel{ProductID: uint(i), Amount: 1})
+			cookRequest.Items = append(cookRequest.Items, apiModel.CookItemAPIModel{ProductID: uint(i), Quantity: 1})
 		}
 		body, _ := json.Marshal(cookRequest)
 		ctx.Request = &http.Request{
@@ -908,8 +981,8 @@ func TestCookProducts(t *testing.T) {
 
 		cookRequest := apiModel.CookProductsAPIModel{
 			Items: []apiModel.CookItemAPIModel{
-				{ProductID: 1, Amount: 1},
-				{ProductID: 2, Amount: 1},
+				{ProductID: 1, Quantity: 1},
+				{ProductID: 2, Quantity: 1},
 			},
 		}
 		body, _ := json.Marshal(cookRequest)
@@ -947,7 +1020,7 @@ func TestCookProducts(t *testing.T) {
 
 		cookRequest := apiModel.CookProductsAPIModel{
 			Items: []apiModel.CookItemAPIModel{
-				{ProductID: 1, Amount: 1},
+				{ProductID: 1, Quantity: 1},
 			},
 		}
 		body, _ := json.Marshal(cookRequest)
@@ -1062,19 +1135,19 @@ func TestProductActionAccessErrorsAre404(t *testing.T) {
 	}
 }
 
-// TestUpdateProductAmountAccessErrorIs404 covers the amount endpoint's
+// TestUpdateProductQuantityAccessErrorIs404 covers the amount endpoint's
 // pre-fetch: a cross-tenant id must read as not-found, not as 500.
-func TestUpdateProductAmountAccessErrorIs404(t *testing.T) {
+func TestUpdateProductQuantityAccessErrorIs404(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	m := repomocks.NewMockRepositoryContainer()
 	m.Products.Err = errors.ErrMismatcherUserID
 	ctx, w := repomocks.SetupGinContextWithMocks(m)
 	testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
-	ctx.Request = testutil.CreateJSONRequest(http.MethodPost, "/api/v1/products/1/amount", apiModel.ProductAmountDTO{Delta: -1})
+	ctx.Request = testutil.CreateJSONRequest(http.MethodPost, "/api/v1/products/1/quantity", apiModel.ProductQuantityDTO{Delta: -1})
 	ctx.Params = []gin.Param{{Key: "id", Value: "1"}}
 
-	UpdateProductAmount(ctx, newTestAppContext(m, 1))
+	UpdateProductQuantity(ctx, newTestAppContext(m, 1))
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("Status = %v, want %v; body: %s", w.Code, http.StatusNotFound, w.Body.String())

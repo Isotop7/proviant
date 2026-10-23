@@ -1,21 +1,148 @@
 // ── Page shell & widgets ───────────────────────────────────────────────────
 
-// Main content area — offset for fixed sidebar
-#content-wrapper {
-  padding: var(--space-6) var(--space-3);
-  margin-left: var(--sidebar-width);
+// The app shell: a sticky topnav and the content below it. The navigation
+// sits in the topbar, the way the design system's screen sheets show it.
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-// Page-level header bar — white surface, bottom border, bleeds to content-wrapper edges
+.app__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  min-height: var(--topbar-height);
+  padding: 0 var(--space-5);
+  background: color-mix(in oklab, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.app__brand {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  color: var(--fg);
+  text-decoration: none;
+  letter-spacing: var(--tracking-tight);
+
+  .app__brand-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.app__nav {
+  display: flex;
+  flex: 1;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+
+  .nav-link {
+    display: inline-flex;
+    gap: var(--space-2);
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--fg-2);
+    text-decoration: none;
+    white-space: nowrap;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out);
+
+    &:hover {
+      color: var(--fg);
+      background: var(--surface-warm);
+    }
+    &.active {
+      font-weight: var(--weight-semibold);
+      color: var(--accent-text);
+      background: var(--accent-soft);
+    }
+  }
+}
+
+.app__topbar-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+// The content is centred and capped: the design system's screen sheets put
+// the page in a fixed column with generous gutters, not edge to edge.
+.app__content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--container-max);
+  padding: var(--space-6) var(--container-gutter-desktop) var(--space-16);
+  margin: 0 auto;
+}
+
+@media (max-width: 991.98px) {
+  .app__content {
+    padding-right: var(--container-gutter-tablet);
+    padding-left: var(--container-gutter-tablet);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .app__content {
+    padding-right: var(--container-gutter-phone);
+    padding-left: var(--container-gutter-phone);
+  }
+}
+
+// The table screens get the measure the screen sheets give them: a table
+// needs a readable line length, the full column would stretch it.
+.app__content--table {
+  max-width: 900px;
+}
+
+.app__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--meta);
+
+  a {
+    color: var(--muted);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--fg);
+    }
+  }
+}
+
+.app__footer-version {
+  font-family: var(--font-mono);
+}
+
+// The page header — the sheets' page-header-block: a label, the number it
+// counts and the context around it. No band, no border, no bleed.
 .page-header {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  align-items: flex-end;
   justify-content: space-between;
-  padding: 14px 24px;
-  // Negative margins cancel content-wrapper padding: the sides must bleed --space-3, or the bar overflows into a horizontal scrollbar.
-  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-3)) var(--space-5);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-8);
 }
 
 .toolbar-sticky {
@@ -23,19 +150,18 @@
   top: 0;
   z-index: 90; // below sidebar (100), above page content
   padding: 1rem 0;
-  background-color: var(--bs-body-bg);
+  background-color: var(--bg-body);
 
   #advanced-filters {
-    .form-select,
     .form-control {
       height: auto;
       padding: .25rem .5rem;
-      font-size: 11px;
+      font-size: 12px;
     }
     .input-group-text {
       padding: .25rem .5rem;
-      font-size: 11px;
-      color: var(--fg-3);
+      font-size: 12px;
+      color: var(--meta);
     }
   }
 }
@@ -47,9 +173,9 @@ th a {
   text-decoration: none;
 }
 
-.form-check-input:checked {
-  background-color: var(--bs-primary);
-  border-color: var(--bs-primary);
+.check:checked {
+  background-color: var(--primary-base);
+  border-color: var(--primary-base);
 }
 
 .product-btn-toolbar {
@@ -80,89 +206,103 @@ th a {
 
 .search-row {
   display: flex;
-  gap: 0;
+  gap: var(--space-2);
   align-items: center;
+  min-width: 0;
+  padding: 0 var(--space-2) 0 var(--space-3);
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  transition: border-color var(--duration-base), box-shadow var(--duration-base);
+  border-radius: var(--radius-pill);
+  transition: border-color var(--motion-base), box-shadow var(--motion-base);
 
   &:focus-within {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px oklch(50% .12 162deg / .15);
+    box-shadow: var(--focus-ring);
   }
 }
 
 .search-icon {
   flex-shrink: 0;
-  padding: 0 10px;
   font-size: 14px;
-  color: var(--fg-3);
+  color: var(--muted);
   pointer-events: none;
 }
 
-.search-select {
+// The field selector lives inside the search field: two toggles, the active
+// one tinted the way the screen sheets draw it.
+.search-scope {
+  display: flex;
   flex-shrink: 0;
-  width: auto;
-  min-width: 100px;
-  padding: 8px 28px 8px 10px;
-  font-family: var(--font-ui);
-  font-size: var(--text-sm);
-  color: var(--fg);
-  appearance: none;
+  gap: 2px;
+}
+
+.search-scope__toggle {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--fg-2);
   cursor: pointer;
   background: transparent;
-  border: none;
-  border-right: 1px solid var(--border);
-  outline: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  transition: background var(--motion-base), color var(--motion-base), border-color var(--motion-base);
 
-  &:focus {
-    box-shadow: none;
+  &:hover {
+    color: var(--fg);
+    background: var(--surface-warm);
+  }
+
+  &.active {
+    color: var(--accent-text);
+    background: var(--accent-soft);
+    border-color: var(--accent-border);
   }
 }
 
 .search-input {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
-  padding: 8px 12px;
-  font-family: var(--font-ui);
-  font-size: var(--text-sm);
+  height: 40px;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
   color: var(--fg);
   background: transparent;
   border: none;
   outline: none;
 
   &::placeholder {
-    font-family: var(--font-ui);
-    font-size: var(--text-sm);
-    color: var(--fg-3);
+    color: var(--muted);
+  }
+
+  &::-webkit-search-cancel-button {
+    display: none;
   }
 }
 
-.btn.btn-search,
-.btn.btn-show-all,
-.btn.btn-filters {
+.search-clear {
+  display: flex;
   flex-shrink: 0;
-  padding: 8px 12px;
-  font-family: var(--font-ui);
-  font-size: var(--text-sm);
-  color: var(--fg-2);
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
   background: transparent;
   border: none;
-  border-left: 1px solid var(--border);
-  transition: background var(--duration-fast), color var(--duration-fast);
+  border-radius: var(--radius-pill);
+  transition: background var(--motion-base), color var(--motion-base);
 
   &:hover {
     color: var(--fg);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
-}
-
-.btn.btn-show-all,
-.btn.btn-filters {
-  border-left: 1px solid var(--border);
-  border-radius: 0;
 }
 
 .filter-row {
@@ -181,14 +321,14 @@ th a {
   margin-right: 4px;
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  color: var(--fg-3);
+  color: var(--meta);
   text-transform: uppercase;
   letter-spacing: .06em;
 }
 
 .filter-select {
   padding: 6px 28px 6px 10px;
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--fg);
   appearance: none;
@@ -197,7 +337,7 @@ th a {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   outline: none;
-  transition: border-color var(--duration-base);
+  transition: border-color var(--motion-base);
 
   &:focus {
     border-color: var(--accent);
@@ -213,7 +353,7 @@ th a {
     position: absolute;
     right: 8px;
     font-size: 10px;
-    color: var(--fg-3);
+    color: var(--meta);
     pointer-events: none;
   }
 }
@@ -270,7 +410,7 @@ th a {
     .step-circle {
       color: white;
       background-color: var(--accent);
-      box-shadow: 0 2px 8px oklch(50% .12 162deg / .4);
+      box-shadow: 0 2px 8px color-mix(in oklab, var(--accent) 40%, transparent);
     }
   }
 
@@ -279,7 +419,7 @@ th a {
     .step-circle {
       color: white;
       background-color: var(--accent-hover);
-      box-shadow: 0 2px 8px oklch(50% .12 162deg / .3);
+      box-shadow: 0 2px 8px color-mix(in oklab, var(--accent) 30%, transparent);
     }
   }
 }
@@ -293,10 +433,10 @@ th a {
   margin-bottom: 4px;
   font-size: 14px;
   font-weight: 700;
-  color: var(--fg-3);
-  background-color: var(--bg-subtle);
+  color: var(--meta);
+  background-color: var(--surface-warm);
   border-radius: 50%;
-  transition: background-color var(--duration-base), box-shadow var(--duration-base);
+  transition: background-color var(--motion-base), box-shadow var(--motion-base);
 }
 
 .step-connector {
@@ -304,7 +444,7 @@ th a {
   width: 60px;
   height: 2px;
   margin: 0 8px;
-  background-color: var(--bs-border-color);
+  background-color: var(--border-color);
 }
 
 .onboarding-step {
@@ -326,13 +466,13 @@ th a {
 // Expiry field update flash
 @keyframes expire-flash {
   0% {
-    box-shadow: 0 0 0 3px var(--bs-info);
+    box-shadow: 0 0 0 3px var(--info-base);
   }
   70% {
-    box-shadow: 0 0 0 3px rgba(var(--bs-info-rgb), .3);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--info-base) 30%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--bs-info-rgb), 0);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--info-base) 0%, transparent);
   }
 }
 
@@ -340,17 +480,16 @@ th a {
   animation: expire-flash .5s ease-out forwards;
 }
 
-// Notification bell
+// Notification bell — the badge hangs off the corner of the icon button.
 #notification-badge {
-  top: 50%;
-  right: 8px;
+  top: -6px;
+  right: -6px;
   min-width: 1.25rem;
   height: 1.25rem;
   padding: 0 .35em;
   font-size: .7rem;
   line-height: 1.25rem;
   text-align: center;
-  transform: translateY(-50%);
 }
 
 #notification-dropdown {
@@ -363,18 +502,47 @@ th a {
 }
 
 .notification-entry:hover {
-  background-color: var(--bs-tertiary-bg);
+  background-color: var(--bg-3);
 }
 
 .notification-entry-date {
   font-size: .7rem;
 }
 
-// Scrollable stat tile body
+// The info trigger of a tile: it carries the explanation in its tooltip.
 .tile-threshold-info {
-  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  font-size: var(--text-sm);
+  line-height: 1;
+  color: var(--meta);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  transition: color var(--motion-base) var(--ease-out);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--fg);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
 }
 
+// The trigger sits behind the eyebrow of a tile, not in a flex row.
+.kpi__label .tile-threshold-info {
+  margin-left: var(--space-2);
+}
+
+// Scrollable stat tile body
 .tile-scroll-body {
   max-height: 200px;
   overflow-y: auto;

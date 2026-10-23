@@ -55,6 +55,23 @@ var (
 	// ErrUnsupportedLanguage is thrown when a language has no message catalog
 	ErrUnsupportedLanguage = errors.New("unsupported language")
 
+	// ErrDashboardLayoutInvalid is thrown when a submitted dashboard layout does
+	// not match the expected shape: an unknown version, a tile span outside the
+	// grid, or a payload above the size limit.
+	ErrDashboardLayoutInvalid = errors.New("invalid dashboard layout")
+
+	// ErrInvalidProductQuantity is thrown when a product is patched with a pack
+	// count of zero: a product always holds at least one pack.
+	ErrInvalidProductQuantity = errors.New("quantity must be at least 1")
+
+	// ErrProductQuantityTooLarge is thrown when a product is patched with a
+	// pack count above util.MaxProductQuantity.
+	ErrProductQuantityTooLarge = errors.New("quantity is above the maximum pack count")
+
+	// ErrProductQuantityDeltaOutOfRange is thrown when a quantity delta is
+	// larger than the range a pack count may span.
+	ErrProductQuantityDeltaOutOfRange = errors.New("quantity delta is out of range")
+
 	// ErrInvalidUserIDWrapper is used to interpolate a invalid user id
 	ErrInvalidUserIDWrapper            = "User with id '%d' not found"
 	ErrInvalidUserIDWrapperWithMessage = ErrInvalidUserIDWrapper + ": %s"
@@ -226,6 +243,27 @@ var (
 
 	// ErrOpenFoodFactsAPIInvalidImageCachePath is thrown if image caching is enabled but no path is specified
 	ErrOpenFoodFactsAPIInvalidImageCachePath = errors.New("image cache enabled but no image cache path specified")
+
+	// ErrOpenFoodFactsDumpEmptyURL is thrown if the bulk dump import is enabled but no dump URL was specified
+	ErrOpenFoodFactsDumpEmptyURL = errors.New("dump import enabled but no dump URL specified")
+
+	// ErrOpenFoodFactsDumpInvalidExpiryDays is thrown if the dump expiry is not a positive number of days
+	ErrOpenFoodFactsDumpInvalidExpiryDays = errors.New("invalid OpenFoodFacts dump import expiry days")
+
+	// ErrOpenFoodFactsDumpInvalidDeltaWindowDays is thrown if the delta window is negative
+	ErrOpenFoodFactsDumpInvalidDeltaWindowDays = errors.New("invalid OpenFoodFacts dump delta window days")
+
+	// ErrOpenFoodFactsDumpEmptyDatabase is thrown if dump import is enabled on MariaDB but no schema name was specified
+	ErrOpenFoodFactsDumpEmptyDatabase = errors.New("dump import enabled but no dump database (schema) specified for MariaDB")
+
+	// ErrOpenFoodFactsDumpSchemaUnavailable is thrown when the configured MariaDB dump schema does not exist
+	ErrOpenFoodFactsDumpSchemaUnavailable = errors.New("configured OpenFoodFacts dump database (schema) does not exist")
+
+	// ErrOpenFoodFactsDumpDatabaseUnavailable is thrown when the dump store cannot be opened or reached
+	ErrOpenFoodFactsDumpDatabaseUnavailable = errors.New("OpenFoodFacts dump database is not reachable")
+
+	// ErrOpenFoodFactsDumpStagingUnavailable is thrown when the full dump staging file cannot be created or opened
+	ErrOpenFoodFactsDumpStagingUnavailable = errors.New("OpenFoodFacts dump staging file is not writable")
 
 	/*
 	 * Notification related errors
@@ -579,6 +617,11 @@ var (
 
 	// ErrImportNoBarcodeColumn is thrown when the CSV header has no barcode column
 	ErrImportNoBarcodeColumn = errors.New("CSV header must contain a barcode column")
+
+	// ErrImportLegacyFormat is thrown when the CSV carries the pre-count-model
+	// headers, whose quantity column held a net content instead of a count of
+	// packs.
+	ErrImportLegacyFormat = errors.New("this file was written before products were counted in packs — re-export it, or use 'quantity' for the number of packs and 'pack_size' for the size of one pack")
 
 	// ErrImportTooManyRows is thrown when the CSV exceeds util.CsvImportMaxRows
 	ErrImportTooManyRows = errors.New("CSV contains too many rows")

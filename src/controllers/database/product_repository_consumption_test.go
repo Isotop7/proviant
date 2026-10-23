@@ -59,7 +59,7 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 	t.Run("excludes products deleted before the window", func(t *testing.T) {
 		barcode := "3333333333333"
 		old := now.AddDate(0, 0, -120)
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Yogurt", "pcs", 1, old)
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Yogurt", 1, old)
 
 		products, err := repo.GetConsumedSamples(hh.ID, admin.ID, barcode, "Yogurt", since)
 		if err != nil {
@@ -72,8 +72,8 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 
 	t.Run("returns ordered by deleted_at ascending", func(t *testing.T) {
 		barcode := "4444444444444"
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Butter", "pcs", 1, now.Add(-1*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Butter", "pcs", 1, now.Add(-10*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Butter", 1, now.Add(-1*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Butter", 1, now.Add(-10*24*time.Hour))
 
 		products, err := repo.GetConsumedSamples(hh.ID, admin.ID, barcode, "Butter", since)
 		if err != nil {
@@ -89,8 +89,8 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 
 	t.Run("privacy: other user's private consumption of same barcode is hidden", func(t *testing.T) {
 		privateBarcode := "5555555555555"
-		testutil.SeedConsumedProduct(t, db, hh.ID, other.ID, true, privateBarcode, "Tea", "pcs", 1, now.Add(-7*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, hh.ID, other.ID, true, privateBarcode, "Tea", "pcs", 1, now.Add(-3*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, other.ID, true, privateBarcode, "Tea", 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, other.ID, true, privateBarcode, "Tea", 1, now.Add(-3*24*time.Hour))
 
 		productsOther, err := repo.GetConsumedSamples(hh.ID, other.ID, privateBarcode, "Tea", since)
 		if err != nil {
@@ -111,9 +111,9 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 
 	t.Run("falls back to product_name when barcode is empty", func(t *testing.T) {
 		name := "Loose Tomatoes"
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "", name, "kg", 1, now.Add(-7*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "", name, "kg", 1, now.Add(-2*24*time.Hour))
-		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "", "Loose Carrots", "kg", 1, now.Add(-3*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "", name, 1, now.Add(-7*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "", name, 1, now.Add(-2*24*time.Hour))
+		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "", "Loose Carrots", 1, now.Add(-3*24*time.Hour))
 
 		products, err := repo.GetConsumedSamples(hh.ID, admin.ID, "", name, since)
 		if err != nil {
@@ -143,8 +143,7 @@ func seedConsumedWithReason(t *testing.T, db *gorm.DB, householdID, userID uint,
 		HouseholdID:   householdID,
 		UserID:        userID,
 		IsPrivate:     isPrivate,
-		Amount:        amount,
-		Unit:          unit,
+		Quantity:      amount,
 		RemovalReason: reason,
 	}
 	if err := db.Create(&p).Error; err != nil {

@@ -6,7 +6,6 @@ type CreateShoppingListItemRequest struct {
 	Name      string `json:"name"`
 	Category  string `json:"category"`
 	Quantity  int    `json:"quantity"`
-	Unit      string `json:"unit"`
 	Notes     string `json:"notes"`
 }
 
@@ -15,7 +14,6 @@ type UpdateShoppingListItemRequest struct {
 	Name     *string `json:"name"`
 	Category *string `json:"category"`
 	Quantity *int    `json:"quantity"`
-	Unit     *string `json:"unit"`
 	Checked  *bool   `json:"checked"`
 	Notes    *string `json:"notes"`
 }

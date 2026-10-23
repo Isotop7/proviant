@@ -16,11 +16,11 @@ const el = Object.freeze({
     instanceDropdown: document.getElementById('instanceDropdown'),
     barcodeLookupLoading: document.getElementById('barcodeLookupLoading'),
     barcodeReaderWrapper: document.getElementById('barcode-reader-wrapper'),
-    amount: document.getElementById('amount'),
-    amountDisplay: document.getElementById('amountDisplay'),
+    quantity: document.getElementById('quantity'),
+    quantityDisplay: document.getElementById('quantityDisplay'),
     modalStorageLocation: document.getElementById('modalStorageLocation'),
-    btnAmountDec: document.getElementById('btnAmountDec'),
-    btnAmountInc: document.getElementById('btnAmountInc'),
+    btnQuantityDec: document.getElementById('btnQuantityDec'),
+    btnQuantityInc: document.getElementById('btnQuantityInc'),
     btnExpireAdd3: document.getElementById('btnExpireAdd3'),
     btnExpireAdd7: document.getElementById('btnExpireAdd7'),
     btnExpireAdd1m: document.getElementById('btnExpireAdd1m'),
@@ -31,8 +31,8 @@ const el = Object.freeze({
     batchStorageLocation: document.getElementById('batchStorageLocation'),
     batchProductName: document.getElementById('batchProductName'),
     batchProductBarcode: document.getElementById('batchProductBarcode'),
-    batchAmount: document.getElementById('batchAmount'),
-    batchAmountDisplay: document.getElementById('batchAmountDisplay'),
+    batchQuantity: document.getElementById('batchQuantity'),
+    batchQuantityDisplay: document.getElementById('batchQuantityDisplay'),
     batchExpireAt: document.getElementById('batchExpireAt'),
 });
 const html5QrCode = new Html5Qrcode('barcode-reader',
@@ -115,10 +115,10 @@ function toggleBtnScan(state) {
     if (el.btnScan) {
         if (state) {
             el.btnScan.dataset.action = 'scan';
-            el.btnScan.innerHTML = '<i class="bi bi-upc-scan px-2"></i>' + proviant.t("js.scan.scanButton");
+            el.btnScan.innerHTML = '<i class="bi bi-upc-scan px-3"></i>' + proviant.t("js.scan.scanButton");
         } else {
             el.btnScan.dataset.action = 'stop';
-            el.btnScan.innerHTML = '<i class="bi bi-stop-circle px-2"></i>' + proviant.t("js.scan.stopButton");
+            el.btnScan.innerHTML = '<i class="bi bi-stop-circle px-3"></i>' + proviant.t("js.scan.stopButton");
         }
     }
 }
@@ -145,11 +145,11 @@ function togglePlaceholders(state) {
 }
 function toggleGrowers(state) {
     if (state) {
-        document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
+        document.querySelectorAll('.spinner-grow.spinner-sm.fg-secondary').forEach((elem) => {
             elem.style.display = '';
         });
     } else {
-        document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
+        document.querySelectorAll('.spinner-grow.spinner-sm.fg-secondary').forEach((elem) => {
             elem.style.display = 'none';
         });
     }
@@ -345,13 +345,13 @@ function handleBatchToggle() {
     if (!el.batchStartPanel) return;
     el.batchStartPanel.classList.toggle('d-none');
     if (!el.batchStartPanel.classList.contains('d-none') && el.batchStorageLocation && el.batchStorageLocation.options.length <= 1) {
-        loadBatchStorageLocations();
+        void loadBatchStorageLocations();
     }
 }
 
 function handleBatchStart() {
     if (!el.batchStartPanel || !el.batchStorageLocation) return;
-    batchLocationId = el.batchStorageLocation.value ? parseInt(el.batchStorageLocation.value, 10) : null;
+    batchLocationId = el.batchStorageLocation.value ? Number.parseInt(el.batchStorageLocation.value, 10) : null;
     batchMode = true;
     batchAwaitingConfirm = false;
     el.batchStartPanel.classList.add('d-none');
@@ -445,8 +445,8 @@ function openBatchConfirmPanel(barcode) {
     batchPendingName = '';
     if (el.batchProductName) el.batchProductName.textContent = proviant.t("js.scan.lookingUp");
     if (el.batchProductBarcode) el.batchProductBarcode.textContent = barcode;
-    if (el.batchAmount) el.batchAmount.value = 1;
-    if (el.batchAmountDisplay) el.batchAmountDisplay.textContent = '1';
+    if (el.batchQuantity) el.batchQuantity.value = 1;
+    if (el.batchQuantityDisplay) el.batchQuantityDisplay.textContent = '1';
     if (el.batchExpireAt) {
         el.batchExpireAt.value = formatInputDate(new Date());
         el.batchExpireAt.classList.remove('is-invalid');
@@ -496,7 +496,7 @@ function shiftBatchExpiry(days, months) {
 
 function handleBatchAdd() {
     if (batchSubmitting) return;
-    if (!batchAwaitingConfirm || !el.batchExpireAt || !el.batchAmount) return;
+    if (!batchAwaitingConfirm || !el.batchExpireAt || !el.batchQuantity) return;
     if (!el.batchExpireAt.value) {
         el.batchExpireAt.classList.add('is-invalid');
         return;
@@ -508,7 +508,7 @@ function handleBatchAdd() {
         barcode: batchPendingBarcode,
         productName: batchPendingName,
         expireAt: expireDate.toISOString(),
-        amount: parseInt(el.batchAmount.value, 10) || 1,
+        quantity: Number.parseInt(el.batchQuantity.value, 10) || 1,
         storageLocationId: batchLocationId
     });
     saveBatchQueue();
@@ -680,17 +680,17 @@ function handleBtnAddProduct() {
         return;
     }
     const expireAt = el.inputExpireAt.valueAsDate.toISOString();
-    const amountEl = el.amount;
-    const amount = amountEl ? parseInt(amountEl.value, 10) || 1 : 1;
+    const qtyEl = el.quantity;
+    const quantity = qtyEl ? Number.parseInt(qtyEl.value, 10) || 1 : 1;
     const locationEl = el.modalStorageLocation;
-    const storageLocationId = locationEl && locationEl.value ? parseInt(locationEl.value, 10) : null;
+    const storageLocationId = locationEl && locationEl.value ? Number.parseInt(locationEl.value, 10) : null;
 
     const btn = el.btnAddProduct;
     if (!btn) return;
     btn.classList.add('loading');
     btn.disabled = true;
 
-    proviant.createProduct(barcode, expireAt, amount, storageLocationId).then((response) => {
+    proviant.createProduct(barcode, expireAt, quantity, storageLocationId, false, null).then((response) => {
         btn.classList.remove('loading');
         btn.disabled = false;
         switch (response.code) {
@@ -736,6 +736,8 @@ function handleBtnDeleteProductModal() {
                 } else {
                     proviant.showFeedback('error', proviant.t("js.products.wastedFailed"), proviant.t("js.products.wastedError", response.message));
                 }
+            }).catch((error) => {
+                showAlert(false, error);
             });
         },
         proviant.t("js.products.wastedButton"),
@@ -757,6 +759,8 @@ function handleBtnArchiveProductModal() {
                 } else {
                     proviant.showFeedback('error', proviant.t("js.products.consumeFailed"), proviant.t("js.products.consumeError", response.message));
                 }
+            }).catch((error) => {
+                showAlert(false, error);
             });
         },
         proviant.t("js.products.consumedButton"),
@@ -791,7 +795,7 @@ function handleChangedBarcode() {
 /* Event delegation for form submission */
 document.addEventListener('submit', function (event) {
     const target = event.target;
-    if (target.classList.contains('needs-validation')) {
+    if (target.matches('form[data-bs-validate]')) {
         if (target.checkValidity() === false) {
             event.preventDefault();
             event.stopPropagation();
@@ -799,7 +803,6 @@ document.addEventListener('submit', function (event) {
             event.preventDefault();
             handleBtnAddProduct();
         }
-        target.classList.add('was-validated');
     }
 });
 
@@ -843,24 +846,24 @@ document.addEventListener('click', function (event) {
         return;
     }
 
-    if (target.closest('#btnAmountDec')) {
+    if (target.closest('#btnQuantityDec')) {
         event.preventDefault();
-        const hiddenInput = el.amount;
-        const display = el.amountDisplay;
+        const hiddenInput = el.quantity;
+        const display = el.quantityDisplay;
         if (hiddenInput && display) {
-            const newVal = Math.max(1, parseInt(hiddenInput.value, 10) - 1);
+            const newVal = Math.max(1, Number.parseInt(hiddenInput.value, 10) - 1);
             hiddenInput.value = newVal;
             display.textContent = newVal;
         }
         return;
     }
 
-    if (target.closest('#btnAmountInc')) {
+    if (target.closest('#btnQuantityInc')) {
         event.preventDefault();
-        const hiddenInput = el.amount;
-        const display = el.amountDisplay;
+        const hiddenInput = el.quantity;
+        const display = el.quantityDisplay;
         if (hiddenInput && display) {
-            const newVal = parseInt(hiddenInput.value, 10) + 1;
+            const newVal = Number.parseInt(hiddenInput.value, 10) + 1;
             hiddenInput.value = newVal;
             display.textContent = newVal;
         }
@@ -904,24 +907,24 @@ document.addEventListener('click', function (event) {
         return;
     }
 
-    if (target.closest('#btnBatchAmountDec')) {
+    if (target.closest('#btnBatchQuantityDec')) {
         event.preventDefault();
-        const hiddenInput = el.batchAmount;
-        const display = el.batchAmountDisplay;
+        const hiddenInput = el.batchQuantity;
+        const display = el.batchQuantityDisplay;
         if (hiddenInput && display) {
-            const newVal = Math.max(1, parseInt(hiddenInput.value, 10) - 1);
+            const newVal = Math.max(1, Number.parseInt(hiddenInput.value, 10) - 1);
             hiddenInput.value = newVal;
             display.textContent = newVal;
         }
         return;
     }
 
-    if (target.closest('#btnBatchAmountInc')) {
+    if (target.closest('#btnBatchQuantityInc')) {
         event.preventDefault();
-        const hiddenInput = el.batchAmount;
-        const display = el.batchAmountDisplay;
+        const hiddenInput = el.batchQuantity;
+        const display = el.batchQuantityDisplay;
         if (hiddenInput && display) {
-            const newVal = parseInt(hiddenInput.value, 10) + 1;
+            const newVal = Number.parseInt(hiddenInput.value, 10) + 1;
             hiddenInput.value = newVal;
             display.textContent = newVal;
         }
@@ -966,7 +969,7 @@ document.addEventListener('click', function (event) {
 
     if (target.closest('#btnBatchDone')) {
         event.preventDefault();
-        handleBatchDone();
+        void handleBatchDone();
         return;
     }
 

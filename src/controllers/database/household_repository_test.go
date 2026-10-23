@@ -322,7 +322,8 @@ func TestHouseholdRepository_NameSettingsAndMembers(t *testing.T) {
 	t.Run("UpdateHouseholdSettings as admin", func(t *testing.T) {
 		goalCount := 5
 		goalPercent := 12.5
-		if err := repo.UpdateHouseholdSettings(household.ID, admin.ID, "count", &goalCount, &goalPercent, nil); err != nil {
+		language := "de"
+		if err := repo.UpdateHouseholdSettings(household.ID, admin.ID, "count", &goalCount, &goalPercent, &language); err != nil {
 			t.Fatalf("UpdateHouseholdSettings() error = %v", err)
 		}
 		var updated dbModel.Household
@@ -337,6 +338,9 @@ func TestHouseholdRepository_NameSettingsAndMembers(t *testing.T) {
 		}
 		if updated.MonthlyWasteGoalPercent == nil || *updated.MonthlyWasteGoalPercent != 12.5 {
 			t.Errorf("goal percent = %v, want 12.5", updated.MonthlyWasteGoalPercent)
+		}
+		if updated.Language != "de" {
+			t.Errorf("language = %q, want de", updated.Language)
 		}
 	})
 

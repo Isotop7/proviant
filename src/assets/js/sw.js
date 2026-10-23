@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v136';
+const CACHE_NAME = 'proviant-v166';
 
 const PRECACHE_URLS = [
   '/manifest.json',
@@ -9,6 +9,7 @@ const PRECACHE_URLS = [
   '/assets/js/offlineQueue.js',
   '/assets/js/theme.js',
   '/assets/js/bootstrap.bundle.min.js',
+  '/assets/js/bootstrap-globals.js',
   '/assets/js/chart.umd.min.js',
   '/assets/js/main.js',
   '/assets/js/notifications.js',
@@ -129,7 +130,7 @@ self.addEventListener('fetch', (event) => {
         .then((response) => {
           if (response.ok) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            void caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
         })
@@ -152,7 +153,7 @@ self.addEventListener('fetch', (event) => {
           fetch(request).then((response) => {
             if (response.ok) {
               const clone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+              void caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
             }
             return response;
           })
@@ -168,7 +169,7 @@ self.addEventListener('fetch', (event) => {
         .then((response) => {
           if (response.ok) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            void caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
         })

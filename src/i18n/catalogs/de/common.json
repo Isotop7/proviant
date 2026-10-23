@@ -17,6 +17,7 @@
   "common.offlineBanner": "Sie sind offline — angezeigte Daten stammen aus dem Cache. Änderungen werden bei Wiederverbindung synchronisiert.",
   "common.ok": "OK",
   "common.previous": "Vorherige",
+  "common.qty": "Stk.",
   "common.reload": "Neu laden",
   "common.retry": "Erneut versuchen",
   "common.save": "Speichern",

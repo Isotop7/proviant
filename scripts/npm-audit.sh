@@ -46,7 +46,7 @@ echo "==> Auditing all dependencies (informational)"
 npm audit --audit-level=high
 info_status=$?
 
-if [ "$info_status" -ne 0 ] && [ "$gate_status" -eq 0 ]; then
+if [[ "$info_status" -ne 0 ]] && [[ "$gate_status" -eq 0 ]]; then
   echo "::warning::npm audit reported dev-dependency vulnerabilities outside the production gate. Non-blocking by design — see the header of scripts/npm-audit.sh"
 fi
 

@@ -176,8 +176,7 @@ func TestGenerateMealPlanShoppingList(t *testing.T) {
 		env := setupHandlerTest(t)
 		product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
 		product.ProductName = "Flour"
-		product.Amount = 100
-		product.Unit = "g"
+		product.Quantity = 1
 		if err := env.DB.Save(product).Error; err != nil {
 			t.Fatalf("save product: %v", err)
 		}
@@ -187,8 +186,8 @@ func TestGenerateMealPlanShoppingList(t *testing.T) {
 			Servings:    2,
 			CreatedBy:   env.User.ID,
 			Ingredients: []dbModel.RecipeIngredient{
-				{ProductID: &product.ID, Name: "Flour", Amount: 250, Unit: "g", SortOrder: 0},
-				{Name: "Salt", Amount: 5, Unit: "g", SortOrder: 1},
+				{ProductID: &product.ID, Name: "Flour", Portion: "250 g", SortOrder: 0},
+				{Name: "Salt", Portion: "5 g", SortOrder: 1},
 			},
 		}
 		if err := env.DB.Create(recipe).Error; err != nil {
@@ -206,18 +205,18 @@ func TestGenerateMealPlanShoppingList(t *testing.T) {
 		if err != nil {
 			t.Fatalf("list shopping items: %v", err)
 		}
-		if len(items) != 2 {
-			t.Fatalf("items = %d, want 2", len(items))
+		if len(items) != 1 {
+			t.Fatalf("items = %d, want 1 (the pack in stock covers the flour)", len(items))
 		}
 		byName := make(map[string]dbModel.ShoppingListItem)
 		for i := range items {
 			byName[items[i].Name] = items[i]
 		}
-		if flour, ok := byName["Flour"]; !ok || flour.Quantity != 150 {
-			t.Errorf("flour item = %+v, want quantity 150 (250 planned - 100 in stock)", flour)
+		if _, ok := byName["Flour"]; ok {
+			t.Errorf("flour item = %+v, want none: one pack in stock covers the planned use", byName["Flour"])
 		}
-		if salt, ok := byName["Salt"]; !ok || salt.Quantity != 5 {
-			t.Errorf("salt item = %+v, want quantity 5", salt)
+		if salt, ok := byName["Salt"]; !ok || salt.Quantity != 1 {
+			t.Errorf("salt item = %+v, want quantity 1 (one pack per planned use)", salt)
 		}
 	})
 

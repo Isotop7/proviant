@@ -141,7 +141,7 @@ func TestScanReceiptHTTPPaths(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ScanReceipt() = %v", err)
 		}
-		if len(resp.Items) != 1 || resp.Items[0].Name != "Milk" || resp.Items[0].Amount != 2 {
+		if len(resp.Items) != 1 || resp.Items[0].Name != "Milk" || resp.Items[0].Quantity != 1 {
 			t.Errorf("Items = %+v, want one Milk x2", resp.Items)
 		}
 		if resp.Items[0].Price == nil || *resp.Items[0].Price != 1.5 {
@@ -162,7 +162,7 @@ func TestScanReceiptHTTPPaths(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ScanReceipt() = %v", err)
 		}
-		if len(resp.Items) != 1 || resp.Items[0].Name != "Bread" || resp.Items[0].Amount != 1 {
+		if len(resp.Items) != 1 || resp.Items[0].Name != "Bread" || resp.Items[0].Quantity != 1 {
 			t.Errorf("Items = %+v, want one Bread x1 assembled from stream deltas", resp.Items)
 		}
 	})
@@ -397,10 +397,10 @@ func TestSalvageReceiptItems(t *testing.T) {
 		if len(items) != 2 {
 			t.Fatalf("items = %+v, want 2 salvaged items", items)
 		}
-		if items[0].Name != "Milk" || items[0].Amount != 1 {
+		if items[0].Name != "Milk" || items[0].Quantity != 1 {
 			t.Errorf("items[0] = %+v, want Milk x1", items[0])
 		}
-		if items[1].Name != "Bread" || items[1].Amount != 2 {
+		if items[1].Name != "Bread" || items[1].Quantity != 2 {
 			t.Errorf("items[1] = %+v, want the truncated Bread x2", items[1])
 		}
 	})
@@ -464,29 +464,55 @@ func TestBuildReceiptItems(t *testing.T) {
 		if len(items) != 5 {
 			t.Fatalf("items = %d, want 5 (empty name dropped)", len(items))
 		}
-		if items[0].Name != "Milk" || items[0].Amount != 2 || items[0].Unit != "l" {
-			t.Errorf("items[0] = %+v, want trimmed Milk x2 l", items[0])
+		if items[0].Name != "Milk" || items[0].Quantity != 1 || items[0].PackSize != "2 l" {
+			t.Errorf("items[0] = %+v, want trimmed Milk, one pack of 2 l", items[0])
 		}
 		if items[0].Price == nil || *items[0].Price != 1.29 {
 			t.Errorf("items[0].Price = %v, want 1.29", items[0].Price)
 		}
-		if items[1].Amount != 1 || items[1].Price != nil {
-			t.Errorf("items[1] = %+v, want amount clamped to 1 and negative price dropped", items[1])
+		if items[1].Quantity != 1 || items[1].Price != nil {
+			t.Errorf("items[1] = %+v, want count clamped to 1 and negative price dropped", items[1])
 		}
-		if items[2].Amount != util.ReceiptItemMaxAmount || items[2].Price != nil {
-			t.Errorf("items[2] = %+v, want amount clamped to %d and oversized price dropped", items[2], util.ReceiptItemMaxAmount)
+		if items[2].Quantity != util.MaxProductQuantity || items[2].Price != nil {
+			t.Errorf("items[2] = %+v, want count clamped to %d and oversized price dropped", items[2], util.MaxProductQuantity)
 		}
 		if len(items[3].Name) > util.ReceiptItemMaxNameLength {
 			t.Errorf("name length = %d, want <= %d", len(items[3].Name), util.ReceiptItemMaxNameLength)
 		}
-		if len(items[4].Unit) > util.ReceiptItemMaxUnitLength {
-			t.Errorf("unit length = %d, want <= %d", len(items[4].Unit), util.ReceiptItemMaxUnitLength)
+		if len(items[4].PackSize) > util.MaxPackSizeLength {
+			t.Errorf("pack size length = %d, want <= %d", len(items[4].PackSize), util.MaxPackSizeLength)
 		}
 	})
 
 	t.Run("nil input yields empty", func(t *testing.T) {
 		if got := buildReceiptItems(nil); len(got) != 0 {
 			t.Errorf("buildReceiptItems(nil) = %+v, want empty", got)
+		}
+	})
+
+	t.Run("a pack count and a pack size are taken as they are", func(t *testing.T) {
+		items, err := ParseReceiptItems(`{"items":[{"name":"Yogurt","quantity":6,"packSize":"150 g","price":2.49}]}`)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(items) != 1 {
+			t.Fatalf("items = %d, want 1", len(items))
+		}
+		if items[0].Quantity != 6 || items[0].PackSize != "150 g" {
+			t.Errorf("items[0] = %+v, want 6 packs of 150 g", items[0])
+		}
+	})
+
+	t.Run("a legacy net content still becomes one pack of that size", func(t *testing.T) {
+		items, err := ParseReceiptItems(`{"items":[{"name":"Yogurt","amount":500,"unit":"g"}]}`)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(items) != 1 {
+			t.Fatalf("items = %d, want 1", len(items))
+		}
+		if items[0].Quantity != 1 || items[0].PackSize != "500 g" {
+			t.Errorf("items[0] = %+v, want one pack of 500 g", items[0])
 		}
 	})
 }

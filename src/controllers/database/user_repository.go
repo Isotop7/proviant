@@ -17,7 +17,7 @@ type UserRepositoryInterface interface {
 	GetUserByUsername(username string) (authentication.User, error)
 	GetUserByID(userID uint) (authentication.User, error)
 	GetUserHouseholdByID(userID uint) (uint, error)
-	GetUserLanguagePreferencesByID(userID uint) (string, string, error)
+	GetUserDisplayPreferencesByID(userID uint) (string, string, error)
 	GetUserHouseholdRole(userID uint) (string, error)
 	UpdateUserHouseholdRole(userID, householdID uint, role string) error
 	UserExistsByUsername(user *authentication.User) bool
@@ -25,6 +25,7 @@ type UserRepositoryInterface interface {
 	CreateUser(user *authentication.User) error
 	UpdateUser(userID uint, user *authentication.User) error
 	UpdateUserReceiptScanSettings(userID uint, prefs authentication.ReceiptScanPreferences, apiKey *string) error
+	UpdateUserDashboardLayout(userID uint, layout string) error
 	UpdateAdminUserFields(userID uint, username, mailAddress string) error
 	UpdateDisplayName(userID uint, displayName string) error
 	UpdateUserPassword(userID uint, login *authentication.Login) error
@@ -99,9 +100,11 @@ func (r *UserRepository) GetUserHouseholdByID(userID uint) (uint, error) {
 	return user.HouseholdID, selectErr.Error
 }
 
-// GetUserLanguagePreferencesByID returns the user language preference and the
-// language preference of the user's household (empty string = automatic).
-func (r *UserRepository) GetUserLanguagePreferencesByID(userID uint) (string, string, error) {
+// GetUserDisplayPreferencesByID returns the user's language preference and the
+// language preference of the user's household (empty string = automatic) in one
+// query, so the per-request middleware and the offline sync need a single
+// round trip.
+func (r *UserRepository) GetUserDisplayPreferencesByID(userID uint) (string, string, error) {
 	var result struct {
 		UserLanguage      string
 		HouseholdLanguage string
@@ -222,6 +225,7 @@ func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) erro
 		"receipt_scan_model",
 		"receipt_scan_timeout",
 		"receipt_scan_api_key",
+		"dashboard_layout",
 	).Save(&dbUser)
 	if saveResult.Error != nil {
 		return saveResult.Error
@@ -262,6 +266,19 @@ func (r *UserRepository) UpdateUserReceiptScanSettings(userID uint, prefs authen
 			Update("receipt_scan_api_key", *apiKey)
 		return keyResult.Error
 	})
+}
+
+// UpdateUserDashboardLayout stores the arrangement of the dashboard tiles. The
+// column is written on its own so a concurrent save of another preference can
+// never be replayed from a stale snapshot.
+func (r *UserRepository) UpdateUserDashboardLayout(userID uint, layout string) error {
+	if userID <= 0 {
+		return errors.ErrInvalidUserID
+	}
+
+	return r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Updates(map[string]any{"dashboard_layout": layout}).Error
 }
 
 // UpdateAdminUserFields allows admins to change login-credential fields (username, email).

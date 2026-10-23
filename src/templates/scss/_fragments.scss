@@ -16,7 +16,7 @@
   height: 64px;
   background: var(--accent);
   border-radius: 16px;
-  box-shadow: 0 6px 18px oklch(50% .12 162deg / .35);
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
 // Tabular numbers — stable width for stat tiles
@@ -25,13 +25,13 @@
 }
 
 // Skeleton shimmer loading tiles
-.skeleton-block {
+.skeleton {
   background:
     linear-gradient(
       90deg,
-      var(--bs-secondary-bg) 25%,
-      var(--bs-tertiary-bg) 50%,
-      var(--bs-secondary-bg) 75%
+      var(--bg-1) 25%,
+      var(--bg-3) 50%,
+      var(--bg-1) 75%
     );
   background-size: 200% 100%;
   border-radius: .375rem;
@@ -58,22 +58,23 @@
   max-width: 480px;
 }
 
-// Mobile bottom navigation
+// Mobile bottom navigation — the design system's spec: the warm surface, a
+// hairline on top, the active item in the accent on the accent's soft ground.
 .bottom-nav {
   position: fixed;
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 9999;
+  z-index: 1035;
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
   height: 60px;
   padding: 0 4px;
   padding-bottom: env(safe-area-inset-bottom, 0);
-  background: var(--surface);
+  background: var(--surface-warm);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -4px 20px oklch(18% .022 70deg / .08);
+  box-shadow: 0 -4px 20px color-mix(in oklab, var(--fg) 8%, transparent);
   transform: translateZ(0);
 }
 
@@ -86,19 +87,19 @@
   width: 64px;
   height: 64px;
   margin-bottom: 4px;
-  color: var(--accent-fg);
+  color: var(--accent-on);
   text-decoration: none;
   background: var(--accent);
   border-radius: 50%;
-  box-shadow: 0 4px 12px oklch(50% .12 162deg / .4);
-  transition: transform var(--duration-base), box-shadow var(--duration-base);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 40%, transparent);
+  transition: transform var(--motion-base), box-shadow var(--motion-base);
 
   i {
     font-size: 24px;
   }
 
   &:hover {
-    box-shadow: 0 6px 16px oklch(50% .12 162deg / .5);
+    box-shadow: 0 6px 16px color-mix(in oklab, var(--accent) 50%, transparent);
     transform: scale(1.05);
   }
 
@@ -109,44 +110,43 @@
 
 .bottom-nav-item {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 3px;
   align-items: center;
   justify-content: center;
+  min-width: 0;
   padding: 8px;
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--fg-3);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
   background: none;
   border: none;
-  transition: color 120ms;
+  border-radius: var(--radius-md);
+  transition: color 120ms, background-color 120ms;
 
   i {
     display: block;
     font-size: 20px;
   }
   span {
-    font-family: var(--font-ui);
+    font-family: var(--font-body);
   }
 
   &.active {
-    font-weight: 700;
+    font-weight: 600;
     color: var(--accent);
+    background: var(--accent-soft);
   }
 }
 
 .mobile-top-more {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 10000;
-  display: none;
-
-  @media (max-width: 767.98px) {
-    display: block;
-  }
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
 }
 
 .mobile-top-more-btn {
@@ -155,12 +155,12 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  color: var(--fg-3);
+  color: var(--meta);
   cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 50%;
-  box-shadow: 0 2px 8px oklch(18% .022 70deg / .12);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--fg) 12%, transparent);
   transition: color 120ms;
 
   i {
@@ -173,25 +173,73 @@
   }
 }
 
-.mobile-top-more-dropdown {
+.mobile-top-more-menu {
   min-width: 160px;
   margin-top: 8px;
 
-  .dropdown-item {
-    font-family: var(--font-ui);
+  .menu-item {
+    font-family: var(--font-body);
     font-size: 12px;
   }
 
-  .dropdown-item-danger {
-    color: var(--bs-danger);
+  .menu-item-danger {
+    color: var(--danger-base);
 
     &:hover {
-      background-color: var(--bs-danger-bg-subtle);
+      background-color: var(--danger-bg-subtle);
     }
   }
 }
 
-@media (min-width: 768px) {
+.drawer.mobile-nav-drawer {
+  height: auto;
+  max-height: 70vh;
+
+  .drawer-body {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0));
+  }
+}
+
+.mobile-nav-link {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+
+  i {
+    width: 20px;
+    font-size: 18px;
+    color: var(--meta);
+    text-align: center;
+  }
+
+  &.active {
+    color: var(--accent);
+    background: var(--bg-3);
+
+    i {
+      color: var(--accent);
+    }
+  }
+}
+
+@media (max-width: 359.98px) {
+  .bottom-nav-item {
+    padding: 8px 4px;
+    font-size: 9px;
+  }
+
+  .bottom-nav-scan {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+// The link row in the topnav disappears below 1024px — the bottom tab takes
+// over, the way the design system's screen sheets do it.
+@media (min-width: 1024px) {
   .bottom-nav {
     display: none;
   }
@@ -206,12 +254,11 @@
     margin: 0;
     overflow-x: hidden;
   }
-  .pv-sidebar {
+  .app__nav {
     display: none;
   }
-  #content-wrapper {
+  .app__content {
     min-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0));
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
-    margin-left: 0;
   }
 }

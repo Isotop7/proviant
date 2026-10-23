@@ -6,7 +6,7 @@ function getFormElements() {
         inputCategories:   document.getElementById('categoriesHidden'),
         inputCountries:    document.getElementById('countriesHidden'),
         inputExpireAt:     document.getElementById('inputExpireAt'),
-        inputAmount:       document.getElementById('inputAmount'),
+        inputQuantity:     document.getElementById('inputQuantity'),
         labelProductID:    document.getElementById('labelProductID'),
         imgProduct:        document.getElementById('imgProduct'),
         alertEditProduct:  document.getElementById('alertEditProduct'),
@@ -58,7 +58,7 @@ function editProduct() {
     const inputOpenedAt = document.getElementById('inputOpenedAt');
     const openedAtValue = inputOpenedAt && inputOpenedAt.value ? inputOpenedAt.value : null;
     const openedAtDate = openedAtValue ? new Date(openedAtValue + 'T00:00:00') : null;
-    const openedAt = openedAtDate && !isNaN(openedAtDate.getTime()) ? openedAtDate.toISOString() : null;
+    const openedAt = openedAtDate && !Number.isNaN(openedAtDate.getTime()) ? openedAtDate.toISOString() : null;
 
     const inputDaysAfterOpening = document.getElementById('inputDaysAfterOpening');
     const daysAfterOpening = inputDaysAfterOpening && inputDaysAfterOpening.value !== ''
@@ -71,7 +71,7 @@ function editProduct() {
         "countries": els.inputCountries.value.trim(),
         "imageUrl": els.inputImageURL.value.trim(),
         "expireAt": expireDate ? expireDate.toISOString() : null,
-        "amount": els.inputAmount ? Number.parseInt(els.inputAmount.value) || 0 : 0,
+        "quantity": els.inputQuantity ? Number.parseInt(els.inputQuantity.value) || 1 : 1,
         "storageLocationId": storageLocationId,
         "notificationLeadDays": notificationLeadDays,
         "minStockAmount": minStockAmount,
@@ -96,6 +96,8 @@ function editProduct() {
                 proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.products.undefinedError", response.message));
                 break;
         }
+    }).catch((error) => {
+        proviant.showFeedback('error', proviant.t("common.error"), error?.message || String(error));
     });
 }
 
@@ -110,6 +112,8 @@ function deleteProduct() {
         } else {
             proviant.showFeedback('error', proviant.t("js.products.deleteFailed"), proviant.t("js.products.deleteFailedMsg", response.message));
         }
+    }).catch((error) => {
+        proviant.showFeedback('error', proviant.t("common.error"), error?.message || String(error));
     });
 }
 
@@ -124,6 +128,8 @@ function restoreProduct() {
         } else {
             proviant.showFeedback('error', proviant.t("js.products.restoreProductFailed"), proviant.t("js.products.restoreProductFailedMsg", response.message));
         }
+    }).catch((error) => {
+        proviant.showFeedback('error', proviant.t("common.error"), error?.message || String(error));
     });
 }
 
@@ -141,7 +147,7 @@ document.addEventListener("click", function (event) {
 /* Form submission */
 document.addEventListener("submit", function (event) {
     const target = event.target;
-    if (target.id === "editProductForm" || target.classList.contains("needs-validation")) {
+    if (target.id === "editProductForm" || target.matches("form[data-bs-validate]")) {
         if (target.checkValidity() === false) {
             event.preventDefault();
             event.stopPropagation();
@@ -149,7 +155,6 @@ document.addEventListener("submit", function (event) {
             event.preventDefault();
             editProduct();
         }
-        target.classList.add('was-validated');
     }
 });
 
@@ -174,6 +179,8 @@ function consumeProduct() {
         } else {
             proviant.showFeedback('error', proviant.t("js.products.consumeFailed"), proviant.t("js.products.couldNotMarkConsumed", response.message));
         }
+    }).catch((error) => {
+        proviant.showFeedback('error', proviant.t("common.error"), error?.message || String(error));
     });
 }
 
@@ -211,13 +218,13 @@ document.addEventListener("click", function (event) {
         }
     }
 
-    // Amount stepper buttons
-    var stepBtn = event.target.closest('[data-amount-step]');
+    // Quantity stepper buttons
+    var stepBtn = event.target.closest('[data-quantity-step]');
     if (stepBtn) {
-        var amountInput = document.getElementById('inputAmount');
-        if (amountInput) {
-            var step = parseInt(stepBtn.dataset.amountStep, 10);
-            amountInput.value = Math.max(0, parseInt(amountInput.value, 10) + step);
+        var quantityInput = document.getElementById('inputQuantity');
+        if (quantityInput) {
+            var step = Number.parseInt(stepBtn.dataset.quantityStep, 10);
+            quantityInput.value = Math.max(1, Number.parseInt(quantityInput.value, 10) + step);
         }
     }
 
@@ -282,23 +289,23 @@ function handleAddToShoppingList(btn) {
     var productId = btn.dataset.productId;
     if (!productId) return;
 
-    proviant.runWithButtonBusyState(
+    void proviant.runWithButtonBusyState(
         btn,
         async function () {
             var response = await proviant.getRestockSuggestion(productId);
             if (response.code !== 200) {
                 // Fall back to a direct add with default quantity (also
                 // covers the "no suggestion available" case).
-                await proviant.addToShoppingList(productId, 1, '');
+                await proviant.addToShoppingList(productId, 1);
                 return;
             }
             var suggestion = response.message;
             if (suggestion && suggestion.hasSuggestion && suggestion.suggestedQty > 0) {
                 var choice = await openRestockModal(suggestion);
                 if (choice === proviant.CANCEL) return proviant.CANCEL;
-                await proviant.addToShoppingList(productId, choice.qty, choice.unit);
+                await proviant.addToShoppingList(productId, choice.qty);
             } else {
-                await proviant.addToShoppingList(productId, 1, '');
+                await proviant.addToShoppingList(productId, 1);
             }
         },
         proviant.t("js.products.addedToShoppingList"),
@@ -308,25 +315,23 @@ function handleAddToShoppingList(btn) {
     );
 }
 
-// Returns a Promise that resolves with {qty, unit} on confirm, or with
+// Returns a Promise that resolves with {qty} on confirm, or with
 // proviant.CANCEL when the user dismisses the modal (Cancel, X, backdrop,
 // Escape). runWithButtonBusyState treats CANCEL as a no-op.
 function openRestockModal(suggestion) {
     return new Promise(function (resolve) {
         var modalEl = document.getElementById('restockSuggestionModal');
         if (!modalEl || typeof bootstrap === 'undefined') {
-            resolve({ qty: suggestion.suggestedQty, unit: suggestion.unit || '' });
+            resolve({ qty: suggestion.suggestedQty });
             return;
         }
 
         var qtyEl = document.getElementById('restockQty');
-        var unitEl = document.getElementById('restockUnit');
         var reasonEl = document.getElementById('restockReason');
         var productEl = document.getElementById('restockProductName');
         var confirmBtn = document.getElementById('restockConfirmBtn');
 
         if (qtyEl) qtyEl.value = suggestion.suggestedQty;
-        if (unitEl) unitEl.value = suggestion.unit || '';
         if (productEl) {
             productEl.textContent = suggestion.productName || suggestion.display || proviant.t("js.products.suggestedQuantity");
         }
@@ -341,25 +346,24 @@ function openRestockModal(suggestion) {
         var finish = function (result) {
             if (resolved) return;
             resolved = true;
-            modalEl.removeEventListener('hidden.bs.modal', onHidden);
+            modalEl.removeEventListener('hidden.bs.dialog', onHidden);
             resolve(result);
         };
 
-        modalEl.addEventListener('hidden.bs.modal', onHidden);
+        modalEl.addEventListener('hidden.bs.dialog', onHidden);
 
         if (confirmBtn) {
             var newBtn = confirmBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
             newBtn.addEventListener('click', function () {
-                var qty = qtyEl ? Math.max(1, parseInt(qtyEl.value, 10) || 1) : 1;
-                var unit = unitEl ? unitEl.value.trim() : '';
-                var modal = bootstrap.Modal.getInstance(modalEl);
+                var qty = qtyEl ? Math.max(1, Number.parseInt(qtyEl.value, 10) || 1) : 1;
+                var modal = bootstrap.Dialog.getInstance(modalEl);
                 if (modal) modal.hide();
-                finish({ qty: qty, unit: unit });
+                finish({ qty: qty });
             });
         }
 
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        bootstrap.Dialog.getOrCreateInstance(modalEl).show();
     });
 }
 

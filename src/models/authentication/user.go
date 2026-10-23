@@ -65,6 +65,7 @@ type User struct {
 	Household               database.Household
 	Role                    string                  `gorm:"default:'member'" json:"role"`
 	Language                string                  `gorm:"default:''" json:"language"`
+	DashboardLayout         string                  `gorm:"column:dashboard_layout;type:text" json:"-"`
 	NotificationPreferences NotificationPreferences `gorm:"embedded"`
 	ReceiptScanPreferences  ReceiptScanPreferences  `gorm:"embedded;embeddedPrefix:receipt_scan_" json:"-"`
 	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`

@@ -1,24 +1,28 @@
 {{ define "content" }}
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">{{ t "nav.shoppingList" }}</h1>
-        <p class="page-header-subtitle">{{ tn "shoppingList.itemCount" .ItemCount }}</p>
+<header class="page-header">
+    <div class="page-header__lead">
+        <h1 class="eyebrow">{{ t "nav.shoppingList" }}</h1>
+        <div class="page-header__count">{{ .ItemCount }}</div>
+        <p class="page-header__sub">{{ t "shoppingList.itemsNeeded" }}</p>
     </div>
-    <button class="btn btn-proviant-secondary d-none d-md-flex align-items-center gap-2" id="btnPrintShoppingList" type="button">
-        <i class="bi bi-printer"></i> {{ t "shoppingList.printList" }}
-    </button>
-</div>
+    <div class="page-header__aside">
+        <div class="page-header__meta">{{ t "shoppingList.checkedOff" .CheckedCount }}</div>
+        <button class="btn btn-outline theme-secondary d-none md:d-flex align-items-center gap-3" id="btnPrintShoppingList" type="button">
+            <i class="bi bi-printer"></i> {{ t "shoppingList.printList" }}
+        </button>
+    </div>
+</header>
 
 {{ if .HasAutoItems }}
-<div class="shopping-list-import-banner mb-3" id="importBanner">
+<div class="shopping-list-import-banner mb-5" id="importBanner">
     <div class="import-banner-header" data-bs-toggle="collapse" data-bs-target="#importCollapse" aria-expanded="false">
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3">
             <i class="bi bi-cart-plus"></i>
             <span>{{ tn "shoppingList.belowThresholdCount" .AutoItemCount }}</span>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-sm btn-proviant-primary" id="btnImportAll">
+        <div class="d-flex align-items-center gap-3">
+            <button type="button" class="btn btn-sm btn-solid theme-primary" id="btnImportAll">
                 {{ t "shoppingList.importAll" }}
             </button>
             <i class="bi bi-chevron-down"></i>
@@ -26,8 +30,8 @@
     </div>
     <div class="collapse" id="importCollapse">
         <div class="import-banner-body">
-            <p class="mb-2 small text-secondary-custom">{{ t "shoppingList.importBannerDesc" }}</p>
-            <div class="d-flex flex-wrap gap-2">
+            <p class="mb-3 small fg-secondary">{{ t "shoppingList.importBannerDesc" }}</p>
+            <div class="d-flex flex-wrap gap-3">
                 {{ range .AutoItems }}
                 <span class="filter-pill">{{ .ProductName }}</span>
                 {{ end }}
@@ -37,58 +41,63 @@
 </div>
 {{ end }}
 
-<div class="shopping-list-add-form mb-3" id="addItemForm">
+<div class="shopping-list-add-form mb-5" id="addItemForm">
     <div class="add-item-form-inner">
         <input type="text" class="form-control" id="inputItemName" placeholder="{{ t "shoppingList.itemName" }}" aria-label="{{ t "shoppingList.itemName" }}">
-        <input type="number" class="form-control" id="inputItemQuantity" value="1" min="1" placeholder="{{ t "shoppingList.qty" }}" aria-label="{{ t "shoppingList.quantity" }}">
-        <input type="text" class="form-control" id="inputItemUnit" placeholder="{{ t "shoppingList.unit" }}" aria-label="{{ t "shoppingList.unit" }}">
-        <button type="button" class="btn btn-proviant-primary" id="btnAddItem" aria-label="{{ t "shoppingList.addItem" }}">
+        <div class="qty-stepper">
+            <button type="button" data-item-quantity-step="-1" aria-label="{{ t "shoppingList.decreaseQuantityLabel" }}">−</button>
+            <input type="number" id="inputItemQuantity" value="1" min="1" placeholder="{{ t "shoppingList.qty" }}" aria-label="{{ t "shoppingList.quantity" }}">
+            <button type="button" data-item-quantity-step="1" aria-label="{{ t "shoppingList.increaseQuantityLabel" }}">+</button>
+        </div>
+        <button type="button" class="btn btn-solid theme-primary" id="btnAddItem" aria-label="{{ t "shoppingList.addItem" }}">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
         </button>
     </div>
 </div>
 
 {{ if .Items }}
-<div id="shoppingListContainer">
-    <div class="sl-list-header">
-        <div class="sl-checkbox-col">
+<div id="shoppingListContainer" class="card shopping-list">
+    <div class="card-header shopping-list__header">
+        <div class="shopping-list__cell shopping-list__cell--check">
             <input type="checkbox" id="selectAll" class="list-checkbox" aria-label="{{ t "shoppingList.selectAllItems" }}">
         </div>
-        <div class="sl-product-col">{{ t "shoppingList.itemColumn" }}</div>
-        <div class="sl-qty-col">{{ t "shoppingList.qty" }}</div>
-        <div class="sl-actions-col"></div>
+        <div class="shopping-list__cell shopping-list__cell--name">{{ t "shoppingList.itemColumn" }}</div>
+        <div class="shopping-list__cell shopping-list__cell--trailing">{{ t "shoppingList.qty" }}</div>
     </div>
 
+    <div class="list-group list-group-flush">
     {{ range $item := .ItemsSorted }}
-    <div class="sl-list-row{{ if $item.Checked }} checked{{ end }}" data-id="{{ $item.ID }}" id="item-{{ $item.ID }}">
-        <div class="sl-checkbox-col">
+    <div class="list-group-item shopping-list__item{{ if $item.Checked }} checked{{ end }}" data-id="{{ $item.ID }}" id="item-{{ $item.ID }}">
+        <div class="list-group-item__leading shopping-list__cell shopping-list__cell--check">
             <input type="checkbox" class="item-checkbox list-checkbox"{{ if $item.Checked }} checked{{ end }} data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.markAsDone" $item.Name }}">
         </div>
-        <div class="sl-product-col">
-            <div class="sl-item-content">
-                <span class="sl-item-name{{ if $item.Checked }} text-decoration-line-through text-secondary-custom{{ end }}">{{ $item.Name }}</span>
-            </div>
+        <div class="list-group-item__body shopping-list__cell shopping-list__cell--name">
+            <div class="list-group-item__title{{ if $item.Checked }} text-decoration-line-through fg-secondary{{ end }}">{{ $item.Name }}</div>
+            {{ with $item.PackSize }}
+            <div class="list-group-item__meta">{{ . }}</div>
+            {{ end }}
         </div>
-        <div class="sl-qty-col">
-            <div class="qty-stepper">
+        <div class="list-group-item__trailing shopping-list__cell shopping-list__cell--trailing">
+            <div class="qty-stepper qty-stepper-flat">
                 <button type="button" data-qty-action="dec" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.decreaseQuantity" $item.Name }}">−</button>
-                <span id="qty-{{ $item.ID }}">{{ $item.Quantity }}</span>
+                <span id="qty-{{ $item.ID }}" class="qty-amount" data-quantity="{{ $item.Quantity }}">{{ quantityLabel $item.Quantity }}</span>
                 <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.increaseQuantity" $item.Name }}">+</button>
             </div>
+            <div class="shopping-list__actions">
+                <button type="button" class="btn-icon fg-secondary" data-notes-toggle="{{ $item.ID }}" title="{{ t "shoppingList.notes" }}" aria-label="{{ t "shoppingList.toggleNotes" $item.Name }}">
+                    <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="btn-icon fg-danger" data-delete-item="{{ $item.ID }}" title="{{ t "common.delete" }}" aria-label="{{ t "shoppingList.deleteItemLabel" $item.Name }}">
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
-        <div class="sl-actions-col">
-            <button type="button" class="btn-icon text-secondary-custom" data-notes-toggle="{{ $item.ID }}" title="{{ t "shoppingList.notes" }}" aria-label="{{ t "shoppingList.toggleNotes" $item.Name }}">
-                <i class="bi bi-chat-left-text" aria-hidden="true"></i>
-            </button>
-            <button type="button" class="btn-icon text-danger" data-delete-item="{{ $item.ID }}" title="{{ t "common.delete" }}" aria-label="{{ t "shoppingList.deleteItemLabel" $item.Name }}">
-                <i class="bi bi-trash3" aria-hidden="true"></i>
-            </button>
+        <div class="shopping-list__notes" id="notes-{{ $item.ID }}">
+            <input type="text" class="form-control form-control-sm" placeholder="{{ t "shoppingList.addNotes" }}" value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
         </div>
-    </div>
-    <div class="sl-notes-row" id="notes-{{ $item.ID }}">
-        <input type="text" class="form-control form-control-sm" placeholder="{{ t "shoppingList.addNotes" }}" value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
     </div>
     {{ end }}
+    </div>
 </div>
 {{ else }}
 <div class="empty">

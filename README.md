@@ -1,6 +1,6 @@
 ![Proviant](./res/icons/proviant_hero.png)
 
-![Golang version](https://img.shields.io/badge/Go-1.26.9-green)
+![Golang version](https://img.shields.io/badge/Go-1.26.10-green)
 ![CI status](https://github.com/Isotop7/proviant/actions/workflows/ci.yml/badge.svg?branch=main)
 ![Release state](https://img.shields.io/github/v/release/Isotop7/proviant)
 ![Open issues](https://img.shields.io/github/issues/Isotop7/proviant)
@@ -11,9 +11,9 @@
 ![Changelog](https://img.shields.io/badge/Changelog-CHANGELOG.md-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant2&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant2)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant2&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant2)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Isotop7_proviant2&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Isotop7_proviant2)
 
 ⁉️ Ever wondered if this oat milk is still fresh or when you opened that hummus? In the past you may have thrown it away. Now there is **proviant**
 
@@ -80,6 +80,7 @@ Then open http://localhost:5114
 ## Technologies and Tools
 
 - **Web:** [Go](https://go.dev/), [Gin](https://gin-gonic.com/), [Gorm](https://gorm.io/index.html), [Bootstrap](https://getbootstrap.com/)
+- **Design:** the design system in [`design-system/`](./design-system/) — crème and sage, Jost and DMMono, one source of truth for every token
 - **Charts:** [Chart.js](https://www.chartjs.org/)
 - **Database:** MariaDB or SQLite
 - **Notifications:** SMTP, Web Push, [Ntfy](https://ntfy.sh/), [Telegram](https://telegram.org/)
@@ -118,6 +119,19 @@ refuses to start without it:
 ```bash
 echo "PROVIANT_JWT_SECRET=$(openssl rand -hex 32)" > .env
 ```
+
+The MariaDB compose file additionally requires the database credentials, so that no
+password ships in the repository:
+
+```bash
+echo "PROVIANT_MARIADB_ROOT_PASSWORD=$(openssl rand -hex 16)" >> .env
+echo "PROVIANT_MARIADB_PASSWORD=$(openssl rand -hex 16)" >> .env
+```
+
+`PROVIANT_MARIADB_ROOT_PASSWORD` is the MariaDB root account, `PROVIANT_MARIADB_PASSWORD`
+the `proviant` user the app connects with. The root password is needed for the manual
+`scripts/mariadb-init.sql` run described under [Database](#database) — the app user
+itself may not grant privileges.
 
 **IMPORTANT:** The mounted directories need to be chowned by the proviant app user.
 
@@ -166,9 +180,9 @@ Configuration is set via environment variables. The complete list of available o
 |---|---|---|
 | `PROVIANT_SERVER_PORT` | `5114` | Listening port |
 | `PROVIANT_SERVER_HOST` | *(empty)* | Bind address; empty binds every interface, set `127.0.0.1` for a loopback-only listener |
-| `PROVIANT_SERVER_BASEURL` | `https://proviant.local.de` | URL of Proviant with protocol (used in emails, notifications) |
+| `PROVIANT_SERVER_BASEURL` | `https://proviant.local.de` | URL of Proviant with protocol (used in emails, notifications, and to decide whether the session and CSRF cookies carry the Secure attribute) |
 | `PROVIANT_SERVER_MAXUPLOADSIZEMB` | `5` | Maximum upload size in MB (receipt photos, CSV imports) |
-| `PROVIANT_SERVER_DEBUG` | `false` | Run Gin in debug mode |
+| `PROVIANT_SERVER_DEBUG` | `false` | Run Gin in debug mode and emit debug-level logs |
 | `PROVIANT_SERVER_DEMOMODE` | `false` | Enable demo mode (read-only demo behaviour) |
 | `PROVIANT_SERVER_METRICSENABLED` | `false` | Expose the unauthenticated Prometheus `/metrics` endpoint |
 | `PROVIANT_SERVER_TRUSTEDPROXIES` | *(empty)* | Comma-separated list of trusted reverse-proxy CIDRs for `X-Forwarded-For`/`X-Real-IP`; empty ignores those headers and uses the connection address |
@@ -218,6 +232,14 @@ Configuration is set via environment variables. The complete list of available o
 | `PROVIANT_DATABASE_MARIADB_USER` | `root` (SQLite: `proviant`) | Database user |
 | `PROVIANT_DATABASE_MARIADB_PASSWORD` | `password` | Database user password |
 
+MariaDB schemas are provisioned outside the app. `scripts/mariadb-init.sql` creates the main `proviant` schema and, when the [OpenFoodFacts bulk dump](#openfoodfacts) is enabled, its separate dump schema (default `off_dump`) and grants. The Docker compose file mounts it for fresh volumes; on an existing volume run it manually, because the MariaDB entrypoint only executes init scripts on an empty data directory:
+
+```bash
+mysql -h <host> -u root -p < scripts/mariadb-init.sql
+```
+
+The app never creates schemas. SQLite needs none: the dump store is a plain file beside the main database. With the dump enabled on MariaDB it fails to start if the configured schema (default `off_dump`) is missing or unreachable, rather than running half-configured.
+
 #### Logging
 
 | Environment Variable | Default | Description |
@@ -258,6 +280,12 @@ Web push subscriptions need no configuration: VAPID keys are generated automatic
 | `PROVIANT_OPENFOODFACTS_CACHEENABLED` | `true` | Cache API responses in database for offline use |
 | `PROVIANT_OPENFOODFACTS_IMAGECACHEENABLED` | `false` | Cache product images locally |
 | `PROVIANT_OPENFOODFACTS_IMAGECACHEPATH` | `data/images` | Path to image cache directory |
+| `PROVIANT_OPENFOODFACTS_DUMPIMPORTENABLED` | `false` | Import the OpenFoodFacts bulk dump for offline barcode lookup (multi-GB download) |
+| `PROVIANT_OPENFOODFACTS_DUMPIMPORTEXPIRYDAYS` | `7` | Days after which the full dump is re-downloaded |
+| `PROVIANT_OPENFOODFACTS_DUMPURL` | `https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz` | Full dump URL |
+| `PROVIANT_OPENFOODFACTS_DUMPDELTAWINDOWDAYS` | `14` | Days of OFF delta files considered between full downloads |
+| `PROVIANT_OPENFOODFACTS_DUMPSTAGINGPATH` | `data` | Directory the full dump is staged in before import (resumable; needs room for the multi-GB dump) |
+| `PROVIANT_OPENFOODFACTS_DUMPDATABASE` | `off_dump` | Dump store name: the MariaDB schema, or `data/<name>.db` on SQLite; a value that names a path (e.g. `/var/opt/off_dump`) is used verbatim |
 
 #### OCR (expiry date scanning)
 
@@ -321,7 +349,7 @@ The scheduled backup job writes one full household JSON backup per household to 
 |---|---|---|
 | `PROVIANT_RESTORE_MAXUPLOADSIZEMB` | `50` | Maximum restore upload size in MB |
 
-Gin's debug mode is controlled by `PROVIANT_SERVER_DEBUG` (`GIN_MODE` is overridden at startup).
+Gin's debug mode and the log level are both controlled by `PROVIANT_SERVER_DEBUG` (`GIN_MODE` is overridden at startup).
 
 ## Upgrade / Migration
 
@@ -373,6 +401,12 @@ Documentation is generated with `gomarkdoc` and `swagger`:
 
 - [Package documentation](./src/docs/README.md)
 - [Swagger definition](./src/docs/swagger.yaml)
+
+The design system has its own documentation:
+
+- [design-system/DESIGN.md](./design-system/DESIGN.md) — the binding rules
+- [design-system/deviations.md](./design-system/deviations.md) — every place the app departs from them, with a reason
+- [design-system/screens/](./design-system/screens/) — the spec sheets, one per screen
 
 ## Screenshots
 

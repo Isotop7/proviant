@@ -59,7 +59,7 @@ func BulkWasteProducts(ctx *gin.Context, appCtx *AppContext) {
 
 // CookProducts consumes multiple products, partially or fully (cook workflow)
 // @Summary      Cook products
-// @Description  Consumes the given products by reducing their amounts. An amount of 0 or one that reaches or exceeds the current amount fully consumes (archives) the product.
+// @Description  Consumes the given products by reducing their pack counts. A count of 0 or one that reaches or exceeds the current count fully consumes (archives) the product.
 // @Tags         product
 // @Accept       json
 // @Produce      json

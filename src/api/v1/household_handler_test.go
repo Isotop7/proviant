@@ -221,6 +221,37 @@ func TestUpdateHouseholdSettingsHandler(t *testing.T) {
 			t.Errorf("status = %d, want 403", env.W.Code)
 		}
 	})
+
+	t.Run("valid language persists", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		language := "de"
+		testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{Language: &language})
+
+		UpdateHouseholdSettings(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+		var stored dbModel.Household
+		if err := env.DB.First(&stored, env.Household.ID).Error; err != nil {
+			t.Fatalf("load household: %v", err)
+		}
+		if stored.Language != "de" {
+			t.Errorf("stored language = %q, want de", stored.Language)
+		}
+	})
+
+	t.Run("invalid language returns 400", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		language := "xx"
+		testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{Language: &language})
+
+		UpdateHouseholdSettings(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want 400", env.W.Code)
+		}
+	})
 }
 
 func TestGetHouseholdActivityHandler(t *testing.T) {

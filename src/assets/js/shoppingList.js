@@ -14,6 +14,12 @@
         return;
       }
 
+      var stepBtn = event.target.closest('[data-item-quantity-step]');
+      if (stepBtn) {
+        stepQuantityInput(Number.parseInt(stepBtn.dataset.itemQuantityStep, 10) || 0);
+        return;
+      }
+
       var delBtn = event.target.closest('[data-delete-item]');
       if (delBtn) {
         var delId = delBtn.dataset.deleteItem;
@@ -81,20 +87,26 @@
   function updateItemQuantity(itemId, delta) {
     var qtyEl = document.getElementById('qty-' + itemId);
     if (!qtyEl) return;
-    var currentQty = parseInt(qtyEl.textContent, 10) || 0;
+    // The count lives in the data attribute. The text is the rendered label
+    // ("2 Stk.") and must not be parsed: a locale that does not separate the
+    // number from the noun would yield NaN.
+    var currentQty = Number.parseInt(qtyEl.dataset.quantity, 10) || 0;
     var newQty = Math.max(1, currentQty + delta);
-    qtyEl.textContent = newQty;
+    qtyEl.dataset.quantity = String(newQty);
+    proviant.renderQuantityLabel(qtyEl);
     fetch('/api/v1/shopping-list/' + itemId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quantity: newQty })
     }).then(function(res) {
       if (!res.ok) {
-        qtyEl.textContent = currentQty;
+        qtyEl.dataset.quantity = String(currentQty);
+        proviant.renderQuantityLabel(qtyEl);
         proviant.showFeedback('error', proviant.t("js.shoppingList.updateFailedTitle"));
       }
     }).catch(function() {
-      qtyEl.textContent = currentQty;
+      qtyEl.dataset.quantity = String(currentQty);
+      proviant.renderQuantityLabel(qtyEl);
     });
   }
 
@@ -165,18 +177,24 @@
     });
   }
 
+  // The add form's stepper moves the count input by one pack, never below one.
+  function stepQuantityInput(delta) {
+    var input = document.getElementById('inputItemQuantity');
+    if (!input) return;
+    var current = Number.parseInt(input.value, 10) || 1;
+    input.value = String(Math.max(1, current + delta));
+  }
+
   function addItem() {
     var nameInput = document.getElementById('inputItemName');
     var qtyInput = document.getElementById('inputItemQuantity');
-    var unitInput = document.getElementById('inputItemUnit');
     if (!nameInput || !nameInput.value.trim()) {
       nameInput.focus();
       return;
     }
     var payload = {
       name: nameInput.value.trim(),
-      quantity: parseInt(qtyInput ? qtyInput.value : '1', 10) || 1,
-      unit: unitInput ? unitInput.value.trim() : ''
+      quantity: Number.parseInt(qtyInput ? qtyInput.value : '1', 10) || 1
     };
     fetch('/api/v1/shopping-list', {
       method: 'POST',
@@ -187,7 +205,6 @@
     }).then(function() {
       nameInput.value = '';
       if (qtyInput) qtyInput.value = '1';
-      if (unitInput) unitInput.value = '';
       nameInput.focus();
       proviant.showFeedback('success', proviant.t("js.shoppingList.itemAddedTitle"));
       setTimeout(function() { location.reload(); }, 300);
@@ -200,7 +217,7 @@
     var btn = document.getElementById('btnImportAll');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + proviant.t("js.shoppingList.importing");
+      btn.innerHTML = '<span class="spinner-border spinner-sm me-1"></span>' + proviant.t("js.shoppingList.importing");
     }
     fetch('/api/v1/shopping-list/import-auto', {
       method: 'POST'
@@ -221,12 +238,25 @@
   function updateItemCount() {
     var container = document.getElementById('shoppingListContainer');
     if (!container) return;
-    var rows = container.querySelectorAll('.shopping-list-item');
-    var total = rows.length;
-    var subtitle = document.querySelector('.page-header-subtitle');
-    if (subtitle) {
-      subtitle.textContent = proviant.tn("js.shoppingList.itemCount", total);
+    var rows = container.querySelectorAll('.shopping-list__item');
+    var count = document.querySelector('.page-header__count');
+    if (count) {
+      count.textContent = String(rows.length);
     }
+    var checked = container.querySelectorAll('.shopping-list__item.checked');
+    var meta = document.querySelector('.page-header__meta');
+    if (meta) {
+      meta.textContent = proviant.t("shoppingList.checkedOff", checked.length);
+    }
+  }
+
+  // The print view is written into a same-origin window, so every value that
+  // reaches the markup has to be escaped: an item name is user input.
+  function escapePrintHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function printShoppingList() {
@@ -251,35 +281,43 @@
     }
     if (!items.length) return;
 
+    // design-tokens:off — the print view is a standalone document with its own
+    // inline styles, so it carries the palette values literally.
     var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + proviant.t("nav.shoppingList") + '</title><style>';
-    html += 'body{font-family:system-ui,sans-serif;padding:1rem;color:#221e18}';
+    html += 'body{font-family:system-ui,sans-serif;padding:1rem;color:#2A2A2A}';
     html += 'h1{margin:0 0 0.5rem;font-size:1.5rem}';
-    html += '.meta{margin-bottom:1rem;font-size:0.875rem;color:#666}';
-    html += '.item{display:flex;flex-direction:column;padding:0.5rem 0;border-bottom:1px solid #dad6d0}';
+    html += '.meta{margin-bottom:1rem;font-size:0.875rem;color:#6B6B6B}';
+    html += '.item{display:flex;flex-direction:column;padding:0.5rem 0;border-bottom:1px solid #E5DFD3}';
     html += '.item-row{display:flex;align-items:center}';
-    html += '.checkbox{width:18px;height:18px;border:2px solid #221e18;border-radius:3px;margin-right:0.5rem;flex-shrink:0}';
+    html += '.checkbox{width:18px;height:18px;border:2px solid #2A2A2A;border-radius:3px;margin-right:0.5rem;flex-shrink:0}';
     html += '.name{font-size:1.1rem;flex:1}';
-    html += '.amount{font-size:1rem;color:#4a6fa0;margin-left:0.5rem}';
+    html += '.qty{font-size:1rem;color:#35604E;margin-left:0.5rem}';
+    // design-tokens:on
+    html += '.pack-size{font-size:0.875rem;color:#666;margin-left:0.35rem}';
     html += '.notes{font-size:0.875rem;color:#888;margin-left:2.25rem;margin-top:0.25rem}';
     html += '</style></head><body>';
     html += '<h1>' + proviant.t("nav.shoppingList") + '</h1>';
     html += '<p class="meta">' + proviant.tn("js.shoppingList.printCount", items.length) + '</p>';
     items.forEach(function(item) {
       var name = item.name || item.Name || '';
+      // Print keeps the stored count, not the row's "2 Stk." label: at the store you need how many to buy.
       var qty = item.quantity || item.Quantity || '';
-      var unit = item.unit || item.Unit || '';
+      var packSize = item.packSize || item.PackSize || '';
       var checked = item.checked || item.Checked ? ' checked' : '';
       var notes = item.notes || item.Notes || '';
       html += '<div class="item' + checked + '">';
       html += '<div class="item-row">';
       html += '<div class="checkbox"></div>';
-      html += '<span class="name">' + name + '</span>';
+      html += '<span class="name">' + escapePrintHtml(name) + '</span>';
       if (qty) {
-        html += '<span class="amount">' + qty + (unit ? ' ' + unit : '') + '</span>';
+        html += '<span class="qty">' + escapePrintHtml(qty) + '</span>';
+      }
+      if (packSize) {
+        html += '<span class="pack-size">' + escapePrintHtml(packSize) + '</span>';
       }
       html += '</div>';
       if (notes) {
-        html += '<div class="notes">' + notes + '</div>';
+        html += '<div class="notes">' + escapePrintHtml(notes) + '</div>';
       }
       html += '</div>';
     });

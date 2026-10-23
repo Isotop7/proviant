@@ -22,7 +22,7 @@ import (
 // ScanReceipt extracts product line items from an uploaded receipt photo via
 // a vision LLM. Stateless: nothing is persisted server-side.
 // @Summary       Scan receipt photo for line items
-// @Description   Upload a receipt photo; returns extracted product drafts (name, amount, unit, price). An empty items list means the scan succeeded but nothing was recognized.
+// @Description   Upload a receipt photo; returns extracted product drafts (name, quantity, packSize, price). The quantity is the number of packs the line stands for and the packSize the size of one pack as the receipt words it. An empty items list means the scan succeeded but nothing was recognized.
 // @Tags          product
 // @Accept        multipart/form-data
 // @Produce       json

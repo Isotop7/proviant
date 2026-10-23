@@ -1,36 +1,24 @@
 {{define "restockSuggestionModal"}}
-<div id="restockSuggestionModal" class="modal fade" tabindex="-1"
-     aria-labelledby="restockSuggestionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon modal-icon-info" aria-hidden="true">
+<dialog class="dialog" id="restockSuggestionModal" aria-labelledby="restockSuggestionModalLabel">
+            <div class="dialog-header">
+                <div class="dialog-icon dialog-icon-info" aria-hidden="true">
                     <i class="bi bi-cart-plus"></i>
-                </div>
-                <div class="modal-header-body">
-                    <h5 id="restockSuggestionModalLabel" class="modal-title mb-0">{{ t "partial.restockSuggestionModal.title" }}</h5>
-                </div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
+                </div><h5 id="restockSuggestionModalLabel" class="dialog-title mb-0">{{ t "partial.restockSuggestionModal.title" }}</h5>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
             </div>
-            <div class="modal-body">
-                <p id="restockProductName" class="fw-semibold mb-2"></p>
-                <p id="restockReason" class="text-secondary-custom small mb-3"></p>
+            <div class="dialog-body">
+                <p id="restockProductName" class="fw-semibold mb-3"></p>
+                <p id="restockReason" class="fg-secondary small mb-5"></p>
                 <div class="row g-2 align-items-end">
-                    <div class="col-6">
+                    <div class="col-12">
                         <label for="restockQty" class="form-label small mb-1">{{ t "partial.restockSuggestionModal.quantity" }}</label>
                         <input type="number" min="1" step="1" id="restockQty" class="form-control" value="1">
                     </div>
-                    <div class="col-6">
-                        <label for="restockUnit" class="form-label small mb-1">{{ t "partial.restockSuggestionModal.unit" }}</label>
-                        <input type="text" id="restockUnit" class="form-control" placeholder="{{ t "partial.restockSuggestionModal.unitPlaceholder" }}">
-                    </div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-end gap-2">
-                <button type="button" class="btn btn-proviant-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-                <button type="button" class="btn btn-proviant-primary" id="restockConfirmBtn">{{ t "partial.restockSuggestionModal.addToList" }}</button>
+            <div class="dialog-footer justify-content-end gap-3">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+                <button type="button" class="btn btn-solid theme-primary" id="restockConfirmBtn">{{ t "partial.restockSuggestionModal.addToList" }}</button>
             </div>
-        </div>
-    </div>
-</div>
+        </dialog>
 {{end}}

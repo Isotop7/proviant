@@ -24,10 +24,10 @@
   width: 32px;
   height: 32px;
   object-fit: contain;
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   border-radius: 6px;
   opacity: 0;
-  transition: opacity var(--duration-slow) var(--ease-out);
+  transition: opacity var(--motion-slow) var(--ease-out);
 }
 
 .list-thumb-fallback {
@@ -36,13 +36,13 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   border-radius: 6px;
 }
 
 .list-thumb-icon {
   font-size: 14px;
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 .list-status-dot {
@@ -51,15 +51,15 @@
   bottom: -2px;
   width: 10px;
   height: 10px;
-  background: var(--status-nodate-dot);
+  background: var(--status-neutral);
   border: 1.5px solid white;
   border-radius: 999px;
 
-  &.status-expired { background: var(--status-expired-dot); }
-  &.status-critical { background: var(--status-critical-dot); }
-  &.status-soon { background: var(--status-soon-dot); }
-  &.status-fresh { background: var(--status-fresh-dot); }
-  &.status-nodate { background: var(--status-nodate-dot); }
+  &.status-expired { background: var(--status-expired); }
+  &.status-critical { background: var(--status-critical); }
+  &.status-soon { background: var(--status-soon); }
+  &.status-fresh { background: var(--status-fresh); }
+  &.status-neutral { background: var(--status-neutral); }
 }
 
 .list-product-text {
@@ -69,7 +69,7 @@
 .list-product-name {
   display: block;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
   text-decoration: none;
@@ -80,44 +80,44 @@
 .list-product-meta {
   font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--fg-3);
+  color: var(--muted);
 }
 
 
 .list-header {
   display: grid;
-  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
+  grid-template-columns: 32px 1fr 120px 140px 90px 88px 50px;
   gap: 10px;
   padding: 8px 16px;
-  background: var(--bg-subtle);
+  background: var(--surface-warm);
   border-bottom: 1px solid var(--border);
 
   > div {
     font-size: 10px;
     font-weight: 600;
-    color: var(--fg-3);
+    color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: .06em;
+    letter-spacing: var(--tracking-eyebrow);
   }
 }
 
 .list-row {
   display: grid;
-  grid-template-columns: 32px 1fr 120px 140px 90px 80px 50px;
+  grid-template-columns: 32px 1fr 120px 140px 90px 88px 50px;
   gap: 10px;
   align-items: center;
   padding: 9px 16px;
   overflow: hidden;
   cursor: default;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border);
   transition: background 120ms;
 
   &:hover {
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
 
   &.selected {
-    background: var(--accent-subtle);
+    background: var(--accent-soft);
   }
 }
 
@@ -129,9 +129,8 @@
 }
 
 .col-location {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--fg-3);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
 }
 
 .col-actions {
@@ -147,7 +146,7 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  color: var(--fg-3);
+  color: var(--meta);
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
@@ -156,12 +155,12 @@
 
   &:hover {
     color: var(--accent);
-    background: var(--accent-subtle);
+    background: var(--accent-soft);
     border-color: var(--accent-border);
   }
 
   &:disabled {
-    color: var(--fg-3);
+    color: var(--meta);
     cursor: default;
     opacity: .5;
   }
@@ -182,10 +181,10 @@
     justify-content: center;
     width: 22px;
     height: 26px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--fg-2);
     cursor: pointer;
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
     border: none;
     transition: background 120ms;
 
@@ -205,6 +204,7 @@
 
   input {
     width: 50px;
+    height: 26px;
     font-family: var(--font-mono);
     font-size: 12px;
     font-weight: 600;
@@ -224,13 +224,68 @@
   color: var(--fg);
 }
 
+.qty-stepper-flat {
+  gap: 2px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+
+  button {
+    width: 20px;
+    height: 26px;
+    color: var(--meta);
+    background: transparent;
+
+    &:hover {
+      color: var(--accent);
+      background: var(--surface-warm);
+    }
+  }
+
+  span {
+    width: auto;
+    min-width: 24px;
+    white-space: nowrap;
+  }
+
+  [id^="qty-"] {
+    display: inline-flex;
+    padding: 0;
+    border-radius: 0;
+  }
+}
+
+// The pack size is secondary metadata next to a name or a count: it says what
+// one pack holds ("1 l") without competing with the count itself.
+.pack-size {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--meta);
+  white-space: nowrap;
+}
+
+// The count leads and the pack size follows under it, so the cell reads
+// "2 Stk." over "500 g".
+.col-qty {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: flex-end;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--fg);
+}
+
 .filter-pill {
   display: inline-flex;
   gap: 4px;
   align-items: center;
   padding: 4px 10px;
-  font-family: var(--font-ui);
-  font-size: 11px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--fg-2);
   text-decoration: none;
   white-space: nowrap;
@@ -241,53 +296,50 @@
 
   &:hover {
     color: var(--fg);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
 
+  // The selected pill carries the accent; the status variants recolour it.
   &.active {
     font-weight: 600;
-    border-width: 1.5px;
-  }
-
-  &.active.status-all {
-    color: var(--accent);
-    background: var(--accent-subtle);
+    color: var(--accent-text);
+    background: var(--accent-soft);
     border-color: var(--accent-border);
   }
 
   &.active.status-expired {
-    color: var(--status-expired);
+    color: var(--status-expired-text);
     background: var(--status-expired-subtle);
     border-color: var(--status-expired-border);
   }
 
   &.active.status-critical {
-    color: var(--status-critical);
+    color: var(--status-critical-text);
     background: var(--status-critical-subtle);
     border-color: var(--status-critical-border);
   }
 
   &.active.status-soon {
-    color: var(--status-soon);
+    color: var(--status-soon-text);
     background: var(--status-soon-subtle);
     border-color: var(--status-soon-border);
   }
 
   &.active.status-fresh {
-    color: var(--status-fresh);
+    color: var(--status-fresh-text);
     background: var(--status-fresh-subtle);
     border-color: var(--status-fresh-border);
   }
 
-  &.active.status-nodate {
-    color: var(--status-nodate);
-    background: var(--status-nodate-subtle);
-    border-color: var(--status-nodate-border);
+  &.active.status-neutral {
+    color: var(--status-neutral-text);
+    background: var(--status-neutral-subtle);
+    border-color: var(--status-neutral-border);
   }
 
   &.active.status-archived {
     color: var(--fg-2);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
     border-color: var(--border);
   }
 }
@@ -310,8 +362,8 @@
   align-items: center;
   min-height: 44px;
   padding: 8px 16px;
-  font-family: var(--font-ui);
-  font-size: 13px;
+  font-family: var(--font-body);
+  font-size: 14px;
   color: var(--fg-2);
   text-decoration: none;
   background: var(--surface);
@@ -321,20 +373,20 @@
 
   &:hover {
     color: var(--fg);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
 
   &.is-disabled {
-    color: var(--fg-3);
+    color: var(--meta);
     cursor: not-allowed;
     opacity: .6;
   }
 }
 
 .pagination-status {
-  font-size: 13px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
-  color: var(--fg-3);
+  color: var(--meta);
 }
 
 .filter-dot {
@@ -344,11 +396,11 @@
   border-radius: 999px;
 }
 
-.dot-expired { background: var(--status-expired-dot); }
-.dot-critical { background: var(--status-critical-dot); }
-.dot-soon { background: var(--status-soon-dot); }
-.dot-fresh { background: var(--status-fresh-dot); }
-.dot-nodate { background: var(--status-nodate-dot); }
+.dot-expired { background: var(--status-expired); }
+.dot-critical { background: var(--status-critical); }
+.dot-soon { background: var(--status-soon); }
+.dot-fresh { background: var(--status-fresh); }
+.dot-nodate { background: var(--status-neutral); }
 
 .filter-separator {
   width: 1px;
@@ -370,8 +422,8 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  font-size: 15px;
-  color: var(--fg-3);
+  font-size: 16px;
+  color: var(--meta);
   text-decoration: none;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -380,12 +432,12 @@
 
   &:hover {
     color: var(--fg);
-    background: var(--bg-subtle);
+    background: var(--surface-warm);
   }
 
   &.active {
     color: var(--accent);
-    background: var(--accent-subtle);
+    background: var(--accent-soft);
     border-color: var(--accent-border);
   }
 }
@@ -398,7 +450,7 @@
 }
 
 .bulk-count {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--accent);
 }
@@ -406,8 +458,8 @@
 .export-menu {
   min-width: 200px;
 
-  .dropdown-item {
-    font-family: var(--font-ui);
+  .menu-item {
+    font-family: var(--font-body);
     font-size: 12px;
   }
 }
@@ -439,17 +491,17 @@
   font-family: var(--font-mono);
   font-size: 11px;
 
-  &.status-expired { color: var(--status-expired); }
-  &.status-critical { color: var(--status-critical); }
-  &.status-soon { color: var(--status-soon); }
+  &.status-expired { color: var(--status-expired-text); }
+  &.status-critical { color: var(--status-critical-text); }
+  &.status-soon { color: var(--status-soon-text); }
   &.status-fresh { color: var(--fg-2); }
-  &.status-nodate { color: var(--fg-3); }
+  &.status-neutral { color: var(--meta); }
 }
 
 @media (max-width: 767.98px) {
   .list-header,
   .list-row {
-    grid-template-columns: 12px 1fr 60px 48px 20px;
+    grid-template-columns: 12px 1fr 48px 88px 20px;
     overflow: hidden;
   }
 
@@ -466,9 +518,20 @@
     display: none;
   }
 
+  @media (max-width: 359.98px) {
+    .list-header,
+    .list-row {
+      grid-template-columns: 12px 1fr 88px 20px;
+    }
+
+    .col-expiry {
+      display: none;
+    }
+  }
+
   .col-qty {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: flex-end;
     text-align: right;
   }
@@ -503,13 +566,12 @@
   }
 
   // Add bottom padding to content so it doesn't get covered by mobile bulk bar + bottom nav
-  #content-wrapper {
+  .app__content {
     padding-bottom: calc(130px + env(safe-area-inset-bottom, 0));
   }
 
   // Search bar: prevent input group from collapsing; ensure search button and filters button visible
   .search-bar {
-    .form-select,
     .form-control {
       flex: 1 1 auto;
       min-width: 0;
@@ -525,12 +587,12 @@
     right: 0;
     bottom: calc(60px + env(safe-area-inset-bottom, 0) + 6px);
     left: 0;
-    z-index: 10000; // above bottom nav (9999)
+    z-index: 1037; // above bottom nav (1035), below offcanvas backdrop (1040)
     display: none;
     padding: 10px 12px;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    box-shadow: 0 -4px 16px oklch(18% .022 70deg / .12);
+    box-shadow: 0 -4px 16px color-mix(in oklab, var(--fg) 12%, transparent);
 
     .bulk-actions-inner {
       display: flex;
@@ -542,20 +604,18 @@
 
     .btn-bulk {
       padding: 8px 14px; // larger touch target
-      font-size: 12px;
     }
   }
 }
 
 /* Amount update feedback — green background flash (pill shape) */
-[id^="amount-"],
 [id^="qty-"] {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
   transition: background .4s ease;
 }
-.amount-updated {
+.qty-updated {
   color: var(--status-fresh) !important;
   background: var(--status-fresh-subtle) !important;
 }

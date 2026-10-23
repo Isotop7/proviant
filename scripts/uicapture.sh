@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 UICAPTURE="$REPO_ROOT/.agents/skills/ui-capture/scripts/uicapture.mjs"
 
-if [ ! -f "$UICAPTURE" ]; then
+if [[ ! -f "$UICAPTURE" ]]; then
   echo "uicapture: $UICAPTURE not found." >&2
   echo "  The ui-capture skill lives under .kilo/skills/ — is it checked out?" >&2
   exit 1

@@ -17,8 +17,7 @@ func seedSubThresholdProduct(t *testing.T, env *handlerTestEnv) *dbModel.Product
 	t.Helper()
 	product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
 	product.MinStockAmount = 5
-	product.Amount = 2
-	product.Unit = "l"
+	product.Quantity = 2
 	if err := env.DB.Save(product).Error; err != nil {
 		t.Fatalf("save product: %v", err)
 	}
@@ -66,13 +65,12 @@ func TestGetAutoShoppingList(t *testing.T) {
 }
 
 func TestCreateShoppingListItem(t *testing.T) {
-	t.Run("creates item with name", func(t *testing.T) {
+	t.Run("creates item with name and count", func(t *testing.T) {
 		env := setupHandlerTest(t)
 		testutil.CreateTestRequest(env.Ctx, map[string]any{
 			"name":     "Milk",
 			"category": "Dairy",
 			"quantity": 2,
-			"unit":     "l",
 			"notes":    "low fat",
 		})
 
@@ -154,7 +152,12 @@ func TestCreateShoppingListItem(t *testing.T) {
 
 func TestListShoppingListItems(t *testing.T) {
 	env := setupHandlerTest(t)
-	env.DB.Create(&dbModel.ShoppingListItem{HouseholdID: env.Household.ID, Name: "Milk", Quantity: 1, CreatedBy: env.User.ID})
+	product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
+	product.PackSize = "1 l"
+	if err := env.DB.Save(product).Error; err != nil {
+		t.Fatalf("save product: %v", err)
+	}
+	env.DB.Create(&dbModel.ShoppingListItem{HouseholdID: env.Household.ID, ProductID: &product.ID, Name: "Milk", Quantity: 1, CreatedBy: env.User.ID})
 	env.Ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/shopping-list", nil)
 
 	ListShoppingListItems(env.Ctx, env.AppCtx)
@@ -168,6 +171,9 @@ func TestListShoppingListItems(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].Name != "Milk" {
 		t.Errorf("items = %+v, want one Milk item", items)
+	}
+	if items[0].PackSize != "1 l" {
+		t.Errorf("pack size = %q, want %q", items[0].PackSize, "1 l")
 	}
 }
 
@@ -191,6 +197,27 @@ func TestUpdateShoppingListItem(t *testing.T) {
 		}
 		if updated.Name != "Oat Milk" || !updated.Checked || updated.Quantity != 3 {
 			t.Errorf("item = %+v, want Oat Milk/checked/3", updated)
+		}
+	})
+
+	t.Run("a count write replaces the count", func(t *testing.T) {
+		env := setupHandlerTest(t)
+		item := dbModel.ShoppingListItem{HouseholdID: env.Household.ID, Name: "Flour", Quantity: 5, CreatedBy: env.User.ID}
+		env.DB.Create(&item)
+		env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(item.ID)}}
+		testutil.CreateTestRequest(env.Ctx, map[string]any{"quantity": 2})
+
+		UpdateShoppingListItem(env.Ctx, env.AppCtx)
+
+		if env.W.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+		}
+		var updated dbModel.ShoppingListItem
+		if err := env.DB.First(&updated, item.ID).Error; err != nil {
+			t.Fatalf("load item: %v", err)
+		}
+		if updated.Quantity != 2 {
+			t.Errorf("count = %d, want 2", updated.Quantity)
 		}
 	})
 

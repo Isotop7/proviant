@@ -67,26 +67,9 @@ func hasPassed(t time.Time) bool {
 	return t.Before(time.Now())
 }
 
-func expiryBadgeClass(t time.Time) string {
-	if t.IsZero() {
-		return "bg-secondary"
-	}
-	now := time.Now()
-	if t.Before(now) {
-		return "bg-danger"
-	}
-	if t.Before(now.Add(time.Duration(criticalThresholdDays) * 24 * time.Hour)) {
-		return "bg-danger"
-	}
-	if t.Before(now.Add(time.Duration(soonThresholdDays) * 24 * time.Hour)) {
-		return "bg-warning"
-	}
-	return "bg-success"
-}
-
 func expiryStatusClass(t time.Time) string {
 	if t.IsZero() {
-		return "nodate"
+		return "neutral"
 	}
 	now := time.Now()
 	if t.Before(now) {
@@ -128,32 +111,6 @@ func expiryStatusLabel(lang string, t time.Time) string {
 		return i18n.T(lang, "status.fresh")
 	default:
 		return i18n.T(lang, "status.noDate")
-	}
-}
-
-func expiryTextClass(t time.Time) string {
-	if t.IsZero() {
-		return "text-secondary"
-	}
-	now := time.Now()
-	if t.Before(now.Add(time.Duration(criticalThresholdDays) * 24 * time.Hour)) {
-		return "text-danger"
-	}
-	return "text-warning"
-}
-
-func expiryColor(t time.Time) string {
-	switch expiryStatusClass(t) {
-	case "expired":
-		return "var(--status-expired)"
-	case "critical":
-		return "var(--status-critical)"
-	case "soon":
-		return "var(--status-soon)"
-	case "fresh":
-		return "var(--fg-2)"
-	default:
-		return "var(--fg-3)"
 	}
 }
 
@@ -309,6 +266,14 @@ func effectiveExpireAt(p *dbModel.Product) time.Time {
 	return p.EffectiveExpireAt()
 }
 
+// QuantityLabel renders a pack count the way every quantity surface does: the
+// count and the localized pack noun ("2 Stk."). It carries the language
+// because only the label needs it, and it lives here so the web handler and
+// the templates share one composition of the display rule.
+func QuantityLabel(lang string, quantity int) string {
+	return fmt.Sprintf("%d %s", quantity, i18n.T(lang, "common.qty"))
+}
+
 func flagReplace(source string) template.HTML {
 	var output strings.Builder
 	for elements := range strings.SplitSeq(source, ",") {
@@ -326,14 +291,11 @@ func templateFunctions(lang string) template.FuncMap {
 		"now":                  now,
 		"today":                today,
 		"hasPassed":            hasPassed,
-		"expiryBadgeClass":     expiryBadgeClass,
 		"expiryStatusClass":    expiryStatusClass,
 		"expiryStatusIcon":     expiryStatusIcon,
 		"expiryStatusLabel":    func(t time.Time) string { return expiryStatusLabel(lang, t) },
 		"expiryUrgencyText":    func(t time.Time) string { return expiryUrgencyText(lang, t) },
 		"expiryDays":           expiryDays,
-		"expiryTextClass":      expiryTextClass,
-		"expiryColor":          expiryColor,
 		"queryWith":            queryWith,
 		"stringSlice":          stringSlice,
 		"badgifyCategories":    badgifyCategories,
@@ -341,6 +303,9 @@ func templateFunctions(lang string) template.FuncMap {
 		"flagReplace":          flagReplace,
 		"derefUint":            derefUint,
 		"effectiveExpireAt":    effectiveExpireAt,
+		"quantityLabel": func(quantity int) string {
+			return QuantityLabel(lang, quantity)
+		},
 	}
 	for name, fn := range i18n.FuncMap(lang) {
 		functions[name] = fn
@@ -434,12 +399,24 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 		}
 	}
 	data["OfflineSyncMaxBodyBytes"] = maxSyncBodyBytes
-	if title, ok := data["Title"].(string); ok && title != "" {
-		key := "pageTitle." + strings.ReplaceAll(title, " ", "")
+	// The bounds a product may hold reach the client with every page, so the
+	// receipt review clamps to the same values the server enforces.
+	data["MaxProductQuantity"] = util.MaxProductQuantity
+	data["MaxPackSizeLength"] = util.MaxPackSizeLength
+	// The page title and the nav key are two different things. The edit
+	// page keeps "Products" as its nav key so the sidebar stays lit, while
+	// its title is "Edit Product" — PageTitle carries the title, Title the
+	// nav key.
+	pageTitle, _ := data["PageTitle"].(string)
+	if pageTitle == "" {
+		pageTitle, _ = data["Title"].(string)
+	}
+	if pageTitle != "" {
+		key := "pageTitle." + strings.ReplaceAll(pageTitle, " ", "")
 		if i18n.Has(lang, key) {
 			data["TitleText"] = i18n.T(lang, key)
 		} else {
-			data["TitleText"] = title
+			data["TitleText"] = pageTitle
 		}
 	}
 	return lang
