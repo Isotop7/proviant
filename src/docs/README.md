@@ -3987,6 +3987,7 @@ util contains helper functions and generic vars
 - [Variables](<#variables>)
 - [func ClampProductQuantity\(quantity int\) int](<#ClampProductQuantity>)
 - [func IsCountUnit\(raw string\) bool](<#IsCountUnit>)
+- [func IsHTTPSBaseURL\(baseURL string\) bool](<#IsHTTPSBaseURL>)
 - [func OffDumpSQLiteFilename\(databaseName string\) string](<#OffDumpSQLiteFilename>)
 - [func OffDumpStagingFilename\(databaseName string\) string](<#OffDumpStagingFilename>)
 - [func PackSizeFromLegacyAmount\(amount int, unit string\) \(quantity int, packSize string\)](<#PackSizeFromLegacyAmount>)
@@ -4384,8 +4385,17 @@ func IsCountUnit(raw string) bool
 
 IsCountUnit reports whether a unit symbol counts items instead of measuring them. An empty or unrecognised symbol is not a count: it is a unit this build cannot read, and treating it as one would silently drop a net content.
 
+<a name="IsHTTPSBaseURL"></a>
+## func [IsHTTPSBaseURL](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L403>)
+
+```go
+func IsHTTPSBaseURL(baseURL string) bool
+```
+
+IsHTTPSBaseURL reports whether the deployment's public URL is reached over TLS. The server itself never terminates TLS — it always listens on plain HTTP and a reverse proxy in front of it does the encryption — so the scheme of the configured base URL is the only statement about the transport to the browser. It decides whether a cookie may carry the Secure attribute: a plain\-HTTP deployment must not set it, or the browser drops the cookie and every state\-changing request fails.
+
 <a name="OffDumpSQLiteFilename"></a>
-## func [OffDumpSQLiteFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L376>)
+## func [OffDumpSQLiteFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L377>)
 
 ```go
 func OffDumpSQLiteFilename(databaseName string) string
@@ -4394,7 +4404,7 @@ func OffDumpSQLiteFilename(databaseName string) string
 OffDumpSQLiteFilename resolves the SQLite dump store for a configured dumpDatabase. A bare name lives beside the main database as data/\<name\>.db; a value that names a path is used verbatim, matching database.sqlite.filepath. An empty name falls back to OffDumpDBFilename.
 
 <a name="OffDumpStagingFilename"></a>
-## func [OffDumpStagingFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L388>)
+## func [OffDumpStagingFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L389>)
 
 ```go
 func OffDumpStagingFilename(databaseName string) string

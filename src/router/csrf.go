@@ -78,7 +78,7 @@ func CSRFMiddleware(cfg *configuration.ProviantConfiguration) gin.HandlerFunc {
 			}
 			// Not HttpOnly — JavaScript must read this value to inject it into request headers.
 			ctx.SetSameSite(http.SameSiteStrictMode)
-			ctx.SetCookie(csrfCookieName, token, maxAge, "/", "", false, false)
+			ctx.SetCookie(csrfCookieName, token, maxAge, "/", "", util.IsHTTPSBaseURL(cfg.Server.BaseURL), false)
 			ctx.Set(util.ContextKeyCSRFToken, token)
 		} else {
 			ctx.Set(util.ContextKeyCSRFToken, cookieToken)

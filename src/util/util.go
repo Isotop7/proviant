@@ -3,6 +3,7 @@ package util
 
 import (
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -390,4 +391,15 @@ func OffDumpStagingFilename(databaseName string) string {
 		return OffDumpDefaultDatabase + OffDumpStagingSuffix
 	}
 	return filepath.Base(databaseName) + OffDumpStagingSuffix
+}
+
+// IsHTTPSBaseURL reports whether the deployment's public URL is reached over
+// TLS. The server itself never terminates TLS — it always listens on plain
+// HTTP and a reverse proxy in front of it does the encryption — so the scheme
+// of the configured base URL is the only statement about the transport to the
+// browser. It decides whether a cookie may carry the Secure attribute: a
+// plain-HTTP deployment must not set it, or the browser drops the cookie and
+// every state-changing request fails.
+func IsHTTPSBaseURL(baseURL string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(baseURL)), "https://")
 }

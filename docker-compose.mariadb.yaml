@@ -4,9 +4,9 @@ services:
     restart: always
     environment:
       - MARIADB_DATABASE=proviant
-      - MARIADB_ROOT_PASSWORD=proviant
+      - MARIADB_ROOT_PASSWORD=${PROVIANT_MARIADB_ROOT_PASSWORD:?PROVIANT_MARIADB_ROOT_PASSWORD is not set - add it to .env, generate with openssl rand -hex 16}
       - MARIADB_USER=proviant
-      - MARIADB_PASSWORD=supersecretpassword
+      - MARIADB_PASSWORD=${PROVIANT_MARIADB_PASSWORD:?PROVIANT_MARIADB_PASSWORD is not set - add it to .env, generate with openssl rand -hex 16}
     volumes:
       - proviantdb:/var/lib/mysql
       - ./scripts/mariadb-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -34,7 +34,7 @@ services:
       - PROVIANT_DATABASE_ENGINE=mariadb
       - PROVIANT_DATABASE_MARIADB_HOST=database
       - PROVIANT_DATABASE_MARIADB_USER=proviant
-      - PROVIANT_DATABASE_MARIADB_PASSWORD=supersecretpassword
+      - PROVIANT_DATABASE_MARIADB_PASSWORD=${PROVIANT_MARIADB_PASSWORD:?PROVIANT_MARIADB_PASSWORD is not set - add it to .env, generate with openssl rand -hex 16}
       - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
       - PROVIANT_NOTIFICATION_SMTP_FROMADDRESS=proviant@yourdomain.com
       - "PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD=${PROVIANT_JWT_SECRET:?PROVIANT_JWT_SECRET is not set - add it to .env, generate with openssl rand -hex 32}"

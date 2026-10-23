@@ -332,3 +332,55 @@ func TestOffDumpStagingFilename(t *testing.T) {
 		})
 	}
 }
+
+func TestIsHTTPSBaseURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		baseURL string
+		want    bool
+	}{
+		{
+			name:    "https deployment is secure",
+			baseURL: "https://proviant.local.de",
+			want:    true,
+		},
+		{
+			name:    "https with a path stays secure",
+			baseURL: "https://proviant.local.de/proviant",
+			want:    true,
+		},
+		{
+			name:    "uppercase scheme is still secure",
+			baseURL: "HTTPS://proviant.local.de",
+			want:    true,
+		},
+		{
+			name:    "surrounding whitespace is ignored",
+			baseURL: "  https://proviant.local.de  ",
+			want:    true,
+		},
+		{
+			name:    "http deployment is not secure",
+			baseURL: "http://127.0.0.1:5114",
+			want:    false,
+		},
+		{
+			name:    "empty base URL is not secure",
+			baseURL: "",
+			want:    false,
+		},
+		{
+			name:    "a scheme in the host does not count",
+			baseURL: "proviant.local.de/https",
+			want:    false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := IsHTTPSBaseURL(test.baseURL); got != test.want {
+				t.Errorf("IsHTTPSBaseURL(%q) = %v, want %v", test.baseURL, got, test.want)
+			}
+		})
+	}
+}

@@ -1,5 +1,8 @@
 ---
 server:
+  # Public URL of this deployment. The scheme also decides whether the session
+  # and CSRF cookies carry the Secure attribute: they do over https, and must
+  # not over http, or the browser drops them.
   baseURL: "https://proviant.local.de"
   port: 5114
   # Bind address. Empty means every interface (needed in a container). Set to

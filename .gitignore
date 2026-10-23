@@ -48,6 +48,11 @@ proviant.log
 src/data
 /proviant
 
+# Compose secrets (PROVIANT_JWT_SECRET, database passwords)
+.env
+.env.*
+!.env.example
+
 # Claude Code CLI
 .claude/
 

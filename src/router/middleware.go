@@ -369,6 +369,7 @@ func JWTMiddleware(
 		TimeFunc:       time.Now,
 		SendCookie:     true,
 		CookieHTTPOnly: true,
+		SecureCookie:   util.IsHTTPSBaseURL(proviantConfiguration.Server.BaseURL),
 		CookieSameSite: http.SameSiteStrictMode,
 		// Generate claims and return it to payload
 		PayloadFunc: func(data any) jwt.MapClaims {

@@ -120,6 +120,19 @@ refuses to start without it:
 echo "PROVIANT_JWT_SECRET=$(openssl rand -hex 32)" > .env
 ```
 
+The MariaDB compose file additionally requires the database credentials, so that no
+password ships in the repository:
+
+```bash
+echo "PROVIANT_MARIADB_ROOT_PASSWORD=$(openssl rand -hex 16)" >> .env
+echo "PROVIANT_MARIADB_PASSWORD=$(openssl rand -hex 16)" >> .env
+```
+
+`PROVIANT_MARIADB_ROOT_PASSWORD` is the MariaDB root account, `PROVIANT_MARIADB_PASSWORD`
+the `proviant` user the app connects with. The root password is needed for the manual
+`scripts/mariadb-init.sql` run described under [Database](#database) — the app user
+itself may not grant privileges.
+
 **IMPORTANT:** The mounted directories need to be chowned by the proviant app user.
 
 ```bash
@@ -167,7 +180,7 @@ Configuration is set via environment variables. The complete list of available o
 |---|---|---|
 | `PROVIANT_SERVER_PORT` | `5114` | Listening port |
 | `PROVIANT_SERVER_HOST` | *(empty)* | Bind address; empty binds every interface, set `127.0.0.1` for a loopback-only listener |
-| `PROVIANT_SERVER_BASEURL` | `https://proviant.local.de` | URL of Proviant with protocol (used in emails, notifications) |
+| `PROVIANT_SERVER_BASEURL` | `https://proviant.local.de` | URL of Proviant with protocol (used in emails, notifications, and to decide whether the session and CSRF cookies carry the Secure attribute) |
 | `PROVIANT_SERVER_MAXUPLOADSIZEMB` | `5` | Maximum upload size in MB (receipt photos, CSV imports) |
 | `PROVIANT_SERVER_DEBUG` | `false` | Run Gin in debug mode and emit debug-level logs |
 | `PROVIANT_SERVER_DEMOMODE` | `false` | Enable demo mode (read-only demo behaviour) |
