@@ -25,8 +25,15 @@
     </a>
 </div>
 
-<div class="dashboard-tools px-5 pt-5 d-flex justify-content-end">
-    <button type="button" class="btn btn-link btn-sm" id="dashboard-reset-layout" disabled>
+<div class="dashboard-tools px-5 pt-5 pb-4 d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-outline theme-secondary btn-sm" id="dashboard-edit-layout"
+            aria-controls="dashboard" disabled
+            data-edit-label="{{ t "home.editDashboard" }}"
+            data-done-label="{{ t "home.doneEditing" }}">
+        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+        <span class="dashboard-tools__label">{{ t "home.editDashboard" }}</span>
+    </button>
+    <button type="button" class="btn btn-link btn-sm" id="dashboard-reset-layout" disabled hidden>
         <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
         {{ t "home.resetLayout" }}
     </button>

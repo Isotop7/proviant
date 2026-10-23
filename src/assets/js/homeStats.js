@@ -76,6 +76,15 @@ function renderHeroTile(tileId, title, hero, chips) {
 // the money tiles.
 const TILE_VALUE_VARIANTS = ['danger', 'warning', 'success', 'accent'];
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderTile(tileId, title, hero, variant, heroClass, span, sub) {
   const col = document.createElement('div');
   col.className = 'bento__cell bento__cell--' + (span || 2);
@@ -93,7 +102,7 @@ function renderTile(tileId, title, hero, variant, heroClass, span, sub) {
     col.innerHTML = `
       <div class="kpi ${fillClass} h-100">
         <div class="kpi__label">${title}</div>
-        <div class="kpi__value" title="${hero}">${hero}</div>
+        <div class="kpi__value" title="${escapeHtml(hero)}">${escapeHtml(hero)}</div>
         ${subHtml}
       </div>`;
     return col;
@@ -103,10 +112,40 @@ function renderTile(tileId, title, hero, variant, heroClass, span, sub) {
   col.innerHTML = `
     <div class="kpi h-100">
       <div class="kpi__label">${title}</div>
-      <div class="${heroInnerClass}${valueClass}" title="${hero}">${hero}</div>
+      <div class="${heroInnerClass}${valueClass}" title="${escapeHtml(hero)}">${escapeHtml(hero)}</div>
       ${subHtml}
     </div>`;
   return col;
+}
+
+// The explanation of a tile: an info trigger behind its eyebrow that carries
+// the text in its tooltip.
+function attachTileHint(cell, text) {
+  if (!text) return;
+  const label = cell.querySelector('.kpi__label');
+  if (!label) return;
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'tile-threshold-info';
+  trigger.setAttribute('aria-label', text);
+  const icon = document.createElement('i');
+  icon.className = 'bi bi-info-circle';
+  icon.setAttribute('aria-hidden', 'true');
+  trigger.appendChild(icon);
+  label.appendChild(trigger);
+
+  attachInfoTooltip(trigger, text, 'top');
+}
+
+// A tooltip opens on hover and on keyboard focus.
+function attachInfoTooltip(trigger, text, placement) {
+  if (!trigger || typeof bootstrap === 'undefined') return;
+  new bootstrap.Tooltip(trigger, {
+    title: text,
+    placement: placement || 'left',
+    trigger: 'hover focus',
+  });
 }
 
 // The expiry status of a product, derived from its date with the app's own
@@ -164,7 +203,7 @@ function renderListTile(title, items, days) {
         </div>
         <span class="flex-grow-1">${title}</span>
         ${countChip}
-        <i class="bi bi-info-circle tile-threshold-info" style="font-size:14px;cursor:default;color:var(--meta);font-weight:normal;"></i>
+        <button type="button" class="tile-threshold-info"><i class="bi bi-info-circle" aria-hidden="true"></i></button>
       </div>
       <div class="tile-scroll-body">
         <ul class="list-group list-group-flush">${listHtml}</ul>
@@ -616,14 +655,24 @@ document.addEventListener('DOMContentLoaded', async function () {
       // Savings tiles
       const savings = (savingsResponse.code === 200 && savingsResponse.message) ? savingsResponse.message : null;
       if (savings) {
-        insertTile(renderTile(
+        // The events from before the count model are not in the totals: their
+        // figures were scaled by the net content, not by a count of packs.
+        const legacyEvents = savings.legacyEvents || 0;
+        const legacyHint = legacyEvents > 0
+          ? proviant.tn("js.home.legacySavingsNote", legacyEvents)
+          : null;
+
+        const eurTile = renderTile(
           'savings-eur',
           proviant.t("js.home.savedThisMonth"),
           `€${(savings.savedEurThisMonth ?? 0).toFixed(2)}`,
           savings.savedEurThisMonth > 0 ? 'accent' : null,
           null,
-        ));
-        insertTile(renderTile(
+        );
+        insertTile(eurTile);
+        attachTileHint(eurTile, legacyHint);
+
+        const co2Tile = renderTile(
           'savings-co2',
           proviant.t("js.home.co2AvoidedThisMonth"),
           `${(savings.savedCo2KgThisMonth ?? 0).toFixed(2)} kg`,
@@ -635,18 +684,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             icon: 'cloud-arrow-down',
             variant: 'accent',
           },
-        ));
-        // The events from before the count model are not in the totals: their
-        // figures were scaled by the net content, not by a count of packs.
-        const legacyEvents = savings.legacyEvents || 0;
-        if (legacyEvents > 0) {
-          const note = document.createElement('div');
-          note.className = 'bento__cell bento__cell--6 fg-secondary small';
-          note.dataset.tile = 'legacy-note';
-          note.dataset.tileFixed = 'true';
-          note.textContent = proviant.tn("js.home.legacySavingsNote", legacyEvents);
-          insertTile(note);
-        }
+        );
+        insertTile(co2Tile);
+        attachTileHint(co2Tile, legacyHint);
       }
     }
 
@@ -656,15 +696,11 @@ document.addEventListener('DOMContentLoaded', async function () {
       const listTile = renderListTile(proviant.tn("js.home.expiringWithin", days), s.expiringSoon ?? [], days);
       dashboardList.appendChild(listTile);
 
-      const infoIcon = listTile.querySelector('.tile-threshold-info');
-      if (infoIcon) {
-        const tooltip = new bootstrap.Tooltip(infoIcon, {
-          title: proviant.tn("js.home.thresholdTooltip", days),
-          placement: 'left',
-          trigger: 'manual',
-        });
-        infoIcon.addEventListener('mouseenter', () => tooltip.show());
-        document.addEventListener('click', () => tooltip.hide(), { once: false, capture: true });
+      const infoTrigger = listTile.querySelector('.tile-threshold-info');
+      if (infoTrigger) {
+        const text = proviant.tn("js.home.thresholdTooltip", days);
+        infoTrigger.setAttribute('aria-label', text);
+        attachInfoTooltip(infoTrigger, text, 'left');
       }
     }
 

@@ -6,6 +6,7 @@
 // span more than one row.
 .bento {
   --bento-row-height: 120px;
+  position: relative;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   grid-auto-rows: minmax(var(--bento-row-height), auto);
@@ -18,6 +19,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  transition: box-shadow var(--motion-base) var(--ease-out);
 }
 
 .bento__cell--2 { grid-column: span 2; }
@@ -61,7 +63,62 @@
 
 .bento__cell--dragging {
   cursor: grabbing;
-  opacity: .9;
+  box-shadow: var(--elev-overlay);
+  opacity: .92;
+}
+
+// The ring around a tile that is being resized shows the size it will have.
+.bento__cell--resizing {
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 2px var(--accent), var(--elev-raised);
+}
+
+// The landing shadow: the place the dragged tile will take and the size it
+// will have there.
+.bento__slot {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--accent-soft);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 2px var(--accent), var(--elev-raised);
+  opacity: 0;
+  transition: left var(--motion-base) var(--ease-out), top var(--motion-base) var(--ease-out), width var(--motion-base) var(--ease-out), height var(--motion-base) var(--ease-out), opacity var(--motion-fast) var(--ease-out), transform var(--motion-base) var(--ease-out);
+  transform: scale(.985);
+}
+
+.bento__slot--visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+// In the edit mode the tiles show that they can be moved.
+.bento--editing .bento__cell {
+  border-radius: var(--radius-sm);
+  outline: 1px dashed var(--border);
+  outline-offset: 4px;
+}
+
+.bento__cell--landed {
+  animation: bento-land var(--motion-base) var(--ease-out);
+}
+
+@keyframes bento-land {
+  from {
+    transform: translateY(-2px) scale(1.004);
+  }
+}
+
+// The tools belong to the edit mode: they appear with it.
+.dashboard-tools .btn {
+  animation: bento-tools-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes bento-tools-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 // The grips that move and resize a tile. They sit in the tile's cell, not in
@@ -83,7 +140,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   opacity: .55;
-  transition: opacity var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out);
+  transition: opacity var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out), transform var(--motion-fast) var(--ease-out);
+  animation: bento-handle-in var(--motion-base) var(--ease-out);
 
   // The grip reaches beyond its visible button, so the touch target keeps
   // the size the design system asks for.
@@ -99,9 +157,20 @@
     opacity: 1;
   }
 
+  &:active {
+    transform: scale(.94);
+  }
+
   &:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
+  }
+}
+
+@keyframes bento-handle-in {
+  from {
+    opacity: 0;
+    transform: scale(.85);
   }
 }
 

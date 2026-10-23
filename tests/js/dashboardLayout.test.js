@@ -9,7 +9,13 @@ import { loadClassicScript } from "./helpers/loadScript.js";
  */
 const PAGE_MARKUP = `
   <div aria-live="polite" class="visually-hidden" id="dashboard-status"></div>
-  <button type="button" id="dashboard-reset-layout" disabled>Reset</button>
+  <div class="dashboard-tools">
+    <button type="button" id="dashboard-edit-layout" disabled
+            data-edit-label="Edit dashboard" data-done-label="Done">
+      <span class="dashboard-tools__label">Edit dashboard</span>
+    </button>
+    <button type="button" id="dashboard-reset-layout" disabled hidden>Reset</button>
+  </div>
   <div class="bento" id="dashboard">
     <div class="bento__cell bento__cell--3" data-tile="hero">
       <div class="kpi"><div class="kpi__label">Active Products</div></div>
@@ -87,8 +93,15 @@ async function boot() {
   await vi.advanceTimersByTimeAsync(0);
 }
 
+/** Switches the dashboard into the edit mode, where the grips live. */
+function enterEditMode() {
+  realm.document.getElementById("dashboard-edit-layout")
+    .dispatchEvent(new realm.MouseEvent("click", { bubbles: true }));
+}
+
 const tile = (id) => realm.document.querySelector(`[data-tile="${id}"]`);
 const span = (id, name) => tile(id).style.getPropertyValue(name);
+const handles = (id) => tile(id).querySelectorAll(".bento__handle");
 
 describe("dashboardLayout.js arrangement", () => {
   it("gives every tile its position, width and height", async () => {
@@ -146,9 +159,60 @@ describe("dashboardLayout.js arrangement", () => {
   });
 });
 
+describe("dashboardLayout.js edit mode", () => {
+  it("keeps the grips and the reset out of the way", async () => {
+    await boot();
+
+    expect(realm.document.getElementById("dashboard-edit-layout").disabled).toBe(false);
+    expect(realm.document.getElementById("dashboard-reset-layout").hidden).toBe(true);
+    expect(realm.document.getElementById("dashboard").classList.contains("bento--editing")).toBe(false);
+    handles("hero").forEach((handle) => expect(handle.hidden).toBe(true));
+  });
+
+  it("shows the grips and the reset while the dashboard is edited", async () => {
+    await boot();
+
+    enterEditMode();
+
+    expect(realm.document.getElementById("dashboard").classList.contains("bento--editing")).toBe(true);
+    expect(realm.document.getElementById("dashboard-reset-layout").hidden).toBe(false);
+    expect(realm.document.querySelector(".dashboard-tools__label").textContent).toBe("Done");
+    handles("hero").forEach((handle) => expect(handle.hidden).toBe(false));
+  });
+
+  it("hides the grips and the reset again", async () => {
+    await boot();
+
+    enterEditMode();
+    enterEditMode();
+
+    expect(realm.document.getElementById("dashboard").classList.contains("bento--editing")).toBe(false);
+    expect(realm.document.getElementById("dashboard-reset-layout").hidden).toBe(true);
+    expect(realm.document.querySelector(".dashboard-tools__label").textContent).toBe("Edit dashboard");
+    handles("hero").forEach((handle) => expect(handle.hidden).toBe(true));
+  });
+
+  it("keeps the resize grip on the desktop only", async () => {
+    await boot();
+    enterEditMode();
+
+    const move = tile("hero").querySelector(".bento__handle--move");
+    const resize = tile("hero").querySelector(".bento__handle--resize");
+    expect(move.hidden).toBe(false);
+    expect(resize.hidden).toBe(false);
+
+    phoneLayout = true;
+    realm.dispatchEvent(new realm.Event("resize"));
+
+    expect(move.hidden).toBe(false);
+    expect(resize.hidden).toBe(true);
+  });
+});
+
 describe("dashboardLayout.js arranging", () => {
   it("moves a tile with the arrow keys and stores the arrangement", async () => {
     await boot();
+    enterEditMode();
 
     const handle = tile("hero").querySelector(".bento__handle--move");
     handle.dispatchEvent(new realm.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
@@ -164,6 +228,7 @@ describe("dashboardLayout.js arranging", () => {
 
   it("resizes a tile with the arrow keys", async () => {
     await boot();
+    enterEditMode();
 
     const handle = tile("hero").querySelector(".bento__handle--resize");
     handle.dispatchEvent(new realm.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
@@ -178,6 +243,7 @@ describe("dashboardLayout.js arranging", () => {
   it("puts the dashboard back to its default arrangement", async () => {
     getDashboardLayout.mockResolvedValue({ code: 200, message: STORED_LAYOUT });
     await boot();
+    enterEditMode();
 
     const reset = realm.document.getElementById("dashboard-reset-layout");
     expect(reset.disabled).toBe(false);
@@ -194,6 +260,52 @@ describe("dashboardLayout.js arranging", () => {
     await boot();
 
     expect(realm.document.getElementById("dashboard-reset-layout").disabled).toBe(true);
+    expect(realm.document.getElementById("dashboard-reset-layout").hidden).toBe(true);
     expect(saveDashboardLayout).not.toHaveBeenCalled();
+  });
+});
+
+describe("dashboardLayout.js pointer", () => {
+  /** jsdom has no PointerEvent: the engine only reads the coordinates and the
+   * pointer id, so a mouse event of the same type does the job. */
+  function pointer(type, x = 0, y = 0) {
+    return new realm.MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+  }
+
+  it("marks the place a dragged tile will land in", async () => {
+    await boot();
+    enterEditMode();
+
+    const handle = tile("hero").querySelector(".bento__handle--move");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+
+    const slot = realm.document.querySelector(".bento__slot");
+    expect(slot).not.toBe(null);
+    expect(slot.classList.contains("bento__slot--visible")).toBe(true);
+    expect(tile("hero").classList.contains("bento__cell--dragging")).toBe(true);
+
+    realm.document.dispatchEvent(pointer("pointermove", 120, 40));
+    realm.document.dispatchEvent(pointer("pointerup", 120, 40));
+
+    expect(tile("hero").classList.contains("bento__cell--dragging")).toBe(false);
+    expect(tile("hero").classList.contains("bento__cell--landed")).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(400);
+    expect(realm.document.querySelector(".bento__slot")).toBe(null);
+  });
+
+  it("shows the size a resized tile will have", async () => {
+    await boot();
+    enterEditMode();
+
+    const handle = tile("hero").querySelector(".bento__handle--resize");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+
+    expect(tile("hero").classList.contains("bento__cell--resizing")).toBe(true);
+
+    realm.document.dispatchEvent(pointer("pointerup", 10, 10));
+
+    expect(tile("hero").classList.contains("bento__cell--resizing")).toBe(false);
+    expect(tile("hero").classList.contains("bento__cell--landed")).toBe(true);
   });
 });

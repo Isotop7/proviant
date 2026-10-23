@@ -9,6 +9,7 @@
   const MAX_COLUMNS = 6;
   const MAX_ROWS = 12;
   const SAVE_DEBOUNCE_MS = 300;
+  const SLOT_EXIT_MS = 120;
 
   // The width of a tile is stored in columns of the desktop grid. The narrower
   // grids derive their spans from it, so a dashboard nobody touched keeps the
@@ -24,13 +25,12 @@
     'activity': { order: 6, w: 6, h: 2 },
     'savings-eur': { order: 7, w: 2, h: 1 },
     'savings-co2': { order: 8, w: 2, h: 1 },
-    'legacy-note': { order: 9, w: 6, h: 1 },
-    'expiring-list': { order: 10, w: 6, h: 2 },
-    'chart-waste': { order: 11, w: 3, h: 2 },
-    'chart-categories': { order: 12, w: 3, h: 2 },
-    'chart-expiry': { order: 13, w: 6, h: 2 },
-    'cta-waste': { order: 14, w: 3, h: 1 },
-    'cta-recipes': { order: 15, w: 3, h: 1 },
+    'expiring-list': { order: 9, w: 6, h: 2 },
+    'chart-waste': { order: 10, w: 3, h: 2 },
+    'chart-categories': { order: 11, w: 3, h: 2 },
+    'chart-expiry': { order: 12, w: 6, h: 2 },
+    'cta-waste': { order: 13, w: 3, h: 1 },
+    'cta-recipes': { order: 14, w: 3, h: 1 },
   };
 
   let grid = null;
@@ -39,6 +39,9 @@
   let drag = null;
   let resize = null;
   let saveTimer = null;
+  let editing = false;
+  let slot = null;
+  let slotTimer = null;
 
   function announce(message) {
     const status = document.getElementById('dashboard-status');
@@ -133,10 +136,13 @@
     const target = clamp(index, 0, ordered.length - 1);
     if (current === target) return false;
 
-    ordered.splice(current, 1);
-    ordered.splice(target, 0, tile);
-    ordered.forEach(function (entry, position) { entry.order = position; });
-    applyLayout();
+    // The dragged tile follows the pointer, so it must not be animated.
+    animateReflow(drag ? drag.tile : null, function () {
+      ordered.splice(current, 1);
+      ordered.splice(target, 0, tile);
+      ordered.forEach(function (entry, position) { entry.order = position; });
+      applyLayout();
+    });
     return true;
   }
 
@@ -208,6 +214,52 @@
     if (button) button.disabled = !enabled;
   }
 
+  // Writes the edit mode into the dashboard: the grips, the reset button and
+  // the label of the toggle.
+  function applyEditMode() {
+    if (!grid) return;
+
+    grid.classList.toggle('bento--editing', editing);
+
+    const toggle = document.getElementById('dashboard-edit-layout');
+    if (toggle) {
+      const label = toggle.querySelector('.dashboard-tools__label');
+      if (label) label.textContent = editing ? toggle.dataset.doneLabel : toggle.dataset.editLabel;
+    }
+
+    const reset = document.getElementById('dashboard-reset-layout');
+    if (reset) reset.hidden = !editing;
+
+    updateHandleVisibility();
+  }
+
+  // The grips and the reset button belong to the edit mode: they only show
+  // while the dashboard is being arranged.
+  function setEditing(enabled) {
+    if (!grid) return;
+    const next = Boolean(enabled);
+    if (editing === next) return;
+    editing = next;
+
+    applyEditMode();
+
+    // The controls that just vanished must not keep the focus.
+    if (!editing) {
+      const active = document.activeElement;
+      const reset = document.getElementById('dashboard-reset-layout');
+      const onVanishedControl = active && (
+        (active.closest && active.closest('.bento__handle') && grid.contains(active)) ||
+        (reset && active === reset)
+      );
+      if (onVanishedControl) {
+        const toggle = document.getElementById('dashboard-edit-layout');
+        if (toggle) toggle.focus();
+      }
+    }
+
+    announce(proviant.t(editing ? "js.home.editModeOn" : "js.home.editModeOff"));
+  }
+
   function hasStoredArrangement() {
     if (!storedLayout || !storedLayout.tiles) return false;
     return Object.keys(storedLayout.tiles).some(function (id) {
@@ -232,25 +284,107 @@
     return handle;
   }
 
-  // The width is a property of the desktop grid: the narrower grids follow
-  // the stored width, so the handle only appears where the columns are.
-  function syncResizeHandles() {
+  // The grips only show in the edit mode, and the resize grip only where the
+  // grid has the columns it resizes.
+  function updateHandleVisibility() {
     const resizable = currentColumns() >= DESKTOP_COLUMNS;
     tiles.forEach(function (tile) {
-      const handle = tile.element.querySelector('.bento__handle--resize');
-      if (!handle) return;
-      handle.hidden = !resizable;
+      const move = tile.element.querySelector('.bento__handle--move');
+      const resize = tile.element.querySelector('.bento__handle--resize');
+      if (move) move.hidden = !editing;
+      if (resize) resize.hidden = !editing || !resizable;
     });
   }
 
   function attachHandles() {
     tiles.forEach(function (tile) {
-      if (tile.element.dataset.tileFixed === 'true') return;
       if (tile.element.querySelector('.bento__handle')) return;
       tile.element.appendChild(buildHandle('move', tile));
       tile.element.appendChild(buildHandle('resize', tile));
     });
-    syncResizeHandles();
+    updateHandleVisibility();
+  }
+
+  // The landing shadow: it marks the place the dragged tile will take and the
+  // size it will have there.
+  function ensureSlot() {
+    if (slot) return slot;
+    slot = document.createElement('div');
+    slot.className = 'bento__slot';
+    slot.setAttribute('aria-hidden', 'true');
+    grid.prepend(slot);
+    return slot;
+  }
+
+  // The slot follows the cell without the drag offset, so it stays where the
+  // tile will land.
+  function positionSlot(cell) {
+    if (!slot) return;
+    const rect = cell.getBoundingClientRect();
+    const gridRect = grid.getBoundingClientRect();
+    slot.style.left = (rect.left - drag.transformX - gridRect.left) + 'px';
+    slot.style.top = (rect.top - drag.transformY - gridRect.top) + 'px';
+    slot.style.width = rect.width + 'px';
+    slot.style.height = rect.height + 'px';
+  }
+
+  function showSlot(cell) {
+    ensureSlot();
+    positionSlot(cell);
+    // The slot has to be in the layout before the class changes, otherwise the
+    // fade in has no starting point.
+    void slot.offsetWidth;
+    slot.classList.add('bento__slot--visible');
+  }
+
+  function hideSlot() {
+    if (!slot) return;
+    slot.classList.remove('bento__slot--visible');
+    if (slotTimer) clearTimeout(slotTimer);
+    slotTimer = setTimeout(function () {
+      slotTimer = null;
+      if (!slot) return;
+      slot.remove();
+      slot = null;
+    }, SLOT_EXIT_MS);
+  }
+
+  // The length of a transition in the current theme. The reduce-motion theme
+  // sets the motion tokens to zero, which switches the animations off.
+  function motionDuration() {
+    const styles = window.getComputedStyle(document.documentElement);
+    const duration = parseFloat(styles.getPropertyValue('--motion-base'));
+    return isNaN(duration) ? 0 : duration;
+  }
+
+  // The tiles that change their place glide there: the grid has already placed
+  // them, the animation plays the difference back.
+  function animateReflow(excluded, mutate) {
+    const moved = tiles.filter(function (tile) { return tile.element !== excluded; });
+    if (moved.length === 0 || typeof moved[0].element.animate !== 'function') {
+      mutate();
+      return;
+    }
+
+    const before = moved.map(function (tile) {
+      return { element: tile.element, rect: tile.element.getBoundingClientRect() };
+    });
+
+    mutate();
+
+    const duration = motionDuration();
+    if (!duration) return;
+
+    before.forEach(function (entry) {
+      const next = entry.element.getBoundingClientRect();
+      const dx = entry.rect.left - next.left;
+      const dy = entry.rect.top - next.top;
+      if (!dx && !dy) return;
+      entry.element.animate(
+        [{ transform: 'translate(' + dx + 'px, ' + dy + 'px)' }, { transform: 'translate(0, 0)' }],
+        { duration: duration, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
+      );
+    });
   }
 
   // The insertion point of a pointer: the number of tiles whose centre lies
@@ -292,7 +426,9 @@
     };
 
     if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
+    cell.classList.remove('bento__cell--landed');
     cell.classList.add('bento__cell--dragging');
+    showSlot(cell);
     document.addEventListener('pointermove', onMovePointerMove);
     document.addEventListener('pointerup', onMovePointerUp);
     document.addEventListener('pointercancel', onMovePointerUp);
@@ -309,6 +445,7 @@
     drag.transformX = event.clientX - drag.grabOffsetX - slotLeft;
     drag.transformY = event.clientY - drag.grabOffsetY - slotTop;
     cell.style.transform = 'translate(' + drag.transformX + 'px, ' + drag.transformY + 'px)';
+    positionSlot(cell);
 
     const index = insertionIndex(event.clientX, event.clientY, drag.tile);
     if (index === drag.index) return;
@@ -324,13 +461,16 @@
     drag.transformX = event.clientX - drag.grabOffsetX - movedSlotLeft;
     drag.transformY = event.clientY - drag.grabOffsetY - movedSlotTop;
     cell.style.transform = 'translate(' + drag.transformX + 'px, ' + drag.transformY + 'px)';
+    positionSlot(cell);
   }
 
   function onMovePointerUp() {
     if (!drag) return;
     const tile = drag.tile;
     tile.element.classList.remove('bento__cell--dragging');
+    tile.element.classList.add('bento__cell--landed');
     tile.element.style.transform = '';
+    hideSlot();
     document.removeEventListener('pointermove', onMovePointerMove);
     document.removeEventListener('pointerup', onMovePointerUp);
     document.removeEventListener('pointercancel', onMovePointerUp);
@@ -370,6 +510,7 @@
     };
 
     if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
+    cell.classList.remove('bento__cell--landed');
     cell.classList.add('bento__cell--resizing');
     document.addEventListener('pointermove', onResizePointerMove);
     document.addEventListener('pointerup', onResizePointerUp);
@@ -395,6 +536,7 @@
     if (!resize) return;
     const tile = resize.tile;
     tile.element.classList.remove('bento__cell--resizing');
+    tile.element.classList.add('bento__cell--landed');
     document.removeEventListener('pointermove', onResizePointerMove);
     document.removeEventListener('pointerup', onResizePointerUp);
     document.removeEventListener('pointercancel', onResizePointerUp);
@@ -453,8 +595,10 @@
   function onResetClick() {
     storedLayout = null;
     clearLocalLayout();
-    readTiles();
-    applyLayout();
+    animateReflow(null, function () {
+      readTiles();
+      applyLayout();
+    });
     setResetEnabled(false);
     saveLayout({ version: LAYOUT_VERSION, tiles: {} });
     announce(proviant.t("js.home.layoutReset"));
@@ -479,6 +623,9 @@
     attachHandles();
     setResetEnabled(hasStoredArrangement());
 
+    editing = false;
+    applyEditMode();
+
     grid.addEventListener('pointerdown', function (event) {
       const handle = event.target.closest('.bento__handle');
       if (!handle || !grid.contains(handle)) return;
@@ -487,6 +634,12 @@
     });
 
     grid.addEventListener('keydown', onHandleKeyDown);
+
+    const toggle = document.getElementById('dashboard-edit-layout');
+    if (toggle) {
+      toggle.disabled = false;
+      toggle.addEventListener('click', function () { setEditing(!editing); });
+    }
 
     const reset = document.getElementById('dashboard-reset-layout');
     if (reset) reset.addEventListener('click', onResetClick);
@@ -515,9 +668,16 @@
     }
   });
 
+  document.addEventListener('keydown', function (event) {
+    if (!editing || event.key !== 'Escape') return;
+    setEditing(false);
+    const toggle = document.getElementById('dashboard-edit-layout');
+    if (toggle) toggle.focus();
+  });
+
   window.addEventListener('resize', function () {
     if (!grid || tiles.length === 0) return;
     applyLayout();
-    syncResizeHandles();
+    updateHandleVisibility();
   });
 })();

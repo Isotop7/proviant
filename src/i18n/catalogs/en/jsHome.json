@@ -19,6 +19,8 @@
   "js.home.daysAgo": "%s days ago",
   "js.home.daysAgo_one": "%s day ago",
   "js.home.daysAgo_other": "%s days ago",
+  "js.home.editModeOff": "Dashboard editing is off.",
+  "js.home.editModeOn": "Dashboard editing is on. Drag the grips to arrange the tiles.",
   "js.home.expiredCount": "%d expired",
   "js.home.expiredCenterLabel": "expired",
   "js.home.expiredNotConsumed": "Expired (not consumed)",

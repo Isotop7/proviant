@@ -19,6 +19,8 @@
   "js.home.daysAgo": "vor %s Tagen",
   "js.home.daysAgo_one": "vor %s Tag",
   "js.home.daysAgo_other": "vor %s Tagen",
+  "js.home.editModeOff": "Die Dashboard-Bearbeitung ist beendet.",
+  "js.home.editModeOn": "Die Dashboard-Bearbeitung ist aktiv. Ziehen Sie die Griffe, um die Kacheln anzuordnen.",
   "js.home.expiredCount": "%d abgelaufen",
   "js.home.expiredCenterLabel": "abgelaufen",
   "js.home.expiredNotConsumed": "Abgelaufen (nicht verbraucht)",

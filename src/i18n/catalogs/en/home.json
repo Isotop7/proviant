@@ -3,6 +3,8 @@
   "home.categoryBreakdown": "Category Breakdown",
   "home.demoMode.desc": "This is a public demo instance. Data resets frequently.",
   "home.demoMode.title": "Demo Mode",
+  "home.doneEditing": "Done",
+  "home.editDashboard": "Edit dashboard",
   "home.expiryTrend": "Expiry Trend (next 12 months)",
   "home.expiryTrendChartAria": "Line chart: products expiring over the next 12 months",
   "home.heroSub": "Add to your pantry in seconds",
