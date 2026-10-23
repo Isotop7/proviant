@@ -65,7 +65,7 @@ jobs:
           OWNER="${{ github.repository_owner }}"
           REPO="${{ github.repository }}"
 
-          EXISTING_IDS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          EXISTING_IDS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             "https://api.github.com/repos/$OWNER/$REPO/issues?state=open&labels=vulnerability" \
             | jq -r '.[].title | split(": ")[1] // empty | split(" ")[0]' 2>/dev/null || true)
 
@@ -85,7 +85,7 @@ jobs:
 
             curl -s -X POST \
               "https://api.github.com/repos/$OWNER/$REPO/issues" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -d "$(jq -n --arg title "Vulnerability: $ID" --arg body "$BODY" \
                   '{title: $title, body: $body, labels: ["security", "vulnerability"]}')"

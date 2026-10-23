@@ -43,9 +43,9 @@ RUN addgroup -S proviant && \
     apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng tzdata && \
     chown -R proviant:proviant /app
 COPY --chown=proviant:proviant ./src/config.yaml.sqlite.tmpl /app/config.yaml
-COPY --chown=proviant:proviant ./demo_entrypoint.sh /entrypoint.sh
-RUN chown root:root /entrypoint.sh && \
-    chmod +x /entrypoint.sh
+# The entrypoint runs as the proviant user, so it must not be writable by it.
+COPY --chown=root:root ./demo_entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ENV GIN_MODE=release
 ENV PROVIANT_DEMO_MODE=true
 ENV TZ=UTC
