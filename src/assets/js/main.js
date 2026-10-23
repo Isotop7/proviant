@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
     // Bootstrap tooltips have no selector-based auto-init; per-element
     // instantiation is the documented API and the side effect is the point.
-    tooltipEls.forEach(function (el) { new bootstrap.Tooltip(el); });
+    tooltipEls.forEach(function (el) { new bootstrap.Tooltip(el); }); // NOSONAR
 
     // Show offline banner immediately if page loaded from cache while offline
     updateOfflineBanner();
