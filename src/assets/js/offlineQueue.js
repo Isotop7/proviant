@@ -771,11 +771,11 @@
   // rather than bound at load: the buttons exist before this script runs.
   document.addEventListener('click', function (event) {
     if (event.target.closest('#offlineQueueRetry')) {
-      retryAllFailed();
+      void retryAllFailed().catch(function () {});
       return;
     }
     if (event.target.closest('#offlineQueueDiscard')) {
-      discardFailedAfterConfirm();
+      void discardFailedAfterConfirm().catch(function () {});
     }
   });
 

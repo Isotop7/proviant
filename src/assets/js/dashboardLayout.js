@@ -353,8 +353,8 @@
   // sets the motion tokens to zero, which switches the animations off.
   function motionDuration() {
     const styles = window.getComputedStyle(document.documentElement);
-    const duration = parseFloat(styles.getPropertyValue('--motion-base'));
-    return isNaN(duration) ? 0 : duration;
+    const duration = Number.parseFloat(styles.getPropertyValue('--motion-base'));
+    return Number.isNaN(duration) ? 0 : duration;
   }
 
   // The tiles that change their place glide there: the grid has already placed
@@ -482,11 +482,11 @@
 
   function gridMetrics() {
     const styles = window.getComputedStyle(grid);
-    const gap = parseFloat(styles.columnGap) || 0;
+    const gap = Number.parseFloat(styles.columnGap) || 0;
     const columns = currentColumns();
     const width = grid.getBoundingClientRect().width;
     const columnWidth = Math.max(1, (width - gap * (columns - 1)) / columns);
-    const rowHeight = parseFloat(styles.getPropertyValue('--bento-row-height')) || 96;
+    const rowHeight = Number.parseFloat(styles.getPropertyValue('--bento-row-height')) || 96;
     return { gap: gap, columnWidth: columnWidth, rowHeight: rowHeight };
   }
 

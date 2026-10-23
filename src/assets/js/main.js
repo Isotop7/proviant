@@ -25,10 +25,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // would abort the rest of this handler and leave the banner permanently
     // blind to stuck changes.
     if (navigator.onLine && proviant._flushQueue) {
-        proviant._flushQueue();
+        void proviant._flushQueue();
     }
     if (proviant._updateOfflineBadge) {
-        proviant._updateOfflineBadge();
+        void proviant._updateOfflineBadge();
     }
 });
 
@@ -64,7 +64,7 @@ function setOfflineBannerText(offline, stuck) {
 window.addEventListener('offline', updateOfflineBanner);
 window.addEventListener('online', function () {
     updateOfflineBanner();
-    if (proviant._flushQueue) proviant._flushQueue();
+    if (proviant._flushQueue) void proviant._flushQueue();
 });
 
 if ('serviceWorker' in navigator) {

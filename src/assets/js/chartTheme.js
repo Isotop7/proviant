@@ -31,9 +31,9 @@ function withAlpha(color, alpha) {
     const hex = value.slice(1);
     const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
     if (full.length < 6) return value;
-    const r = parseInt(full.slice(0, 2), 16);
-    const g = parseInt(full.slice(2, 4), 16);
-    const b = parseInt(full.slice(4, 6), 16);
+    const r = Number.parseInt(full.slice(0, 2), 16);
+    const g = Number.parseInt(full.slice(2, 4), 16);
+    const b = Number.parseInt(full.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
   const match = value.match(/^rgba?\(([^)]+)\)$/i);
