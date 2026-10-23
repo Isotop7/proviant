@@ -1,67 +1,71 @@
 {{ define "_settings_receipt_scan" }}
 {{ if .ReceiptScanFeatureEnabled }}
-<div class="card card-section mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
-        <div class="d-flex align-items-center gap-2">
+<div class="card card-section mb-7">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-receipt"></i>
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "receiptScan.title" }}</h2>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetReceiptScanSettings">
+        <div class="d-flex align-items-center gap-3">
+            <button type="button" class="btn btn-outline theme-secondary btn-sm" id="btnResetReceiptScanSettings">
                 {{ t "receiptScan.resetToDefaults" }}
             </button>
-            <button type="button" class="btn btn-primary btn-sm" id="btnUpdateReceiptScanSettings">
+            <button type="button" class="btn btn-solid theme-primary btn-sm" id="btnUpdateReceiptScanSettings">
                 {{ t "common.save" }}
             </button>
         </div>
     </div>
-    <div class="card-body px-4 py-4">
+    <div class="card-body px-7 py-7">
         <form id="receiptScanSettings" novalidate>
 
-            <div class="list-group list-group-flush border rounded-3">
-                <div class="list-group-item px-3 py-3">
-                    <div class="d-flex align-items-center justify-content-between gap-3">
+            <div class="list-group list-group-flush border rounded-5">
+                <div class="list-group-item px-5 py-5">
+                    <div class="d-flex align-items-center justify-content-between gap-5">
                         <div>
                             <div class="fw-medium small">{{ t "receiptScan.overrideServer" }}</div>
-                            <div class="text-body-secondary small">{{ t "receiptScan.overrideServerDesc" }}</div>
+                            <div class="fg-secondary small">{{ t "receiptScan.overrideServerDesc" }}</div>
                         </div>
-                        <div class="form-check form-switch mb-0 flex-shrink-0">
-                            <input class="form-check-input" type="checkbox" role="switch"
+                        <div class="form-field mb-0 flex-shrink-0">
+                          <div class="switch">
+                            <input type="checkbox" role="switch"
                                    id="toggleReceiptScanOverride"
                                    {{if .User.ReceiptScanPreferences.OverrideEnabled}}checked{{end}}>
-                            <label class="visually-hidden" for="toggleReceiptScanOverride">{{ t "receiptScan.overrideToggleLabel" }}</label>
+                            
+                          </div>
+                          <label class="visually-hidden" for="toggleReceiptScanOverride">{{ t "receiptScan.overrideToggleLabel" }}</label>
+                        
                         </div>
                     </div>
                 </div>
-                <div id="receiptScanOverrideFields" class="list-group-item px-3 py-3 bg-subtle{{if not .User.ReceiptScanPreferences.OverrideEnabled}} d-none{{end}}">
+                <div id="receiptScanOverrideFields" class="list-group-item px-5 py-5 bg-subtle{{if not .User.ReceiptScanPreferences.OverrideEnabled}} d-none{{end}}">
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="md:col-6">
                             <label for="inputReceiptScanEndpoint" class="form-label fw-medium small">{{ t "receiptScan.endpointLabel" }}</label>
                             <input type="url" class="form-control" id="inputReceiptScanEndpoint"
                                    placeholder="{{ .ReceiptScanDefaults.Endpoint }}"
                                    value="{{ .User.ReceiptScanPreferences.Endpoint }}"
                                    autocomplete="off">
-                            <div class="form-text text-body-secondary">{{ t "receiptScan.endpointHelp" }}</div>
+                            <div class="form-text fg-secondary">{{ t "receiptScan.endpointHelp" }}</div>
                             <div class="invalid-feedback">{{ t "receiptScan.endpointInvalid" }}</div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="md:col-6">
                             <label for="inputReceiptScanModel" class="form-label fw-medium small">{{ t "receiptScan.modelLabel" }}</label>
                             <input type="text" class="form-control" id="inputReceiptScanModel"
                                    placeholder="{{ .ReceiptScanDefaults.Model }}"
                                    value="{{ .User.ReceiptScanPreferences.Model }}"
                                    autocomplete="off">
-                            <div class="form-text text-body-secondary">{{ t "receiptScan.modelHelp" }}</div>
+                            <div class="form-text fg-secondary">{{ t "receiptScan.modelHelp" }}</div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="md:col-6">
                             <label for="inputReceiptScanApiKey" class="form-label fw-medium small">{{ t "receiptScan.apiKeyLabel" }}</label>
                             <input type="password" class="form-control" id="inputReceiptScanApiKey"
                                    placeholder="{{ t "receiptScan.keepCurrentPlaceholder" }}"
                                    autocomplete="new-password">
-                            <div class="form-text text-body-secondary">
+                            <div class="form-text fg-secondary">
                                 {{ if .User.ReceiptScanPreferences.APIKey }}
-                                <span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "receiptScan.apiKeyConfigured" }}</span>
+                                <span class="fg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>{{ t "receiptScan.apiKeyConfigured" }}</span>
                                 {{ t "receiptScan.apiKeyReplace" }}
                                 {{ else if and .ReceiptScanDefaults.APIKeyConfigured (not .User.ReceiptScanPreferences.Endpoint) }}
                                 {{ t "receiptScan.noCustomKeyServer" }}
@@ -71,12 +75,12 @@
                                 {{ t "receiptScan.noApiKey" }}
                                 {{ end }}
                             </div>
-                            <div class="form-check mt-2">
-                                <input class="form-check-input" type="checkbox" id="clearReceiptScanApiKey">
-                                <label class="form-check-label small" for="clearReceiptScanApiKey">{{ t "receiptScan.clearApiKey" }}</label>
+                            <div class="form-field mt-3">
+                              <input class="check" type="checkbox" id="clearReceiptScanApiKey">
+                              <label class="small" for="clearReceiptScanApiKey">{{ t "receiptScan.clearApiKey" }}</label>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="md:col-6">
                             <label for="inputReceiptScanTimeout" class="form-label fw-medium small">{{ t "receiptScan.timeoutLabel" }}</label>
                             <div class="input-group input-width-260">
                                 <span class="input-group-text"><i class="bi bi-clock"></i></span>
@@ -86,7 +90,7 @@
                                        value="{{ if gt .User.ReceiptScanPreferences.Timeout 0 }}{{ .User.ReceiptScanPreferences.Timeout }}{{ end }}">
                                 <span class="input-group-text">s</span>
                             </div>
-                            <div class="form-text text-body-secondary">{{ t "receiptScan.timeoutHelp" }}</div>
+                            <div class="form-text fg-secondary">{{ t "receiptScan.timeoutHelp" }}</div>
                             <div class="invalid-feedback">{{ t "receiptScan.timeoutInvalid" }}</div>
                         </div>
                     </div>

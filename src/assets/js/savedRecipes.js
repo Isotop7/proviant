@@ -129,20 +129,20 @@ function ingredientRowHtml(ingredient, products) {
     }).join("");
     return `
         <div class="row g-2 mb-1" data-ingredient-row>
-            <div class="col-12 col-md-4">
-                <select class="form-select form-select-sm" data-ingredient-product aria-label="${proviant.t("js.savedRecipes.linkedProduct")}">
+            <div class="col-12 md:col-4">
+                <select class="form-control form-control-sm" data-ingredient-product aria-label="${proviant.t("js.savedRecipes.linkedProduct")}">
                     <option value="">${proviant.t("js.savedRecipes.noProduct")}</option>
                     ${options}
                 </select>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 md:col-3">
                 <input type="text" class="form-control form-control-sm" data-ingredient-name maxlength="255" placeholder="${proviant.t("js.savedRecipes.namePlaceholder")}" aria-label="${proviant.t("js.savedRecipes.ingredientName")}" value="${escapeRecipeHtml(ingredient ? ingredient.name : "")}">
             </div>
-            <div class="col-6 col-md-4">
+            <div class="col-6 md:col-4">
                 <input type="text" class="form-control form-control-sm" data-ingredient-portion maxlength="40" placeholder="${proviant.t("js.savedRecipes.portion")}" aria-label="${proviant.t("js.savedRecipes.portionLabel")}" value="${escapeRecipeHtml(ingredient ? ingredient.portion : "")}">
             </div>
-            <div class="col-12 col-md-1 d-flex align-items-center">
-                <button type="button" class="btn-icon text-danger" data-ingredient-remove aria-label="${proviant.t("js.savedRecipes.removeIngredient")}">
+            <div class="col-12 md:col-1 d-flex align-items-center">
+                <button type="button" class="btn-icon fg-danger" data-ingredient-remove aria-label="${proviant.t("js.savedRecipes.removeIngredient")}">
                     <i class="bi bi-trash3" aria-hidden="true"></i>
                 </button>
             </div>
@@ -340,30 +340,30 @@ function renderSavedRecipes(recipes) {
                 </div>
                 <div class="empty-title">${proviant.t("js.savedRecipes.emptyTitle")}</div>
                 <div class="empty-desc">${proviant.t("js.savedRecipes.emptyDesc")}</div>
-                <button class="btn btn-primary" id="btnNewRecipeEmpty" type="button">
+                <button class="btn btn-solid theme-primary" id="btnNewRecipeEmpty" type="button">
                     <i class="bi bi-plus-lg me-1"></i> ${proviant.t("js.savedRecipes.newRecipe")}
                 </button>
             </div>`;
         return;
     }
     container.innerHTML = `
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div class="row row-cols-1 md:row-cols-2 lg:row-cols-3 g-4">
             ${recipes.map(function (recipe) {
                 return `
                 <div class="col">
                     <div class="card h-100 recipe-card shadow-sm">
                         <div class="card-body d-flex flex-column">
                             <h3 class="h6">${escapeRecipeHtml(recipe.name)}</h3>
-                            <p class="mp-entry-meta mb-2">${proviant.tn("js.savedRecipes.servings", recipe.servings)}</p>
-                            ${recipe.description ? `<p class="small text-body-secondary">${escapeRecipeHtml(recipe.description)}</p>` : ""}
-                            <div class="mt-auto d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-primary btn-sm" data-recipe-cook="${recipe.id}" data-recipe-name="${escapeRecipeHtml(recipe.name)}">
+                            <p class="mp-entry-meta mb-3">${proviant.tn("js.savedRecipes.servings", recipe.servings)}</p>
+                            ${recipe.description ? `<p class="small fg-secondary">${escapeRecipeHtml(recipe.description)}</p>` : ""}
+                            <div class="mt-auto d-flex flex-wrap gap-3">
+                                <button type="button" class="btn btn-solid theme-primary btn-sm" data-recipe-cook="${recipe.id}" data-recipe-name="${escapeRecipeHtml(recipe.name)}">
                                     <i class="bi bi-fire me-1" aria-hidden="true"></i> ${proviant.t("js.savedRecipes.cook")}
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" data-recipe-edit="${recipe.id}" aria-label="${proviant.t("js.savedRecipes.editLabel", escapeRecipeHtml(recipe.name))}">
+                                <button type="button" class="btn btn-outline theme-secondary btn-sm" data-recipe-edit="${recipe.id}" aria-label="${proviant.t("js.savedRecipes.editLabel", escapeRecipeHtml(recipe.name))}">
                                     <i class="bi bi-pencil" aria-hidden="true"></i> ${proviant.t("common.edit")}
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm text-danger" data-recipe-delete="${recipe.id}" data-recipe-name="${escapeRecipeHtml(recipe.name)}" aria-label="${proviant.t("js.savedRecipes.deleteLabel", escapeRecipeHtml(recipe.name))}">
+                                <button type="button" class="btn btn-outline theme-secondary btn-sm fg-danger" data-recipe-delete="${recipe.id}" data-recipe-name="${escapeRecipeHtml(recipe.name)}" aria-label="${proviant.t("js.savedRecipes.deleteLabel", escapeRecipeHtml(recipe.name))}">
                                     <i class="bi bi-trash3" aria-hidden="true"></i> ${proviant.t("common.delete")}
                                 </button>
                             </div>

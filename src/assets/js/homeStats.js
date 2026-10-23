@@ -22,7 +22,7 @@ function renderSkeletons(count) {
     const col = document.createElement('div');
     col.className = 'bento__cell bento__cell--2 skeleton-tile';
     col.innerHTML = `<div class="kpi h-100">
-      <div class="skeleton mb-2" style="height:.75rem;width:60%"></div>
+      <div class="skeleton mb-3" style="height:.75rem;width:60%"></div>
       <div class="skeleton" style="height:2rem;width:40%"></div>
     </div>`;
     insertTile(col);
@@ -39,7 +39,7 @@ function showEmptyChart(canvasId, message) {
   canvas.style.display = 'none';
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-body-secondary small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
+    `<p class="fg-secondary small text-center my-auto py-7 chart-empty-msg">${message}</p>`,
   );
 }
 
@@ -132,14 +132,14 @@ function renderListTile(title, items, days) {
 
   let listHtml;
   if (items.length === 0) {
-    listHtml = `<li class="list-group-item text-body-secondary small py-2">${proviant.tn("js.home.noExpiringProducts", days)}</li>`;
+    listHtml = `<li class="list-group-item fg-secondary small py-3">${proviant.tn("js.home.noExpiringProducts", days)}</li>`;
   } else {
     listHtml = items.map((item) => {
       const status = expiryStatus(item.expireAt);
       const meta = EXPIRY_STATUS[status];
       const date = new Date(item.expireAt + 'T00:00:00');
       const dateLabel = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      return `<li class="list-group-item d-flex align-items-center gap-3 px-3 py-2">
+      return `<li class="list-group-item d-flex align-items-center gap-5 px-5 py-3">
         <span class="list-group-item__stripe list-group-item__stripe--${status}" aria-hidden="true"></span>
         <span class="list-group-item__body">
           <span class="list-group-item__title text-truncate">${item.productName}</span>
@@ -158,7 +158,7 @@ function renderListTile(title, items, days) {
 
   col.innerHTML = `
     <div class="card h-100" style="overflow:hidden;">
-      <div class="card-header d-flex align-items-center gap-2 fw-bold">
+      <div class="card-header d-flex flex-row align-items-center gap-3 fw-bold">
         <div class="icon-chip" aria-hidden="true">
           <i class="bi bi-clock-history"></i>
         </div>
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       const currentStreak = streak ? streak.currentStreak : 0;
       const longestStreak = streak ? streak.longestStreak : 0;
       const streakHero = proviant.tn("js.home.streakDays", currentStreak);
-      const streakHeroClass = currentStreak > 0 ? 'kpi__value' : 'kpi__value text-body-secondary';
+      const streakHeroClass = currentStreak > 0 ? 'kpi__value' : 'kpi__value fg-secondary';
       const streakCol = renderTile('streak', '<i class="bi bi-fire"></i> ' + proviant.t("js.home.wasteFreeStreak"), streakHero, null, streakHeroClass, 2);
       const streakTile = streakCol.querySelector('.kpi');
       if (streakTile) {
@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             <div class="kpi h-100">
               <div class="kpi__label"><i class="bi bi-bullseye me-1"></i>${proviant.t("js.home.monthlyGoal")}</div>
               <div class="kpi__value${exceeded ? ' kpi__value--danger' : ''}" title="${label}">${label}</div>
-              <div class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" style="height:6px;">
+              <div class="progress mt-3" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" style="height:6px;">
                 <div class="progress-bar" style="width:${pct}%;background:${barColor};"></div>
               </div>
             </div>`;
@@ -575,7 +575,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         let listHtml;
         if (activities.length === 0) {
-          listHtml = `<li class="list-group-item text-body-secondary small py-2">${proviant.t("js.home.noRecentActivity")}</li>`;
+          listHtml = `<li class="list-group-item fg-secondary small py-3">${proviant.t("js.home.noRecentActivity")}</li>`;
         } else {
           listHtml = activities.map((a) => {
             const icon = actionIconMap[a.action] || 'bi-circle';
@@ -583,19 +583,19 @@ document.addEventListener('DOMContentLoaded', async function () {
             const actionText = actionKeyMap[a.action]
               ? proviant.t(actionKeyMap[a.action], productName)
               : `${a.action} ${productName}`;
-            return `<li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
-              <span class="d-flex align-items-center gap-2 text-truncate me-2 small">
+            return `<li class="list-group-item d-flex justify-content-between align-items-center px-5 py-3">
+              <span class="d-flex align-items-center gap-3 text-truncate me-2 small">
                 <i class="bi ${icon}" style="font-size:12px;color:var(--accent);flex-shrink:0;"></i>
                 <span class="text-truncate"><strong>${a.userName || proviant.t("js.home.someone")}</strong> ${actionText}</span>
               </span>
-              <span class="text-nowrap text-body-secondary small" style="flex-shrink:0;">${relativeTime(a.timestamp)}</span>
+              <span class="text-nowrap fg-secondary small" style="flex-shrink:0;">${relativeTime(a.timestamp)}</span>
             </li>`;
           }).join('');
         }
 
         activityCol.innerHTML = `
           <div class="card h-100" style="overflow:hidden;">
-            <div class="card-header d-flex align-items-center gap-2 fw-bold">
+            <div class="card-header d-flex flex-row align-items-center gap-3 fw-bold">
               <div style="width:28px;height:28px;border-radius:7px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;" aria-hidden="true">
                 <i class="bi bi-activity" style="font-size:12px;color:var(--accent);"></i>
               </div>
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const legacyEvents = savings.legacyEvents || 0;
         if (legacyEvents > 0) {
           const note = document.createElement('div');
-          note.className = 'bento__cell bento__cell--6 text-body-secondary small';
+          note.className = 'bento__cell bento__cell--6 fg-secondary small';
           note.dataset.tile = 'legacy-note';
           note.dataset.tileFixed = 'true';
           note.textContent = proviant.tn("js.home.legacySavingsNote", legacyEvents);

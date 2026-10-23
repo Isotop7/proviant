@@ -14,22 +14,23 @@ export default async function flow({ page, shot, goto, settle }) {
   await goto('/web/products');
   await settle('#productRows .list-row');
   await page.click('#btnOpenAddProductModal');
-  await settle('#addProductModal.show', 'visible');
+  await settle('#addProductModal[open]', 'visible');
   await shot('products-add-modal-manual');
 
-  // The camera tab cannot work headless — html5-qrcode raises NotFoundError and
-  // the app reports it through the shared feedback dialog. That stack is a real
-  // user-facing state, so it gets its own shot before the flow moves on.
+  // The camera tab cannot work headless — html5-qrcode finds no camera, so the
+  // app reports it as a toast. That stack is a real user-facing state, so it
+  // gets its own shot before the flow moves on. The camera section may or may
+  // not have opened its own dialog on top, so Escape is the reliable way out:
+  // it closes the topmost one.
   await page.click('#tabCamera');
-  await settle('#proviantFeedbackModal.show', 'visible');
+  await settle('#proviantToastStack .toast', 'visible');
   await shot('products-add-modal-camera-unavailable');
-  await page.click('#proviantFeedbackBtn');
-  await settle('#proviantFeedbackModal:not(.show)');
-  await page.click('#addProductModal .btn-modal-close');
-  await settle('#addProductModal:not(.show)');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await settle('#addProductModal:not([open])');
 
-  // ── Products: export dropdown ──────────────────────────────────────────────
-  await page.click('[aria-label="Product export options bar"] .dropdown-toggle');
+  // ── Products: export menu ──────────────────────────────────────────────────
+  await page.click('[aria-label="Product export options bar"] [data-bs-toggle="menu"]');
   await settle('.export-menu.show', 'visible');
   await shot('products-export-menu');
   await page.keyboard.press('Escape');
@@ -43,23 +44,32 @@ export default async function flow({ page, shot, goto, settle }) {
   await shot('products-bulk-selection');
 
   await page.click('[data-bulk-action="cook"]');
-  await settle('#cookModal.show', 'visible');
+  await settle('#cookModal[open]', 'visible');
   await settle('#cookModalItems .cook-item-row');
   await shot('products-cook-modal');
   await page.keyboard.press('Escape');
-  await settle('#cookModal:not(.show)');
+  await settle('#cookModal:not([open])');
 
   // ── Products: destructive confirm dialog ───────────────────────────────────
   await page.click('[data-bulk-action="delete"]');
-  await settle('#proviantConfirmModal.show', 'visible');
+  await settle('#proviantConfirmModal[open]', 'visible');
   await shot('products-confirm-waste');
-  await page.click('#proviantConfirmModal [data-bs-dismiss="modal"]');
-  await settle('#proviantConfirmModal:not(.show)');
+  // The footer button, not the header close: an error toast can sit on top of
+  // the header's close button.
+  await page.click('#proviantConfirmModal .dialog-footer [data-bs-dismiss="dialog"]');
+  await settle('#proviantConfirmModal:not([open])');
 
-  // ── Notifications dropdown (sidebar bell) ──────────────────────────────────
+  // ── Notifications menu (sidebar bell) ──────────────────────────────────────
+  // An error toast stays until it is dismissed, and it sits right on top of
+  // the notification bell. Clear it first.
+  const errorToast = page.locator('#proviantToastStack .toast [data-bs-dismiss="toast"]');
+  if (await errorToast.count()) {
+    await errorToast.first().click();
+    await settle('#proviantToastStack .toast', 'hidden');
+  }
   await page.click('button[aria-label="Notifications"]');
   await settle('#notification-dropdown.show', 'visible');
-  await settle('#notification-items .list-group-item, #notification-items .dropdown-item, #notification-items .text-secondary-custom:not(:has-text("Loading"))');
+  await settle('#notification-items .notification-entry');
   await shot('nav-notifications-dropdown');
   await page.keyboard.press('Escape');
 
@@ -70,17 +80,17 @@ export default async function flow({ page, shot, goto, settle }) {
   await goto('/web/products/1/edit');
   await settle('#editProductForm');
   await page.click('.btn-add-to-shopping-list');
-  await settle('#restockSuggestionModal.show', 'visible');
+  await settle('#restockSuggestionModal[open]', 'visible');
   await shot('product-restock-suggestion');
   await page.keyboard.press('Escape');
-  await settle('#restockSuggestionModal:not(.show)');
+  await settle('#restockSuggestionModal:not([open])');
 
-  // ── Settings: create API token modal ───────────────────────────────────────
+  // ── Settings: create API token dialog ───────────────────────────────────────
   await goto('/web/user/settings');
   await settle('h1:has-text("User Settings")');
   await page.click('#btnCreatePAT');
-  await settle('#createPatModal.show', 'visible');
+  await settle('#createPatModal[open]', 'visible');
   await shot('settings-create-token-modal');
   await page.keyboard.press('Escape');
-  await settle('#createPatModal:not(.show)');
+  await settle('#createPatModal:not([open])');
 }

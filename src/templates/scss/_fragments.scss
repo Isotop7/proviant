@@ -29,9 +29,9 @@
   background:
     linear-gradient(
       90deg,
-      var(--bs-secondary-bg) 25%,
-      var(--bs-tertiary-bg) 50%,
-      var(--bs-secondary-bg) 75%
+      var(--bg-1) 25%,
+      var(--bg-3) 50%,
+      var(--bg-1) 75%
     );
   background-size: 200% 100%;
   border-radius: .375rem;
@@ -173,29 +173,29 @@
   }
 }
 
-.mobile-top-more-dropdown {
+.mobile-top-more-menu {
   min-width: 160px;
   margin-top: 8px;
 
-  .dropdown-item {
+  .menu-item {
     font-family: var(--font-body);
     font-size: 12px;
   }
 
-  .dropdown-item-danger {
-    color: var(--bs-danger);
+  .menu-item-danger {
+    color: var(--danger-base);
 
     &:hover {
-      background-color: var(--bs-danger-bg-subtle);
+      background-color: var(--danger-bg-subtle);
     }
   }
 }
 
-.offcanvas.mobile-nav-offcanvas {
+.drawer.mobile-nav-drawer {
   height: auto;
   max-height: 70vh;
 
-  .offcanvas-body {
+  .drawer-body {
     padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0));
   }
 }
@@ -217,7 +217,7 @@
 
   &.active {
     color: var(--accent);
-    background: var(--bs-tertiary-bg);
+    background: var(--bg-3);
 
     i {
       color: var(--accent);

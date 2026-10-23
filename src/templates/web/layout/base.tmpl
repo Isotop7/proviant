@@ -31,22 +31,22 @@
 
       <div class="app__topbar-actions">
         <div class="position-relative">
-          <button class="btn-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+          <button class="btn-icon" type="button" data-bs-toggle="menu" data-bs-placement="bottom-end" aria-expanded="false"
             aria-label="{{ t "a11y.notifications" }}" title="{{ t "nav.notifications" }}">
             <i class="bi bi-bell" aria-hidden="true"></i>
             <span class="nav-badge position-absolute d-none" id="notification-badge">0</span>
           </button>
-          <div class="dropdown-menu p-0 dropdown-menu-end" id="notification-dropdown">
-            <div class="px-3 py-2 border-bottom">
+          <div class="menu p-0 " id="notification-dropdown">
+            <div class="px-5 py-3 border-bottom">
               <span class="fw-bold small">{{ t "nav.notifications" }}</span>
             </div>
             <div id="notification-items">
-              <p class="text-body-secondary small px-3 py-2 mb-0">{{ t "common.loading" }}</p>
+              <p class="fg-secondary small px-5 py-3 mb-0">{{ t "common.loading" }}</p>
             </div>
           </div>
         </div>
 
-        <div class="d-none d-lg-flex gap-1">
+        <div class="d-none lg:d-flex gap-1">
           <button class="btn-icon" type="button" id="btnThemeToggle"
             aria-label="{{ t "a11y.toggleColorTheme" }}" title="{{ t "a11y.toggleColorTheme" }}">
             <i class="bi bi-circle-half" id="themeToggleIcon" aria-hidden="true"></i>
@@ -57,20 +57,19 @@
           </a>
         </div>
 
-        <!-- Mobile only: the rest of the utility cluster -->
-        <div class="mobile-top-more d-lg-none">
-          <a class="btn-icon d-lg-none" href="/web/user/settings" aria-label="{{ t "nav.settings" }}" title="{{ t "nav.settings" }}">
-            <i class="bi bi-gear-wide-connected" aria-hidden="true"></i>
-          </a>
-          <button class="mobile-top-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
+        <!-- Mobile only: the rest of the utility cluster. Settings has its own
+             entry in the topnav, so only the theme toggle and the logout live
+             behind the overflow menu here. -->
+        <div class="mobile-top-more lg:d-none">
+          <button class="mobile-top-more-btn" data-bs-toggle="menu" data-bs-placement="bottom-end" aria-expanded="false" aria-label="{{ t "a11y.moreOptions" }}">
             <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
           </button>
-          <div class="dropdown-menu dropdown-menu-end mobile-top-more-dropdown">
-            <button type="button" class="dropdown-item" id="btnThemeToggleMobile">
+          <div class="menu  mobile-top-more-menu">
+            <button type="button" class="menu-item" id="btnThemeToggleMobile">
               <i class="bi bi-circle-half me-2" id="themeToggleIconMobile" aria-hidden="true"></i>{{ t "common.toggleTheme" }}
             </button>
-            <div class="dropdown-divider"></div>
-            <a href="/web" data-logout class="dropdown-item dropdown-item-danger">
+            <div class="menu-divider"></div>
+            <a href="/web" data-logout class="menu-item menu-item-danger">
               <i class="bi bi-escape me-2" aria-hidden="true"></i>{{ t "common.logout" }}
             </a>
           </div>
@@ -108,66 +107,61 @@
     </a>
     <button type="button"
             class="bottom-nav-item {{ if or (eq .Title "Recipes") (eq .Title "Meal Plan") (eq .Title "Waste Analytics") }}active{{ end }}"
-            data-bs-toggle="offcanvas" data-bs-target="#mobileNavOffcanvas"
+            data-bs-toggle="drawer" data-bs-target="#mobileNavOffcanvas"
             aria-controls="mobileNavOffcanvas">
       <i class="bi bi-grid" aria-hidden="true"></i><span>{{ t "nav.more" }}</span>
     </button>
   </nav>
   <!-- Mobile more sheet — destinations that do not fit the bottom bar -->
-  <div class="offcanvas offcanvas-bottom mobile-nav-offcanvas" tabindex="-1" id="mobileNavOffcanvas"
+  <dialog class="drawer drawer-bottom mobile-nav-drawer" id="mobileNavOffcanvas"
        aria-labelledby="mobileNavOffcanvasLabel">
-    <div class="offcanvas-header">
-      <h5 class="offcanvas-title" id="mobileNavOffcanvasLabel">{{ t "nav.more" }}</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{{ t "a11y.close" }}"></button>
+    <div class="drawer-header">
+      <h5 class="drawer-title" id="mobileNavOffcanvasLabel">{{ t "nav.more" }}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="{{ t "a11y.close" }}"></button>
     </div>
-    <div class="offcanvas-body p-0">
+    <div class="drawer-body p-0">
       <div class="list-group list-group-flush">
         <a href="/web/recipes"
-           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-3 {{ if eq .Title "Recipes" }}active{{ end }}"
+           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-5 {{ if eq .Title "Recipes" }}active{{ end }}"
            {{ if eq .Title "Recipes" }}aria-current="page"{{ end }}>
           <i class="bi bi-journal-richtext" aria-hidden="true"></i><span>{{ t "nav.recipes" }}</span>
         </a>
         <a href="/web/mealplan"
-           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-3 {{ if eq .Title "Meal Plan" }}active{{ end }}"
+           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-5 {{ if eq .Title "Meal Plan" }}active{{ end }}"
            {{ if eq .Title "Meal Plan" }}aria-current="page"{{ end }}>
           <i class="bi bi-calendar-week" aria-hidden="true"></i><span>{{ t "nav.mealPlan" }}</span>
         </a>
         <a href="/web/waste-analytics"
-           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-3 {{ if eq .Title "Waste Analytics" }}active{{ end }}"
+           class="list-group-item list-group-item-action mobile-nav-link d-flex align-items-center gap-5 {{ if eq .Title "Waste Analytics" }}active{{ end }}"
            {{ if eq .Title "Waste Analytics" }}aria-current="page"{{ end }}>
           <i class="bi bi-bar-chart-line" aria-hidden="true"></i><span>{{ t "nav.wasteAnalytics" }}</span>
         </a>
       </div>
     </div>
-  </div>
-  <!-- Shared confirm modal — destructive actions requiring user decision -->
-  <div id="proviantConfirmModal" class="modal fade" tabindex="-1"
-       aria-labelledby="proviantConfirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-md">
-      <div class="modal-content">
-        <div class="modal-header">
-          <div class="modal-icon modal-icon-danger" id="proviantConfirmIconBox" aria-hidden="true">
+  </dialog>
+  <!-- Shared confirm dialog — destructive actions requiring user decision -->
+  <dialog class="dialog dialog-md" id="proviantConfirmModal" aria-labelledby="proviantConfirmModalLabel">
+        <div class="dialog-header">
+          <div class="dialog-icon dialog-icon-danger" id="proviantConfirmIconBox" aria-hidden="true">
             <i id="proviantConfirmIcon" class="bi bi-exclamation-triangle-fill"></i>
-          </div><h5 id="proviantConfirmTitle" class="modal-title mb-0"></h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+          </div><h5 id="proviantConfirmTitle" class="dialog-title mb-0"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
             <i class="bi bi-x"></i>
           </button>
         </div>
-        <div class="modal-body">
-          <p id="proviantConfirmMessage" class="text-body-secondary small mb-0"></p>
+        <div class="dialog-body">
+          <p id="proviantConfirmMessage" class="fg-secondary small mb-0"></p>
         </div>
-        <div class="modal-footer justify-content-end gap-2 flex-nowrap">
-          <button type="button" class="btn btn-outline-secondary text-nowrap" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-          <button type="button" class="btn btn-danger text-nowrap" id="proviantConfirmBtn">{{ t "common.confirm" }}</button>
+        <div class="dialog-footer justify-content-end gap-3 flex-nowrap">
+          <button type="button" class="btn btn-outline theme-secondary text-nowrap" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+          <button type="button" class="btn btn-solid theme-danger text-nowrap" id="proviantConfirmBtn">{{ t "common.confirm" }}</button>
         </div>
-      </div>
-    </div>
-  </div>
+      </dialog>
 
   <!-- Toasts — page-level feedback for every async result -->
   <div class="toast-stack" id="proviantToastStack" aria-live="polite" aria-atomic="true"></div>
 
-  <script src="/assets/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="/assets/js/bootstrap-globals.js"></script>
   <script src="/assets/js/main.js"></script>
   <script src="/assets/js/notifications.js" defer></script>
 </body>

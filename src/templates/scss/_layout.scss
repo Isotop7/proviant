@@ -150,10 +150,9 @@
   top: 0;
   z-index: 90; // below sidebar (100), above page content
   padding: 1rem 0;
-  background-color: var(--bs-body-bg);
+  background-color: var(--bg-body);
 
   #advanced-filters {
-    .form-select,
     .form-control {
       height: auto;
       padding: .25rem .5rem;
@@ -174,9 +173,9 @@ th a {
   text-decoration: none;
 }
 
-.form-check-input:checked {
-  background-color: var(--bs-primary);
-  border-color: var(--bs-primary);
+.check:checked {
+  background-color: var(--primary-base);
+  border-color: var(--primary-base);
 }
 
 .product-btn-toolbar {
@@ -445,7 +444,7 @@ th a {
   width: 60px;
   height: 2px;
   margin: 0 8px;
-  background-color: var(--bs-border-color);
+  background-color: var(--border-color);
 }
 
 .onboarding-step {
@@ -467,13 +466,13 @@ th a {
 // Expiry field update flash
 @keyframes expire-flash {
   0% {
-    box-shadow: 0 0 0 3px var(--bs-info);
+    box-shadow: 0 0 0 3px var(--info-base);
   }
   70% {
-    box-shadow: 0 0 0 3px rgba(var(--bs-info-rgb), .3);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--info-base) 30%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--bs-info-rgb), 0);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--info-base) 0%, transparent);
   }
 }
 
@@ -503,7 +502,7 @@ th a {
 }
 
 .notification-entry:hover {
-  background-color: var(--bs-tertiary-bg);
+  background-color: var(--bg-3);
 }
 
 .notification-entry-date {

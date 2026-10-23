@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const expireAtInput = document.getElementById('expireAt') || document.getElementById('inputExpireAt');
 
     const ocrCameraModal = document.getElementById('ocrCameraModal');
-    const ocrResultModal = new bootstrap.Modal(document.getElementById('ocrResultModal'));
+    const ocrResultModal = new bootstrap.Dialog(document.getElementById('ocrResultModal'));
     const ocrDetectedDate = document.getElementById('ocrDetectedDate');
     const ocrConfidenceBar = document.querySelector('#ocrResultModal .progress-bar');
     const ocrRawTextWrapper = document.getElementById('ocrRawTextWrapper');
@@ -31,10 +31,10 @@ document.addEventListener('DOMContentLoaded', function () {
             mediaStream = null;
         }
 
-        ocrCameraModal.addEventListener('hidden.bs.modal', onCameraModalHidden, { once: true });
-        ocrCameraModal.addEventListener('shown.bs.modal', onCameraModalShown, { once: true });
+        ocrCameraModal.addEventListener('hidden.bs.dialog', onCameraModalHidden, { once: true });
+        ocrCameraModal.addEventListener('shown.bs.dialog', onCameraModalShown, { once: true });
 
-        const modalInstance = bootstrap.Modal.getOrCreateInstance(ocrCameraModal);
+        const modalInstance = bootstrap.Dialog.getOrCreateInstance(ocrCameraModal);
         modalInstance.show();
     }
 
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
             proviant.showFeedback('error', proviant.t("js.scan.cameraError"), proviant.t("js.scan.cameraAccessDenied"));
             // Close modal after error
             setTimeout(() => {
-                const modal = bootstrap.Modal.getInstance(ocrCameraModal);
+                const modal = bootstrap.Dialog.getInstance(ocrCameraModal);
                 if (modal) modal.hide();
             }, 1500);
         }
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // Stop camera and hide modal
                 stopCamera();
-                const modalInstance = bootstrap.Modal.getInstance(ocrCameraModal);
+                const modalInstance = bootstrap.Dialog.getInstance(ocrCameraModal);
                 if (modalInstance) modalInstance.hide();
 
                 // Send to OCR
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="fw-semibold">${proviant.t("js.scan.detectedLabel")} <input type="date" id="ocrDateInput" value="${result.detectedDate}" class="form-control form-control-sm d-inline-block" style="width: auto; min-width: 150px;"></div>
             `;
         } else {
-            ocrDetectedDate.innerHTML = `<div class="text-warning">${proviant.t("js.scan.noDateDetected")}</div>`;
+            ocrDetectedDate.innerHTML = `<div class="fg-warning">${proviant.t("js.scan.noDateDetected")}</div>`;
         }
 
         // Confidence bar

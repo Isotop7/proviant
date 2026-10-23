@@ -1,5 +1,7 @@
 // ── Monthly meal plan grid and planned meal rows ───────────────────────────
 
+@use "bootstrap/scss/layout/breakpoints" as *;
+
 .mp-range-label {
   font-size: var(--text-sm);
   font-weight: 600;
@@ -80,7 +82,7 @@
     grid-template-columns: repeat(4, 1fr);
   }
 
-  @include media-breakpoint-up(xxl) {
+  @include media-breakpoint-up(2xl) {
     grid-template-columns: repeat(7, 1fr);
   }
 }

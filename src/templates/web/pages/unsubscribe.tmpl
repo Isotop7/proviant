@@ -1,26 +1,26 @@
 {{ define "content" }}
-<div class="container my-4">
+<div class="container my-7">
     <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
+        <div class="md:col-6 lg:col-5">
             <div class="card card-section">
-                <div class="card-body p-4 text-center">
+                <div class="card-body p-7 text-center">
                     {{if .Error}}
-                        <div class="text-danger mb-3">
-                            <i class="bi bi-exclamation-circle-fill fs-1"></i>
+                        <div class="fg-danger mb-5">
+                            <i class="bi bi-exclamation-circle-fill fs-4xl"></i>
                         </div>
-                        <h1 class="h4 mb-3">{{ t "unsubscribe.errorTitle" }}</h1>
-                        <p class="text-body-secondary">{{.Error}}</p>
+                        <h1 class="h4 mb-5">{{ t "unsubscribe.errorTitle" }}</h1>
+                        <p class="fg-secondary">{{.Error}}</p>
                     {{else if .Success}}
-                        <div class="text-success mb-3">
-                            <i class="bi bi-check-circle-fill fs-1"></i>
+                        <div class="fg-success mb-5">
+                            <i class="bi bi-check-circle-fill fs-4xl"></i>
                         </div>
-                        <h1 class="h4 mb-3">{{ t "unsubscribe.successTitle" }}</h1>
-                        <p class="text-body-secondary">
+                        <h1 class="h4 mb-5">{{ t "unsubscribe.successTitle" }}</h1>
+                        <p class="fg-secondary">
                             {{if .HouseholdName}}{{ t "unsubscribe.successFor" }}<strong>{{.HouseholdName}}</strong>{{ t "unsubscribe.successSuffix" }}{{else}}{{ t "unsubscribe.success" }}{{end}}
                         </p>
-                        <p class="text-body-secondary small">{{ t "unsubscribe.resubscribeHint" }}</p>
+                        <p class="fg-secondary small">{{ t "unsubscribe.resubscribeHint" }}</p>
                     {{end}}
-                    <a href="/web" class="btn btn-primary mt-3">{{ t "unsubscribe.goToHome" }}</a>
+                    <a href="/web" class="btn btn-solid theme-primary mt-5">{{ t "unsubscribe.goToHome" }}</a>
                 </div>
             </div>
         </div>

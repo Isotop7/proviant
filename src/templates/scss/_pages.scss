@@ -230,7 +230,7 @@
 
 .waste-category-product-list-item {
   padding: .25rem 0;
-  border-bottom: 1px solid var(--bs-border-color-translucent, var(--overlay-subtle));
+  border-bottom: 1px solid var(--border-color-translucent, var(--overlay-subtle));
 
   &:last-child {
     border-bottom: 0;
@@ -243,7 +243,7 @@
   padding: .5rem 1rem;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--bs-list-group-border-color);
+  border-bottom: 1px solid var(--list-group-border-color);
   border-radius: 0;
 }
 
@@ -256,7 +256,7 @@
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.4;
-  color: var(--bs-body-color);
+  color: var(--fg-body);
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -264,7 +264,7 @@
 
   &:hover,
   &:focus {
-    background: var(--bs-tertiary-bg);
+    background: var(--bg-3);
     box-shadow: none;
   }
 

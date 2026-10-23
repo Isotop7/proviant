@@ -375,13 +375,13 @@ function performSearch() {
 
 /* ── Add-product modal ───────────────────────────────────────────────────────
    Bootstrap is loaded after content scripts, so init must wait for
-   DOMContentLoaded before calling bootstrap.Modal.
+   DOMContentLoaded before calling bootstrap.Dialog.
 ─────────────────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
     const modalEl = document.getElementById('addProductModal');
     if (!modalEl) return;
 
-    const bsModal         = new bootstrap.Modal(modalEl);
+    const bsModal         = new bootstrap.Dialog(modalEl);
     const barcodeInput    = document.getElementById('barcode');
     const productData     = document.getElementById('productData');
     const inputWrap       = document.querySelector('#modalStepScan .barcode-input-wrap');
@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (tabCamera)      tabCamera.addEventListener('click',      function () { setActiveTab('camera'); });
 
     function showModalStep(step) {
-        const footerEl = document.querySelector('#addProductModal .modal-footer');
+        const footerEl = document.querySelector('#addProductModal .dialog-footer');
         ['scan', 'form', 'success'].forEach(function (s) {
             document.getElementById('modalStep' + cap(s)).style.display   = s === step ? 'block' : 'none';
             document.getElementById('modalFooter' + cap(s)).style.display = s === step ? 'flex'  : 'none';
@@ -506,12 +506,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    modalEl.addEventListener('shown.bs.modal', function () {
+    modalEl.addEventListener('shown.bs.dialog', function () {
         modalIsOpen = true;
         resetToScan();
     });
 
-    modalEl.addEventListener('hidden.bs.modal', function () {
+    modalEl.addEventListener('hidden.bs.dialog', function () {
         modalIsOpen = false;
         stopCameraIfRunning();
     });
@@ -595,8 +595,8 @@ function getCookModal() {
     if (!cookModalInstance) {
         var el = document.getElementById('cookModal');
         if (!el || typeof bootstrap === 'undefined') return null;
-        cookModalInstance = new bootstrap.Modal(el);
-        el.addEventListener('hidden.bs.modal', resetCookModal);
+        cookModalInstance = new bootstrap.Dialog(el);
+        el.addEventListener('hidden.bs.dialog', resetCookModal);
         // Clamp on change/blur (not per keystroke): corrects out-of-range
         // values without fighting the user while typing. Prevents a stray
         // value from falling through to 0, which the backend treats as a
@@ -698,7 +698,7 @@ async function openCookModalInner(ids, container) {
         }
 
         var row = document.createElement('div');
-        row.className = 'cook-item-row d-flex align-items-center gap-2 py-1';
+        row.className = 'cook-item-row d-flex align-items-center gap-3 py-1';
         row.dataset.productId = id;
         row.dataset.maxQuantity = String(quantity);
 
@@ -722,7 +722,7 @@ async function openCookModalInner(ids, container) {
 
     if (skipped) {
         var note = document.createElement('div');
-        note.className = 'text-body-secondary small py-1';
+        note.className = 'fg-secondary small py-1';
         note.textContent = proviant.tn("js.products.cookSkippedNote", skipped);
         container.appendChild(note);
     }

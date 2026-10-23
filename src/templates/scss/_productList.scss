@@ -458,7 +458,7 @@
 .export-menu {
   min-width: 200px;
 
-  .dropdown-item {
+  .menu-item {
     font-family: var(--font-body);
     font-size: 12px;
   }
@@ -572,7 +572,6 @@
 
   // Search bar: prevent input group from collapsing; ensure search button and filters button visible
   .search-bar {
-    .form-select,
     .form-control {
       flex: 1 1 auto;
       min-width: 0;

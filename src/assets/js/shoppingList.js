@@ -217,7 +217,7 @@
     var btn = document.getElementById('btnImportAll');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + proviant.t("js.shoppingList.importing");
+      btn.innerHTML = '<span class="spinner-border spinner-sm me-1"></span>' + proviant.t("js.shoppingList.importing");
     }
     fetch('/api/v1/shopping-list/import-auto', {
       method: 'POST'

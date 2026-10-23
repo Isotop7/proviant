@@ -22,12 +22,12 @@
 
 <div>
 
-    <div class="row row-cols-2 row-cols-md-5 g-3 mb-2" id="wasteTiles"></div>
+    <div class="row row-cols-2 md:row-cols-5 g-3 mb-3" id="wasteTiles"></div>
 
     <div class="row g-3">
-        <div class="col-md-7">
+        <div class="md:col-7">
             <div class="card h-100">
-                <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div class="card-header d-flex flex-row align-items-center gap-3 fw-bold">
                     <div class="icon-chip" aria-hidden="true"><i class="bi bi-bar-chart-line-fill"></i></div>
                     {{ t "waste.monthlyBreakdown" }}
                 </div>
@@ -38,9 +38,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-5">
+        <div class="md:col-5">
             <div class="card h-100">
-                <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div class="card-header d-flex flex-row align-items-center gap-3 fw-bold">
                     <div class="icon-chip" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></div>
                     {{ t "waste.trendTitle" }}
                 </div>
@@ -54,9 +54,9 @@
     </div>
 
     <div class="row g-3 mt-1">
-        <div class="col-md-7">
+        <div class="md:col-7">
             <div class="card h-100">
-                <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div class="card-header d-flex flex-row align-items-center gap-3 fw-bold">
                     <div class="icon-chip" aria-hidden="true"><i class="bi bi-table"></i></div>
                     {{ t "waste.monthlyDetails" }}
                 </div>
@@ -79,9 +79,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-5">
+        <div class="md:col-5">
             <div class="card h-100">
-                <div class="card-header d-flex align-items-center gap-2 fw-bold">
+                <div class="card-header d-flex flex-row align-items-center gap-3 fw-bold">
                     <div class="icon-chip" aria-hidden="true"><i class="bi bi-tags-fill"></i></div>
                     <span class="flex-grow-1">{{ t "waste.mostWastedCategories" }}</span>
                     <div class="btn-group gap-1" role="group" aria-label="{{ t "waste.sortBy" }}" id="sortToggle">
@@ -94,7 +94,7 @@
         </div>
     </div>
 
-    <p class="text-body-secondary small mt-3 mb-0">
+    <p class="fg-secondary small mt-5 mb-0">
         <i class="bi bi-info-circle"></i>
         {{ t "waste.methodologyNote" }}
     </p>
@@ -112,7 +112,7 @@
     </div>
     <div class="empty-title">{{ t "waste.emptyTitle" }}</div>
     <div class="empty-desc">{{ t "waste.emptyDesc" }}</div>
-    <a class="btn btn-primary" href="/web/user/settings#household">
+    <a class="btn btn-solid theme-primary" href="/web/user/settings#household">
         <i class="bi bi-people me-2"></i> {{ t "waste.setupHousehold" }}
     </a>
 </div>

@@ -473,6 +473,14 @@ function checkHardcodedColorsInJs() {
 
 function checkJsTokenReferences() {
   const known = new Set([...lightProps.keys(), ...darkProps.keys()]);
+  // A variable may also be declared in a component scope rather than a theme
+  // (the dashboard reads --bento-row-height off the .bento element). The
+  // compiled stylesheet is the record of what actually exists.
+  const cssPath = path.join(ROOT, 'src', 'assets', 'css', 'main.css');
+  if (fs.existsSync(cssPath)) {
+    const css = fs.readFileSync(cssPath, 'utf8');
+    for (const m of css.matchAll(/(--[\w-]+)\s*:/g)) known.add(m[1]);
+  }
   // Vendor bundles are not ours to tokenise.
   const files = [...sourceFiles(['src/assets/js'], ['.js']), ...sourceFiles(['tests/js'], ['.js'])]
     .filter((f) => !/bootstrap\.bundle|chart\.umd|html5-qrcode/.test(f));
@@ -480,7 +488,7 @@ function checkJsTokenReferences() {
     const src = fs.readFileSync(file, 'utf8');
     const rel = path.relative(ROOT, file);
     for (const m of src.matchAll(/getPropertyValue\(\s*['"](--[\w-]+)['"]/g)) {
-      if (!known.has(m[1])) fail('js-token', `${rel} reads ${m[1]}, which no theme declares`);
+      if (!known.has(m[1])) fail('js-token', `${rel} reads ${m[1]}, which no stylesheet declares`);
     }
   }
 }

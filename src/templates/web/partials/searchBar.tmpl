@@ -1,6 +1,6 @@
 {{ define "searchBar" }}
 {{/* Search bar — design-token controlled, no input-group */}}
-<div role="search" class="search-bar mb-2 mb-md-0">
+<div role="search" class="search-bar mb-3 mb-md-0">
     <div class="search-row">
         {{/* Search icon */}}
         <i class="bi bi-search search-icon" aria-hidden="true"></i>
@@ -22,7 +22,7 @@
     </div>
 
     {{/* Advanced filters */}}
-    <div id="advanced-filters" class="collapse w-100 mt-2">
+    <div id="advanced-filters" class="collapse w-100 mt-3">
         <div class="filter-row">
             <div class="select-wrapper">
                 <label for="sort-param" class="filter-label">{{ t "partial.searchBar.orderBy" }}</label>
@@ -62,5 +62,5 @@
 </div>
 
 <!-- Empty product-list div for JavaScript injection -->
-<div id="product-list" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 my-auto d-none"></div>
+<div id="product-list" class="row row-cols-1 md:row-cols-2 lg:row-cols-3 g-4 my-auto d-none"></div>
 {{ end }}

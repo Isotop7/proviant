@@ -227,9 +227,14 @@ tasks:
     cmds:
       - npm run lint-html
 
+  lint-selectors:
+    desc: Check that every class the JavaScript queries still exists
+    cmds:
+      - python3 scripts/check-js-class-selectors.py
+
   lint:
     desc: Run all frontend linters (CSS, JS, HTML)
-    deps: [lint-css, lint-js, lint-html]
+    deps: [lint-css, lint-js, lint-html, lint-selectors]
 
   vuln-go:
     desc: Scan Go dependencies for vulnerabilities

@@ -10,11 +10,11 @@ document.addEventListener("click", function(e) {
 });
 
 const RECIPE_LOADING_HTML = `
-    <div class="text-center p-5">
-        <div class="spinner-border text-body-secondary" role="status">
+    <div class="text-center p-12">
+        <div class="spinner-border fg-secondary" role="status">
             <span class="visually-hidden">${proviant.t("js.recipes.loading")}</span>
         </div>
-        <p class="mt-2 text-body-secondary">${proviant.t("js.recipes.loadingSuggestions")}</p>
+        <p class="mt-3 fg-secondary">${proviant.t("js.recipes.loadingSuggestions")}</p>
     </div>`;
 
 async function loadRecipeSuggestions(forceRefresh = false) {
@@ -43,10 +43,10 @@ async function loadRecipeSuggestions(forceRefresh = false) {
 
         if (recipes.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-5">
-                    <i class="bi bi-inbox fs-1 text-body-secondary"></i>
-                    <p class="mt-3">${proviant.t("js.recipes.emptyTitle")}</p>
-                    <p class="text-body-secondary">${proviant.t("js.recipes.emptyDesc")}</p>
+                <div class="text-center py-12">
+                    <i class="bi bi-inbox fs-4xl fg-secondary"></i>
+                    <p class="mt-5">${proviant.t("js.recipes.emptyTitle")}</p>
+                    <p class="fg-secondary">${proviant.t("js.recipes.emptyDesc")}</p>
                 </div>
             `;
             return;
@@ -74,7 +74,7 @@ function renderRecipes(recipes) {
     recipes.forEach(recipe => renderedSuggestions.push(recipe));
 
     const html = `
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div class="row row-cols-1 md:row-cols-2 lg:row-cols-3 g-4">
             ${recipes.map((recipe, index) => {
                 const ingredients = recipe.ingredients || [];
                 const cookIds = recipe.matchedProductIds || [];
@@ -84,23 +84,23 @@ function renderRecipes(recipes) {
                         ${recipe.imageUrl ? `
                             <img src="${escapeHtml(recipe.imageUrl)}" class="card-img-top" alt="${escapeHtml(recipe.title)}" loading="lazy" style="height: 200px; object-fit: cover;">
                         ` : `
-                            <div class="bg-body-tertiary text-center py-4">
-                                <i class="bi bi-journal-richtext fs-1 text-body-secondary"></i>
+                            <div class="bg-3 text-center py-7">
+                                <i class="bi bi-journal-richtext fs-4xl fg-secondary"></i>
                             </div>
                         `}
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title">${escapeHtml(recipe.title)}</h5>
 
-                            <div class="mb-2">
+                            <div class="mb-3">
                                 <div class="progress" style="height: 6px;">
                                     <div class="progress-bar bg-success" role="progressbar" style="width: ${recipe.matchPercent}%" aria-valuenow="${Math.round(recipe.matchPercent)}" aria-valuemin="0" aria-valuemax="100"></div>
                                 </div>
-                                <small class="text-body-secondary">${proviant.t("js.recipes.ingredientsMatched", recipe.matchedProducts.length, recipe.totalIngredients)}</small>
+                                <small class="fg-secondary">${proviant.t("js.recipes.ingredientsMatched", recipe.matchedProducts.length, recipe.totalIngredients)}</small>
                             </div>
 
                             ${ingredients.length > 0 ? `
-                            <div class="ingredient-list mt-2">
-                                <small class="text-body-secondary mb-1 d-block">${proviant.t("js.recipes.ingredientsLabel")}</small>
+                            <div class="ingredient-list mt-3">
+                                <small class="fg-secondary mb-1 d-block">${proviant.t("js.recipes.ingredientsLabel")}</small>
                                 <div class="d-flex flex-wrap gap-1">
                                     ${ingredients.map(ing => `
                                         <span class="badge badge--${ing.matched ? 'fresh' : 'expired'}"
@@ -115,17 +115,17 @@ function renderRecipes(recipes) {
 
 
                         </div>
-                        <div class="card-footer bg-transparent border-top-0 pb-3 d-flex flex-wrap gap-3 align-items-center">
-                            <a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm${cookIds.length ? '' : ' stretched-link'}">
+                        <div class="card-footer bg-transparent border-top-0 pb-5 d-flex flex-wrap gap-5 align-items-center">
+                            <a href="${escapeHtml(recipe.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-solid theme-primary btn-sm${cookIds.length ? '' : ' stretched-link'}">
                                 ${proviant.t("js.recipes.viewRecipe")} <i class="bi bi-box-arrow-up-right"></i>
                             </a>
-                            <button type="button" class="btn btn-outline-secondary btn-sm position-relative z-2 save-suggestion-btn"
+                            <button type="button" class="btn btn-outline theme-secondary btn-sm position-relative z-2 save-suggestion-btn"
                                     data-suggestion-index="${index}"
                                     aria-label="${proviant.t("js.recipes.saveSuggestionLabel", escapeHtml(recipe.title))}">
                                 <i class="bi bi-save"></i> ${proviant.t("js.recipes.saveRecipe")}
                             </button>
                             ${cookIds.length ? `
-                            <button type="button" class="btn btn-outline-secondary btn-sm position-relative z-2 cook-recipe-btn"
+                            <button type="button" class="btn btn-outline theme-secondary btn-sm position-relative z-2 cook-recipe-btn"
                                     data-product-ids='${JSON.stringify(cookIds)}'
                                     aria-label="${proviant.tn("js.recipes.cookThisLabel", cookIds.length)}">
                                 <i class="bi bi-fire"></i> ${proviant.t("js.recipes.cookThis")}
@@ -177,7 +177,7 @@ document.addEventListener("click", function(e) {
 async function cookMatchedProducts(btn, ids) {
     const original = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + proviant.t("js.recipes.cooking");
+    btn.innerHTML = '<span class="spinner-border spinner-sm" role="status" aria-hidden="true"></span> ' + proviant.t("js.recipes.cooking");
     try {
         // One pack per matched product: the stock is counted in packs, and a
         // recipe states what a dish needs, not how many packs of it are in

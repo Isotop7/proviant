@@ -112,13 +112,13 @@
                 householdListLoaded = true;
             } else {
                 if (listEl) {
-                    listEl.innerHTML = '<div class="alert alert-warning mb-0">' + proviant.t("js.onboarding.loadHouseholdsFailed") + '</div>';
+                    listEl.innerHTML = '<div class="alert alert theme-warning mb-0">' + proviant.t("js.onboarding.loadHouseholdsFailed") + '</div>';
                     listEl.classList.remove("d-none");
                 }
             }
         } catch (err) {
             if (listEl) {
-                listEl.innerHTML = '<div class="alert alert-danger mb-0">' + proviant.t("js.onboarding.loadHouseholdsNetworkError", err.message) + '</div>';
+                listEl.innerHTML = '<div class="alert alert theme-danger mb-0">' + proviant.t("js.onboarding.loadHouseholdsNetworkError", err.message) + '</div>';
                 listEl.classList.remove("d-none");
             }
         } finally {
@@ -131,7 +131,7 @@
         if (!listEl) return;
 
         if (households.length === 0) {
-            listEl.innerHTML = '<div class="list-group-item text-body-secondary">' + proviant.t("js.onboarding.noHouseholdsAvailable") + '</div>';
+            listEl.innerHTML = '<div class="list-group-item fg-secondary">' + proviant.t("js.onboarding.noHouseholdsAvailable") + '</div>';
             listEl.classList.remove("d-none");
             return;
         }
@@ -141,12 +141,12 @@
             html += '<button class="list-group-item list-group-item-action household-join-btn" data-household-id="' + h.id + '">';
             html += '<div class="d-flex w-100 justify-content-between">';
             html += '<h6 class="mb-1">' + escapeHtml(h.name) + '</h6>';
-            html += '<small class="text-body-secondary">' + proviant.tn("js.onboarding.members", h.memberCount) + '</small>';
+            html += '<small class="fg-secondary">' + proviant.tn("js.onboarding.members", h.memberCount) + '</small>';
             html += '</div>';
             if (h.description) {
-                html += '<p class="mb-1 small text-body-secondary">' + escapeHtml(h.description) + '</p>';
+                html += '<p class="mb-1 small fg-secondary">' + escapeHtml(h.description) + '</p>';
             }
-            html += '<small class="text-primary"><i class="bi bi-box-arrow-in-right me-1"></i>' + proviant.t("js.onboarding.requestToJoin") + '</small>';
+            html += '<small class="fg-primary"><i class="bi bi-box-arrow-in-right me-1"></i>' + proviant.t("js.onboarding.requestToJoin") + '</small>';
             html += '</button>';
         });
 

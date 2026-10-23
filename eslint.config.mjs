@@ -44,6 +44,24 @@ export default [
     },
   },
   {
+    // The one ES module in src/assets/js: it re-exports the Bootstrap 6 bundle
+    // as the global the classic scripts expect. Bootstrap 6 ships ESM only,
+    // so this file has to be a module too.
+    ...js.configs.recommended,
+    files: ["src/assets/js/bootstrap-globals.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.browser,
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
+    },
+  },
+  {
     // Each file that *defines* one of the cross-file globals needs it off for
     // itself, or the definition trips no-redeclare — same reason as below.
     files: ["src/assets/js/proviant.js"],

@@ -14,7 +14,7 @@
 
     if (data && data.lastSyncAt) {
       const syncDiv = document.createElement("div");
-      syncDiv.className = "text-body-secondary";
+      syncDiv.className = "fg-secondary";
       syncDiv.textContent = proviant.t("js.syncSettings.lastSynced", data.lastSyncAt);
       statusEl.appendChild(syncDiv);
     }
@@ -22,7 +22,7 @@
     const activeError = errorMsg || (data && data.lastError) || "";
     if (activeError) {
       const alertDiv = document.createElement("div");
-      alertDiv.className = "alert alert-danger py-2 px-3 mt-2 mb-0 small";
+      alertDiv.className = "alert alert theme-danger py-3 px-5 mt-3 mb-0 small";
       alertDiv.setAttribute("role", "alert");
       alertDiv.textContent = activeError;
       statusEl.appendChild(alertDiv);

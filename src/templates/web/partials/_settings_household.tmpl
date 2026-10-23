@@ -1,33 +1,33 @@
 {{ define "_settings_household" }}
-<div class="card card-section mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
-        <div class="d-flex align-items-center gap-2">
+<div class="card card-section mb-7">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-geo-alt"></i>
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "household.storageLocations" }}</h2>
         </div>
         {{ if .IsAdmin }}
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAddStorageLocation">
+        <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnAddStorageLocation">
             <i class="bi bi-plus-lg me-1"></i>{{ t "household.addLocation" }}
         </button>
         {{ end }}
     </div>
-    <div class="card-body px-4 py-4">
-        <p class="text-body-secondary small mb-3">{{ t "household.storageLocationsHelp" }}</p>
+    <div class="card-body px-7 py-7">
+        <p class="fg-secondary small mb-5">{{ t "household.storageLocationsHelp" }}</p>
         {{ if .Locations }}
-        <ul class="list-group mb-3" id="storageLocationList">
+        <ul class="list-group mb-5" id="storageLocationList">
             {{ range .Locations }}
             <li class="list-group-item d-flex justify-content-between align-items-center" id="sl-{{ .ID }}">
                 <span>{{ .Icon }} <strong>{{ .Name }}</strong></span>
                 {{ if $.IsAdmin }}
                 <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-outline-secondary btn-edit-sl"
+                    <button type="button" class="btn btn-outline theme-secondary btn-edit-sl"
                             data-id="{{ .ID }}" data-name="{{ .Name }}" data-icon="{{ .Icon }}"
                             data-sortorder="{{ .SortOrder }}" aria-label="{{ t "household.editStorageLocationAria" .Name }}">
                         <i class="bi bi-pencil" aria-hidden="true"></i>
                     </button>
-                    <button type="button" class="btn btn-danger btn-delete-sl"
+                    <button type="button" class="btn btn-solid theme-danger btn-delete-sl"
                             data-id="{{ .ID }}" data-name="{{ .Name }}" aria-label="{{ t "household.deleteStorageLocationAria" .Name }}">
                         <i class="bi bi-trash" aria-hidden="true"></i>
                     </button>
@@ -37,52 +37,48 @@
             {{ end }}
         </ul>
         {{ else }}
-        <p class="text-body-secondary small">{{ t "household.noStorageLocations" }}</p>
+        <p class="fg-secondary small">{{ t "household.noStorageLocations" }}</p>
         {{ end }}
     </div>
 </div>
 
-<div class="modal fade" id="storageLocationModal" tabindex="-1" aria-labelledby="storageLocationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="storageLocationModalLabel">{{ t "household.storageLocation" }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
+<dialog class="dialog" id="storageLocationModal" aria-labelledby="storageLocationModalLabel">
+            <div class="dialog-header">
+                <h5 class="dialog-title" id="storageLocationModalLabel">{{ t "household.storageLocation" }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
             </div>
-            <div class="modal-body">
+            <div class="dialog-body">
                 <input type="hidden" id="slModalID">
-                <div class="mb-3">
-                    <label for="slModalName" class="form-label fw-medium">{{ t "household.nameLabel" }} <span class="text-danger" aria-hidden="true">*</span></label>
+                <div class="mb-5">
+                    <label for="slModalName" class="form-label fw-medium">{{ t "household.nameLabel" }} <span class="fg-danger" aria-hidden="true">*</span></label>
                     <input type="text" class="form-control" id="slModalName" required placeholder="{{ t "household.storageLocationNamePlaceholder" }}">
                 </div>
-                <div class="mb-3">
+                <div class="mb-5">
                     <label for="slModalIcon" class="form-label fw-medium">{{ t "household.iconLabel" }}</label>
                     <input type="text" class="form-control" id="slModalIcon" placeholder="📦" maxlength="8">
                 </div>
-                <div class="mb-3">
+                <div class="mb-5">
                     <label for="slModalSortOrder" class="form-label fw-medium">{{ t "household.sortOrderLabel" }}</label>
                     <input type="number" class="form-control" id="slModalSortOrder" value="0" min="0">
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-                <button type="button" class="btn btn-primary" id="btnSaveStorageLocation">{{ t "common.save" }}</button>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+                <button type="button" class="btn btn-solid theme-primary" id="btnSaveStorageLocation">{{ t "common.save" }}</button>
             </div>
-        </div>
-    </div>
-</div>
+        </dialog>
 
-<div class="card card-section mb-4" id="household">
-    <div class="card-header d-flex align-items-center gap-2 py-3 px-4">
+<div class="card card-section mb-7" id="household">
+    <div class="card-header d-flex flex-row align-items-center gap-3 py-5 px-7">
         <div class="icon-chip" aria-hidden="true">
             <i class="bi bi-house"></i>
         </div>
         <h2 class="h5 mb-0 fw-semibold">{{ t "household.title" }}</h2>
     </div>
-    <div class="card-body px-4 py-4">
+    <div class="card-body px-7 py-7">
 
         {{/* Current household info */}}
-        <div class="d-flex align-items-center gap-2 p-3 rounded bg-subtle mb-4">
+        <div class="d-flex align-items-center gap-3 p-5 rounded bg-subtle mb-7">
             <span class="badge badge--neutral">{{ t "household.idBadge" .Household.ID }}</span>
             <strong>{{ .Household.Name }}</strong>
             {{ if .IsAdmin }}<span class="badge badge--fresh"><i class="bi bi-shield-check me-1"></i>{{ t "household.admin" }}</span>{{ end }}
@@ -90,46 +86,46 @@
 
         {{/* Rename household — admin only */}}
         {{ if .IsAdmin }}
-        <div class="mb-4">
-            <h3 class="h6 fw-semibold mb-2"><i class="bi bi-pencil me-1"></i>{{ t "household.renameHousehold" }}</h3>
+        <div class="mb-7">
+            <h3 class="h6 fw-semibold mb-3"><i class="bi bi-pencil me-1"></i>{{ t "household.renameHousehold" }}</h3>
             <div class="input-group input-width-480">
                 <input type="text" class="form-control" id="inputHouseholdName"
                        placeholder="{{ t "household.newHouseholdName" }}" aria-label="{{ t "household.newHouseholdName" }}"
                        value="{{ .Household.Name }}">
-                <button type="button" class="btn btn-outline-secondary" id="btnUpdateHouseholdName">{{ t "household.rename" }}</button>
+                <button type="button" class="btn btn-outline theme-secondary" id="btnUpdateHouseholdName">{{ t "household.rename" }}</button>
             </div>
         </div>
         {{ end }}
 
         {{/* Monthly waste goal — admin only */}}
         {{ if .IsAdmin }}
-        <div class="mb-4">
-            <h3 class="h6 fw-semibold mb-2"><i class="bi bi-bullseye me-1"></i>{{ t "household.monthlyWasteGoal" }}</h3>
-            <p class="text-body-secondary small mb-2">{{ t "household.monthlyWasteGoalHelp" }}</p>
-            <div class="mb-3">
+        <div class="mb-7">
+            <h3 class="h6 fw-semibold mb-3"><i class="bi bi-bullseye me-1"></i>{{ t "household.monthlyWasteGoal" }}</h3>
+            <p class="fg-secondary small mb-3">{{ t "household.monthlyWasteGoalHelp" }}</p>
+            <div class="mb-5">
                 <label class="form-label fw-medium small">{{ t "household.goalTypeLabel" }}</label>
                 <div class="btn-group btn-group-sm" role="group" id="monthlyGoalTypeGroup" aria-label="{{ t "household.monthlyGoalTypeAria" }}">
                     <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypeDisabled" value="" {{ if not .Household.MonthlyWasteGoalType }}checked{{ end }}>
-                    <label class="btn btn-outline-secondary btn-sm" for="monthlyGoalTypeDisabled">{{ t "household.goalTypeDisabled" }}</label>
+                    <label class="btn btn-outline theme-secondary btn-sm" for="monthlyGoalTypeDisabled">{{ t "household.goalTypeDisabled" }}</label>
                     <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypeCount" value="count" {{ if eq .Household.MonthlyWasteGoalType "count" }}checked{{ end }}>
-                    <label class="btn btn-outline-secondary btn-sm" for="monthlyGoalTypeCount">{{ t "household.goalTypeMaxCount" }}</label>
+                    <label class="btn btn-outline theme-secondary btn-sm" for="monthlyGoalTypeCount">{{ t "household.goalTypeMaxCount" }}</label>
                     <input type="radio" class="btn-check" name="monthlyGoalType" id="monthlyGoalTypePercent" value="percent" {{ if eq .Household.MonthlyWasteGoalType "percent" }}checked{{ end }}>
-                    <label class="btn btn-outline-secondary btn-sm" for="monthlyGoalTypePercent">{{ t "household.goalTypeMaxPercent" }}</label>
+                    <label class="btn btn-outline theme-secondary btn-sm" for="monthlyGoalTypePercent">{{ t "household.goalTypeMaxPercent" }}</label>
                 </div>
             </div>
-            <div class="mb-3" id="monthlyGoalCountRow" {{ if ne .Household.MonthlyWasteGoalType "count" }}style="display:none"{{ end }}>
+            <div class="mb-5" id="monthlyGoalCountRow" {{ if ne .Household.MonthlyWasteGoalType "count" }}style="display:none"{{ end }}>
                 <label for="inputMonthlyGoalCount" class="form-label fw-medium small">{{ t "household.maxWastedProductsLabel" }}</label>
                 <input type="number" min="0" step="1" class="form-control input-width-240" id="inputMonthlyGoalCount"
                        value="{{ if .Household.MonthlyWasteGoalCount }}{{ .Household.MonthlyWasteGoalCount }}{{ else }}0{{ end }}">
             </div>
-            <div class="mb-3" id="monthlyGoalPercentRow" {{ if ne .Household.MonthlyWasteGoalType "percent" }}style="display:none"{{ end }}>
+            <div class="mb-5" id="monthlyGoalPercentRow" {{ if ne .Household.MonthlyWasteGoalType "percent" }}style="display:none"{{ end }}>
                 <label for="inputMonthlyGoalPercent" class="form-label fw-medium small">{{ t "household.maxWastePercentLabel" }}</label>
                 <input type="number" min="0" max="100" step="0.1" class="form-control input-width-240" id="inputMonthlyGoalPercent"
                        value="{{ if .Household.MonthlyWasteGoalPercent }}{{ .Household.MonthlyWasteGoalPercent }}{{ else }}0{{ end }}">
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
                 <label for="inputHouseholdLanguage" class="form-label fw-medium small">{{ t "household.languageLabel" }}</label>
-                <select class="form-select input-width-240" id="inputHouseholdLanguage">
+                <select class="form-control input-width-240" id="inputHouseholdLanguage">
                     <option value="" {{ if eq .Household.Language "" }}selected{{ end }}>{{ t "settings.languageAuto" }}</option>
                     {{ range .AvailableLanguages }}
                     <option value="{{ .Code }}" {{ if eq $.Household.Language .Code }}selected{{ end }}>{{ .Name }}</option>
@@ -137,41 +133,41 @@
                 </select>
                 <div class="form-text">{{ t "household.languageHelp" }}</div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" id="btnSaveMonthlyGoal">
+            <button type="button" class="btn btn-solid theme-primary btn-sm" id="btnSaveMonthlyGoal">
                 <i class="bi bi-save me-1"></i>{{ t "household.saveGoal" }}
             </button>
         </div>
         {{ end }}
 
         {{/* ── Join & Invite ───────────────────────────────── */}}
-        <div class="mt-4 pt-4 border-top">
-            <h3 class="h6 fw-semibold text-body-secondary mb-3"><i class="bi bi-person-plus me-1"></i>{{ t "household.joinInvite" }}</h3>
+        <div class="mt-7 pt-7 border-top">
+            <h3 class="h6 fw-semibold fg-secondary mb-5"><i class="bi bi-person-plus me-1"></i>{{ t "household.joinInvite" }}</h3>
 
             {{/* Apply to join a household */}}
-            <div class="mb-4">
+            <div class="mb-7">
                 <label for="inputApplyHouseholdID" class="form-label fw-medium">
                     {{ t "household.applyToJoinLabel" }}
                 </label>
-                <p class="text-body-secondary small mb-2">{{ t "household.applyToJoinHelp" }}</p>
+                <p class="fg-secondary small mb-3">{{ t "household.applyToJoinHelp" }}</p>
                 <div class="input-group input-width-360">
                     <span class="input-group-text"><i class="bi bi-hash"></i></span>
                     <input type="number" class="form-control" id="inputApplyHouseholdID"
                            placeholder="{{ t "household.householdIdPlaceholder" }}" aria-required="true" min="1">
-                    <button type="button" class="btn btn-outline-secondary" id="btnApplyHousehold">{{ t "household.apply" }}</button>
+                    <button type="button" class="btn btn-outline theme-secondary" id="btnApplyHousehold">{{ t "household.apply" }}</button>
                 </div>
                 <div class="form-text">{{ t "household.applyToJoinHint" }}</div>
             </div>
 
             {{/* Outgoing pending applications */}}
             {{ if .MyApplications }}
-            <div class="mb-4">
-                <h3 class="h6 fw-semibold mb-2"><i class="bi bi-send me-1"></i>{{ t "household.yourPendingApplications" }}</h3>
-                <p class="text-body-secondary small mb-2">{{ t "household.awaitingAdminApproval" }}</p>
+            <div class="mb-7">
+                <h3 class="h6 fw-semibold mb-3"><i class="bi bi-send me-1"></i>{{ t "household.yourPendingApplications" }}</h3>
+                <p class="fg-secondary small mb-3">{{ t "household.awaitingAdminApproval" }}</p>
                 <ul class="list-group" id="myApplicationList">
                     {{ range .MyApplications }}
                     <li class="list-group-item d-flex justify-content-between align-items-center" id="my-application-{{ .ID }}">
                         <span><i class="bi bi-house me-2"></i>{{ t "household.householdNumber" .HouseholdID }}</span>
-                        <button type="button" class="btn btn-sm btn-danger btn-cancel-application"
+                        <button type="button" class="btn btn-sm btn-solid theme-danger btn-cancel-application"
                                 data-id="{{ .ID }}" aria-label="{{ t "household.cancelApplicationAria" .HouseholdID }}">
                             <i class="bi bi-x-lg"></i> {{ t "common.cancel" }}
                         </button>
@@ -182,24 +178,24 @@
             {{ end }}
 
             {{/* Invite by email */}}
-            <div class="mb-4">
+            <div class="mb-7">
                 <label for="inputInviteEmail" class="form-label fw-medium">
                     <i class="bi bi-envelope-paper me-1"></i>{{ t "household.inviteByEmail" }}
                 </label>
-                <p class="text-body-secondary small mb-2">{{ t "household.inviteHelp" }}</p>
+                <p class="fg-secondary small mb-3">{{ t "household.inviteHelp" }}</p>
                 <div class="input-group input-width-480">
                     <span class="input-group-text"><i class="bi bi-at"></i></span>
                     <input type="email" class="form-control" id="inputInviteEmail"
                            placeholder="user@example.com" aria-label="{{ t "household.inviteEmailAria" }}" autocomplete="email">
-                    <button type="button" class="btn btn-outline-secondary" id="btnSendInvitation">{{ t "household.sendInvite" }}</button>
+                    <button type="button" class="btn btn-outline theme-secondary" id="btnSendInvitation">{{ t "household.sendInvite" }}</button>
                 </div>
             </div>
 
             {{/* Sent invitations list */}}
             {{ if .Invitations }}
-            <div class="mb-3">
-                <h3 class="h6 fw-semibold mb-2"><i class="bi bi-send me-1"></i>{{ t "household.sentInvitations" }}</h3>
-                <p class="text-body-secondary small mb-2">{{ t "household.sentInvitationsHelp" }}</p>
+            <div class="mb-5">
+                <h3 class="h6 fw-semibold mb-3"><i class="bi bi-send me-1"></i>{{ t "household.sentInvitations" }}</h3>
+                <p class="fg-secondary small mb-3">{{ t "household.sentInvitationsHelp" }}</p>
                 <ul class="list-group" id="invitationList">
                     {{ range .Invitations }}
                     {{ if ne .Status "cancelled" }}
@@ -207,10 +203,10 @@
                         <span>
                             <i class="bi bi-envelope me-2"></i>{{ .Email }}
                             <span class="badge badge--neutral ms-2">{{ .Status }}</span>
-                            <small class="text-body-secondary ms-2">{{ t "household.expiresAt" (.ExpiresAt.Format "2006-01-02") }}</small>
+                            <small class="fg-secondary ms-2">{{ t "household.expiresAt" (.ExpiresAt.Format "2006-01-02") }}</small>
                         </span>
                         {{ if eq .Status "pending" }}
-                        <button type="button" class="btn btn-sm btn-danger btn-cancel-invitation"
+                        <button type="button" class="btn btn-sm btn-solid theme-danger btn-cancel-invitation"
                                 data-id="{{ .ID }}" aria-label="{{ t "household.cancelInvitationAria" .Email }}">
                             <i class="bi bi-x-lg"></i> {{ t "common.cancel" }}
                         </button>
@@ -227,18 +223,18 @@
             {{ if eq .Status "cancelled" }}{{ $hasCancelled = true }}{{ end }}
             {{ end }}
             {{ if $hasCancelled }}
-            <div class="mt-3">
-                <button type="button" class="btn btn-sm btn-outline-secondary"
+            <div class="mt-5">
+                <button type="button" class="btn btn-sm btn-outline theme-secondary"
                         data-bs-toggle="collapse" data-bs-target="#cancelledInvitations"
                         aria-expanded="false" aria-controls="cancelledInvitations">
                     <i class="bi bi-chevron-down me-1"></i>{{ t "household.showCancelledInvitations" }}
                 </button>
             </div>
-            <div class="collapse mt-2" id="cancelledInvitations">
+            <div class="collapse mt-3" id="cancelledInvitations">
                 <ul class="list-group">
                     {{ range .Invitations }}
                     {{ if eq .Status "cancelled" }}
-                    <li class="list-group-item d-flex justify-content-between align-items-center text-body-secondary" id="invitation-{{ .ID }}">
+                    <li class="list-group-item d-flex justify-content-between align-items-center fg-secondary" id="invitation-{{ .ID }}">
                         <span>
                             <i class="bi bi-envelope me-2"></i>{{ .Email }}
                             <span class="badge badge--neutral ms-2">{{ .Status }}</span>
@@ -255,18 +251,18 @@
         {{/* Admin: Pending join requests */}}
         {{ if .IsAdmin }}
         {{ if .PendingApplications }}
-        <div class="mt-4 pt-4 border-top">
-            <h3 class="h6 fw-semibold mb-2"><i class="bi bi-people me-1"></i>{{ t "household.pendingJoinRequests" }}</h3>
+        <div class="mt-7 pt-7 border-top">
+            <h3 class="h6 fw-semibold mb-3"><i class="bi bi-people me-1"></i>{{ t "household.pendingJoinRequests" }}</h3>
             <ul class="list-group" id="applicationList">
                 {{ range .PendingApplications }}
                 <li class="list-group-item d-flex justify-content-between align-items-center" id="application-{{ .ID }}">
                     <span><i class="bi bi-person me-2"></i>{{ t "household.userNumber" .ApplicantID }}</span>
                     <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-primary btn-approve-application"
+                        <button type="button" class="btn btn-solid theme-primary btn-approve-application"
                                 data-id="{{ .ID }}" aria-label="{{ t "household.approveApplicationAria" .ApplicantID }}">
                             <i class="bi bi-check-lg"></i>
                         </button>
-                        <button type="button" class="btn btn-danger btn-reject-application"
+                        <button type="button" class="btn btn-solid theme-danger btn-reject-application"
                                 data-id="{{ .ID }}" aria-label="{{ t "household.rejectApplicationAria" .ApplicantID }}">
                             <i class="bi bi-x-lg"></i>
                         </button>
@@ -280,45 +276,43 @@
 
         {{/* Admin: User Management ──────────────────────────────── */}}
         {{ if .IsAdmin }}
-        <div class="mt-4 pt-4 border-top">
+        <div class="mt-7 pt-7 border-top">
             <h3 class="h6 fw-semibold mb-1"><i class="bi bi-person-gear me-1"></i>{{ t "household.members" }}</h3>
-            <p class="text-body-secondary small mb-3">{{ t "household.membersHelp" }}</p>
+            <p class="fg-secondary small mb-5">{{ t "household.membersHelp" }}</p>
 
-            <div class="mb-3">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRefreshUsers">
+            <div class="mb-5">
+                <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnRefreshUsers">
                     <i class="bi bi-arrow-clockwise me-1"></i>{{ t "settings.refresh" }}
                 </button>
             </div>
             <ul class="list-group" id="adminUserList" data-admin-id="{{ .Household.AdminID }}" data-current-user-id="{{ .User.ID }}">
-                <li class="list-group-item text-center text-body-secondary py-3" id="adminUserLoading">
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>{{ t "common.loading" }}
+                <li class="list-group-item text-center fg-secondary py-5" id="adminUserLoading">
+                    <span class="spinner-border spinner-sm me-2" role="status" aria-hidden="true"></span>{{ t "common.loading" }}
                 </li>
             </ul>
 
-            <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="editUserModalLabel">{{ t "household.editUser" }}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
+            <dialog class="dialog" id="editUserModal" aria-labelledby="editUserModalLabel">
+                        <div class="dialog-header">
+                            <h5 class="dialog-title" id="editUserModalLabel">{{ t "household.editUser" }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
                         </div>
-                        <div class="modal-body">
+                        <div class="dialog-body">
                             <form id="editUserForm" novalidate>
                                 <input type="hidden" id="editUserID">
                                 <input type="hidden" id="editUserRole">
-                                <div class="mb-3">
+                                <div class="mb-5">
                                     <label for="editUsername" class="form-label fw-medium">{{ t "settings.usernameLabel" }}</label>
                                     <input type="text" class="form-control" id="editUsername" required>
                                     <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "household.usernameRequired" }}</div>
                                 </div>
-                                <div class="mb-3">
+                                <div class="mb-5">
                                     <label for="editMailAddress" class="form-label fw-medium">{{ t "settings.mailAddressLabel" }}</label>
                                     <input type="email" class="form-control" id="editMailAddress" required>
                                     <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "household.validEmailRequired" }}</div>
                                 </div>
-                                <div class="mb-3" id="editUserRoleRow">
+                                <div class="mb-5" id="editUserRoleRow">
                                     <label for="editUserRole" class="form-label fw-medium">{{ t "household.roleLabel" }}</label>
-                                    <select class="form-select" id="editUserRoleSelect">
+                                    <select class="form-control" id="editUserRoleSelect">
                                         <option value="admin">{{ t "household.admin" }}</option>
                                         <option value="member">{{ t "household.member" }}</option>
                                         <option value="viewer">{{ t "household.viewer" }}</option>
@@ -326,81 +320,83 @@
                                 </div>
                             </form>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-                            <button type="button" class="btn btn-primary" id="btnSaveUserEdit">{{ t "household.saveChanges" }}</button>
+                        <div class="dialog-footer">
+                            <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+                            <button type="button" class="btn btn-solid theme-primary" id="btnSaveUserEdit">{{ t "household.saveChanges" }}</button>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    </dialog>
         </div>
         {{ end }}
 
         {{/* ── Webhooks ──────────────────────────────────────── */}}
-        <div class="mt-4 pt-4 border-top">
+        <div class="mt-7 pt-7 border-top">
             <h3 class="h6 fw-semibold mb-1"><i class="bi bi-webhook me-1"></i>{{ t "household.webhooks" }}</h3>
-            <p class="text-body-secondary small mb-3">{{ t "household.webhooksHelp" }}</p>
+            <p class="fg-secondary small mb-5">{{ t "household.webhooksHelp" }}</p>
 
-            <div id="webhookList" class="mb-3"></div>
+            <div id="webhookList" class="mb-5"></div>
 
-            <div class="list-group list-group-flush border rounded-3">
-                <div class="list-group-item px-3 py-3">
-                    <div class="d-flex align-items-center justify-content-between gap-3">
+            <div class="list-group list-group-flush border rounded-5">
+                <div class="list-group-item px-5 py-5">
+                    <div class="d-flex align-items-center justify-content-between gap-5">
                         <div>
                             <div class="fw-medium small">{{ t "household.createNewWebhook" }}</div>
-                            <div class="text-body-secondary small">{{ t "household.createNewWebhookHelp" }}</div>
+                            <div class="fg-secondary small">{{ t "household.createNewWebhookHelp" }}</div>
                         </div>
-                        <div class="form-check form-switch mb-0 flex-shrink-0">
-                            <input class="form-check-input" type="checkbox" role="switch" id="toggleWebhookCreate">
-                            <label class="visually-hidden" for="toggleWebhookCreate">{{ t "household.createNewWebhookLabel" }}</label>
+                        <div class="form-field mb-0 flex-shrink-0">
+                          <div class="switch">
+                            <input type="checkbox" role="switch" id="toggleWebhookCreate">
+                            
+                          </div>
+                          <label class="visually-hidden" for="toggleWebhookCreate">{{ t "household.createNewWebhookLabel" }}</label>
+                        
                         </div>
                     </div>
                 </div>
-                <div id="webhookCreateSettings" class="list-group-item px-3 py-3 bg-subtle d-none">
+                <div id="webhookCreateSettings" class="list-group-item px-5 py-5 bg-subtle d-none">
                     <form id="webhookCreateForm" novalidate>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="inputWebhookUrl" class="form-label fw-medium small">{{ t "household.webhookUrlLabel" }} <span class="text-danger" aria-hidden="true">*</span></label>
+                        <div class="row g-3 mb-5">
+                            <div class="md:col-6">
+                                <label for="inputWebhookUrl" class="form-label fw-medium small">{{ t "household.webhookUrlLabel" }} <span class="fg-danger" aria-hidden="true">*</span></label>
                                 <input type="url" class="form-control" id="inputWebhookUrl" placeholder="https://example.com/webhook" required>
                                 <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "household.invalidUrl" }}</div>
                             </div>
-                            <div class="col-md-6">
-                                <label for="inputWebhookSecret" class="form-label fw-medium small">{{ t "household.secretLabel" }} <span class="text-danger" aria-hidden="true">*</span></label>
+                            <div class="md:col-6">
+                                <label for="inputWebhookSecret" class="form-label fw-medium small">{{ t "household.secretLabel" }} <span class="fg-danger" aria-hidden="true">*</span></label>
                                 <input type="password" class="form-control" id="inputWebhookSecret" placeholder="{{ t "household.secretPlaceholder" }}" minlength="16" required>
                                 <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "household.secretTooShort" }}</div>
                                 <div class="form-text">{{ t "household.secretHelp" }}</div>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-medium small">{{ t "household.eventsLabel" }} <span class="text-danger" aria-hidden="true">*</span></label>
+                        <div class="mb-5">
+                            <label class="form-label fw-medium small">{{ t "household.eventsLabel" }} <span class="fg-danger" aria-hidden="true">*</span></label>
                             <div class="row g-2">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductCreated" data-event="product.created">
-                                        <label class="form-check-label small" for="eventProductCreated">product.created</label>
+                                <div class="md:col-6">
+                                    <div class="form-field ">
+                                      <input class="check webhook-event-checkbox" type="checkbox" id="eventProductCreated" data-event="product.created">
+                                      <label class="small" for="eventProductCreated">product.created</label>
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductExpired" data-event="product.expired">
-                                        <label class="form-check-label small" for="eventProductExpired">product.expired</label>
+                                    <div class="form-field ">
+                                      <input class="check webhook-event-checkbox" type="checkbox" id="eventProductExpired" data-event="product.expired">
+                                      <label class="small" for="eventProductExpired">product.expired</label>
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductExpiringSoon" data-event="product.expiring_soon">
-                                        <label class="form-check-label small" for="eventProductExpiringSoon">product.expiring_soon</label>
+                                    <div class="form-field ">
+                                      <input class="check webhook-event-checkbox" type="checkbox" id="eventProductExpiringSoon" data-event="product.expiring_soon">
+                                      <label class="small" for="eventProductExpiringSoon">product.expiring_soon</label>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventProductWasted" data-event="product.wasted">
-                                        <label class="form-check-label small" for="eventProductWasted">product.wasted</label>
+                                <div class="md:col-6">
+                                    <div class="form-field ">
+                                      <input class="check webhook-event-checkbox" type="checkbox" id="eventProductWasted" data-event="product.wasted">
+                                      <label class="small" for="eventProductWasted">product.wasted</label>
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input webhook-event-checkbox" type="checkbox" id="eventHouseholdMemberJoined" data-event="household.member_joined">
-                                        <label class="form-check-label small" for="eventHouseholdMemberJoined">household.member_joined</label>
+                                    <div class="form-field ">
+                                      <input class="check webhook-event-checkbox" type="checkbox" id="eventHouseholdMemberJoined" data-event="household.member_joined">
+                                      <label class="small" for="eventHouseholdMemberJoined">household.member_joined</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnCreateWebhook">
+                        <button type="button" class="btn btn-solid theme-primary btn-sm" id="btnCreateWebhook">
                             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>{{ t "household.createWebhook" }}
                         </button>
                     </form>
@@ -411,131 +407,115 @@
     </div>
 </div>
 
-<div class="modal fade" id="webhookSecretModal" tabindex="-1" aria-labelledby="webhookSecretModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="webhookSecretModalLabel">{{ t "household.webhookSecret" }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
+<dialog class="dialog" id="webhookSecretModal" aria-labelledby="webhookSecretModalLabel">
+            <div class="dialog-header">
+                <h5 class="dialog-title" id="webhookSecretModalLabel">{{ t "household.webhookSecret" }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
             </div>
-            <div class="modal-body">
-                <p class="text-body-secondary small mb-2">{{ t "household.webhookSecretHelp" }}</p>
+            <div class="dialog-body">
+                <p class="fg-secondary small mb-3">{{ t "household.webhookSecretHelp" }}</p>
                 <input type="text" class="form-control" id="webhookSecretCopy" readonly>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" id="btnCloseWebhookSecret" data-bs-dismiss="modal">{{ t "common.close" }}</button>
-                <button type="button" class="btn btn-primary" id="btnCopySecret">{{ t "household.copy" }}</button>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" id="btnCloseWebhookSecret" data-bs-dismiss="dialog">{{ t "common.close" }}</button>
+                <button type="button" class="btn btn-solid theme-primary" id="btnCopySecret">{{ t "household.copy" }}</button>
             </div>
-        </div>
-    </div>
-</div>
+        </dialog>
 
-<div class="modal fade" id="webhookDeliveriesModal" tabindex="-1" aria-labelledby="webhookDeliveriesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="webhookDeliveriesModalLabel">{{ t "household.webhookDeliveryHistory" }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
+<dialog class="dialog dialog-lg" id="webhookDeliveriesModal" aria-labelledby="webhookDeliveriesModalLabel">
+            <div class="dialog-header">
+                <h5 class="dialog-title" id="webhookDeliveriesModalLabel">{{ t "household.webhookDeliveryHistory" }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
             </div>
-            <div class="modal-body" id="deliveriesModalBody">
+            <div class="dialog-body" id="deliveriesModalBody">
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.close" }}</button>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.close" }}</button>
             </div>
-        </div>
-    </div>
-</div>
+        </dialog>
 
-<div class="modal fade" id="telegramHelpModal" tabindex="-1" aria-labelledby="telegramHelpModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="telegramHelpModalLabel">
+<dialog class="dialog dialog-lg" id="telegramHelpModal" aria-labelledby="telegramHelpModalLabel">
+            <div class="dialog-header">
+                <h5 class="dialog-title" id="telegramHelpModalLabel">
                     <i class="bi bi-telegram me-2" aria-hidden="true"></i>{{ t "household.telegramBotSetup" }}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
             </div>
-            <div class="modal-body">
-                <p class="text-body-secondary small mb-3">
+            <div class="dialog-body">
+                <p class="fg-secondary small mb-5">
                     {{ t "household.telegramHelpIntro" }}
                 </p>
-                <ol class="small mb-3">
-                    <li class="mb-3">
+                <ol class="small mb-5">
+                    <li class="mb-5">
                         <strong>{{ t "household.telegramStepCreateBotTitle" }}</strong> — {{ t "household.telegramStepCreateBotLead" }}
                         <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a>{{ t "household.telegramStepCreateBotMid" }}
                         <code>/newbot</code>{{ t "household.telegramStepCreateBotTail" }}
                     </li>
-                    <li class="mb-3">
+                    <li class="mb-5">
                         <strong>{{ t "household.telegramStepPasteTitle" }}</strong> — {{ t "household.telegramStepPasteLead" }} <em>{{ t "household.telegramStepPasteField" }}</em> {{ t "household.telegramStepPasteMid" }} <strong>{{ t "common.save" }}</strong>. {{ t "household.telegramStepPasteTail" }}
                     </li>
-                    <li class="mb-3">
+                    <li class="mb-5">
                         <strong>{{ t "household.telegramStepLinkTitle" }}</strong> — {{ t "household.telegramStepLinkClick" }} <strong>{{ t "household.linkAccount" }}</strong>{{ t "household.telegramStepLinkThen" }} <strong>{{ t "household.generateToken" }}</strong>. {{ t "household.telegramStepLinkUse" }} <em>{{ t "household.openInTelegram" }}</em> {{ t "household.telegramStepLinkOr" }}
                     </li>
                     <li>
                         <strong>{{ t "household.telegramStepEnableTitle" }}</strong> — {{ t "household.telegramStepEnableBody" }}
                     </li>
                 </ol>
-                <div class="alert alert-info small mb-0 py-2">
+                <div class="alert alert theme-info small mb-0 py-3">
                     <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
                     {{ t "household.telegramLongPollingNote" }}
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.close" }}</button>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.close" }}</button>
             </div>
-        </div>
-    </div>
-</div>
+        </dialog>
 
-<div class="modal fade" id="telegramLinkModal" tabindex="-1" aria-labelledby="telegramLinkModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="telegramLinkModalLabel">
+<dialog class="dialog" id="telegramLinkModal" aria-labelledby="telegramLinkModalLabel">
+            <div class="dialog-header">
+                <h5 class="dialog-title" id="telegramLinkModalLabel">
                     <i class="bi bi-telegram me-2" aria-hidden="true"></i>{{ t "household.linkTelegramAccount" }}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
             </div>
-            <div class="modal-body">
+            <div class="dialog-body">
                 <div id="telegramLinkSteps">
-                    <p class="text-body-secondary small mb-3">{{ t "household.telegramLinkIntro" }}</p>
-                    <ol class="small mb-3">
-                        <li class="mb-2">{{ t "household.telegramLinkStepClick" }} <strong>{{ t "household.generateToken" }}</strong> {{ t "household.telegramLinkStepBelow" }}</li>
-                        <li class="mb-2">{{ t "household.telegramLinkStepClick" }} <strong>{{ t "household.openInTelegram" }}</strong> {{ t "household.telegramLinkStepOpen" }}</li>
-                        <li class="mb-2">{{ t "household.telegramLinkStepPress" }} <strong>{{ t "household.start" }}</strong> {{ t "household.telegramLinkStepStart" }}</li>
+                    <p class="fg-secondary small mb-5">{{ t "household.telegramLinkIntro" }}</p>
+                    <ol class="small mb-5">
+                        <li class="mb-3">{{ t "household.telegramLinkStepClick" }} <strong>{{ t "household.generateToken" }}</strong> {{ t "household.telegramLinkStepBelow" }}</li>
+                        <li class="mb-3">{{ t "household.telegramLinkStepClick" }} <strong>{{ t "household.openInTelegram" }}</strong> {{ t "household.telegramLinkStepOpen" }}</li>
+                        <li class="mb-3">{{ t "household.telegramLinkStepPress" }} <strong>{{ t "household.start" }}</strong> {{ t "household.telegramLinkStepStart" }}</li>
                     </ol>
-                    <div id="telegramLinkCommand" class="d-none mb-3">
+                    <div id="telegramLinkCommand" class="d-none mb-5">
                         <a id="telegramDeepLink" href="#" target="_blank" rel="noopener noreferrer"
-                        class="btn btn-primary w-100 d-none">
+                        class="btn btn-solid theme-primary w-100 d-none">
                             <i class="bi bi-telegram me-2" aria-hidden="true"></i>{{ t "household.openInTelegram" }}
                         </a>
-                        <div id="telegramManualCommand" class="mt-2">
-                            <small class="text-body-secondary d-block mb-1">
+                        <div id="telegramManualCommand" class="mt-3">
+                            <small class="fg-secondary d-block mb-1">
                                 {{ t "household.copyCommandHint" }}
                             </small>
                             <div class="input-group input-group-sm">
                                 <input type="text" class="form-control font-monospace" id="telegramLinkCommandText" readonly>
-                                <button type="button" class="btn btn-outline-secondary" id="btnCopyTelegramCommand"
+                                <button type="button" class="btn btn-outline theme-secondary" id="btnCopyTelegramCommand"
                                         title="{{ t "household.copyCommand" }}" aria-label="{{ t "household.copyCommand" }}">
                                     <i class="bi bi-clipboard" aria-hidden="true"></i>
                                 </button>
                             </div>
-                            <div id="telegramCommandCopied" class="form-text text-success d-none">
+                            <div id="telegramCommandCopied" class="form-text fg-success d-none">
                                 <i class="bi bi-check-circle me-1"></i>{{ t "household.copied" }}
                             </div>
                         </div>
                     </div>
-                    <p class="small text-body-secondary mb-0">{{ t "household.telegramTokenNote" }}</p>
+                    <p class="small fg-secondary mb-0">{{ t "household.telegramTokenNote" }}</p>
                 </div>
-                <div id="telegramLinkAlert" class="alert fade mt-3 d-none" role="alert"><span></span></div>
+                <div id="telegramLinkAlert" class="alert fade mt-5 d-none" role="alert"><span></span></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.close" }}</button>
-                <button type="button" class="btn btn-primary" id="btnGenerateTelegramToken">
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.close" }}</button>
+                <button type="button" class="btn btn-solid theme-primary" id="btnGenerateTelegramToken">
                     <i class="bi bi-key me-1" aria-hidden="true"></i>{{ t "household.generateToken" }}
                 </button>
             </div>
-        </div>
-    </div>
-</div>
+        </dialog>
 {{ end }}

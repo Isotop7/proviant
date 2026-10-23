@@ -132,12 +132,12 @@
 }
 
 // Modal header extensions
-.modal-icon-danger {
+.dialog-icon-danger {
   color: var(--status-expired-text);
   background: var(--status-expired-subtle);
 }
 
-.modal-subtitle {
+.dialog-subtitle {
   font-size: var(--text-xs);
   color: var(--meta);
 }
@@ -271,12 +271,12 @@
   color: var(--accent);
 }
 
-.modal-icon-subtle {
+.dialog-icon-subtle {
   color: var(--fg-2);
   background: var(--surface-warm);
 }
 
-.modal-icon-accent {
+.dialog-icon-accent {
   color: var(--accent);
   background: var(--accent-soft);
 }
@@ -296,7 +296,7 @@
 }
 
 // Modal success banner (add-product step 3)
-.modal-success-banner {
+.dialog-success-banner {
   display: flex;
   gap: 14px;
   align-items: center;
@@ -307,7 +307,7 @@
   border-radius: 12px;
 }
 
-.modal-success-icon {
+.dialog-success-icon {
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -323,18 +323,18 @@
   }
 }
 
-.modal-success-name {
+.dialog-success-name {
   font-size: 14px;
   font-weight: var(--weight-semibold);
   color: var(--fg);
 }
-.modal-success-sub {
+.dialog-success-sub {
   font-size: var(--text-xs);
   color: var(--meta);
 }
 
 // Add-product modal — dialog width + JS-toggled step/footer visibility
-#addProductModal .modal-dialog {
+#addProductModal .dialog {
   max-width: 500px;
 }
 

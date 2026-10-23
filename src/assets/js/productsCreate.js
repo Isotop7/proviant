@@ -115,10 +115,10 @@ function toggleBtnScan(state) {
     if (el.btnScan) {
         if (state) {
             el.btnScan.dataset.action = 'scan';
-            el.btnScan.innerHTML = '<i class="bi bi-upc-scan px-2"></i>' + proviant.t("js.scan.scanButton");
+            el.btnScan.innerHTML = '<i class="bi bi-upc-scan px-3"></i>' + proviant.t("js.scan.scanButton");
         } else {
             el.btnScan.dataset.action = 'stop';
-            el.btnScan.innerHTML = '<i class="bi bi-stop-circle px-2"></i>' + proviant.t("js.scan.stopButton");
+            el.btnScan.innerHTML = '<i class="bi bi-stop-circle px-3"></i>' + proviant.t("js.scan.stopButton");
         }
     }
 }
@@ -145,11 +145,11 @@ function togglePlaceholders(state) {
 }
 function toggleGrowers(state) {
     if (state) {
-        document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
+        document.querySelectorAll('.spinner-grow.spinner-sm.fg-secondary').forEach((elem) => {
             elem.style.display = '';
         });
     } else {
-        document.querySelectorAll('.spinner-grow.spinner-grow-sm.text-secondary').forEach((elem) => {
+        document.querySelectorAll('.spinner-grow.spinner-sm.fg-secondary').forEach((elem) => {
             elem.style.display = 'none';
         });
     }
@@ -795,7 +795,7 @@ function handleChangedBarcode() {
 /* Event delegation for form submission */
 document.addEventListener('submit', function (event) {
     const target = event.target;
-    if (target.classList.contains('needs-validation')) {
+    if (target.matches('form[data-bs-validate]')) {
         if (target.checkValidity() === false) {
             event.preventDefault();
             event.stopPropagation();
@@ -803,7 +803,6 @@ document.addEventListener('submit', function (event) {
             event.preventDefault();
             handleBtnAddProduct();
         }
-        target.classList.add('was-validated');
     }
 });
 

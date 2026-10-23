@@ -2,7 +2,7 @@
 <div class="pv-edit-page-wrap">
 
   <!-- ── Mobile: image strip (hidden on desktop) ── -->
-  <div class="d-flex align-items-center gap-3 p-3 border-bottom bg-body d-md-none">
+  <div class="d-flex align-items-center gap-5 p-5 border-bottom bg-body md:d-none">
     <div class="pv-mobile-thumb">
       {{ if .Product.ImageURL }}
        <img src="{{ .Product.ImageURL }}" alt="{{ .Product.ProductName }}">
@@ -13,13 +13,13 @@
       <div class="mobile-product-name">{{ .Product.ProductName }}</div>
       <div class="font-mono mobile-product-barcode">{{ .Product.Barcode }}</div>
     </div>
-    <button type="button" id="btnMobilePhotoFocus" class="btn btn-sm btn-outline-secondary">
+    <button type="button" id="btnMobilePhotoFocus" class="btn btn-sm btn-outline theme-secondary">
       <i class="bi bi-image"></i> {{ t "products.photo" }}
     </button>
   </div>
 
   <!-- ── Breadcrumb + page header ── -->
-  <div class="pv-breadcrumb-row d-none d-md-flex">
+  <div class="pv-breadcrumb-row d-none md:d-flex">
     <a href="/web/products"><i class="bi bi-box-seam"></i> {{ t "nav.products" }}</a>
     <i class="bi bi-chevron-right"></i>
     <span>{{ t "products.editProduct" }}</span>
@@ -30,12 +30,12 @@
       <p class="page-header__sub"><span class="id-chip">#<span id="labelProductID">{{ .Product.ID }}</span></span> {{ t "products.changesSavedHint" }}</p>
     </div>
     <div class="page-header__aside">
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-3">
         <span class="badge badge--{{ expiryStatusClass .Product.ExpireAt }}">
           <i class="bi bi-{{ expiryStatusIcon .Product.ExpireAt }}"></i>
           {{ expiryStatusLabel .Product.ExpireAt }}
         </span>
-        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}" title="{{ t "products.addToShoppingList" }}">
+        <button type="button" class="btn btn-outline theme-secondary btn-sm btn-add-to-shopping-list" data-product-id="{{ .Product.ID }}" title="{{ t "products.addToShoppingList" }}">
           <i class="bi bi-cart-plus"></i>
         </button>
       </div>
@@ -48,33 +48,37 @@
       <div class="pv-form-left">
 
         <!-- Identity card -->
-        <div class="card mb-3">
-          <div class="card-header d-flex align-items-center gap-2">
+        <div class="card mb-5">
+          <div class="card-header d-flex flex-row align-items-center gap-3">
             <div class="icon-chip"><i class="bi bi-tag"></i></div>
             <span class="fw-semibold">{{ t "products.identity" }}</span>
           </div>
           <div class="card-body">
-            <div class="mb-3">
-              <label class="form-label">{{ t "products.productName" }} <span class="text-danger">*</span></label>
+            <div class="mb-5">
+              <label class="form-label">{{ t "products.productName" }} <span class="fg-danger">*</span></label>
               <input type="text" class="form-control" id="inputProductName" value="{{ .Product.ProductName }}" required>
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
               <label class="form-label">{{ t "products.barcode" }}</label>
               <div class="position-relative">
                 <i class="bi bi-upc-scan position-absolute text-fg-3 input-icon-left"></i>
                 <input type="text" class="form-control font-mono input-with-icon" value="{{ .Product.Barcode }}" readonly>
               </div>
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
               <label class="form-label">
                 <i class="bi bi-lock"></i> {{ t "products.privateProduct" }}
               </label>
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="inputIsPrivate"
+              <div class="form-field">
+                <div class="switch">
+                  <input type="checkbox" id="inputIsPrivate"
                   {{ if .Product.IsPrivate }}checked{{ end }}>
-                <label class="form-check-label" for="inputIsPrivate">
+                
+                </div>
+                <label for="inputIsPrivate">
                   {{ t "products.onlyVisibleToYou" }}
                 </label>
+              
               </div>
               <div class="form-text">{{ t "products.privateHelp" }}</div>
             </div>
@@ -82,18 +86,18 @@
         </div>
 
         <!-- Categories card -->
-        <div class="card mb-3">
-          <div class="card-header d-flex align-items-center gap-2">
+        <div class="card mb-5">
+          <div class="card-header d-flex flex-row align-items-center gap-3">
             <div class="icon-chip"><i class="bi bi-grid"></i></div>
             <span class="fw-semibold">{{ t "products.categories" }}</span>
           </div>
           <div class="card-body">
-            <div class="mb-3">
+            <div class="mb-5">
               <label class="form-label">{{ t "products.productCategories" }}</label>
               <input type="hidden" id="categoriesHidden" value="{{ .Product.Categories }}">
               <div class="pv-tag-wrap" data-target="categoriesHidden" data-color="accent" data-readonly="true"></div>
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
               <label class="form-label">{{ t "products.countriesSoldIn" }}</label>
               <input type="hidden" id="countriesHidden" value="{{ .Product.Countries }}">
               <div class="pv-tag-wrap" data-target="countriesHidden" data-color="neutral" data-readonly="true"></div>
@@ -102,29 +106,29 @@
         </div>
 
         <!-- Expiry & inventory card -->
-        <div class="card mb-3">
-          <div class="card-header d-flex align-items-center gap-2">
+        <div class="card mb-5">
+          <div class="card-header d-flex flex-row align-items-center gap-3">
             <div class="icon-chip"><i class="bi bi-calendar-event"></i></div>
             <span class="fw-semibold">{{ t "products.expiryInventory" }}</span>
           </div>
           <div class="card-body">
             <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">{{ t "products.expiryDateField" }} <span class="text-danger">*</span></label>
-                <div class="d-flex align-items-center gap-2">
+              <div class="md:col-6">
+                <label class="form-label">{{ t "products.expiryDateField" }} <span class="fg-danger">*</span></label>
+                <div class="d-flex align-items-center gap-3">
                   <input type="date" class="form-control font-mono flex-grow-1" id="inputExpireAt"
                     value="{{ .Product.ExpireAt | inputDate }}" required>
                   {{ if .Product.ExpireAt.IsZero }}
-                  <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTodayExpiry" title="{{ t "products.setToday" }}" aria-label="{{ t "products.setExpiryToToday" }}">
+                  <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnTodayExpiry" title="{{ t "products.setToday" }}" aria-label="{{ t "products.setExpiryToToday" }}">
                     <i class="bi bi-calendar-check" aria-hidden="true"></i>
                   </button>
                   {{ end }}
-                  <button type="button" class="btn btn-sm btn-outline-secondary" id="btnScanExpiry" title="{{ t "products.scanExpiryDateBtn" }}" aria-label="{{ t "products.scanExpiryFromPhoto" }}">
+                  <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnScanExpiry" title="{{ t "products.scanExpiryDateBtn" }}" aria-label="{{ t "products.scanExpiryFromPhoto" }}">
                     <i class="bi bi-camera" aria-hidden="true"></i>
                   </button>
                 </div>
               </div>
-              <div class="col-md-6">
+              <div class="md:col-6">
                 <label class="form-label" for="inputQuantity">{{ t "products.quantity" }}</label>
                 <div class="qty-stepper">
                   <button type="button" data-quantity-step="-1">-</button>
@@ -136,9 +140,9 @@
                 {{ end }}
               </div>
             </div>
-            <div class="mb-3 mt-3">
+            <div class="mb-5 mt-5">
               <label class="form-label">{{ t "products.storageLocation" }}</label>
-              <select class="form-select" id="selectStorageLocation">
+              <select class="form-control" id="selectStorageLocation">
                 <option value="">{{ t "products.noneOption" }}</option>
                 {{ range .Locations }}
                 <option value="{{ .ID }}" {{ if and $.Product.StorageLocationID (eq (derefUint $.Product.StorageLocationID) .ID) }}selected{{ end }}>
@@ -147,35 +151,35 @@
                 {{ end }}
               </select>
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
               <label class="form-label">{{ t "products.notificationLeadTime" }}</label>
               <input type="number" class="form-control" id="inputNotificationLeadDays"
                 value="{{ if .Product.NotificationLeadDays }}{{ .Product.NotificationLeadDays }}{{ end }}"
                 min="0" placeholder="{{ t "products.defaultDaysPlaceholder" .GlobalNotificationThresholdDays }}">
               <div class="form-text">{{ t "products.notificationLeadHelp" .GlobalNotificationThresholdDays }}</div>
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
               <label class="form-label">{{ t "products.minStockAmount" }}</label>
               <input type="number" class="form-control" id="inputMinStockAmount"
                 value="{{ .Product.MinStockAmount }}" min="0">
               <div class="form-text">{{ t "products.minStockHelp" }}</div>
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
               <label class="form-label">{{ t "products.purchasePrice" }}</label>
               <input type="number" class="form-control" id="inputPriceOverride"
                 value="{{ if .Product.PriceOverride }}{{ .Product.PriceOverride }}{{ end }}"
                 min="0" step="0.01" placeholder="{{ t "products.priceExample" }}">
               <div class="form-text">{{ t "products.priceHelp" }}</div>
             </div>
-            <div class="mb-3">
+            <div class="mb-5">
               <label class="form-label">{{ t "products.shelfLifeAfterOpening" }}</label>
               <div class="row g-3">
-                <div class="col-md-6">
+                <div class="md:col-6">
                   <input type="date" class="form-control font-mono" id="inputOpenedAt"
                     value="{{ if .Product.OpenedAt }}{{ .Product.OpenedAt | inputDate }}{{ end }}" max="{{ today }}">
                   <div class="form-text">{{ t "products.openedAtHelp" }}</div>
                 </div>
-                <div class="col-md-6">
+                <div class="md:col-6">
                   <input type="number" class="form-control" id="inputDaysAfterOpening"
                     value="{{ if .Product.DaysAfterOpening }}{{ .Product.DaysAfterOpening }}{{ end }}"
                     min="0" max="365" placeholder="{{ t "products.daysExample" }}">
@@ -183,8 +187,8 @@
                 </div>
               </div>
               {{ if .Product.OpenedAt }}
-              <div class="mt-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearOpenedAt" aria-label="{{ t "products.clearOpenedDate" }}">
+              <div class="mt-3">
+                <button type="button" class="btn btn-sm btn-outline theme-secondary" id="btnClearOpenedAt" aria-label="{{ t "products.clearOpenedDate" }}">
                   <i class="bi bi-x-circle"></i> {{ t "products.clearOpenedDate" }}
                 </button>
               </div>
@@ -194,24 +198,24 @@
         </div>
 
         <!-- Desktop form actions (hidden on mobile) -->
-        <div class="d-none d-md-flex gap-2 mb-3">
-          <button class="btn btn-primary" type="submit">
+        <div class="d-none md:d-flex gap-3 mb-5">
+          <button class="btn btn-solid theme-primary" type="submit">
             <i class="bi bi-check2"></i> {{ t "products.updateProduct" }}
           </button>
-          <a href="/web/products" class="btn btn-outline-secondary">{{ t "common.cancel" }}</a>
+          <a href="/web/products" class="btn btn-outline theme-secondary">{{ t "common.cancel" }}</a>
           <div class="flex-grow-1"></div>
           {{ if $.IsArchived }}
-          <button class="btn btn-outline-secondary" type="button" id="btnRestoreProduct">
+          <button class="btn btn-outline theme-secondary" type="button" id="btnRestoreProduct">
             <i class="bi bi-arrow-counterclockwise"></i> {{ t "products.restore" }}
           </button>
           {{ end }}
           {{ if not $.IsArchived }}
-          <button class="btn btn-outline-secondary" type="button" id="btnConsumeProduct">
+          <button class="btn btn-outline theme-secondary" type="button" id="btnConsumeProduct">
             <i class="bi bi-check-circle"></i> {{ t "products.consumed" }}
           </button>
           {{ end }}
-          <button class="btn btn-danger" type="button"
-            data-bs-toggle="modal" data-bs-target="#deleteModal">
+          <button class="btn btn-solid theme-danger" type="button"
+            data-bs-toggle="dialog" data-bs-target="#deleteModal">
             <i class="bi bi-trash3"></i> {{ t "products.wasted" }}
           </button>
         </div>
@@ -248,12 +252,12 @@
         </div>
 
         <!-- Image URL card -->
-        <div class="card mb-3">
-          <div class="card-header d-flex align-items-center gap-2">
+        <div class="card mb-5">
+          <div class="card-header d-flex flex-row align-items-center gap-3">
             <div class="icon-chip"><i class="bi bi-image"></i></div>
             <span class="fw-semibold">{{ t "products.imageUrl" }}</span>
           </div>
-          <div class="card-body py-3">
+          <div class="card-body py-5">
             <div class="mb-0">
               <input type="url" id="inputImageURL" class="form-control font-mono text-sm"
                 value="{{ .Product.ImageURL }}" placeholder="https://…">
@@ -263,8 +267,8 @@
         </div>
 
         <!-- Quick info card -->
-        <div class="card mb-3">
-          <div class="card-header d-flex align-items-center gap-2">
+        <div class="card mb-5">
+          <div class="card-header d-flex flex-row align-items-center gap-3">
             <div class="icon-chip"><i class="bi bi-info-circle"></i></div>
             <span class="fw-semibold">{{ t "products.productInfo" }}</span>
           </div>
@@ -298,121 +302,109 @@
   </form>
 
   <!-- ── Mobile: sticky footer (hidden on desktop) ── -->
-  <div class="d-flex gap-2 d-md-none mobile-sticky-footer">
-    <button type="submit" form="editProductForm" class="btn btn-primary flex-grow-1">
+  <div class="d-flex gap-3 md:d-none mobile-sticky-footer">
+    <button type="submit" form="editProductForm" class="btn btn-solid theme-primary flex-grow-1">
       <i class="bi bi-check2"></i> {{ t "products.updateProduct" }}
     </button>
-    <a href="/web/products" class="btn btn-outline-secondary">{{ t "common.cancel" }}</a>
+    <a href="/web/products" class="btn btn-outline theme-secondary">{{ t "common.cancel" }}</a>
     {{ if $.IsArchived }}
-    <button type="button" class="btn btn-outline-secondary" id="btnRestoreProductMobile">
+    <button type="button" class="btn btn-outline theme-secondary" id="btnRestoreProductMobile">
       <i class="bi bi-arrow-counterclockwise"></i> {{ t "products.restore" }}
     </button>
     {{ end }}
     {{ if not $.IsArchived }}
-    <button type="button" class="btn btn-outline-secondary" id="btnConsumeProductMobile">
+    <button type="button" class="btn btn-outline theme-secondary" id="btnConsumeProductMobile">
       <i class="bi bi-check-circle"></i> {{ t "products.consumed" }}
     </button>
     {{ end }}
-    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+    <button type="button" class="btn btn-solid theme-danger" data-bs-toggle="dialog" data-bs-target="#deleteModal">
       <i class="bi bi-trash3"></i>
     </button>
   </div>
 
 </div><!-- /pv-edit-page-wrap -->
 
-<!-- ── Delete confirmation modal ── -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-narrow">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="modal-icon modal-icon-danger">
+<!-- ── Delete confirmation dialog ── -->
+<dialog class="dialog dialog-narrow" id="deleteModal">
+      <div class="dialog-header">
+        <div class="dialog-icon dialog-icon-danger">
           <i class="bi bi-trash3-fill"></i>
-        </div><h5 class="modal-title mb-0">{{ t "products.markAsWasted" .Product.ProductName }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+        </div><h5 class="dialog-title mb-0">{{ t "products.markAsWasted" .Product.ProductName }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
           <i class="bi bi-x"></i>
         </button>
       </div>
-      <div class="modal-body">
-        <p class="text-body-secondary small mb-0">{{ t "products.wastedConfirmBody" }}</p>
+      <div class="dialog-body">
+        <p class="fg-secondary small mb-0">{{ t "products.wastedConfirmBody" }}</p>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-        <button id="btnConfirmDelete" class="btn btn-danger" type="button">
+      <div class="dialog-footer">
+        <button class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+        <button id="btnConfirmDelete" class="btn btn-solid theme-danger" type="button">
           <i class="bi bi-trash3"></i> {{ t "products.wasted" }}
         </button>
       </div>
-    </div>
-  </div>
-</div>
+    </dialog>
 
 <!-- ── OCR Camera Modal ── -->
-<div class="modal fade" id="ocrCameraModal" tabindex="-1" aria-labelledby="ocrCameraModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="modal-icon modal-icon-accent">
+<dialog class="dialog" id="ocrCameraModal" aria-labelledby="ocrCameraModalLabel">
+      <div class="dialog-header">
+        <div class="dialog-icon dialog-icon-accent">
           <i class="bi bi-camera"></i>
-        </div><h5 class="modal-title mb-0" id="ocrCameraModalLabel">{{ t "products.scanExpiryDate" }}</h5>
-          <div class="modal-subtitle">{{ t "products.scanExpirySubtitle" }}
+        </div><h5 class="dialog-title mb-0" id="ocrCameraModalLabel">{{ t "products.scanExpiryDate" }}</h5>
+          <div class="dialog-subtitle">{{ t "products.scanExpirySubtitle" }}
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+        <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
           <i class="bi bi-x"></i>
         </button>
       </div>
-      <div class="modal-body text-center">
+      <div class="dialog-body text-center">
         <div class="camera-preview-wrapper">
           <video id="ocrVideoPreview" autoplay playsinline class="camera-preview"></video>
         </div>
-        <p class="text-body-secondary small mt-2">{{ t "products.captureHint" }}</p>
+        <p class="fg-secondary small mt-3">{{ t "products.captureHint" }}</p>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t "common.cancel" }}</button>
-        <button type="button" class="btn btn-primary" id="btnCaptureExpiry">
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+        <button type="button" class="btn btn-solid theme-primary" id="btnCaptureExpiry">
           <i class="bi bi-camera"></i> {{ t "products.capture" }}
         </button>
       </div>
-    </div>
-  </div>
-</div>
+    </dialog>
 
 <!-- ── OCR Result Modal ── -->
-<div class="modal fade" id="ocrResultModal" tabindex="-1" aria-labelledby="ocrResultModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="modal-icon modal-icon-accent">
+<dialog class="dialog" id="ocrResultModal" aria-labelledby="ocrResultModalLabel">
+      <div class="dialog-header">
+        <div class="dialog-icon dialog-icon-accent">
           <i class="bi bi-camera"></i>
-        </div><h5 class="modal-title mb-0" id="ocrResultModalLabel">{{ t "products.expiryDateScan" }}</h5>
-          <div class="modal-subtitle">{{ t "products.checkDetectedDate" }}
+        </div><h5 class="dialog-title mb-0" id="ocrResultModalLabel">{{ t "products.expiryDateScan" }}</h5>
+          <div class="dialog-subtitle">{{ t "products.checkDetectedDate" }}
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}">
+        <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
           <i class="bi bi-x"></i>
         </button>
       </div>
-      <div class="modal-body">
-        <div id="ocrPreviewImage" class="mb-3 text-center"></div>
-        <div class="mb-3" id="ocrDetectedDate"></div>
-        <div class="progress progress-sm mb-2">
+      <div class="dialog-body">
+        <div id="ocrPreviewImage" class="mb-5 text-center"></div>
+        <div class="mb-5" id="ocrDetectedDate"></div>
+        <div class="progress progress-sm mb-3">
           <div id="ocrConfidenceBar" class="progress-bar" role="progressbar" style="width:0%"></div>
         </div>
-        <small class="text-body-secondary" id="ocrConfidenceLabel">{{ t "products.confidenceLabel" }}</small>
-        <div id="ocrRawTextWrapper" class="mt-3 d-none">
+        <small class="fg-secondary" id="ocrConfidenceLabel">{{ t "products.confidenceLabel" }}</small>
+        <div id="ocrRawTextWrapper" class="mt-5 d-none">
           <label class="form-label">{{ t "products.rawOcrText" }}</label>
           <textarea id="ocrRawText" class="form-control" rows="3" readonly></textarea>
           <div class="form-text">{{ t "products.ocrFallbackHelp" }}</div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" id="btnRecaptureExpiry">
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline theme-secondary" id="btnRecaptureExpiry">
           <i class="bi bi-camera"></i> {{ t "products.retake" }}
         </button>
-        <button type="button" class="btn btn-primary" id="btnConfirmExpiry">
+        <button type="button" class="btn btn-solid theme-primary" id="btnConfirmExpiry">
           <i class="bi bi-check"></i> {{ t "common.confirm" }}
         </button>
       </div>
-    </div>
-  </div>
-</div>
+    </dialog>
 
 {{ template "restockSuggestionModal" . }}
 

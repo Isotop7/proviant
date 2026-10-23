@@ -133,6 +133,8 @@ jobs:
         run: npm run lint-js
       - name: Lint HTML
         run: npm run lint-html
+      - name: Check the class selectors the JavaScript queries
+        run: python3 scripts/check-js-class-selectors.py
       - name: Test JS
         run: npm run test-js
 

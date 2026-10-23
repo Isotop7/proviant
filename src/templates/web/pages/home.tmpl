@@ -1,7 +1,7 @@
 {{ define "content" }}
 
 {{ if .DemoMode }}
-<div class="alert alert-info text-center mb-0 py-2" role="alert">
+<div class="alert alert theme-info text-center mb-0 py-3" role="alert">
     <i class="bi bi-info-circle-fill me-1"></i>
     <strong>{{ t "home.demoMode.title" }}</strong> — {{ t "home.demoMode.desc" }}
 </div>
@@ -14,8 +14,8 @@
 <h1 class="visually-hidden">{{ t "nav.dashboard" }}</h1>
 
 <!-- Hero scan card — mobile only -->
-<div class="px-3 pt-3 d-md-none">
-    <a href="/web/products/scan" class="hero-scan-card mb-3" aria-label="{{ t "home.scanProduct" }}">
+<div class="px-5 pt-5 md:d-none">
+    <a href="/web/products/scan" class="hero-scan-card mb-5" aria-label="{{ t "home.scanProduct" }}">
         <div>
             <div class="hero-label">{{ t "home.quickAction" }}</div>
             <div class="hero-title">{{ t "home.scanProduct" }}</div>
@@ -25,7 +25,7 @@
     </a>
 </div>
 
-<div class="dashboard-tools px-3 pt-3 d-flex justify-content-end">
+<div class="dashboard-tools px-5 pt-5 d-flex justify-content-end">
     <button type="button" class="btn btn-link btn-sm" id="dashboard-reset-layout" disabled>
         <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
         {{ t "home.resetLayout" }}
@@ -34,7 +34,7 @@
 
 <!-- The bento grid: the tiles, the lists and the charts share six columns.
      Every tile carries a data-tile name: the layout engine arranges them. -->
-<div class="bento px-3 pb-3" id="dashboard">
+<div class="bento px-5 pb-5" id="dashboard">
     <div class="bento__cell bento__cell--6" data-tile="expiring-list" id="dashboard-list"></div>
 
     <div class="bento__cell bento__cell--3" data-tile="chart-waste">
@@ -95,31 +95,31 @@
     </div>
 
     <div class="bento__cell bento__cell--3" data-tile="cta-waste" data-tile-label="{{ t "home.viewWasteAnalytics" }}">
-        <a href="/web/waste-analytics" class="card card-accent h-100 text-decoration-none text-reset">
-            <div class="card-body d-flex align-items-center gap-3">
+        <a href="/web/waste-analytics" class="card card-accent h-100 text-decoration-none fg-body">
+            <div class="card-body d-flex flex-row align-items-center gap-5">
                 <div class="icon-chip icon-chip-inverse" aria-hidden="true">
                     <i class="bi bi-bar-chart-line-fill"></i>
                 </div>
                 <div class="flex-grow-1">
                     <div class="fw-bold">{{ t "home.viewWasteAnalytics" }}</div>
-                    <div class="text-body-secondary small">{{ t "home.wasteAnalyticsDesc" }}</div>
+                    <div class="fg-secondary small">{{ t "home.wasteAnalyticsDesc" }}</div>
                 </div>
-                <i class="bi bi-chevron-right text-body-secondary"></i>
+                <i class="bi bi-chevron-right fg-secondary"></i>
             </div>
         </a>
     </div>
 
     <div class="bento__cell bento__cell--3" data-tile="cta-recipes" data-tile-label="{{ t "home.whatCanIMake" }}">
-        <a href="/web/recipes" class="card card-accent h-100 text-decoration-none text-reset">
-            <div class="card-body d-flex align-items-center gap-3">
+        <a href="/web/recipes" class="card card-accent h-100 text-decoration-none fg-body">
+            <div class="card-body d-flex flex-row align-items-center gap-5">
                 <div class="icon-chip icon-chip-inverse" aria-hidden="true">
                     <i class="bi bi-egg-fried"></i>
                 </div>
                 <div class="flex-grow-1">
                     <div class="fw-bold">{{ t "home.whatCanIMake" }}</div>
-                    <div class="text-body-secondary small">{{ t "home.recipesDesc" }}</div>
+                    <div class="fg-secondary small">{{ t "home.recipesDesc" }}</div>
                 </div>
-                <i class="bi bi-chevron-right text-body-secondary"></i>
+                <i class="bi bi-chevron-right fg-secondary"></i>
             </div>
         </a>
     </div>
@@ -138,7 +138,7 @@
     </div>
     <div class="empty-title">{{ t "home.noHouseholdTitle" }}</div>
     <div class="empty-desc">{{ t "home.noHouseholdDesc" }}</div>
-    <a class="btn btn-primary" href="/web/user/settings#household">
+    <a class="btn btn-solid theme-primary" href="/web/user/settings#household">
         <i class="bi bi-people me-2"></i>
         {{ t "home.setUpHousehold" }}
     </a>

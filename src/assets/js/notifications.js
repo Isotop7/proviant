@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   const response = await proviant.getNotifications();
 
   if (response.code !== 200) {
-    itemsEl.innerHTML = `<p class="text-body-secondary small px-3 py-2 mb-0">${proviant.t("js.app.notificationsLoadFailed")}</p>`;
+    itemsEl.innerHTML = `<p class="fg-secondary small px-5 py-3 mb-0">${proviant.t("js.app.notificationsLoadFailed")}</p>`;
     return;
   }
 
@@ -26,18 +26,18 @@ document.addEventListener('DOMContentLoaded', async function () {
   };
 
   if (data.total === 0) {
-    itemsEl.innerHTML = `<p class="text-body-secondary small px-3 py-2 mb-0">${proviant.t("js.app.notificationsEmpty")}</p>`;
+    itemsEl.innerHTML = `<p class="fg-secondary small px-5 py-3 mb-0">${proviant.t("js.app.notificationsEmpty")}</p>`;
     return;
   }
 
   itemsEl.innerHTML = data.items.map((item, i) => {
     const divider = i > 0 ? '<hr class="my-0">' : '';
-    return `${divider}<a class="d-block text-decoration-none px-3 py-2 notification-entry" href="/web/user/settings">
-      <div class="d-flex align-items-start gap-2">
-        <i class="bi ${iconMap[item.type] || 'bi-bell'} text-primary flex-shrink-0 mt-1" aria-hidden="true"></i>
+    return `${divider}<a class="d-block text-decoration-none px-5 py-3 notification-entry" href="/web/user/settings">
+      <div class="d-flex align-items-start gap-3">
+        <i class="bi ${iconMap[item.type] || 'bi-bell'} fg-primary flex-shrink-0 mt-1" aria-hidden="true"></i>
         <div>
-          <div class="small text-body">${item.title}</div>
-          <div class="text-body-secondary notification-entry-date">${item.createdAt}</div>
+          <div class="small fg-body">${item.title}</div>
+          <div class="fg-secondary notification-entry-date">${item.createdAt}</div>
         </div>
       </div>
     </a>`;

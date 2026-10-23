@@ -147,7 +147,7 @@ document.addEventListener("click", function (event) {
 /* Form submission */
 document.addEventListener("submit", function (event) {
     const target = event.target;
-    if (target.id === "editProductForm" || target.classList.contains("needs-validation")) {
+    if (target.id === "editProductForm" || target.matches("form[data-bs-validate]")) {
         if (target.checkValidity() === false) {
             event.preventDefault();
             event.stopPropagation();
@@ -155,7 +155,6 @@ document.addEventListener("submit", function (event) {
             event.preventDefault();
             editProduct();
         }
-        target.classList.add('was-validated');
     }
 });
 
@@ -347,24 +346,24 @@ function openRestockModal(suggestion) {
         var finish = function (result) {
             if (resolved) return;
             resolved = true;
-            modalEl.removeEventListener('hidden.bs.modal', onHidden);
+            modalEl.removeEventListener('hidden.bs.dialog', onHidden);
             resolve(result);
         };
 
-        modalEl.addEventListener('hidden.bs.modal', onHidden);
+        modalEl.addEventListener('hidden.bs.dialog', onHidden);
 
         if (confirmBtn) {
             var newBtn = confirmBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
             newBtn.addEventListener('click', function () {
                 var qty = qtyEl ? Math.max(1, Number.parseInt(qtyEl.value, 10) || 1) : 1;
-                var modal = bootstrap.Modal.getInstance(modalEl);
+                var modal = bootstrap.Dialog.getInstance(modalEl);
                 if (modal) modal.hide();
                 finish({ qty: qty });
             });
         }
 
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        bootstrap.Dialog.getOrCreateInstance(modalEl).show();
     });
 }
 

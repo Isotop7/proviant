@@ -72,14 +72,14 @@ document.addEventListener("DOMContentLoaded", function () {
               '<div class="form-heading-title">' + proviant.t("js.auth.checkYourEmail") + '</div>' +
               '<div class="form-heading-sub">' + proviant.t("js.auth.resetLinkSentHint") + '</div>' +
               "</div>" +
-              '<div class="alert alert-success" role="alert">' +
+              '<div class="alert alert theme-success" role="alert">' +
               '<i class="bi bi-check-circle me-2"></i>' +
               (result.data && result.data.message
                 ? result.data.message
                 : proviant.t("js.auth.resetLinkSentFallback")) +
               "</div>" +
-              '<div class="text-center mt-3">' +
-              '<a href="' + routeAuth + '" class="btn btn-outline-secondary">' + proviant.t("reset.backToSignIn") + '</a>' +
+              '<div class="text-center mt-5">' +
+              '<a href="' + routeAuth + '" class="btn btn-outline theme-secondary">' + proviant.t("reset.backToSignIn") + '</a>' +
               "</div>";
           }
           return;

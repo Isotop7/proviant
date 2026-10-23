@@ -8,13 +8,17 @@
 // Change a token in design-system/_tokens.scss, then run `task design-tokens`
 // and `task design-check`. Never add a colour here that the design system
 // already owns.
+//
+// The design system's own :root block is emitted by main.scss, which loads it
+// before Bootstrap so Bootstrap's :root wins the shared names. The values
+// below therefore only correct what Bootstrap cannot be configured with.
 
-@import "../../../design-system/tokens";
+@use "../../../design-system/tokens" as *;
 
 :root {
-  // Die Bootstrap-Texthierarchie spricht die Tinte des Design-Systems.
-  --bs-secondary-color: var(--muted);
-  --bs-tertiary-color: var(--meta);
+  // Bootstrap hard-codes the pill radius after the token map is merged, so the
+  // design system's value is restored here.
+  --radius-pill: #{$radius-pill};
 
   // Tertiärer Text auf deaktivierten Bedienelementen.
   --text-disabled: #8a8a8a;

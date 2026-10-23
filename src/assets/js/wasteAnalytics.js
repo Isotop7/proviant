@@ -44,7 +44,7 @@ function showEmptyChart(canvasId, message) {
   }
   canvas.insertAdjacentHTML(
     'afterend',
-    `<p class="text-body-secondary small text-center my-auto py-4 chart-empty-msg">${message}</p>`,
+    `<p class="fg-secondary small text-center my-auto py-7 chart-empty-msg">${message}</p>`,
   );
 }
 
@@ -216,7 +216,7 @@ function renderTable(s) {
   const rows = s.monthly || [];
   if (rows.length === 0) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" class="text-center text-body-secondary py-3">${proviant.t("js.waste.noData")}</td>`;
+    tr.innerHTML = `<td colspan="6" class="text-center fg-secondary py-5">${proviant.t("js.waste.noData")}</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -242,19 +242,19 @@ function renderCategories(s) {
   const cats = s.mostWastedCategories || [];
   if (cats.length === 0) {
     const empty = document.createElement('div');
-    empty.className = 'text-center text-body-secondary py-3';
+    empty.className = 'text-center fg-secondary py-5';
     empty.textContent = proviant.t("js.waste.noCategories");
     list.appendChild(empty);
     return;
   }
-  cats.forEach((c, idx) => {
+  cats.forEach((c) => {
     const prods = Array.isArray(c.products) ? c.products : [];
     const hasProducts = prods.length > 0;
     if (!hasProducts) {
       const item = document.createElement('div');
       item.className = 'list-group-item d-flex justify-content-between align-items-center';
       item.innerHTML = `
-        <span class="d-flex align-items-center gap-2">
+        <span class="d-flex align-items-center gap-3">
           <span class="waste-cat__stripe"></span>
           <i class="bi bi-tag-fill" style="color:var(--accent);"></i>
           <span>
@@ -262,20 +262,19 @@ function renderCategories(s) {
             <span class="waste-cat__meta">${proviant.t("js.waste.itemsWasted", c.count || 0)}</span>
           </span>
         </span>
-        <span class="d-flex align-items-center gap-3 small">
+        <span class="d-flex align-items-center gap-5 small">
           <span class="waste-cat__cost">${fmtEur(c.costEur)}</span>
-          <span class="text-body-secondary">${fmtKg(c.co2Kg)}</span>
+          <span class="fg-secondary">${fmtKg(c.co2Kg)}</span>
         </span>`;
       list.appendChild(item);
       return;
     }
-    const item = document.createElement('div');
+    const item = document.createElement('details');
     item.className = 'accordion-item';
-    const targetId = `waste-cat-${idx}`;
+    item.name = 'wasteCategories';
     item.innerHTML = `
-      <h2 class="accordion-header">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${targetId}" aria-expanded="false" aria-controls="${targetId}">
-          <span class="d-flex align-items-center gap-2 flex-grow-1">
+      <summary class="accordion-header">
+          <span class="d-flex align-items-center gap-3 flex-grow-1">
             <span class="waste-cat__stripe"></span>
             <i class="bi bi-tag-fill" style="color:var(--accent);"></i>
             <span>
@@ -283,16 +282,14 @@ function renderCategories(s) {
               <span class="waste-cat__meta">${proviant.t("js.waste.itemsWasted", c.count || 0)}</span>
             </span>
           </span>
-          <span class="d-flex align-items-center gap-3 small">
+          <span class="d-flex align-items-center gap-5 small">
             <span class="waste-cat__cost">${fmtEur(c.costEur)}</span>
-            <span class="text-body-secondary">${fmtKg(c.co2Kg)}</span>
+            <span class="fg-secondary">${fmtKg(c.co2Kg)}</span>
           </span>
-        </button>
-      </h2>
-      <div id="${targetId}" class="accordion-collapse collapse" data-bs-parent="#categoryList">
-        <div class="accordion-body p-2">
+          <svg class="accordion-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m2 5 6 6 6-6"/></svg>
+      </summary>
+      <div class="accordion-body p-3">
           ${renderCategoryProducts(prods)}
-        </div>
       </div>`;
     list.appendChild(item);
   });
@@ -301,14 +298,14 @@ function renderCategories(s) {
 function renderCategoryProducts(products) {
   const rows = products.map((p) => `
     <li class="waste-category-product-list-item d-flex justify-content-between align-items-center">
-      <span class="d-flex align-items-center gap-2">
+      <span class="d-flex align-items-center gap-3">
         <i class="bi bi-box" style="color:var(--accent);"></i>
         <span>${p.productName || proviant.t("js.waste.unknown")}</span>
       </span>
-      <span class="d-flex align-items-center gap-3 small">
+      <span class="d-flex align-items-center gap-5 small">
         <span class="badge badge--neutral">${p.count || 0}</span>
-        <span class="text-body-secondary">${fmtEur(p.costEur)}</span>
-        <span class="text-body-secondary">${fmtKg(p.co2Kg)}</span>
+        <span class="fg-secondary">${fmtEur(p.costEur)}</span>
+        <span class="fg-secondary">${fmtKg(p.co2Kg)}</span>
       </span>
     </li>`).join('');
   return `<ul class="waste-category-product-list list-unstyled mb-0">${rows}</ul>`;
@@ -336,7 +333,7 @@ let currentPeriod = '6months';
 async function load(period) {
   if (period) currentPeriod = period;
   const tiles = document.getElementById('wasteTiles');
-  if (tiles) tiles.innerHTML = `<div class="col-12 text-center text-body-secondary py-3"><div class="spinner-border spinner-border-sm" role="status"></div> ${proviant.t("common.loading")}</div>`;
+  if (tiles) tiles.innerHTML = `<div class="col-12 text-center fg-secondary py-5"><div class="spinner-border spinner-sm" role="status"></div> ${proviant.t("common.loading")}</div>`;
 
   const resp = await proviant.getWasteAnalytics(currentPeriod, currentSort);
   if (resp.code !== 200 || !resp.message) {

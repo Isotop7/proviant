@@ -162,7 +162,7 @@ function showEmailVerificationModal(email) {
     if (!modal) return;
     const addressEl = document.getElementById('emailVerificationAddress');
     if (addressEl) addressEl.textContent = email || proviant.t('js.auth.yourEmailAddress');
-    new bootstrap.Modal(modal).show();
+    new bootstrap.Dialog(modal).show();
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────

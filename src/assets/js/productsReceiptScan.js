@@ -161,13 +161,13 @@
     // input and the clamp below agree with what the server stores.
     const maxQuantity = (window.proviantLimits && window.proviantLimits.maxQuantity) || 999;
     card.innerHTML =
-      '<div class="card-body py-2">' +
-      '<div class="d-flex align-items-start gap-2">' +
+      '<div class="card-body py-3">' +
+      '<div class="d-flex align-items-start gap-3">' +
       '<input type="text" class="form-control form-control-sm receipt-item-name" value="" aria-label="' + proviant.t("js.receipt.productNameLabel") + '" placeholder="' + proviant.t("js.receipt.productNameLabel") + '">' +
-      '<button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-receipt-remove aria-label="' + proviant.t("js.receipt.removeItemLabel") + '">' +
+      '<button type="button" class="btn btn-sm btn-outline theme-secondary flex-shrink-0" data-receipt-remove aria-label="' + proviant.t("js.receipt.removeItemLabel") + '">' +
       '<i class="bi bi-x-lg" aria-hidden="true"></i></button>' +
       "</div>" +
-      '<div class="d-flex gap-2 mt-2">' +
+      '<div class="d-flex gap-3 mt-3">' +
       '<input type="number" class="form-control form-control-sm receipt-item-quantity" min="1" max="' + maxQuantity + '" aria-label="' + proviant.t("js.receipt.quantityLabel") + '">' +
       '<input type="text" class="form-control form-control-sm receipt-item-pack-size" value="" aria-label="' + proviant.t("js.receipt.packSizeLabel") + '" placeholder="' + proviant.t("js.receipt.packSizeLabel") + '">' +
       '<input type="number" class="form-control form-control-sm receipt-item-price" min="0" max="100000" step="0.01" aria-label="' + proviant.t("js.receipt.priceLabel") + '" placeholder="' + proviant.t("js.receipt.priceLabel") + '">' +
@@ -175,7 +175,7 @@
       '<div class="row g-2 mt-1">' +
       '<div class="col-4"><input type="date" class="form-control form-control-sm receipt-item-expire" aria-label="' + proviant.t("js.receipt.expiryOverrideLabel") + '"></div>' +
       '<div class="col-4"><input type="text" class="form-control form-control-sm receipt-item-category" aria-label="' + proviant.t("js.receipt.categoryOverrideLabel") + '" placeholder="' + proviant.t("js.receipt.categoryLabel") + '"></div>' +
-      '<div class="col-4"><select class="form-select form-select-sm receipt-item-location" aria-label="' + proviant.t("js.receipt.locationOverrideLabel") + '"></select></div>' +
+      '<div class="col-4"><select class="form-control form-control-sm receipt-item-location" aria-label="' + proviant.t("js.receipt.locationOverrideLabel") + '"></select></div>' +
       "</div>" +
       "</div>";
     fillLocationOptions(card.querySelector(".receipt-item-location"));

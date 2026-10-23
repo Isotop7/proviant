@@ -179,7 +179,9 @@ func TestEffectiveExpireAt(t *testing.T) {
 				OpenedAt:         &now,
 				DaysAfterOpening: d(2),
 			},
-			want: now.Add(2 * 24 * time.Hour),
+			// Calendar days, not 48 absolute hours: a shelf life counts days,
+			// so the two differ by an hour across a daylight-saving change.
+			want: now.AddDate(0, 0, 2),
 		},
 		{
 			name: "opened later than printed returns printed",

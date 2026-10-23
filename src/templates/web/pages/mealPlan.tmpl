@@ -6,32 +6,32 @@
         <p class="page-header__sub">{{ t "mealPlan.header.mealsPlanned" }}</p>
     </div>
     <div class="page-header__aside">
-        <button class="btn btn-outline-secondary d-none d-md-flex align-items-center gap-2" id="btnGenerateShoppingList" type="button">
+        <button class="btn btn-outline theme-secondary d-none md:d-flex align-items-center gap-3" id="btnGenerateShoppingList" type="button">
             <i class="bi bi-cart-plus"></i> {{ t "mealPlan.generateShoppingList" }}
         </button>
     </div>
 </header>
 
 {{ if .HasHousehold }}
-<div class="d-flex align-items-center gap-2 mb-3">
+<div class="d-flex align-items-center gap-3 mb-5">
     <span id="monthLabel" class="mp-range-label me-auto" aria-live="polite"></span>
-    <button class="btn btn-outline-secondary" id="btnPrevMonth" type="button" aria-label="{{ t "mealPlan.loadPreviousMonth" }}">
+    <button class="btn btn-outline theme-secondary" id="btnPrevMonth" type="button" aria-label="{{ t "mealPlan.loadPreviousMonth" }}">
         <i class="bi bi-chevron-left" aria-hidden="true"></i> {{ t "common.previous" }}
     </button>
-    <button class="btn btn-outline-secondary" id="btnTodayMonth" type="button" aria-label="{{ t "mealPlan.jumpToCurrentMonth" }}">
+    <button class="btn btn-outline theme-secondary" id="btnTodayMonth" type="button" aria-label="{{ t "mealPlan.jumpToCurrentMonth" }}">
         {{ t "mealPlan.today" }}
     </button>
-    <button class="btn btn-outline-secondary" id="btnNextMonth" type="button" aria-label="{{ t "mealPlan.loadNextMonth" }}">
+    <button class="btn btn-outline theme-secondary" id="btnNextMonth" type="button" aria-label="{{ t "mealPlan.loadNextMonth" }}">
         {{ t "common.next" }} <i class="bi bi-chevron-right" aria-hidden="true"></i>
     </button>
 </div>
 
-<div class="shopping-list-add-form add-meal-form mb-3" id="addMealForm">
+<div class="shopping-list-add-form add-meal-form mb-5" id="addMealForm">
     <div class="add-item-form-inner">
-        <select class="form-select" id="inputMealDate" aria-label="{{ t "mealPlan.day" }}"></select>
-        <select class="form-select" id="inputMealRecipe" aria-label="{{ t "mealPlan.recipe" }}"></select>
+        <select class="form-control" id="inputMealDate" aria-label="{{ t "mealPlan.day" }}"></select>
+        <select class="form-control" id="inputMealRecipe" aria-label="{{ t "mealPlan.recipe" }}"></select>
         <input type="number" class="form-control" id="inputMealServings" value="2" min="1" placeholder="{{ t "mealPlan.servings" }}" aria-label="{{ t "mealPlan.servings" }}">
-        <button type="button" class="btn btn-primary" id="btnAddMeal" aria-label="{{ t "mealPlan.addMeal" }}">
+        <button type="button" class="btn btn-solid theme-primary" id="btnAddMeal" aria-label="{{ t "mealPlan.addMeal" }}">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
         </button>
     </div>
@@ -39,14 +39,14 @@
 
 <div id="mealPlanGrid" class="mp-weeks" aria-live="polite">
     <div class="loading-state">
-        <div class="spinner-border text-body-secondary" role="status">
+        <div class="spinner-border fg-secondary" role="status">
             <span class="visually-hidden">{{ t "mealPlan.loading" }}</span>
         </div>
-        <p class="mt-2 text-body-secondary">{{ t "mealPlan.loadingPlan" }}</p>
+        <p class="mt-3 fg-secondary">{{ t "mealPlan.loadingPlan" }}</p>
     </div>
 </div>
 
-<button class="btn btn-primary w-100 d-md-none mt-3" id="btnGenerateShoppingListMobile" type="button">
+<button class="btn btn-solid theme-primary w-100 md:d-none mt-5" id="btnGenerateShoppingListMobile" type="button">
     <i class="bi bi-cart-plus me-1"></i> {{ t "mealPlan.generateShoppingList" }}
 </button>
 {{ else }}

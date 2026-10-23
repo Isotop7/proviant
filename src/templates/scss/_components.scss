@@ -40,60 +40,59 @@
 // The variants carry the brand colours. Bootstrap's own defaults are
 // replaced, so every button in the app speaks the same palette.
 .btn-primary {
-  --bs-btn-color: var(--accent-on);
-  --bs-btn-bg: var(--accent);
-  --bs-btn-border-color: transparent;
-  --bs-btn-hover-color: var(--accent-on);
-  --bs-btn-hover-bg: var(--accent-hover);
-  --bs-btn-hover-border-color: transparent;
-  --bs-btn-active-color: var(--accent-on);
-  --bs-btn-active-bg: var(--accent-active);
-  --bs-btn-active-border-color: var(--accent-active);
-  --bs-btn-disabled-color: var(--muted);
-  --bs-btn-disabled-bg: var(--border);
-  --bs-btn-disabled-border-color: var(--border);
+  --btn-color: var(--accent-on);
+  --btn-bg: var(--accent);
+  --btn-border-color: transparent;
+  --btn-hover-color: var(--accent-on);
+  --btn-hover-bg: var(--accent-hover);
+  --btn-hover-border-color: transparent;
+  --btn-active-color: var(--accent-on);
+  --btn-active-bg: var(--accent-active);
+  --btn-active-border-color: var(--accent-active);
+  --btn-disabled-color: var(--muted);
+  --btn-disabled-bg: var(--border);
+  --btn-disabled-border-color: var(--border);
 }
 
 .btn-outline-secondary {
-  --bs-btn-color: var(--fg);
-  --bs-btn-bg: var(--bg);
-  --bs-btn-border-color: var(--border-strong);
-  --bs-btn-hover-color: var(--fg);
-  --bs-btn-hover-bg: var(--surface-warm);
-  --bs-btn-hover-border-color: var(--muted);
-  --bs-btn-active-color: var(--fg);
-  --bs-btn-active-bg: var(--surface-warm);
-  --bs-btn-active-border-color: var(--muted);
-  --bs-btn-disabled-color: var(--muted);
-  --bs-btn-disabled-bg: var(--border);
-  --bs-btn-disabled-border-color: var(--border);
+  --btn-color: var(--fg);
+  --btn-bg: var(--bg);
+  --btn-border-color: var(--border-strong);
+  --btn-hover-color: var(--fg);
+  --btn-hover-bg: var(--surface-warm);
+  --btn-hover-border-color: var(--muted);
+  --btn-active-color: var(--fg);
+  --btn-active-bg: var(--surface-warm);
+  --btn-active-border-color: var(--muted);
+  --btn-disabled-color: var(--muted);
+  --btn-disabled-bg: var(--border);
+  --btn-disabled-border-color: var(--border);
   border-width: 1.5px;
 }
 
 .btn-danger {
-  --bs-btn-color: var(--status-expired-on);
-  --bs-btn-bg: var(--status-expired);
-  --bs-btn-border-color: var(--status-expired);
-  --bs-btn-hover-color: var(--status-expired-on);
-  --bs-btn-hover-bg: var(--status-expired-hover);
-  --bs-btn-hover-border-color: var(--status-expired-hover);
-  --bs-btn-active-color: var(--status-expired-on);
-  --bs-btn-active-bg: var(--status-expired-hover);
-  --bs-btn-active-border-color: var(--status-expired-hover);
-  --bs-btn-disabled-color: var(--muted);
-  --bs-btn-disabled-bg: var(--border);
-  --bs-btn-disabled-border-color: var(--border);
+  --btn-color: var(--status-expired-on);
+  --btn-bg: var(--status-expired);
+  --btn-border-color: var(--status-expired);
+  --btn-hover-color: var(--status-expired-on);
+  --btn-hover-bg: var(--status-expired-hover);
+  --btn-hover-border-color: var(--status-expired-hover);
+  --btn-active-color: var(--status-expired-on);
+  --btn-active-bg: var(--status-expired-hover);
+  --btn-active-border-color: var(--status-expired-hover);
+  --btn-disabled-color: var(--muted);
+  --btn-disabled-bg: var(--border);
+  --btn-disabled-border-color: var(--border);
 }
 
 // The ghost variant: transparent, the ink only.
 .btn-link {
-  --bs-btn-color: var(--fg-2);
-  --bs-btn-hover-color: var(--fg);
-  --bs-btn-active-color: var(--fg);
-  --bs-btn-hover-bg: var(--surface-warm);
-  --bs-btn-active-bg: var(--surface-warm);
-  --bs-btn-disabled-color: var(--muted);
-  --bs-btn-focus-shadow-rgb: 0, 0, 0;
+  --btn-color: var(--fg-2);
+  --btn-hover-color: var(--fg);
+  --btn-active-color: var(--fg);
+  --btn-hover-bg: var(--surface-warm);
+  --btn-active-bg: var(--surface-warm);
+  --btn-disabled-color: var(--muted);
   min-height: 36px;
   padding: 0 var(--space-3);
   text-decoration: none;
@@ -148,8 +147,7 @@
 }
 
 // Form controls
-.form-control,
-.form-select {
+.form-control {
   min-height: 44px;
   font-family: var(--font-body);
   font-size: var(--text-base);
@@ -213,6 +211,15 @@
   &:hover {
     box-shadow: var(--elev-raised);
   }
+}
+
+// Bootstrap 6 turns .card-body into a flex column that spaces its children
+// with a gap of its own. The app spaces the card bodies with its own
+// utilities, so the body keeps the block layout it had in v5 — a flex column
+// would also stop the children's margins from collapsing.
+.card-body {
+  display: block;
+  --card-body-gap: 0;
 }
 
 // Settings section card — accent-tinted border + accent hover shadow
@@ -511,29 +518,29 @@
 // Sidebar nav
 
 // Modals
-.modal-content {
+.dialog {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--elev-overlay);
 }
-.modal-header {
+.dialog-header {
   gap: 12px;
   align-items: flex-start;
   padding: 20px 20px 0;
   border-bottom: none;
 }
-.modal-title {
+.dialog-title {
   font-size: 16px;
   font-weight: 600;
 }
-.modal-body {
+.dialog-body {
   padding: 16px 20px 20px;
 }
-.modal-footer {
+.dialog-footer {
   padding: 0 20px 20px;
   border-top: none;
 }
-.modal-icon {
+.dialog-icon {
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -583,14 +590,14 @@
   }
 }
 
-#addProductModal .modal-header {
+#addProductModal .dialog-header {
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
 }
-#addProductModal .modal-body {
+#addProductModal .dialog-body {
   padding-top: 18px;
 }
-#addProductModal .modal-footer {
+#addProductModal .dialog-footer {
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
@@ -677,6 +684,9 @@
 // A chart card speaks like a tile: an eyebrow and the number behind it.
 .chart-card__header {
   display: flex;
+  // Bootstrap 6 makes .card-header a flex column; the chart header keeps its
+  // title and its icon on one line.
+  flex-direction: row;
   gap: var(--space-2);
   align-items: center;
 }

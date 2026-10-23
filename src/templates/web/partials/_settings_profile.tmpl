@@ -1,43 +1,43 @@
 {{ define "_settings_profile" }}
-<div class="card card-section mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
-        <div class="d-flex align-items-center gap-2">
+<div class="card card-section mb-7">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-person"></i>
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "settings.personalDetails" }}</h2>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" id="btnUpdatePersonalDetails">
+        <button type="button" class="btn btn-solid theme-primary btn-sm" id="btnUpdatePersonalDetails">
             {{ t "settings.update" }}
         </button>
     </div>
-    <div class="card-body px-4 py-4">
+    <div class="card-body px-7 py-7">
         <form id="userSettings" novalidate>
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="md:col-6">
                     <label for="inputDisplayName" class="form-label fw-medium">{{ t "settings.displayNameLabel" }}</label>
                     <input type="text" class="form-control" id="inputDisplayName"
                            value="{{ .User.DisplayName }}" autocomplete="nickname"
                            placeholder="{{ t "settings.displayNamePlaceholder" }}">
                     <div class="form-text">{{ t "settings.displayNameHelp" }}</div>
                 </div>
-                <div class="col-md-6">
+                <div class="md:col-6">
                     <label for="inputMailAddress" class="form-label fw-medium">
-                        {{ t "settings.mailAddressLabel" }} <span class="text-danger" aria-hidden="true">*</span>
+                        {{ t "settings.mailAddressLabel" }} <span class="fg-danger" aria-hidden="true">*</span>
                     </label>
                     <input type="email" class="form-control" id="inputMailAddress"
                            value="{{ .User.MailAddress }}" aria-required="true" autocomplete="email">
                     <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "settings.mailAddressInvalid" }}</div>
                 </div>
-                <div class="col-md-6">
+                <div class="md:col-6">
                     <label for="inputUsername" class="form-label fw-medium">{{ t "settings.usernameLabel" }}</label>
                     <input type="text" class="form-control" id="inputUsername"
                            value="{{ .User.Username }}" readonly autocomplete="username">
-                    <div class="form-text text-body-secondary">{{ t "settings.usernameHelp" }}</div>
+                    <div class="form-text fg-secondary">{{ t "settings.usernameHelp" }}</div>
                 </div>
-                <div class="col-md-6">
+                <div class="md:col-6">
                     <label for="inputLanguage" class="form-label fw-medium">{{ t "settings.languageLabel" }}</label>
-                    <select class="form-select" id="inputLanguage">
+                    <select class="form-control" id="inputLanguage">
                         <option value="" {{ if eq .User.Language "" }}selected{{ end }}>{{ t "settings.languageAuto" }}</option>
                         {{ range .AvailableLanguages }}
                         <option value="{{ .Code }}" {{ if eq $.User.Language .Code }}selected{{ end }}>{{ .Name }}</option>
@@ -50,24 +50,24 @@
     </div>
 </div>
 
-<div class="card card-section mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
-        <div class="d-flex align-items-center gap-2">
+<div class="card card-section mb-7">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
             <div class="icon-chip" aria-hidden="true">
                 <i class="bi bi-lock"></i>
             </div>
             <h2 class="h5 mb-0 fw-semibold">{{ t "settings.passwordTitle" }}</h2>
         </div>
-        <button class="btn btn-primary btn-sm" type="button" id="btnUpdatePassword">
+        <button class="btn btn-solid theme-primary btn-sm" type="button" id="btnUpdatePassword">
             {{ t "settings.update" }}
         </button>
     </div>
-    <div class="card-body px-4 py-4">
+    <div class="card-body px-7 py-7">
         <form id="passwordUpdate" novalidate>
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="md:col-6">
                     <label for="inputPassword" class="form-label fw-medium">
-                        {{ t "settings.newPasswordLabel" }} <span class="text-danger" aria-hidden="true">*</span>
+                        {{ t "settings.newPasswordLabel" }} <span class="fg-danger" aria-hidden="true">*</span>
                     </label>
                     <input id="inputPassword" type="password" class="form-control"
                            aria-required="true" autocomplete="new-password"
@@ -89,9 +89,9 @@
                         {{ end }}
                     </ul>
                 </div>
-                <div class="col-md-6">
+                <div class="md:col-6">
                     <label for="inputPasswordVerification" class="form-label fw-medium">
-                        {{ t "settings.confirmPasswordLabel" }} <span class="text-danger" aria-hidden="true">*</span>
+                        {{ t "settings.confirmPasswordLabel" }} <span class="fg-danger" aria-hidden="true">*</span>
                     </label>
                     <input id="inputPasswordVerification" type="password" class="form-control"
                            aria-required="true" autocomplete="new-password">

@@ -4,11 +4,11 @@
 // is the single source. What follows is only the translation into the
 // component variables Bootstrap expects.
 
-@import "../../../design-system/tokens-dark";
+@use "../../../design-system/tokens-dark";
 
 // Light mode surface polish — card and navbar surfaces use the warm surface
 [data-bs-theme="light"] {
-  --bs-tertiary-bg: var(--surface-warm); // used by bg-body-tertiary (auth pages, offcanvas)
+  --bg-3: var(--surface-warm); // used by bg-body-tertiary (auth pages, drawer)
 }
 
 // Dark theme — warm dark palette
@@ -28,182 +28,146 @@
   --hero-pill-bg: rgba(0, 0, 0, .25);
 
   /* Bootstrap root-level overrides */
-  --bs-body-bg: var(--bg);
-  --bs-body-color: var(--fg);
-  --bs-body-bg-rgb: 42, 38, 32;
-  --bs-body-color-rgb: 235, 230, 220;
-  --bs-tertiary-bg: var(--surface-warm);
-  --bs-border-color: var(--border);
-  --bs-secondary-color: var(--fg-2);
-  --bs-tertiary-color: var(--meta);
-  --bs-emphasis-color: var(--fg);
-  --bs-emphasis-color-rgb: 235, 230, 220;
-  --bs-secondary-bg: var(--surface);
-  --bs-heading-color: var(--fg);
-  --bs-border-color-translucent: color-mix(in oklab, #fff 15%, transparent);
-  --bs-link-color: var(--accent-text);
-  --bs-link-hover-color: var(--accent-hover);
-  --bs-code-color: var(--status-soon-text);
-  --bs-highlight-color: var(--fg);
-  --bs-highlight-bg: var(--surface);
+  --bg-body: var(--bg);
+  --fg-body: var(--fg);
+  --bg-3: var(--surface-warm);
+  --border-color: var(--border);
+  --fg-3: var(--meta);
+  --bg-1: var(--surface);
+  --heading-color: var(--fg);
+  --border-color-translucent: color-mix(in oklab, #fff 15%, transparent);
+  --link-color: var(--accent-text);
+  --link-hover-color: var(--accent-hover);
+  --code-color: var(--status-soon-text);
+  --mark-color: var(--fg);
+  --mark-bg: var(--surface);
 
   /* Component-scoped overrides — Bootstrap sets these on component elements,
      so they must be overridden with equal or higher specificity */
   .card {
-    --bs-card-bg: var(--surface);
-    --bs-card-cap-bg: var(--surface);
-    --bs-card-cap-color: var(--fg);
-    --bs-card-border-color: var(--border);
-    --bs-card-color: var(--fg);
-    --bs-card-title-color: var(--fg);
-    --bs-card-subtitle-color: var(--fg-2);
+    --card-bg: var(--surface);
+    --card-cap-bg: var(--surface);
+    --card-cap-color: var(--fg);
+    --card-border-color: var(--border);
+    --card-color: var(--fg);
+    --card-subtitle-color: var(--fg-2);
   }
 
   .list-group {
-    --bs-list-group-bg: var(--surface);
-    --bs-list-group-color: var(--fg);
-    --bs-list-group-border-color: var(--border);
-    --bs-list-group-action-color: var(--fg-2);
-    --bs-list-group-action-hover-color: var(--fg);
-    --bs-list-group-action-hover-bg: var(--surface);
-    --bs-list-group-active-bg: var(--accent);
-    --bs-list-group-active-color: var(--accent-on);
-    --bs-list-group-active-border-color: var(--accent);
-    --bs-list-group-disabled-color: var(--meta);
-    --bs-list-group-disabled-bg: var(--surface);
+    --list-group-bg: var(--surface);
+    --list-group-color: var(--fg);
+    --list-group-border-color: var(--border);
+    --list-group-action-color: var(--fg-2);
+    --list-group-action-hover-color: var(--fg);
+    --list-group-action-hover-bg: var(--surface);
+    --list-group-active-bg: var(--accent);
+    --list-group-active-color: var(--accent-on);
+    --list-group-active-border-color: var(--accent);
+    --list-group-disabled-color: var(--meta);
+    --list-group-disabled-bg: var(--surface);
   }
 
-  .modal-content {
-    --bs-modal-bg: var(--surface);
-    --bs-modal-color: var(--fg);
-    --bs-modal-border-color: var(--border);
-    --bs-modal-header-border-color: var(--border);
-    --bs-modal-footer-bg: var(--surface);
-    --bs-modal-footer-border-color: var(--border);
+  .dialog {
+    --dialog-bg: var(--surface);
+    --dialog-color: var(--fg);
+    --dialog-border-color: var(--border);
+    --dialog-header-border-color: var(--border);
+    --dialog-footer-border-color: var(--border);
   }
 
-  .dropdown-menu {
-    --bs-dropdown-bg: var(--surface);
-    --bs-dropdown-color: var(--fg);
-    --bs-dropdown-border-color: var(--border);
-    --bs-dropdown-link-color: var(--fg);
-    --bs-dropdown-link-hover-color: var(--fg);
-    --bs-dropdown-link-hover-bg: var(--surface);
-    --bs-dropdown-link-active-bg: var(--accent);
-    --bs-dropdown-link-active-color: var(--accent-on);
-    --bs-dropdown-link-disabled-color: var(--meta);
-    --bs-dropdown-header-color: var(--meta);
-    --bs-dropdown-divider-bg: var(--border);
+  .menu {
+    --menu-bg: var(--surface);
+    --menu-color: var(--fg);
+    --menu-item-color: var(--fg);
+    --menu-item-hover-color: var(--fg);
+    --menu-item-hover-bg: var(--surface);
+    --menu-item-active-bg: var(--accent);
+    --menu-item-active-color: var(--accent-on);
+    --menu-item-disabled-color: var(--meta);
+    --menu-header-color: var(--meta);
+    --menu-divider-bg: var(--border);
   }
 
-  .offcanvas {
-    --bs-offcanvas-bg: var(--surface);
-    --bs-offcanvas-color: var(--fg);
-    --bs-offcanvas-border-color: var(--border);
+  .drawer {
+    --drawer-bg: var(--surface);
+    --drawer-color: var(--fg);
+    --drawer-border-color: var(--border);
   }
 
   .table {
-    --bs-table-bg: var(--surface);
-    --bs-table-color: var(--fg);
-    --bs-table-border-color: var(--border);
-    --bs-table-striped-bg: var(--surface);
-    --bs-table-striped-color: var(--fg);
-    --bs-table-hover-bg: var(--surface);
-    --bs-table-hover-color: var(--fg);
-    --bs-table-active-bg: var(--surface);
-    --bs-table-active-color: var(--fg);
+    --table-bg: var(--surface);
+    --table-color: var(--fg);
+    --table-border-color: var(--border);
+    --table-striped-bg: var(--surface);
+    --table-striped-color: var(--fg);
+    --table-hover-bg: var(--surface);
+    --table-hover-color: var(--fg);
+    --table-active-bg: var(--surface);
+    --table-active-color: var(--fg);
   }
 
   .form-control {
-    --bs-body-color: var(--fg);
-    --bs-body-bg: var(--surface);
-    --bs-border-color: var(--border);
-    --bs-form-control-bg: var(--surface);
-    --bs-form-control-color: var(--fg);
-    --bs-form-control-border-color: var(--border);
-    --bs-form-control-disabled-bg: var(--surface);
-    --bs-form-control-disabled-color: var(--meta);
-    --bs-input-bg: var(--surface);
-    --bs-input-color: var(--fg);
-    --bs-input-border-color: var(--border);
-    --bs-input-disabled-bg: var(--surface);
-    --bs-input-disabled-color: var(--meta);
-    --bs-input-placeholder-color: var(--meta);
-    --bs-input-focus-bg: var(--surface);
-    --bs-input-focus-color: var(--fg);
-    --bs-input-focus-border-color: var(--accent);
+    --fg-body: var(--fg);
+    --bg-body: var(--surface);
+    --border-color: var(--border);
+    --control-bg: var(--surface);
+    --control-fg: var(--fg);
+    --control-border-color: var(--border);
+    --control-disabled-bg: var(--surface);
+    --control-disabled-color: var(--meta);
+    --control-placeholder-color: var(--meta);
+    --control-active-border-color: var(--accent);
+    --control-select-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a09880' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
   }
 
-  .form-select {
-    --bs-body-color: var(--fg);
-    --bs-body-bg: var(--surface);
-    --bs-border-color: var(--border);
-    --bs-form-select-bg: var(--surface);
-    --bs-form-select-color: var(--fg);
-    --bs-form-select-border-color: var(--border);
-    --bs-form-select-disabled-bg: var(--surface);
-    --bs-form-select-disabled-color: var(--meta);
-    --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a09880' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-  }
-
-  .form-check-input {
-    --bs-border-color: var(--border);
+  .check {
+    --border-color: var(--border);
     background-color: var(--surface);
     border-color: var(--border);
   }
 
-  .form-check-label {
-    color: var(--fg);
-  }
-
   .toast {
-    --bs-toast-bg: var(--surface);
-    --bs-toast-color: var(--fg);
-    --bs-toast-header-bg: var(--surface);
-    --bs-toast-header-color: var(--fg);
+    --toast-bg: var(--surface);
+    --toast-color: var(--fg);
+    --toast-header-bg: var(--surface);
+    --toast-header-color: var(--fg);
   }
 
   .tooltip {
-    --bs-tooltip-bg: var(--surface);
-    --bs-tooltip-color: var(--fg);
+    --tooltip-bg: var(--surface);
+    --tooltip-color: var(--fg);
   }
 
   .popover {
-    --bs-popover-bg: var(--surface);
-    --bs-popover-body-color: var(--fg);
-    --bs-popover-header-bg: var(--surface);
-    --bs-popover-header-color: var(--fg);
-    --bs-popover-border-color: var(--border);
+    --popover-bg: var(--surface);
+    --popover-body-color: var(--fg);
+    --popover-header-bg: var(--surface);
+    --popover-header-color: var(--fg);
+    --popover-border-color: var(--border);
   }
 
   .page-link {
-    --bs-pagination-bg: var(--surface);
-    --bs-pagination-color: var(--fg-2);
-    --bs-pagination-border-color: var(--border);
-    --bs-pagination-hover-bg: var(--surface);
-    --bs-pagination-hover-color: var(--fg);
-    --bs-pagination-hover-border-color: var(--border);
-    --bs-pagination-active-bg: var(--accent);
-    --bs-pagination-active-color: var(--accent-on);
-    --bs-pagination-active-border-color: var(--accent);
-    --bs-pagination-disabled-bg: var(--surface);
-    --bs-pagination-disabled-color: var(--meta);
-    --bs-pagination-disabled-border-color: var(--border);
+    --pagination-bg: var(--surface);
+    --pagination-color: var(--fg-2);
+    --pagination-border-color: var(--border);
+    --pagination-hover-bg: var(--surface);
+    --pagination-hover-color: var(--fg);
+    --pagination-hover-border-color: var(--border);
+    --pagination-active-bg: var(--accent);
+    --pagination-active-color: var(--accent-on);
+    --pagination-active-border-color: var(--accent);
+    --pagination-disabled-bg: var(--surface);
+    --pagination-disabled-color: var(--meta);
+    --pagination-disabled-border-color: var(--border);
   }
 
   .accordion {
-    --bs-accordion-bg: var(--surface);
-    --bs-accordion-color: var(--fg);
-    --bs-accordion-border-color: var(--border);
-    --bs-accordion-btn-color: var(--fg);
-    --bs-accordion-btn-bg: var(--surface);
-    --bs-accordion-active-bg: var(--surface);
-    --bs-accordion-active-color: var(--fg);
-    --bs-accordion-button-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e8e4dc'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
-    --bs-accordion-button-active-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e8e4dc'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
-  }
-
-  .btn-close {
-    --bs-btn-close-filter: invert(1) grayscale(100%) brightness(200%);
+    --accordion-bg: var(--surface);
+    --accordion-color: var(--fg);
+    --accordion-border-color: var(--border);
+    --accordion-btn-color: var(--fg);
+    --accordion-btn-bg: var(--surface);
+    --accordion-active-bg: var(--surface);
+    --accordion-active-color: var(--fg);
   }
 }

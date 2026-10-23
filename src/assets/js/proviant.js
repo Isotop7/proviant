@@ -185,16 +185,16 @@ proviant.showConfirm = function (title, message, onConfirm, confirmLabel, confir
   if (msgEl) msgEl.textContent = message || "";
   if (btnEl) {
     const confirmClasses = {
-      primary: "btn btn-primary",
-      secondary: "btn btn-outline-secondary",
-      warning: "btn btn-primary",
-      danger: "btn btn-danger",
+      primary: "btn btn-solid theme-primary",
+      secondary: "btn btn-outline theme-secondary",
+      warning: "btn btn-solid theme-primary",
+      danger: "btn btn-solid theme-danger",
     };
     btnEl.textContent = confirmLabel || proviant.t("common.confirm");
     btnEl.className = confirmClasses[confirmType] || confirmClasses.danger;
-    btnEl.onclick = function () { bootstrap.Modal.getInstance(modal).hide(); onConfirm(); };
+    btnEl.onclick = function () { bootstrap.Dialog.getInstance(modal).hide(); onConfirm(); };
   }
-  bootstrap.Modal.getOrCreateInstance(modal).show();
+  bootstrap.Dialog.getOrCreateInstance(modal).show();
 };
 
 proviant.copyToClipboard = async function (text) {

@@ -289,13 +289,13 @@ function mealPlanEntryHtml(entry, day) {
                     <button type="button" data-meal-servings-action="dec" data-meal-id="${entry.id}" aria-label="${proviant.t("js.mealPlan.decreaseServingsLabel", escapeMealHtml(entry.recipeName))}">−</button>
                     <button type="button" data-meal-servings-action="inc" data-meal-id="${entry.id}" aria-label="${proviant.t("js.mealPlan.increaseServingsLabel", escapeMealHtml(entry.recipeName))}">+</button>
                 </div>
-                <select class="form-select form-select-sm" data-meal-move="${entry.id}" aria-label="${proviant.t("js.mealPlan.moveToDayLabel", escapeMealHtml(entry.recipeName))}">
+                <select class="form-control form-control-sm" data-meal-move="${entry.id}" aria-label="${proviant.t("js.mealPlan.moveToDayLabel", escapeMealHtml(entry.recipeName))}">
                     ${moveOptions}
                 </select>
                 <button type="button" class="btn-icon" data-meal-cook="${entry.id}" data-recipe-name="${escapeMealHtml(entry.recipeName)}" title="${proviant.t("js.mealPlan.cook")}" aria-label="${proviant.t("js.mealPlan.cookLabel", escapeMealHtml(entry.recipeName))}">
                     <i class="bi bi-fire" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="btn-icon text-danger" data-meal-delete="${entry.id}" data-recipe-name="${escapeMealHtml(entry.recipeName)}" title="${proviant.t("common.delete")}" aria-label="${proviant.t("js.mealPlan.deleteLabel", escapeMealHtml(entry.recipeName))}">
+                <button type="button" class="btn-icon fg-danger" data-meal-delete="${entry.id}" data-recipe-name="${escapeMealHtml(entry.recipeName)}" title="${proviant.t("common.delete")}" aria-label="${proviant.t("js.mealPlan.deleteLabel", escapeMealHtml(entry.recipeName))}">
                     <i class="bi bi-trash3" aria-hidden="true"></i>
                 </button>
             </div>

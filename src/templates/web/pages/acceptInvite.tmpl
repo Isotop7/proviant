@@ -1,56 +1,56 @@
 {{ define "content" }}
-<div class="container py-5">
+<div class="container py-12">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6">
+        <div class="col-12 md:col-8 lg:col-6">
             <div class="card">
-                <div class="card-body p-4 p-md-5">
-                    <div class="text-center mb-4">
-                        <div class="d-inline-flex align-items-center justify-content-center rounded-3 invite-icon-wrapper">
-                            <i class="bi bi-envelope-paper fs-3 text-white"></i>
+                <div class="card-body p-7 p-md-5">
+                    <div class="text-center mb-7">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-5 invite-icon-wrapper">
+                            <i class="bi bi-envelope-paper fs-2xl fg-white"></i>
                         </div>
-                        <h1 class="mt-3 mb-1 h5">{{ t "invite.title" }}</h1>
+                        <h1 class="mt-5 mb-1 h5">{{ t "invite.title" }}</h1>
                     </div>
 
                     {{ if .Error }}
-                    <div class="alert alert-danger" role="alert">
+                    <div class="alert alert theme-danger" role="alert">
                         <i class="bi bi-exclamation-triangle me-2"></i>{{ .Error }}
                     </div>
-                    <div class="text-center mt-3">
-                        <a href="/web" class="btn btn-outline-secondary">{{ t "auth.goToDashboard" }}</a>
+                    <div class="text-center mt-5">
+                        <a href="/web" class="btn btn-outline theme-secondary">{{ t "auth.goToDashboard" }}</a>
                     </div>
 
                     {{ else if .Success }}
-                    <div class="alert alert-success" role="alert">
+                    <div class="alert alert theme-success" role="alert">
                         <i class="bi bi-check-circle me-2"></i>{{ .Success }}
                     </div>
-                    <div class="text-center mt-3">
-                        <a href="/web" class="btn btn-primary">{{ t "auth.goToDashboard" }}</a>
+                    <div class="text-center mt-5">
+                        <a href="/web" class="btn btn-solid theme-primary">{{ t "auth.goToDashboard" }}</a>
                     </div>
 
                     {{ else if .NeedsAuth }}
-                    <p class="text-center text-body-secondary">{{ t "invite.needsAuthPrefix" }}<strong>{{ .HouseholdName }}</strong>{{ t "invite.needsAuthSuffix" }}</p>
-                    <div class="alert alert-info mt-3" role="alert">
+                    <p class="text-center fg-secondary">{{ t "invite.needsAuthPrefix" }}<strong>{{ .HouseholdName }}</strong>{{ t "invite.needsAuthSuffix" }}</p>
+                    <div class="alert alert theme-info mt-5" role="alert">
                         <i class="bi bi-info-circle me-2"></i>{{ t "invite.needsAuthAlertPrefix" }}<strong>{{ .InvitationEmail }}</strong>{{ t "invite.needsAuthAlertSuffix" }}
                     </div>
-                    <div class="d-grid gap-2 mt-4">
-                        <a href="/web/auth?invite_token={{ .Token }}" class="btn btn-primary btn-lg">
+                    <div class="d-grid gap-3 mt-7">
+                        <a href="/web/auth?invite_token={{ .Token }}" class="btn btn-solid theme-primary btn-lg">
                             <i class="bi bi-box-arrow-in-right me-2"></i>{{ t "invite.loginSignup" }}
                         </a>
                     </div>
 
                     {{ else if .ConfirmAccept }}
-                    <p class="text-center fs-5">{{ t "invite.confirmAcceptPrefix" }}<strong>{{ .HouseholdName }}</strong>{{ t "invite.confirmAcceptSuffix" }}</p>
-                    <div class="alert alert-info mt-3" role="alert">
+                    <p class="text-center fs-lg">{{ t "invite.confirmAcceptPrefix" }}<strong>{{ .HouseholdName }}</strong>{{ t "invite.confirmAcceptSuffix" }}</p>
+                    <div class="alert alert theme-info mt-5" role="alert">
                         <i class="bi bi-info-circle me-2"></i>{{ t "invite.loggedInPrefix" }}<strong>{{ .InvitationEmail }}</strong>{{ t "invite.loggedInSuffix" }}
                     </div>
-                    <p class="text-center text-body-secondary small mt-2">{{ t "invite.membershipReplaced" }}</p>
-                    <form id="acceptInviteForm" class="mt-4">
+                    <p class="text-center fg-secondary small mt-3">{{ t "invite.membershipReplaced" }}</p>
+                    <form id="acceptInviteForm" class="mt-7">
                         <input type="hidden" id="inviteToken" value="{{ .Token }}">
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg" id="btnAcceptInvite">
+                        <div class="d-grid gap-3">
+                            <button type="submit" class="btn btn-solid theme-primary btn-lg" id="btnAcceptInvite">
                                 <i class="bi bi-check-lg me-2"></i>{{ t "invite.acceptJoin" }}
                             </button>
-                            <a href="/web" class="btn btn-outline-secondary">{{ t "common.cancel" }}</a>
+                            <a href="/web" class="btn btn-outline theme-secondary">{{ t "common.cancel" }}</a>
                         </div>
                     </form>
                     {{ end }}

@@ -155,7 +155,7 @@
         </div>
 
         <!-- Submit -->
-        <button type="submit" class="btn btn-primary w-100 mt-2" id="btn-auth-submit">
+        <button type="submit" class="btn btn-solid theme-primary w-100 mt-3" id="btn-auth-submit">
           <i class="bi bi-box-arrow-in-right" id="btn-auth-icon" aria-hidden="true"></i>
           <span id="btn-auth-label">{{ t "auth.signIn" }}</span>
         </button>
@@ -172,28 +172,23 @@
   {{ template "loginBrand" . }}
 </div>
 
-<!-- Email verification modal -->
-<div class="modal fade" id="emailVerificationModal" tabindex="-1"
-  aria-labelledby="emailVerificationModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="emailVerificationModalLabel">
+<!-- Email verification dialog -->
+<dialog class="dialog" id="emailVerificationModal" aria-labelledby="emailVerificationModalLabel">
+      <div class="dialog-header">
+        <h5 class="dialog-title" id="emailVerificationModalLabel">
           <i class="bi bi-envelope-check me-2" aria-hidden="true"></i>{{ t "auth.verifyEmailModalTitle" }}
         </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t "a11y.close" }}"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
       </div>
-      <div class="modal-body text-center">
-        <i class="bi bi-envelope-open text-info fs-1 mb-3 d-block" aria-hidden="true"></i>
+      <div class="dialog-body text-center">
+        <i class="bi bi-envelope-open fg-info fs-4xl mb-5 d-block" aria-hidden="true"></i>
         <p class="mb-1">{{ t "auth.verificationSentTo" }}</p>
-        <p class="fw-semibold mb-3" id="emailVerificationAddress"></p>
-        <p class="text-body-secondary small mb-0">{{ t "auth.verifyEmailHelp" }}</p>
+        <p class="fw-semibold mb-5" id="emailVerificationAddress"></p>
+        <p class="fg-secondary small mb-0">{{ t "auth.verifyEmailHelp" }}</p>
       </div>
-      <div class="modal-footer justify-content-center">
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{{ t "auth.gotIt" }}</button>
+      <div class="dialog-footer justify-content-center">
+        <button type="button" class="btn btn-solid theme-primary" data-bs-dismiss="dialog">{{ t "auth.gotIt" }}</button>
       </div>
-    </div>
-  </div>
-</div>
+    </dialog>
 
 {{ end }}

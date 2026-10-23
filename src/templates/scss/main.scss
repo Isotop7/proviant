@@ -1,114 +1,239 @@
-// Toggle global options
-$enable-gradients: true;
-$enable-shadows: true;
-
-$offcanvas-box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175);
-
-// Include functions first
-@import "bootstrap/scss/functions";
-
-// Include fonts;
-@import "./fonts";
-
-// Customize some defaults
+// ── Proviant stylesheet entry point ───────────────────────────────────────────
 //
-// The colour values come from the design system: design-system/_tokens.scss is
-// the single source. Bootstrap gets its compile-time colours from the same
-// variables the CSS custom properties are built from, so the Bootstrap layer
-// and the custom layer can no longer disagree.
-@import "./tokens";
+// Bootstrap 6 is configured from the design system. design-system/_tokens.scss
+// is the single source: its Sass variables feed Bootstrap's token maps, and
+// those maps point at the runtime custom properties the design system emits.
+// The Bootstrap layer and the custom-property layer therefore cannot disagree.
+//
+// Bootstrap 6 emits its custom properties unprefixed (the --bs- prefix only
+// exists in the prebuilt dist CSS). Five names collide with the design
+// system: --fg-2, --focus-ring, --font-mono, --radius-pill and --accent-border.
+// Each is aligned below so the design system stays the single source.
 
-$font-family-base: $font-body;
-$font-family-monospace: $font-mono;
-$line-height-base: 1.55;
+@use "../../../design-system/tokens" as *;
 
-$card-cap-bg: $surface-warm;
-$card-bg: $surface;
-$list-group-border-width: 1px;
+// ── Theme colours ───────────────────────────────────────────────────────────
+//
+// v6 splits every theme colour into nine roles. Each role is filled from the
+// design system's runtime tokens, so a theme switch moves both layers at once.
+$proviant-primary: (
+  base: var(--accent),
+  fg: var(--accent-text),
+  fg-emphasis: var(--accent-text),
+  bg: var(--accent),
+  bg-subtle: var(--accent-soft),
+  bg-muted: var(--accent-soft),
+  border: $accent-border,
+  focus-ring: var(--accent),
+  contrast: var(--accent-on)
+);
 
-$border-radius: $radius-md;
-$border-radius-sm: $radius-sm;
-$border-radius-lg: $radius-lg;
-$border-radius-pill: $radius-pill;
+$proviant-accent: (
+  base: var(--accent),
+  fg: var(--accent-text),
+  fg-emphasis: var(--accent-text),
+  bg: var(--accent),
+  bg-subtle: var(--accent-soft),
+  bg-muted: var(--accent-soft),
+  border: $accent-border,
+  focus-ring: var(--accent),
+  contrast: var(--accent-on)
+);
 
-// Colors map to the Proviant design tokens: $primary ← --accent, $success ←
-// --status-fresh, $warning ← --status-soon, $danger ← --status-expired,
-// $dark ← --fg. There is no second accent — $secondary is a neutral.
-$primary: $accent;
-$secondary: $fg-2;
-// $info, $success and $danger are already set by the design tokens.
-$light: $surface-warm;
-$dark: $fg;
-$gray: #9e9990; // warm neutral gray
-$success: $status-fresh;
-$warning: $warn;
-$danger: $status-expired;
-$link-color: $accent-text;
+$proviant-success: (
+  base: var(--status-fresh),
+  fg: var(--status-fresh-text),
+  fg-emphasis: var(--status-fresh-text),
+  bg: var(--status-fresh),
+  bg-subtle: var(--status-fresh-subtle),
+  bg-muted: var(--status-fresh-subtle),
+  border: var(--status-fresh-border),
+  focus-ring: var(--status-fresh),
+  contrast: var(--status-fresh-on)
+);
 
-// Body
-$body-bg: $bg;
-$body-color: $fg;
-$border-color: $border;
-$shadow-color: rgba(80, 60, 30, .1);
+$proviant-warning: (
+  base: var(--status-soon),
+  fg: var(--status-soon-text),
+  fg-emphasis: var(--status-soon-text),
+  bg: var(--status-soon),
+  bg-subtle: var(--status-soon-subtle),
+  bg-muted: var(--status-soon-subtle),
+  border: var(--status-soon-border),
+  focus-ring: var(--status-soon),
+  contrast: var(--status-soon-on)
+);
 
-// Required
-@import "bootstrap/scss/variables";
-@import "bootstrap/scss/variables-dark";
-@import "bootstrap/scss/maps";
-@import "bootstrap/scss/mixins";
-@import "bootstrap/scss/utilities";
-@import "bootstrap/scss/root";
-@import "bootstrap/scss/reboot";
+$proviant-danger: (
+  base: var(--status-expired),
+  fg: var(--status-expired-text),
+  fg-emphasis: var(--status-expired-text),
+  bg: var(--status-expired),
+  bg-subtle: var(--status-expired-subtle),
+  bg-muted: var(--status-expired-subtle),
+  border: var(--status-expired-border),
+  focus-ring: var(--status-expired),
+  contrast: var(--status-expired-on)
+);
 
-@import "bootstrap/scss/type";
-@import "bootstrap/scss/images";
-@import "bootstrap/scss/containers";
-@import "bootstrap/scss/grid";
-@import "bootstrap/scss/tables";
-@import "bootstrap/scss/forms";
-@import "bootstrap/scss/buttons";
-@import "bootstrap/scss/transitions";
-@import "bootstrap/scss/dropdown";
-@import "bootstrap/scss/button-group";
-@import "bootstrap/scss/nav";
-@import "bootstrap/scss/navbar"; // Requires nav
-@import "bootstrap/scss/card";
-@import "bootstrap/scss/pagination";
-@import "bootstrap/scss/badge";
-@import "bootstrap/scss/alert";
-@import "bootstrap/scss/progress";
-@import "bootstrap/scss/list-group";
-@import "bootstrap/scss/close";
-@import "bootstrap/scss/toasts";
-@import "bootstrap/scss/modal"; // Requires transitions
-@import "bootstrap/scss/tooltip";
-@import "bootstrap/scss/popover";
-@import "bootstrap/scss/spinners";
-@import "bootstrap/scss/offcanvas"; // Requires transitions
+$proviant-info: (
+  base: var(--info),
+  fg: var(--info),
+  fg-emphasis: var(--info),
+  bg: var(--info),
+  bg-subtle: color-mix(in oklab, var(--info) 12%, var(--bg-body)),
+  bg-muted: color-mix(in oklab, var(--info) 22%, var(--bg-body)),
+  border: var(--border),
+  focus-ring: var(--info),
+  contrast: var(--bg-body)
+);
+
+$proviant-secondary: (
+  base: var(--fg-2),
+  fg: var(--muted),
+  fg-emphasis: var(--fg),
+  bg: var(--bg-2),
+  bg-subtle: var(--bg-1),
+  bg-muted: var(--bg-2),
+  border: var(--border),
+  focus-ring: var(--fg-2),
+  contrast: var(--bg-body)
+);
+
+$proviant-inverse: (
+  base: var(--fg),
+  fg: var(--bg-body),
+  fg-emphasis: var(--bg-body),
+  bg: var(--fg),
+  bg-subtle: var(--bg-3),
+  bg-muted: var(--bg-4),
+  border: var(--border-strong),
+  focus-ring: var(--fg),
+  contrast: var(--bg-body)
+);
+
+@use "bootstrap/scss/config" with (
+  $enable-gradients: true,
+  $enable-shadows: true,
+  $radius: $radius-md
+);
+
+// The namespace is renamed because the project has its own _theme.scss
+// partial, which would otherwise claim the "theme" namespace.
+@use "bootstrap/scss/theme" as bs-theme with (
+  $theme-colors: (
+    "primary": $proviant-primary,
+    "accent": $proviant-accent,
+    "success": $proviant-success,
+    "warning": $proviant-warning,
+    "danger": $proviant-danger,
+    "info": $proviant-info,
+    "secondary": $proviant-secondary,
+    "inverse": $proviant-inverse
+  ),
+  $theme-bgs: (
+    "body": var(--bg),
+    "1": var(--surface),
+    "2": var(--surface-warm),
+    "3": var(--surface-warm),
+    "4": var(--border),
+    "fg": var(--fg-body),
+    "white": var(--white),
+    "black": var(--black),
+    "transparent": transparent,
+    "inherit": inherit
+  ),
+  $theme-fgs: (
+    "body": var(--fg),
+    "1": var(--fg),
+    // null drops the key: the design system owns --fg-2 and its value
+    // differs from Bootstrap's secondary text level.
+    "2": null,
+    "3": var(--muted),
+    "4": var(--meta),
+    "bg": var(--bg-body),
+    "white": var(--white),
+    "black": var(--black),
+    "inherit": inherit
+  )
+);
+
+@use "bootstrap/scss/root" with (
+  $root-tokens: (
+    --body-font-family: $font-body,
+    --body-line-height: 1.55,
+    --font-mono: $font-mono,
+    --focus-ring: $focus-ring,
+    --heading-color: var(--fg),
+    --link-color: var(--accent-text),
+    --link-hover-color: var(--accent-hover),
+    --border-color: var(--border),
+    --border-color-translucent: color-mix(in oklab, var(--fg) 15%, transparent),
+    --code-color: var(--status-soon-text)
+  )
+);
+
+// ── Bootstrap components ────────────────────────────────────────────────────
+
+@use "bootstrap/scss/content/reboot";
+@use "bootstrap/scss/content/lists";
+@use "bootstrap/scss/content/images";
+@use "bootstrap/scss/content/tables";
+@use "bootstrap/scss/layout/containers";
+@use "bootstrap/scss/layout/grid";
+@use "bootstrap/scss/forms";
+@use "bootstrap/scss/buttons";
+@use "bootstrap/scss/transitions";
+@use "bootstrap/scss/menu";
+@use "bootstrap/scss/nav";
+@use "bootstrap/scss/navbar";
+@use "bootstrap/scss/card";
+@use "bootstrap/scss/pagination";
+@use "bootstrap/scss/badge";
+@use "bootstrap/scss/alert";
+@use "bootstrap/scss/progress";
+@use "bootstrap/scss/list-group";
+@use "bootstrap/scss/toasts";
+@use "bootstrap/scss/dialog";
+@use "bootstrap/scss/tooltip";
+@use "bootstrap/scss/popover";
+@use "bootstrap/scss/spinner";
+@use "bootstrap/scss/drawer";
+@use "bootstrap/scss/accordion";
 
 // Helpers
-@import "bootstrap/scss/helpers";
+@use "bootstrap/scss/helpers";
 
 // Utilities
-@import "bootstrap/scss/utilities/api";
+//
+// Not bootstrap/scss/utilities/api: the app needs Bootstrap 5's precedence,
+// where every utility carried !important. See _bootstrap-utilities.scss.
+@use "./bootstrap-utilities";
 
-// Icons
-$bootstrap-icons-font-dir: "../fonts";
-@import "bootstrap-icons/font/bootstrap-icons";
+// ── Icons ───────────────────────────────────────────────────────────────────
 
-// Proviant design system — tokens + component CSS
+@use "bootstrap-icons/font/bootstrap-icons" with (
+  $bootstrap-icons-font-dir: "../fonts"
+);
 
-@import "./base";
-@import "./components";
-@import "./theme";
-@import "./layout";
-@import "./dashboard";
-@import "./fragments";
-@import "./scan";
-@import "./pageChrome";
-@import "./login";
-@import "./editProduct";
-@import "./productList";
-@import "./mealPlan";
-@import "./pages";
-@import "./utilities";
+// ── Proviant design system ──────────────────────────────────────────────────
+//
+// The design system's own tokens are emitted above (design-system/tokens).
+// The partials below translate them into component styles.
+
+@use "./fonts";
+@use "./tokens";
+@use "./base";
+@use "./components";
+@use "./theme";
+@use "./layout";
+@use "./dashboard";
+@use "./fragments";
+@use "./scan";
+@use "./pageChrome";
+@use "./login";
+@use "./editProduct";
+@use "./productList";
+@use "./mealPlan";
+@use "./pages";
+@use "./utilities";
