@@ -6,10 +6,9 @@ Agent coding guidelines for Proviant codebase.
 
 ## Search order (mandatory)
 
-1. Architecture, relationships, "what calls this", blast radius, onboarding: if `graphify-out/graph.json` exists, run `graphify query "<question>"` first (`graphify path` / `graphify explain` for specific nodes). Never grep for this.
-2. Finding an implementation or a name you don't know: call `tools.semble.search` through `execute`, then read the returned file and lines. `tools.semble.find_related` finds similar code elsewhere.
-3. `grep` only for exhaustive literal occurrences (rename, config key, flag) or after 1–2 failed. `glob` only for path patterns.
-4. After changing code, run `graphify update .` (see the graphify section for the full rules).
+1. Architecture, relationships, "what calls this", blast radius, onboarding: search the codebase before reading, and never guess at call relationships.
+2. Finding an implementation or a name you don't know: search for it, then read the returned file and lines. When a feature exists in more than one place, look for the similar code elsewhere.
+3. `grep` only for exhaustive literal occurrences (rename, config key, flag) or after 1–2 failed searches. `glob` only for path patterns.
 
 ## Workflow
 
@@ -220,17 +219,3 @@ departure in `design-system/deviations.md`.
 - **Guidance**: async >500ms → loading indicator + disable the trigger; inline validation on blur, page-level feedback at submit; empty states carry a clear CTA; confirm before irreversible actions.
 - **Feedback**: `proviant.showFeedback()` shows a toast, not a modal; field and section errors stay inline. A toast's callback fires when it goes — the auto-hiding types after their timeout, an error when it is dismissed.
 - **Accessibility**: `<html lang>` matches the active UI language; the page header carries the page's only `h1` — the topnav is navigation; icon-only buttons get an `aria-label`; everything keyboard-navigable (`tabindex`, `focus-visible`); populate `aria-live` after dynamic updates.
-
-## graphify
-
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
-
-Rules:
-- When graphify-out/graph.json exists, run `graphify query "<question>"` before your first grep, search or source-file read for a codebase question, and put this rule in every subagent prompt that explores code. Read raw files only for lines the graph or an earlier read already located. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-- A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.
