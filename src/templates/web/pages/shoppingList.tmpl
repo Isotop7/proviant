@@ -93,7 +93,7 @@
             </div>
         </div>
         <div class="shopping-list__notes" id="notes-{{ $item.ID }}">
-            <input type="text" class="form-control form-control-sm" placeholder="{{ t "shoppingList.addNotes" }}" value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
+            <input type="text" class="form-control form-control-sm" id="notesInput-{{ $item.ID }}" aria-label="{{ t "shoppingList.notesFor" $item.Name }}" placeholder="{{ t "shoppingList.addNotes" }}" value="{{ $item.Notes }}" data-notes-input="{{ $item.ID }}">
         </div>
     </div>
     {{ end }}

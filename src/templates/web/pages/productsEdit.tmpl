@@ -59,10 +59,10 @@
               <input type="text" class="form-control" id="inputProductName" value="{{ .Product.ProductName }}" required>
             </div>
             <div class="mb-5">
-              <label class="form-label">{{ t "products.barcode" }}</label>
+              <label class="form-label" for="inputProductBarcode">{{ t "products.barcode" }}</label>
               <div class="position-relative">
                 <i class="bi bi-upc-scan position-absolute text-fg-3 input-icon-left"></i>
-                <input type="text" class="form-control font-mono input-with-icon" value="{{ .Product.Barcode }}" readonly>
+                <input type="text" class="form-control font-mono input-with-icon" id="inputProductBarcode" value="{{ .Product.Barcode }}" readonly>
               </div>
             </div>
             <div class="mb-5">

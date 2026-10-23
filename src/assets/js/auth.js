@@ -250,7 +250,7 @@ function Signup() {
     if (!email) {
         showFieldError('auth-email', proviant.t('js.auth.emailRequired'));
         valid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@.]+(\.[^@\s.]+)+$/.test(email)) {
         showFieldError('auth-email', proviant.t('js.auth.emailInvalid'));
         valid = false;
     }

@@ -1,5 +1,12 @@
 import js from "@eslint/js";
 import globals from "globals";
+import { superLinearRegex } from "./scripts/eslint-rules/super-linear-regex.mjs";
+
+const localPlugin = {
+    rules: {
+        "super-linear-regex": superLinearRegex,
+    },
+};
 
 export default [
   {
@@ -41,7 +48,9 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
+      "local/super-linear-regex": "error",
     },
+    plugins: { local: localPlugin },
   },
   {
     // The one ES module in src/assets/js: it re-exports the Bootstrap 6 bundle
@@ -59,7 +68,9 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
+      "local/super-linear-regex": "error",
     },
+    plugins: { local: localPlugin },
   },
   {
     // Each file that *defines* one of the cross-file globals needs it off for
@@ -91,7 +102,9 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
+      "local/super-linear-regex": "error",
     },
+    plugins: { local: localPlugin },
   },
   {
     // Vitest specs live outside src/ and reach into jsdom globals that the
@@ -110,6 +123,8 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       "no-unused-vars": ["error", { "caughtErrorsIgnorePattern": "^_" }],
+      "local/super-linear-regex": "error",
     },
+    plugins: { local: localPlugin },
   },
 ];
