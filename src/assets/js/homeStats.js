@@ -141,7 +141,7 @@ function attachTileHint(cell, text) {
 // A tooltip opens on hover and on keyboard focus.
 function attachInfoTooltip(trigger, text, placement) {
   if (!trigger || typeof bootstrap === 'undefined') return;
-  new bootstrap.Tooltip(trigger, {
+  bootstrap.Tooltip.getOrCreateInstance(trigger, {
     title: text,
     placement: placement || 'left',
     trigger: 'hover focus',
