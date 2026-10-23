@@ -12,7 +12,9 @@ res/icons/*.xcf
 .githooks/
 .kilo/
 .zed/
-design-system/
+design-system/*
+!design-system/_tokens.scss
+!design-system/_tokens-dark.scss
 docs/
 issues/
 screenshots/
