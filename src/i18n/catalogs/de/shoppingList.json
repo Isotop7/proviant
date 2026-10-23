@@ -37,6 +37,7 @@
   "shoppingList.itemsNeeded": "benötigte Artikel",
   "shoppingList.markAsDone": "%s als erledigt markieren",
   "shoppingList.notes": "Notizen",
+  "shoppingList.notesFor": "Notizen für %s",
   "shoppingList.printList": "Liste drucken",
   "shoppingList.qty": "Menge",
   "shoppingList.quantity": "Menge",

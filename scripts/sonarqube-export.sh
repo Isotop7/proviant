@@ -24,6 +24,7 @@ API_BASE="${SONAR_URL}/api/issues/search"
 OUTPUT_FILE="sonar-export.json"
 STATUSES="OPEN"
 EXTRA_PARAMS=""
+SCOPE_PARAMS=""
 MODE="issues"
 
 usage() {
@@ -37,6 +38,8 @@ Options:
   --severities <list>       Comma-separated: BLOCKER,CRITICAL,MAJOR,MINOR,INFO
   --types <list>            Comma-separated: BUG,VULNERABILITY,CODE_SMELL
   --tags <list>             Comma-separated tag filter
+  --branch <name>           Only issues of this branch (default: the default branch)
+  --pull-request <key>      Only issues of this pull request
   --duplications            Export code duplication metrics instead of issues
   -h, --help                Show this help
 
@@ -54,6 +57,8 @@ while [[ $# -gt 0 ]]; do
 		--statuses) STATUSES="$2"; shift 2 ;;
 		--resolutions|--severities|--types|--tags)
 			EXTRA_PARAMS="${EXTRA_PARAMS}&${1#--}=$2"; shift 2 ;;
+		--branch) SCOPE_PARAMS="${SCOPE_PARAMS}&branch=$2"; shift 2 ;;
+		--pull-request) SCOPE_PARAMS="${SCOPE_PARAMS}&pullRequest=$2"; shift 2 ;;
 		--duplications) MODE="duplications"; shift ;;
 		-h|--help) usage ;;
 		*) echo "Unknown option: $1"; usage ;;
@@ -62,6 +67,12 @@ done
 
 if [[ -z "${SONAR_TOKEN:-}" ]]; then
 	echo "ERROR: SONAR_TOKEN env var is not set."
+	exit 1
+fi
+
+# The API rejects a request that names a branch and a pull request at the same time.
+if [[ "$SCOPE_PARAMS" == *"&branch="* && "$SCOPE_PARAMS" == *"&pullRequest="* ]]; then
+	echo "ERROR: --branch and --pull-request are mutually exclusive."
 	exit 1
 fi
 
@@ -87,7 +98,7 @@ echo "Project:  ${PROJECT_KEY}"
 
 if [[ "$MODE" = "duplications" ]]; then
 	DUPLICATION_METRICS="duplicated_lines_density,duplicated_lines,duplicated_blocks"
-	TREE_BASE="${SONAR_URL}/api/measures/component_tree?component=${PROJECT_KEY}&metricKeys=${DUPLICATION_METRICS}&qualifiers=FIL&strategy=leaves&ps=500"
+	TREE_BASE="${SONAR_URL}/api/measures/component_tree?component=${PROJECT_KEY}${SCOPE_PARAMS}&metricKeys=${DUPLICATION_METRICS}&qualifiers=FIL&strategy=leaves&ps=500"
 
 	page=1
 	all_files="[]"
@@ -123,7 +134,7 @@ if [[ "$MODE" = "duplications" ]]; then
 	exit 0
 fi
 
-BASE_URL="${API_BASE}?componentKeys=${PROJECT_KEY}&statuses=${STATUSES}${EXTRA_PARAMS}"
+BASE_URL="${API_BASE}?componentKeys=${PROJECT_KEY}&statuses=${STATUSES}${SCOPE_PARAMS}${EXTRA_PARAMS}"
 
 total=$(sonar_get "${BASE_URL}&ps=1" | jq -r '.total // 0')
 echo "Total issues: ${total}"

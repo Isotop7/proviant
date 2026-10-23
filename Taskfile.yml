@@ -267,20 +267,20 @@ tasks:
     deps: [vuln-go, vuln-npm]
 
   sonar-issues:
-    desc: Export SonarQube issues to JSON for agent consumption (requires SONAR_TOKEN)
+    desc: "Export SonarQube issues to JSON for agent consumption (requires SONAR_TOKEN). Usage: task sonar-issues [-- --branch main]"
     preconditions:
       - sh: '[ -n "$SONAR_TOKEN" ]'
         msg: "SONAR_TOKEN env var is not set."
     cmds:
-      - ./scripts/sonarqube-export.sh
+      - ./scripts/sonarqube-export.sh {{if .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
 
   sonar-duplications:
-    desc: Export SonarQube code duplications to JSON for agent consumption (requires SONAR_TOKEN)
+    desc: "Export SonarQube code duplications to JSON for agent consumption (requires SONAR_TOKEN). Usage: task sonar-duplications [-- --branch main]"
     preconditions:
       - sh: '[ -n "$SONAR_TOKEN" ]'
         msg: "SONAR_TOKEN env var is not set."
     cmds:
-      - ./scripts/sonarqube-export.sh --duplications
+      - ./scripts/sonarqube-export.sh --duplications {{if .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
 
   seed-products:
     desc: "Fill the pack size of the demo products from Open Food Facts. Usage: task seed-products [-- --dry-run]"
