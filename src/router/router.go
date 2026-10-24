@@ -517,6 +517,10 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	// Public unsubscribe page (no auth required)
 	engine.GET("/web/unsubscribe", LanguageMiddleware(), webFrontendHandler.Unsubscribe)
 
+	// Public offline fallback page (no auth required) — the service worker
+	// precaches it and serves it when a navigation cannot reach the network.
+	engine.GET("/offline", LanguageMiddleware(), webFrontendHandler.Offline)
+
 	// Protected web frontend routes
 	protectedWebFrontend := engine.Group("/web")
 	protectedWebFrontend.Use(jwtFrontendUserAwareMiddleware.MiddlewareFunc(), UserContextLoggerMiddleware(), LanguageMiddleware())

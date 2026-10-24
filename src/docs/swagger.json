@@ -6271,6 +6271,26 @@
                 }
             }
         },
+        "/offline": {
+            "get": {
+                "description": "Renders the app-styled offline screen the service worker serves from its cache when a navigation fails.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Offline fallback page",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/web": {
             "get": {
                 "description": "Renders the home page showing product dashboard",

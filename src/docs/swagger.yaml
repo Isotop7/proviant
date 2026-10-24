@@ -5904,6 +5904,20 @@ paths:
       summary: Prometheus metrics
       tags:
       - common
+  /offline:
+    get:
+      description: Renders the app-styled offline screen the service worker serves
+        from its cache when a navigation fails.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Offline fallback page
+      tags:
+      - web
   /web:
     get:
       description: Renders the home page showing product dashboard

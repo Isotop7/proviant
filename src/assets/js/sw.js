@@ -2,6 +2,10 @@
 
 const CACHE_NAME = 'proviant-v167';
 
+// The offline screen is a server-rendered page: the worker precaches it and
+// serves the cached copy when a navigation cannot reach the network.
+const OFFLINE_URL = '/offline';
+
 const PRECACHE_URLS = [
   '/manifest.json',
   '/assets/css/main.css',
@@ -17,47 +21,20 @@ const PRECACHE_URLS = [
   '/assets/icons/proviant_logo_512.png',
   '/assets/icons/hero.png',
   '/assets/icons/favicon.png',
+  OFFLINE_URL,
 ];
 
-// Minimal offline fallback page (no asset dependencies)
-const OFFLINE_PAGE = `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>proviant — offline</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      background:#212529;color:#e2e8f0;
-      font-family:system-ui,-apple-system,sans-serif;
-      display:flex;align-items:center;justify-content:center;
-      min-height:100dvh;text-align:center;padding:2rem;
-    }
-    .icon{font-size:5rem;line-height:1;margin-bottom:1.5rem}
-    h1{font-size:1.75rem;font-weight:700;margin-bottom:.75rem}
-    p{color:#94a3b8;margin-bottom:1.5rem;line-height:1.6}
-    button{
-      background:#4e9ab8;color:#fff;border:none;border-radius:.5rem;
-      padding:.75rem 1.5rem;font-size:1rem;font-weight:500;cursor:pointer;
-    }
-    button:hover{background:#3d87a3}
-  </style>
-</head>
-<body>
-  <div>
-    <div class="icon" aria-hidden="true">
-      <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="#4e9ab8" viewBox="0 0 16 16">
-        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-        <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/>
-      </svg>
-    </div>
-    <h1>You're offline</h1>
-    <p>Proviant needs a connection to load your products.<br>Check your network and try again.</p>
-    <a href="/" class="button">Try again</a>
-  </div>
-</body>
-</html>`;
+// The precache request for the offline page carries the browser's language,
+// because the worker's own requests carry no Accept-Language of their own.
+function precacheRequest(url) {
+  if (url === OFFLINE_URL) {
+    return new Request(url, {
+      cache: 'no-cache',
+      headers: { 'Accept-Language': navigator.language || 'en' },
+    });
+  }
+  return new Request(url, { cache: 'no-cache' });
+}
 
 // ── Install: pre-cache static shell ──────────────────────────────────────────
 // Precache fetches bypass the HTTP cache: its heuristic freshness can serve a
@@ -66,7 +43,7 @@ const OFFLINE_PAGE = `<!doctype html>
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
-      cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: 'no-cache' })))
+      cache.addAll(PRECACHE_URLS.map(precacheRequest))
     )
   );
   self.skipWaiting();
@@ -177,10 +154,17 @@ self.addEventListener('fetch', (event) => {
           caches.match(request).then(
             (cached) =>
               cached ||
-              new Response(OFFLINE_PAGE, {
-                status: 200,
-                headers: { 'Content-Type': 'text/html; charset=utf-8' },
-              })
+              caches.match(OFFLINE_URL).then(
+                (offlinePage) =>
+                  offlinePage ||
+                  new Response(
+                    '<!doctype html><meta charset="utf-8"><title>proviant</title><p>Offline.</p>',
+                    {
+                      status: 503,
+                      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                    }
+                  )
+              )
           )
         )
     );

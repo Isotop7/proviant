@@ -4446,6 +4446,7 @@ import "github.com/Isotop7/proviant/web"
   - [func \(frontend \*Frontend\) ForgotPassword\(ctx \*gin.Context\)](<#Frontend.ForgotPassword>)
   - [func \(frontend \*Frontend\) Licenses\(ctx \*gin.Context\)](<#Frontend.Licenses>)
   - [func \(frontend \*Frontend\) MealPlan\(ctx \*gin.Context\)](<#Frontend.MealPlan>)
+  - [func \(frontend \*Frontend\) Offline\(ctx \*gin.Context\)](<#Frontend.Offline>)
   - [func \(frontend \*Frontend\) Onboarding\(ctx \*gin.Context\)](<#Frontend.Onboarding>)
   - [func \(frontend \*Frontend\) Products\(ctx \*gin.Context\)](<#Frontend.Products>)
   - [func \(frontend \*Frontend\) ProductsEdit\(ctx \*gin.Context\)](<#Frontend.ProductsEdit>)
@@ -4474,7 +4475,7 @@ const (
 ```
 
 <a name="BrandFeature"></a>
-## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1291-L1294>)
+## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1305-L1308>)
 
 BrandFeature is a single icon\+text row in the brand panel of the split\-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
 
@@ -4540,6 +4541,17 @@ func (frontend *Frontend) MealPlan(ctx *gin.Context)
 ```
 
 MealPlan renders the weekly meal plan page @Summary Meal Plan page @Description Renders the weekly meal plan with planned meals and shopping list generation @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/mealplan \[get\]
+
+<a name="Frontend.Offline"></a>
+### func \(\*Frontend\) [Offline](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1299>)
+
+```go
+func (frontend *Frontend) Offline(ctx *gin.Context)
+```
+
+Offline renders the fallback screen the service worker serves when a navigation cannot reach the network. The page is precached by the worker and carries the app stylesheet, so it looks like the app it replaces.
+
+@Summary Offline fallback page @Description Renders the app\-styled offline screen the service worker serves from its cache when a navigation fails. @Tags web @Produce html @Success 200 \{string\} html @Router /offline \[get\]
 
 <a name="Frontend.Onboarding"></a>
 ### func \(\*Frontend\) [Onboarding](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L988>)

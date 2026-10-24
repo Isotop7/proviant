@@ -1286,6 +1286,20 @@ func (frontend *Frontend) ResetPassword(ctx *gin.Context) {
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "resetPassword.tmpl", data)
 }
 
+// Offline renders the fallback screen the service worker serves when a
+// navigation cannot reach the network. The page is precached by the worker
+// and carries the app stylesheet, so it looks like the app it replaces.
+//
+// @Summary      Offline fallback page
+// @Description  Renders the app-styled offline screen the service worker serves from its cache when a navigation fails.
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Router       /offline [get]
+func (frontend *Frontend) Offline(ctx *gin.Context) {
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "offline.tmpl", "offline.tmpl", map[string]any{})
+}
+
 // BrandFeature is a single icon+text row in the brand panel of the
 // split-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
 type BrandFeature struct {
