@@ -31,12 +31,18 @@ type MockProductRepository struct {
 	// SyncIDProduct is what GetProductBySyncID resolves to; nil means the sync
 	// id is unknown, which is the case every create path hits first.
 	SyncIDProduct *dbModel.Product
+	// DuplicateProduct is what FindDuplicateProduct resolves to; nil means the
+	// draft duplicates nothing, which is the case every create path hits.
+	DuplicateProduct *dbModel.Product
 	// SyncIDLookups counts GetProductBySyncID calls, so a test can assert a
 	// path spent the lookup only when a lost race could explain it.
 	SyncIDLookups int
 	// CreateErr overrides Err for CreateProduct only, so a test can make the
 	// sync id lookup miss while the insert fails.
 	CreateErr error
+	// DuplicateErr overrides Err for FindDuplicateProduct only, so a failing
+	// duplicate lookup does not make every other read fail too.
+	DuplicateErr error
 	// MutationDeltas records the clientMutationID of every UpdateProductQuantity
 	// call, so a test can assert the handler forwarded the idempotency token.
 	MutationDeltas []*string
@@ -85,6 +91,15 @@ func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcod
 }
 func (m *MockProductRepository) GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]dbModel.Product, error) {
 	return m.Products, m.Err
+}
+func (m *MockProductRepository) FindDuplicateProduct(userID uint, draft *dbModel.Product) (dbModel.Product, bool, error) {
+	if m.DuplicateErr != nil {
+		return dbModel.Product{}, false, m.DuplicateErr
+	}
+	if m.DuplicateProduct == nil {
+		return dbModel.Product{}, false, nil
+	}
+	return *m.DuplicateProduct, true, nil
 }
 func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err

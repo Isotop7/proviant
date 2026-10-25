@@ -121,7 +121,7 @@ func syncIDVisibleTo(existing *dbModel.Product, userID uint) bool {
 
 // CreateProduct creates a new product of a user
 // @Summary      	Creates a new product
-// @Description  	Creates a new product of a user. The body carries the pack count and the size of one pack ("1 l"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.
+// @Description  	Creates a new product of a user. The body carries the pack count and the size of one pack ("1 l"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read. A create that duplicates an active row of the household — the same barcode in the same storage location with the same effective expiry — is answered with 409 and the matched product in the body, so the client can ask whether to add a pack to it, to create a separate product, or to cancel. Archived rows and other members' private products are never matches. A body that sets allowDuplicate skips the duplicate check and writes the row as it is.
 // @Tags         	product
 // @Accept			json
 // @Produce      	json
@@ -129,7 +129,7 @@ func syncIDVisibleTo(existing *dbModel.Product, userID uint) bool {
 // @Success      	201  {object}  apiModel.ProductResponse
 // @Success      	200  {object}  apiModel.ProductResponse
 // @Failure      	400  {object}  api.APIResponse
-// @Failure      	409  {object}  api.APIResponse
+// @Failure      	409  {object}  api.ProductConflictResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products [post]
 func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
@@ -176,7 +176,9 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 			// index on (household, sync id) forbids a second one: refuse rather
 			// than fall through to an insert that would fail.
 			logger.Warn().Msg("clientSyncId collides with another member's private product")
-			api.RespondError(ctx, http.StatusConflict, errors.ErrClientSyncIDConflict)
+			ctx.JSON(http.StatusConflict, api.ProductConflictResponse{
+				APIResponse: api.APIResponse{Message: errors.ErrClientSyncIDConflict.Error()},
+			})
 			return
 		case !stderrors.Is(syncErr, gorm.ErrRecordNotFound):
 			logger.Error().Msgf("Error looking up product by client sync id: %s", syncErr)
@@ -185,6 +187,9 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
+	// The barcode is trimmed before anything reads it: a padded barcode is
+	// the same barcode, and a blank one is no barcode at all.
+	product.Barcode = dbModel.NormalizeBarcode(product.Barcode)
 	if product.Barcode == "" {
 		logger.Warn().Msgf("Body is missing barcode")
 		api.RespondError(ctx, http.StatusBadRequest, errors.ErrBarcodeMissing)
@@ -199,17 +204,69 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 	var apiProduct dbModel.Product
 	apiProduct, err := offacntrl.GetDataset(product.Barcode)
-	if err == nil {
-		apiProduct.ScannedAt = time.Now()
-		apiProduct.ExpireAt = product.ExpireAt
-		apiProduct.Quantity = product.Quantity
+	// The lookup owns the product's identity, not its stock: where the packs
+	// go, who may see them and when they were opened are the client's
+	// answers, and the lookup must not drop them. A lookup that answered with
+	// nothing leaves the client's product as it is, so the row keeps its
+	// barcode and its name.
+	//
+	// Every field is listed, because the ones that are not on this list are
+	// the server's: the notification stamp, the removal reason and the
+	// archive state must not be settable through a create request.
+	if err == nil && apiProduct.Barcode != "" {
+		packSize := apiProduct.PackSize
 		// The barcode knows the size of a pack, but a client that named one
 		// knows better.
 		if product.PackSize != "" {
-			apiProduct.PackSize = product.PackSize
+			packSize = product.PackSize
 		}
-		apiProduct.ClientSyncID = product.ClientSyncID
-		product = apiProduct
+		product = dbModel.Product{
+			Barcode:              product.Barcode,
+			ProductName:          apiProduct.ProductName,
+			Categories:           apiProduct.Categories,
+			Countries:            apiProduct.Countries,
+			ImageURL:             apiProduct.ImageURL,
+			ExpireAt:             product.ExpireAt,
+			ScannedAt:            time.Now(),
+			IsPrivate:            product.IsPrivate,
+			Quantity:             product.Quantity,
+			PackSize:             packSize,
+			StorageLocationID:    product.StorageLocationID,
+			ClientSyncID:         product.ClientSyncID,
+			PriceOverride:        product.PriceOverride,
+			CO2KgPerKg:           apiProduct.CO2KgPerKg,
+			NotificationLeadDays: product.NotificationLeadDays,
+			MinStockAmount:       product.MinStockAmount,
+			OpenedAt:             product.OpenedAt,
+			DaysAfterOpening:     product.DaysAfterOpening,
+			AllowDuplicate:       product.AllowDuplicate,
+		}
+	}
+
+	// A create that would duplicate an active row is refused instead of
+	// written: the pack may belong to the product that is already there. The
+	// server cannot know the user's intent, so it hands the matched row back
+	// and lets the client ask whether to add a pack to it, to create a
+	// separate product, or to cancel.
+	if !product.AllowDuplicate {
+		duplicate, isDuplicate, duplicateErr := repos.Products.FindDuplicateProduct(userID, &product)
+		if duplicateErr != nil {
+			logger.Error().Msgf("Error looking up a duplicate product: %s", duplicateErr)
+			ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
+			return
+		}
+		if isDuplicate {
+			logger.Info().Msgf("Product create for barcode '%s' duplicates product #%d", product.Barcode, duplicate.ID)
+			matched := apiModel.NewProductResponse(&duplicate)
+			ctx.JSON(http.StatusConflict, api.ProductConflictResponse{
+				APIResponse: api.APIResponse{
+					Message: errors.ErrDuplicateProduct.Error(),
+					Action:  "Add a pack to the existing product, create a separate one, or cancel",
+				},
+				Duplicate: &matched,
+			})
+			return
+		}
 	}
 
 	createResult := repos.Products.CreateProduct(userID, &product)
@@ -233,7 +290,9 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 			existing, lookupErr := repos.Products.GetProductBySyncID(userID, clientSyncID)
 			if lookupErr == nil && !syncIDVisibleTo(&existing, userID) {
 				logger.Warn().Msg("clientSyncId collides with another member's private product")
-				api.RespondError(ctx, http.StatusConflict, errors.ErrClientSyncIDConflict)
+				ctx.JSON(http.StatusConflict, api.ProductConflictResponse{
+					APIResponse: api.APIResponse{Message: errors.ErrClientSyncIDConflict.Error()},
+				})
 				return
 			}
 			if lookupErr == nil {

@@ -46,7 +46,7 @@ var bulkSideEffectBatches atomic.Int64
 // per-item and partial success is allowed: every submitted item reports its
 // own outcome, a failing item never blocks the others.
 // @Summary       Create multiple products
-// @Description   Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack.
+// @Description   Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack. A batch is insert-only: a draft that duplicates a row of the household — the same barcode in the same storage location with the same effective expiry — is written as a row of its own, because a batch may hold several packs of one product and a duplicate cannot be answered with a question.
 // @Tags          product
 // @Accept        json
 // @Produce       json

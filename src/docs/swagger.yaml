@@ -772,6 +772,15 @@ definitions:
       removed:
         type: integer
     type: object
+  api.ProductConflictResponse:
+    properties:
+      action:
+        type: string
+      duplicate:
+        $ref: '#/definitions/api.ProductResponse'
+      message:
+        type: string
+    type: object
   api.ProductQuantityDTO:
     properties:
       clientMutationId:
@@ -1387,6 +1396,11 @@ definitions:
     type: object
   database.Product:
     properties:
+      allowDuplicate:
+        description: |-
+          AllowDuplicate says the caller has seen the duplicate refusal and wants
+          a row of its own anyway. It is a request flag and never stored.
+        type: boolean
       barcode:
         type: string
       categories:
@@ -3358,7 +3372,12 @@ paths:
         exists in the household, the existing product is returned with 200 instead
         of creating a duplicate. A clientSyncId held by another member''s private
         product is answered with 409: the id is taken, but the row is not the caller''s
-        to read.'
+        to read. A create that duplicates an active row of the household — the same
+        barcode in the same storage location with the same effective expiry — is answered
+        with 409 and the matched product in the body, so the client can ask whether
+        to add a pack to it, to create a separate product, or to cancel. Archived
+        rows and other members'' private products are never matches. A body that sets
+        allowDuplicate skips the duplicate check and writes the row as it is.'
       parameters:
       - description: Product
         in: body
@@ -3384,7 +3403,7 @@ paths:
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.ProductConflictResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -3926,10 +3945,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates products from a list of drafts with per-item results. Partial
-        success is allowed; each item reports created or failed with a reason. The
-        price of a draft is the price of the whole line and is stored per pack, so
-        a draft of three packs at 6 EUR stores a price of 2 EUR per pack.
+      description: 'Creates products from a list of drafts with per-item results.
+        Partial success is allowed; each item reports created or failed with a reason.
+        The price of a draft is the price of the whole line and is stored per pack,
+        so a draft of three packs at 6 EUR stores a price of 2 EUR per pack. A batch
+        is insert-only: a draft that duplicates a row of the household — the same
+        barcode in the same storage location with the same effective expiry — is written
+        as a row of its own, because a batch may hold several packs of one product
+        and a duplicate cannot be answered with a question.'
       parameters:
       - description: Product drafts
         in: body
@@ -4579,8 +4602,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates queued drafts. Replayed clientSyncId values return the
-        existing product.
+      description: 'Creates queued drafts. Replayed clientSyncId values return the
+        existing product. The queue is insert-only: a queued draft that duplicates
+        a row of the household — the same barcode in the same storage location with
+        the same effective expiry — is written as a row of its own, because the sync
+        runs unattended and a duplicate cannot be answered with a question.'
       parameters:
       - description: Queued drafts
         in: body

@@ -22,7 +22,7 @@ import (
 
 // SyncOfflineProducts creates queued mobile entries idempotently.
 // @Summary       Sync offline product entries
-// @Description   Creates queued drafts. Replayed clientSyncId values return the existing product.
+// @Description   Creates queued drafts. Replayed clientSyncId values return the existing product. The queue is insert-only: a queued draft that duplicates a row of the household — the same barcode in the same storage location with the same effective expiry — is written as a row of its own, because the sync runs unattended and a duplicate cannot be answered with a question.
 // @Tags          product
 // @Accept        json
 // @Produce       json

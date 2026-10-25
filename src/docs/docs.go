@@ -2499,7 +2499,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Creates a new product of a user. The body carries the pack count and the size of one pack (\"1 l\"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.",
+                "description": "Creates a new product of a user. The body carries the pack count and the size of one pack (\"1 l\"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read. A create that duplicates an active row of the household — the same barcode in the same storage location with the same effective expiry — is answered with 409 and the matched product in the body, so the client can ask whether to add a pack to it, to create a separate product, or to cancel. Archived rows and other members' private products are never matches. A body that sets allowDuplicate skips the duplicate check and writes the row as it is.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2543,7 +2543,7 @@ const docTemplate = `{
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.ProductConflictResponse"
                         }
                     },
                     "500": {
@@ -2592,7 +2592,7 @@ const docTemplate = `{
         },
         "/api/v1/products/bulk": {
             "post": {
-                "description": "Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack.",
+                "description": "Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack. A batch is insert-only: a draft that duplicates a row of the household — the same barcode in the same storage location with the same effective expiry — is written as a row of its own, because a batch may hold several packs of one product and a duplicate cannot be answered with a question.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3529,7 +3529,7 @@ const docTemplate = `{
         },
         "/api/v1/products/sync-offline": {
             "post": {
-                "description": "Creates queued drafts. Replayed clientSyncId values return the existing product.",
+                "description": "Creates queued drafts. Replayed clientSyncId values return the existing product. The queue is insert-only: a queued draft that duplicates a row of the household — the same barcode in the same storage location with the same effective expiry — is written as a row of its own, because the sync runs unattended and a duplicate cannot be answered with a question.",
                 "consumes": [
                     "application/json"
                 ],
@@ -8033,6 +8033,20 @@ const docTemplate = `{
                 }
             }
         },
+        "api.ProductConflictResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "duplicate": {
+                    "$ref": "#/definitions/api.ProductResponse"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "api.ProductQuantityDTO": {
             "type": "object",
             "required": [
@@ -8952,6 +8966,10 @@ const docTemplate = `{
         "database.Product": {
             "type": "object",
             "properties": {
+                "allowDuplicate": {
+                    "description": "AllowDuplicate says the caller has seen the duplicate refusal and wants\na row of its own anyway. It is a request flag and never stored.",
+                    "type": "boolean"
+                },
                 "barcode": {
                     "type": "string"
                 },

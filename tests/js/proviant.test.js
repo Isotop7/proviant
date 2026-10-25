@@ -180,6 +180,53 @@ describe("proviant.js offline queue", () => {
     expect(sentBodies[0]).not.toHaveProperty("amount");
     expect(sentBodies[0]).not.toHaveProperty("unit");
   });
+
+  it("asks for a separate row when the duplicate refusal was seen", async () => {
+    // The retry of a refused create has to get past the refusal, or it lands
+    // on the same refusal again.
+    const { proviant, realm } = freshProviant({ online: true });
+    const sentBodies = [];
+    realm.fetch = async (url, options) => {
+      sentBodies.push(JSON.parse(options.body));
+      return { status: 201, json: async () => ({}) };
+    };
+
+    await proviant.createProduct("4006381333931", "2030-01-01", 1, null, false, "sync-42", true);
+
+    expect(sentBodies[0]).toMatchObject({ allowDuplicate: true, clientSyncId: "sync-42" });
+  });
+
+  it("keeps the allow flag out of an ordinary create", async () => {
+    const { proviant, realm } = freshProviant({ online: true });
+    const sentBodies = [];
+    realm.fetch = async (url, options) => {
+      sentBodies.push(JSON.parse(options.body));
+      return { status: 201, json: async () => ({}) };
+    };
+
+    await proviant.createProduct("4006381333931", "2030-01-01", 1, null, false, null);
+
+    expect(sentBodies[0]).not.toHaveProperty("allowDuplicate");
+  });
+
+  it("hands the matched product of a refusal to the caller", async () => {
+    // The prompt needs the row the server matched: its id to merge into and
+    // its name to show.
+    const { proviant, realm } = freshProviant({ online: true });
+    realm.fetch = async () => ({
+      status: 409,
+      json: async () => ({
+        message: "a matching product already exists",
+        duplicate: { id: 42, productName: "Yogurt", quantity: 2 },
+      }),
+    });
+
+    const response = await proviant.createProduct("4006381333931", "2030-01-01", 1, null, false, "sync-42");
+
+    expect(response.code).toBe(409);
+    expect(response.duplicate).toEqual({ id: 42, productName: "Yogurt", quantity: 2 });
+    expect(response.clientSyncId).toBe("sync-42");
+  });
 });
 
 describe("proviant.js runWithButtonBusyState", () => {

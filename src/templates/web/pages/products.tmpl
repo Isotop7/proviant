@@ -777,8 +777,11 @@
 <!-- Hidden file input backing the JSON backup restore menu entries -->
 <input type="file" id="jsonRestoreFile" accept=".json,application/json" class="d-none" aria-hidden="true" tabindex="-1">
 
+{{ template "duplicateProductModal" . }}
+
 <script src="/assets/js/html5-qrcode.min.js"></script>
 <script src="/assets/js/productsCreate.js"></script>
+<script src="/assets/js/productsDuplicate.js"></script>
 <script src="/assets/js/products.js"></script>
 <script src="/assets/js/productsExpiryOCR.js"></script>
 <script src="/assets/js/productsImport.js"></script>

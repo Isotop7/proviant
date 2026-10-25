@@ -154,6 +154,12 @@ var (
 	// forbids a second row, and the existing row is not the caller's to read.
 	ErrClientSyncIDConflict = errors.New("clientSyncId is already used by another product")
 
+	// ErrDuplicateProduct is thrown if a product create would duplicate an
+	// active row of the household: the same barcode, the same storage location
+	// and the same effective expiry. The caller decides whether the pack
+	// belongs to that row or is a product of its own.
+	ErrDuplicateProduct = errors.New("a matching product already exists")
+
 	// ErrNoValidSearchParameters is thrown if a product search yields no usable
 	// query parameters.
 	ErrNoValidSearchParameters = errors.New("no valid search parameters found")

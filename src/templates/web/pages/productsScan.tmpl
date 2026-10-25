@@ -226,6 +226,8 @@
             </div>
         </dialog>
 
+{{ template "duplicateProductModal" . }}
+
 <script src="/assets/js/html5-qrcode.min.js"></script>
 <script nonce="{{ .CSPNonce }}">
 // On successful camera scan, activate the scan line animation
@@ -254,4 +256,5 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <script src="/assets/js/productsCreate.js"></script>
+<script src="/assets/js/productsDuplicate.js"></script>
 {{ end }}

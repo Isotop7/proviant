@@ -98,6 +98,7 @@ type ProductRepositoryInterface interface {
 	GetUserArchivedProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
 	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
 	GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]database.Product, error)
+	FindDuplicateProduct(userID uint, draft *database.Product) (database.Product, bool, error)
 	GetProductByID(productID, userID uint) (database.Product, error)
 	GetProductIdentity(productID, userID uint) (database.Product, error)
 	GetArchivedProductByID(productID, userID uint) (database.Product, error)
@@ -464,6 +465,50 @@ func (r *ProductRepository) GetUserProductsBulkByBarcodes(userID uint, barcodes 
 	return products, nil
 }
 
+// FindDuplicateProduct returns the household's active product that the given
+// draft would duplicate, and reports whether there is one. A duplicate is a
+// row with the same barcode, the same storage location and the same effective
+// expiry: the same packs of the same thing in the same place.
+//
+// The lookup is scoped to the household and to privacyScope, so another
+// member's private row is neither matched nor disclosed. Archived rows are
+// skipped: they are history, not stock, and restoring one is a different
+// action.
+//
+// The candidate set is the household's rows with that barcode, so the
+// comparison runs in Go through Product.IsDuplicateOf and the rule cannot
+// drift from the one the client is told about. The candidate query trims the
+// stored barcode as well, because a row written with a padded barcode is the
+// same barcode and must not slip past the rule.
+func (r *ProductRepository) FindDuplicateProduct(userID uint, draft *database.Product) (database.Product, bool, error) {
+	if draft == nil || draft.Barcode == "" {
+		return database.Product{}, false, nil
+	}
+
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return database.Product{}, false, err
+	}
+
+	var candidates []database.Product
+	queryErr := r.DB.Preload("StorageLocation").
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Where("TRIM(barcode) = ?", database.NormalizeBarcode(draft.Barcode)).
+		Find(&candidates).Error
+	if queryErr != nil {
+		return database.Product{}, false, queryErr
+	}
+
+	for i := range candidates {
+		if candidates[i].IsDuplicateOf(draft) {
+			return candidates[i], true, nil
+		}
+	}
+	return database.Product{}, false, nil
+}
+
 func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Product, error) {
 	if productID == 0 {
 		return database.Product{}, gorm.ErrNotImplemented
@@ -716,6 +761,10 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 
 	product.HouseholdID = user.HouseholdID
 	product.UserID = userID
+	// The barcode is normalised in one place, like the pack size: every path
+	// stores the same trimmed barcode, so the duplicate rule compares equal
+	// barcodes whatever wrote the row.
+	product.Barcode = database.NormalizeBarcode(product.Barcode)
 	// The pack size is free text that several write paths fill, so it is
 	// normalised in one place: every path stores the same collapsed, capped
 	// label.

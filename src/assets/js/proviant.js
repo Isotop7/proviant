@@ -268,11 +268,15 @@ proviant.updateProductQuantity = async function (productID, delta, clientMutatio
 };
 
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId) {
+proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId, allowDuplicate = false) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null }) });
+  const payload = { barcode, expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null };
+  if (allowDuplicate) payload.allowDuplicate = true;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const body = await res.json();
-  return { code: res.status, message: body.message };
+  // A refusal that names a duplicate carries the matched product, so the
+  // client can ask whether the pack belongs to that row.
+  return { code: res.status, message: body.message, action: body.action, duplicate: body.duplicate || null, clientSyncId: clientSyncId || null };
 };
 
 proviant._sendProductAction = async function (action, productID, quantity, clientMutationId) {

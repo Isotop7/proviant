@@ -701,6 +701,15 @@ function handleBtnAddProduct() {
             case 202:
                 showAlert(true, proviant.t("js.products.productQueuedOffline"));
                 break;
+            case 409:
+                // A conflict that names no duplicate — a clientSyncId another
+                // member's private row holds — has nothing to offer.
+                if (!response.duplicate) {
+                    showAlert(false, response.message);
+                    break;
+                }
+                openDuplicatePrompt(response, { barcode: barcode, expireAt: expireAt, quantity: quantity, storageLocationId: storageLocationId });
+                break;
             case 400:
                 showAlert(false, proviant.t("js.scan.invalidRequestData"));
                 break;
@@ -717,6 +726,70 @@ function handleBtnAddProduct() {
         showAlert(false, error);
     });
 }
+
+// The server refused the create because the household already has this
+// product: the same barcode, the same expiry date, the same storage
+// location. The user decides whether the pack belongs to that row, is a
+// product of its own, or was a mis-scan.
+function openDuplicatePrompt(response, draft) {
+    if (typeof proviant.showDuplicatePrompt !== 'function') {
+        showAlert(false, proviant.t("js.products.duplicateUnavailable"));
+        return;
+    }
+
+    proviant.showDuplicatePrompt({
+        duplicate: response.duplicate,
+        quantity: draft.quantity,
+        onAddPack: function (duplicate, quantity) {
+            proviant.updateProductQuantity(duplicate.id, quantity).then((result) => {
+                if (result.code !== 200 && result.code !== 202) {
+                    showAlert(false, proviant.t("js.products.duplicateAddPackFailed", result.message));
+                    return;
+                }
+                updateQuantityInPlace(duplicate, quantity);
+                showAlert(true, proviant.tn("js.products.duplicateAddedPack", quantity, duplicate.productName));
+            }).catch((error) => {
+                showAlert(false, error);
+            });
+        },
+        onAddSeparately: function () {
+            // The same id as the refused attempt: nothing was written under it,
+            // so the row this creates is idempotent as well.
+            proviant.createProduct(draft.barcode, draft.expireAt, draft.quantity, draft.storageLocationId, false, response.clientSyncId, true).then((result) => {
+                if (result.code === 200 || result.code === 201) {
+                    showAlert(true, proviant.t("js.products.productCreatedBarcode", draft.barcode));
+                    return;
+                }
+                // A queued create is a create: the row is written when the
+                // outbox drains, so it is not a failure.
+                if (result.code === 202) {
+                    showAlert(true, proviant.t("js.products.productQueuedOffline"));
+                    return;
+                }
+                showAlert(false, proviant.t("js.products.duplicateAddSeparatelyFailed", result.message));
+            }).catch((error) => {
+                showAlert(false, error);
+            });
+        },
+        onCancel: function () {
+            // Nothing was written, and nothing is written now.
+        },
+    });
+}
+
+// The merged row keeps its place in the list: its count grows by the packs
+// that were added. The count stops at the bound a product may hold, the same
+// bound the server writes.
+function updateQuantityInPlace(duplicate, quantity) {
+    const qtyEl = document.getElementById('qty-' + duplicate.id);
+    if (!qtyEl) return;
+    const maxQuantity = (window.proviantLimits && window.proviantLimits.maxQuantity) || 999;
+    qtyEl.dataset.quantity = String(Math.min(duplicate.quantity + quantity, maxQuantity));
+    if (typeof proviant.renderQuantityLabel === 'function') {
+        proviant.renderQuantityLabel(qtyEl);
+    }
+}
+
 function handleBtnShowProduct() {
     const dropdown = el.instanceDropdown;
     const productId = dropdown[dropdown.selectedIndex].value;

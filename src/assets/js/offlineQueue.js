@@ -760,20 +760,24 @@
 
   if (typeof proviant.createProduct === 'function') {
     var originalCreateProduct = proviant.createProduct;
-    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate) {
+    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId, allowDuplicate) {
       // The sync id goes out on the online path too. Without it the server-side
       // idempotency check cannot fire, so a response lost after the server
       // committed — which is exactly what the catch below detects — would enqueue
       // a second create for a product that already exists.
-      var clientSyncId = generateId();
-      var draft = { barcode: barcode, expireAt: expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: clientSyncId };
+      //
+      // A caller that brings its own id keeps it: the retry of a create the
+      // server refused as a duplicate reuses the id, so that attempt is
+      // idempotent as well.
+      var syncId = clientSyncId || generateId();
+      var draft = { barcode: barcode, expireAt: expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: syncId };
       if (!navigator.onLine) {
-        return enqueueOrReport({ id: clientSyncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: clientSyncId });
+        return enqueueOrReport({ id: syncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: syncId });
       }
       try {
-        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId);
+        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, syncId, allowDuplicate);
       } catch (_) {
-        return enqueueOrReport({ id: clientSyncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: clientSyncId });
+        return enqueueOrReport({ id: syncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: syncId });
       }
     };
   }

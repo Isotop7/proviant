@@ -56,6 +56,10 @@ type Product struct {
 	MinStockAmount       int              `gorm:"default:0"                   json:"minStockAmount"`
 	OpenedAt             *time.Time       `gorm:"default:null"                 json:"openedAt,omitempty"`
 	DaysAfterOpening     *int             `gorm:"default:null"                 json:"daysAfterOpening,omitempty"`
+
+	// AllowDuplicate says the caller has seen the duplicate refusal and wants
+	// a row of its own anyway. It is a request flag and never stored.
+	AllowDuplicate bool `gorm:"-" json:"allowDuplicate,omitempty"`
 }
 
 // ProductDTOExpire is a simplified DTO for product expiration

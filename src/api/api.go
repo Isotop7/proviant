@@ -20,9 +20,10 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-
 	"github.com/Isotop7/proviant/errors"
+	apiModel "github.com/Isotop7/proviant/models/api"
+
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -58,6 +59,17 @@ type BulkActionResponse struct {
 type ProductActionResponse struct {
 	APIResponse
 	Removed int `json:"removed"`
+}
+
+// ProductConflictResponse is the body of a 409 from a product create.
+//
+// The duplicate is set when the refusal is a duplicate row: the client offers
+// the user to add the pack to that row, to create a separate product, or to
+// cancel. It is absent when the refusal is a clientSyncId another member's
+// private row already holds — there the caller learns nothing about the row.
+type ProductConflictResponse struct {
+	APIResponse
+	Duplicate *apiModel.ProductResponse `json:"duplicate,omitempty"`
 }
 
 // Error returns an API response object from a error object
