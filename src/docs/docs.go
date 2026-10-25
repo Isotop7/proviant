@@ -3843,14 +3843,17 @@ const docTemplate = `{
         },
         "/api/v1/products/{id}/consume": {
             "post": {
-                "description": "Soft-deletes (archives) a product without firing a product.wasted webhook event",
+                "description": "Consumes the requested number of packs. Omitting the body or quantity consumes the whole stock. A partial consume leaves the remaining packs active; a full consume soft-deletes the row with removal reason consumed. The response carries the number of packs that actually left the stock.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "product"
                 ],
-                "summary": "Mark product as consumed",
+                "summary": "Consume product packs",
                 "parameters": [
                     {
                         "type": "integer",
@@ -3858,13 +3861,21 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Pack quantity and optional offline mutation ID",
+                        "name": "action",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductActionDTO"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.ProductActionResponse"
                         }
                     },
                     "400": {
@@ -3875,6 +3886,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -4216,14 +4233,17 @@ const docTemplate = `{
         },
         "/api/v1/products/{id}/waste": {
             "post": {
-                "description": "Hard-deletes a product and fires the product.wasted webhook event",
+                "description": "Wastes the requested number of packs. Omitting the body or quantity wastes the whole stock. A partial waste leaves the remaining packs active; a full waste soft-deletes the row with removal reason wasted and fires the product.wasted webhook. The response carries the number of packs that actually left the stock.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "product"
                 ],
-                "summary": "Mark product as wasted",
+                "summary": "Waste product packs",
                 "parameters": [
                     {
                         "type": "integer",
@@ -4231,13 +4251,21 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Pack quantity and optional offline mutation ID",
+                        "name": "action",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductActionDTO"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.ProductActionResponse"
                         }
                     },
                     "400": {
@@ -4248,6 +4276,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -7971,6 +8005,31 @@ const docTemplate = `{
                 },
                 "storageHint": {
                     "type": "string"
+                }
+            }
+        },
+        "api.ProductActionDTO": {
+            "type": "object",
+            "properties": {
+                "clientMutationId": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.ProductActionResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "removed": {
+                    "type": "integer"
                 }
             }
         },

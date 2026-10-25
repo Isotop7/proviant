@@ -48,11 +48,11 @@ func (r *WasteAnalyticsRepository) GetConsumedVsWasted(householdID uint, since t
 
 	for _, a := range aggs {
 		switch a.EventType {
-		case "consumed":
+		case dbModel.SavingsEventTypeConsumed:
 			row.ConsumedCount = a.Count
 			row.ConsumedEUR = a.EUR
 			row.ConsumedCO2Kg = a.CO2
-		case "wasted":
+		case dbModel.SavingsEventTypeWasted:
 			row.WastedCount = a.Count
 			row.WastedEUR = a.EUR
 			row.WastedCO2Kg = a.CO2
@@ -96,9 +96,9 @@ func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since t
 			byMonth[key] = b
 		}
 		switch rows[i].EventType {
-		case "consumed":
+		case dbModel.SavingsEventTypeConsumed:
 			b.ConsumedCount++
-		case "wasted":
+		case dbModel.SavingsEventTypeWasted:
 			b.WastedCount++
 			b.WastedEUR += rows[i].PriceEUR
 			b.WastedCO2Kg += rows[i].CO2Kg
@@ -153,7 +153,7 @@ func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, sin
 		Table("savings_records AS s").
 		Select("s.product_id AS product_id, s.price_eur AS price_eur, s.co2_kg AS co2_kg, p.categories AS categories").
 		Joins("LEFT JOIN products p ON p.id = s.product_id").
-		Where("s.household_id = ? AND s.event_type = 'wasted' AND s.created_at >= ?", householdID, since).
+		Where("s.household_id = ? AND s.event_type = ? AND s.created_at >= ?", householdID, dbModel.SavingsEventTypeWasted, since).
 		Where("s.legacy = ?", false).
 		Scan(&raws).Error; err != nil {
 		return nil, err
@@ -202,7 +202,7 @@ func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int) 
 	if err := r.DB.
 		Table("savings_records").
 		Select("created_at AS created_at").
-		Where("household_id = ? AND event_type = 'wasted' AND created_at >= ?", householdID, since).
+		Where("household_id = ? AND event_type = ? AND created_at >= ?", householdID, dbModel.SavingsEventTypeWasted, since).
 		Where("legacy = ?", false).
 		Scan(&createdAts).Error; err != nil {
 		return nil, err
@@ -328,7 +328,7 @@ func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since
 		Table("savings_records AS s").
 		Select("s.product_id AS product_id, s.product_name AS product_name, s.price_eur AS price_eur, s.co2_kg AS co2_kg, p.categories AS categories").
 		Joins("LEFT JOIN products p ON p.id = s.product_id").
-		Where("s.household_id = ? AND s.event_type = 'wasted' AND s.created_at >= ?", householdID, since).
+		Where("s.household_id = ? AND s.event_type = ? AND s.created_at >= ?", householdID, dbModel.SavingsEventTypeWasted, since).
 		Where("s.legacy = ?", false).
 		Scan(&raws).Error; err != nil {
 		return nil, err

@@ -37,6 +37,13 @@ type ProductQuantityDTO struct {
 	ClientMutationID *string `json:"clientMutationId,omitempty"`
 }
 
+// ProductActionDTO is the optional request body for consuming or wasting packs.
+// A nil Quantity records the whole remaining stock.
+type ProductActionDTO struct {
+	Quantity         *int    `json:"quantity,omitempty"`
+	ClientMutationID *string `json:"clientMutationId,omitempty"`
+}
+
 // HouseholdListItem represents a household in the discovery list
 type HouseholdListItem struct {
 	ID          uint   `json:"id"`

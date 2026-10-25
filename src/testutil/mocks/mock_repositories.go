@@ -52,7 +52,14 @@ type MockProductRepository struct {
 	// ConsumePartialErr overrides the error returned by ConsumeProductPartial,
 	// independent of Err (which GetProductByID also returns); nil falls back
 	// to Err.
-	ConsumePartialErr error
+	ConsumePartialErr         error
+	WastePartialErr           error
+	WastePartialFullyConsumed *bool
+	PartialApplied            *bool
+	ConsumePartialMutationIDs []*string
+	WastePartialMutationIDs   []*string
+	ConsumePartialQuantities  []int
+	WastePartialQuantities    []int
 }
 
 func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
@@ -281,20 +288,45 @@ func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, bar
 	return nil, m.Err
 }
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
-func (m *MockProductRepository) ConsumeProductPartial(product *dbModel.Product, amount int) (int, bool, error) {
+func (m *MockProductRepository) ConsumeProductPartial(product *dbModel.Product, amount int, mutationID *string) (int, bool, bool, error) {
+	m.ConsumePartialMutationIDs = append(m.ConsumePartialMutationIDs, mutationID)
+	m.ConsumePartialQuantities = append(m.ConsumePartialQuantities, amount)
 	if m.ConsumePartialErr != nil {
-		return 0, false, m.ConsumePartialErr
+		return 0, false, false, m.ConsumePartialErr
 	}
 	if m.Err != nil {
-		return 0, false, m.Err
+		return 0, false, false, m.Err
 	}
 	fullyConsumed := true
 	if m.ConsumePartialFullyConsumed != nil {
 		fullyConsumed = *m.ConsumePartialFullyConsumed
 	}
-	return amount, fullyConsumed, nil
+	applied := true
+	if m.PartialApplied != nil {
+		applied = *m.PartialApplied
+	}
+	return amount, fullyConsumed, applied, nil
 }
 func (m *MockProductRepository) WasteProduct(productID, userID uint) error { return m.Err }
+func (m *MockProductRepository) WasteProductPartial(product *dbModel.Product, amount int, mutationID *string) (int, bool, bool, error) {
+	m.WastePartialMutationIDs = append(m.WastePartialMutationIDs, mutationID)
+	m.WastePartialQuantities = append(m.WastePartialQuantities, amount)
+	if m.WastePartialErr != nil {
+		return 0, false, false, m.WastePartialErr
+	}
+	if m.Err != nil {
+		return 0, false, false, m.Err
+	}
+	fullyWasted := true
+	if m.WastePartialFullyConsumed != nil {
+		fullyWasted = *m.WastePartialFullyConsumed
+	}
+	applied := true
+	if m.PartialApplied != nil {
+		applied = *m.PartialApplied
+	}
+	return amount, fullyWasted, applied, nil
+}
 func (m *MockProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (dbModel.Product, *time.Time, bool, error) {
 	previous := m.Product.OpenedAt
 	if previous != nil && !force {

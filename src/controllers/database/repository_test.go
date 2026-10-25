@@ -542,7 +542,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		db, repo, user := setup(t)
 		product := createProduct(db, user.HouseholdID, "Partial", 5)
 
-		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&product, 2)
+		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&product, 2, nil)
 		if err != nil {
 			t.Fatalf("ConsumeProductPartial() error = %v", err)
 		}
@@ -569,7 +569,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		db, repo, user := setup(t)
 		product := createProduct(db, user.HouseholdID, "Equal", 3)
 
-		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&product, 3)
+		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&product, 3, nil)
 		if err != nil {
 			t.Fatalf("ConsumeProductPartial() error = %v", err)
 		}
@@ -596,7 +596,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		db, repo, user := setup(t)
 		product := createProduct(db, user.HouseholdID, "Overshoot", 2)
 
-		consumed, _, err := repo.ConsumeProductPartial(&product, 5)
+		consumed, _, _, err := repo.ConsumeProductPartial(&product, 5, nil)
 		if err != nil {
 			t.Fatalf("ConsumeProductPartial() error = %v", err)
 		}
@@ -617,7 +617,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		db, repo, user := setup(t)
 		product := createProduct(db, user.HouseholdID, "Zero", 4)
 
-		consumed, _, err := repo.ConsumeProductPartial(&product, 0)
+		consumed, _, _, err := repo.ConsumeProductPartial(&product, 0, nil)
 		if err != nil {
 			t.Fatalf("ConsumeProductPartial() error = %v", err)
 		}
@@ -648,7 +648,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 		if err := db.First(&current, product.ID).Error; err != nil {
 			t.Fatalf("reload product: %v", err)
 		}
-		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&current, 3)
+		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&current, 3, nil)
 		if err != nil {
 			t.Fatalf("ConsumeProductPartial() error = %v", err)
 		}
@@ -662,7 +662,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 
 		missing := dbModel.Product{Quantity: 1}
 		missing.ID = 9999
-		consumed, _, err := repo.ConsumeProductPartial(&missing, 1)
+		consumed, _, _, err := repo.ConsumeProductPartial(&missing, 1, nil)
 		if err != gorm.ErrRecordNotFound {
 			t.Errorf("ConsumeProductPartial() error = %v, want %v", err, gorm.ErrRecordNotFound)
 		}
@@ -679,7 +679,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 
 		stale := product
 
-		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&stale, 2)
+		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&stale, 2, nil)
 		if err != nil {
 			t.Fatalf("ConsumeProductPartial() error = %v", err)
 		}
@@ -707,7 +707,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 
 		stale := product
 
-		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&stale, 5)
+		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&stale, 5, nil)
 		if err != nil {
 			t.Fatalf("ConsumeProductPartial() error = %v", err)
 		}
@@ -736,7 +736,7 @@ func TestProductRepository_ConsumeProductPartial(t *testing.T) {
 
 		stale := product
 
-		consumed, fullyConsumed, err := repo.ConsumeProductPartial(&stale, 3)
+		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&stale, 3, nil)
 		if err != nil {
 			t.Fatalf("ConsumeProductPartial() error = %v", err)
 		}

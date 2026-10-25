@@ -21,6 +21,7 @@
   "products.confidenceLabel": "Confidence: 0%",
   "products.consume": "Consume",
   "products.consumed": "Consumed",
+  "products.consuming": "Consuming...",
   "products.cook": "Cook",
   "products.cookModalSubtitle": "Set how much of each product to use",
   "products.cookModalTitle": "Cook products",
@@ -69,6 +70,9 @@
   "products.openedAtHelp": "When the product was opened. Used to compute a secondary expiry.",
   "products.packSize": "Pack size",
   "products.packSizeHint": "One pack holds %s.",
+  "products.partialAction": "Consume / waste",
+  "products.partialActionFor": "Consume or waste packs of %s",
+  "products.partialActionTitle": "Consume or waste packs",
   "products.pagination.label": "Product list pages",
   "products.pagination.pageStatus": "Page %d of %d",
   "products.photo": "Photo",
@@ -114,5 +118,6 @@
   "products.view": "View",
   "products.waste": "Waste",
   "products.wasted": "Wasted",
-  "products.wastedConfirmBody": "This product will be permanently marked as wasted. Consider marking as consumed instead if you want to keep the record."
+  "products.wastedConfirmBody": "This product will be permanently marked as wasted. Consider marking as consumed instead if you want to keep the record.",
+  "products.wasting": "Wasting..."
 }

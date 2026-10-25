@@ -56,7 +56,7 @@ func (r *SavingsRepository) MatchCategory(categories string) (*dbModel.ProductCa
 }
 
 // RecordSavingsEvent writes a SavingsRecord for a consume or waste action.
-// eventType must be "consumed" or "wasted".
+// eventType must be dbModel.SavingsEventTypeConsumed or dbModel.SavingsEventTypeWasted.
 // CO2 priority: per-product Agribalyse rate (product.CO2KgPerKg) > seeded category fallback.
 // Price priority: product.PriceOverride > seeded category average. The override is
 // the price of one pack, so it is multiplied by the number of packs.
@@ -123,20 +123,20 @@ func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsS
 	var resp apiModel.SavingsStatsResponse
 	for idx := range monthRecords {
 		switch monthRecords[idx].EventType {
-		case "consumed":
+		case dbModel.SavingsEventTypeConsumed:
 			resp.SavedEURThisMonth += monthRecords[idx].PriceEUR
 			resp.SavedCO2KgThisMonth += monthRecords[idx].CO2Kg
-		case "wasted":
+		case dbModel.SavingsEventTypeWasted:
 			resp.WastedEURThisMonth += monthRecords[idx].PriceEUR
 			resp.WastedCO2KgThisMonth += monthRecords[idx].CO2Kg
 		}
 	}
 	for idx := range allRecords {
 		switch allRecords[idx].EventType {
-		case "consumed":
+		case dbModel.SavingsEventTypeConsumed:
 			resp.SavedEURLifetime += allRecords[idx].PriceEUR
 			resp.SavedCO2KgLifetime += allRecords[idx].CO2Kg
-		case "wasted":
+		case dbModel.SavingsEventTypeWasted:
 			resp.WastedEURLifetime += allRecords[idx].PriceEUR
 			resp.WastedCO2KgLifetime += allRecords[idx].CO2Kg
 		}

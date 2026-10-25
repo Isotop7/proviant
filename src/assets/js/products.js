@@ -148,6 +148,14 @@ document.addEventListener("click", function (event) {
         return;
     }
 
+    var partialActionBtn = target.closest('.btn-partial-action');
+    if (partialActionBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        void openPartialActionModal(partialActionBtn.dataset.productId, partialActionBtn);
+        return;
+    }
+
     // Card click
     const card = target.closest('.card');
     if (card) {
@@ -286,6 +294,17 @@ document.addEventListener("click", function (event) {
         return;
     }
 
+    if (target.closest('#btnPartialConsumeConfirm')) {
+        event.preventDefault();
+        void submitPartialAction('consume');
+        return;
+    }
+    if (target.closest('#btnPartialWasteConfirm')) {
+        event.preventDefault();
+        void submitPartialAction('waste');
+        return;
+    }
+
     // List-view qty stepper buttons
     var qtyBtn = target.closest('[data-qty-action]');
     if (qtyBtn) {
@@ -302,6 +321,10 @@ document.addEventListener("click", function (event) {
         var targetEl = document.getElementById(focusDiv.dataset.focusTarget);
         if (targetEl) targetEl.focus();
     }
+});
+
+document.addEventListener('focusout', function (event) {
+    if (event.target.id === 'partialActionQuantity') validatePartialActionQuantity();
 });
 
 /* Event delegation for checkbox changes */
@@ -781,6 +804,148 @@ async function submitCook() {
         btn.disabled = false;
         btn.classList.remove('loading');
         proviant.showFeedback('error', proviant.t("js.products.cookFailed"), err.message);
+    }
+}
+
+// ── Partial consume / waste ─────────────────────────────────────
+var partialActionModalInstance = null;
+var partialActionState = { productID: 0, maxQuantity: 0, busy: false, openToken: 0 };
+
+function getPartialActionModal() {
+    if (!partialActionModalInstance) {
+        var element = document.getElementById('partialActionModal');
+        if (!element || typeof bootstrap === 'undefined') return null;
+        partialActionModalInstance = new bootstrap.Dialog(element);
+    }
+    return partialActionModalInstance;
+}
+
+function validatePartialActionQuantity() {
+    var input = document.getElementById('partialActionQuantity');
+    var error = document.getElementById('partialActionQuantityError');
+    if (!input) return null;
+    var quantity = Number(input.value);
+    var valid = Number.isInteger(quantity) && quantity >= 1 && quantity <= partialActionState.maxQuantity;
+    input.classList.toggle('is-invalid', !valid);
+    input.setAttribute('aria-invalid', valid ? 'false' : 'true');
+    if (error) {
+        error.textContent = valid ? '' : proviant.t('js.products.partialActionQuantityInvalid', partialActionState.maxQuantity);
+    }
+    return valid ? quantity : null;
+}
+
+function setPartialActionBusy(busy, action) {
+    partialActionState.busy = busy;
+    [
+        { id: 'btnPartialConsumeConfirm', action: 'consume' },
+        { id: 'btnPartialWasteConfirm', action: 'waste' },
+    ].forEach(function (entry) {
+        var button = document.getElementById(entry.id);
+        if (!button) return;
+        button.disabled = busy;
+        button.classList.toggle('loading', busy && entry.action === action);
+        if (busy) button.setAttribute('aria-busy', 'true');
+        else button.removeAttribute('aria-busy');
+    });
+    var input = document.getElementById('partialActionQuantity');
+    if (input) input.disabled = busy;
+    document.querySelectorAll('#partialActionModal [data-bs-dismiss="dialog"]').forEach(function (button) {
+        button.disabled = busy;
+    });
+}
+
+async function openPartialActionModal(productID, triggerButton) {
+    var id = Number.parseInt(productID, 10);
+    if (!Number.isInteger(id) || id < 1 || partialActionState.busy) return;
+    // Two products clicked in quick succession would race: the slower fetch
+    // would land last and put its product into the dialog the faster one
+    // opened. The token makes the newer request win and the older one
+    // harmless.
+    var token = ++partialActionState.openToken;
+    var triggerHTML = triggerButton ? triggerButton.innerHTML : '';
+    if (triggerButton) {
+        triggerButton.disabled = true;
+        triggerButton.classList.add('loading');
+        triggerButton.setAttribute('aria-busy', 'true');
+        triggerButton.innerHTML = '<i class="bi bi-hourglass-split" aria-hidden="true"></i>';
+    }
+    try {
+        var freshMap = await fetchFreshProducts([id]);
+        if (token !== partialActionState.openToken) return;
+        if (!freshMap) {
+            proviant.showFeedback('error', proviant.t('js.products.partialActionUnavailable'), proviant.t('js.products.partialActionStockLoadFailed'));
+            return;
+        }
+        var product = freshMap.get(id);
+        var quantity = product ? Number.parseInt(product.quantity, 10) : 0;
+        if (!product || !Number.isInteger(quantity) || quantity < 1) {
+            proviant.showFeedback('warning', proviant.t('js.products.partialActionUnavailable'), proviant.t('js.products.partialActionNoStock'));
+            return;
+        }
+
+        partialActionState.productID = id;
+        partialActionState.maxQuantity = quantity;
+        var name = document.getElementById('partialActionProductName');
+        if (name) name.textContent = product.productName || ('#' + id);
+        var stock = document.getElementById('partialActionStock');
+        if (stock) stock.textContent = proviant.tn('js.products.partialActionStock', quantity);
+        var input = document.getElementById('partialActionQuantity');
+        if (input) {
+            input.max = String(quantity);
+            input.value = '1';
+            input.classList.remove('is-invalid');
+            input.setAttribute('aria-invalid', 'false');
+        }
+        var error = document.getElementById('partialActionQuantityError');
+        if (error) error.textContent = '';
+
+        var modal = getPartialActionModal();
+        if (!modal) {
+            proviant.showFeedback('error', proviant.t('js.products.partialActionUnavailable'), proviant.t('js.products.uiComponentsFailed'));
+            return;
+        }
+        modal.show();
+    } finally {
+        if (triggerButton) {
+            triggerButton.disabled = false;
+            triggerButton.classList.remove('loading');
+            triggerButton.removeAttribute('aria-busy');
+            triggerButton.innerHTML = triggerHTML;
+        }
+    }
+}
+
+async function submitPartialAction(action) {
+    if (partialActionState.busy) return;
+    var quantity = validatePartialActionQuantity();
+    if (quantity === null) return;
+    var productID = partialActionState.productID;
+    setPartialActionBusy(true, action);
+    try {
+        var send = action === 'consume' ? proviant.consumeProduct : proviant.wasteProduct;
+        var response = await send(productID, quantity);
+        var modal = getPartialActionModal();
+        if (response.queued && response.code === 202) {
+            if (modal) modal.hide();
+            proviant.showFeedback('info', proviant.t('js.products.productQueuedOffline'), proviant.t('js.products.partialActionQueued'));
+            return;
+        }
+        if (response.code !== 200) {
+            throw new Error(response.message || proviant.t('js.products.requestFailed'));
+        }
+        if (modal) modal.hide();
+        // The server clamps the request to the stock that is actually left, so
+        // the reported count is the one that left the pantry.
+        var removed = typeof response.removed === 'number' ? response.removed : quantity;
+        var successTitle = action === 'consume' ? proviant.t('js.products.consumedButton') : proviant.t('js.products.wastedButton');
+        var messageKey = action === 'consume' ? 'js.products.partialConsumeSuccess' : 'js.products.partialWasteSuccess';
+        proviant.showFeedback('success', successTitle, proviant.tn(messageKey, removed));
+        setTimeout(clearBulkSelectionAndReload, 800);
+    } catch (error) {
+        var errorTitle = action === 'consume' ? proviant.t('js.products.consumeFailed') : proviant.t('js.products.wastedFailed');
+        proviant.showFeedback('error', errorTitle, error.message);
+    } finally {
+        setPartialActionBusy(false, null);
     }
 }
 

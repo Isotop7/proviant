@@ -18,7 +18,7 @@
 
   <script src="/assets/js/theme.js"></script>
   <link rel="stylesheet" href="/assets/css/main.css">
-  <script nonce="{{ .CSPNonce }}">window.proviantI18n = {{ .I18nJSON }};window.proviantLang = "{{ .Lang }}";window.proviantOffline = { maxBatchBytes: {{ .OfflineSyncMaxBodyBytes }} };window.proviantLimits = { maxQuantity: {{ .MaxProductQuantity }}, maxPackSizeLength: {{ .MaxPackSizeLength }} };</script>
+  <script nonce="{{ .CSPNonce }}">window.proviantI18n = {{ .I18nJSON }};window.proviantLang = "{{ .Lang }}";window.proviantOffline = { maxBatchBytes: {{ .OfflineSyncMaxBodyBytes }} };window.proviantLimits = { maxQuantity: {{ .MaxProductQuantity }}, maxPackSizeLength: {{ .MaxPackSizeLength }}, mutationClaimTtlSeconds: {{ .MutationClaimTTLSeconds }} };</script>
   <script src="/assets/js/proviant.js"></script>
   <script src="/assets/js/offlineQueue.js"></script>
 </head>

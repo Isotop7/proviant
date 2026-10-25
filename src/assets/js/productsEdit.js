@@ -173,9 +173,11 @@ function consumeProduct() {
     const productID = Number.parseInt(labelProductID?.innerText?.trim());
     if (!Number.isInteger(productID) || productID <= 0) return;
 
-    proviant.deleteProduct(productID, true).then((response) => {
+    proviant.consumeProduct(productID).then((response) => {
         if (response.code === 200) {
             window.location.href = '/web/products';
+        } else if (response.code === 202 && response.queued) {
+            proviant.showFeedback('info', proviant.t('js.products.productQueuedOffline'), proviant.t('js.products.partialActionQueued'));
         } else {
             proviant.showFeedback('error', proviant.t("js.products.consumeFailed"), proviant.t("js.products.couldNotMarkConsumed", response.message));
         }

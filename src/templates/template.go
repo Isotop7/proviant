@@ -403,6 +403,10 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 	// receipt review clamps to the same values the server enforces.
 	data["MaxProductQuantity"] = util.MaxProductQuantity
 	data["MaxPackSizeLength"] = util.MaxPackSizeLength
+	// The window in which the server still deduplicates a replayed stock
+	// mutation. The outbox learns it so it can refuse to replay a queued
+	// change the server would no longer recognize.
+	data["MutationClaimTTLSeconds"] = int(util.ProductMutationClaimTTL.Seconds())
 	// The page title and the nav key are two different things. The edit
 	// page keeps "Products" as its nav key so the sidebar stays lit, while
 	// its title is "Edit Product" — PageTitle carries the title, Title the

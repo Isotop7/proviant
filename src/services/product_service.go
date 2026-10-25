@@ -109,50 +109,72 @@ func (s *ProductService) createActivityLog(entry *dbModel.ActivityLog) {
 }
 
 func (s *ProductService) ConsumeProduct(productID, userID uint) error {
+	_, err := s.ConsumeProductPartial(productID, userID, 0, nil)
+	return err
+}
+
+// ConsumeProductPartial records up to quantity packs as consumed. A zero
+// quantity consumes the whole stock; mutationID deduplicates offline replays.
+// The returned count is what actually left the stock, which is fewer than the
+// requested count when the stock shrank in between.
+func (s *ProductService) ConsumeProductPartial(productID, userID uint, quantity int, mutationID *string) (int, error) {
 	product, err := s.repos.Products.GetProductByID(productID, userID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	if err := s.repos.Products.ConsumeProduct(productID, userID); err != nil {
-		return err
+	consumed, _, applied, err := s.repos.Products.ConsumeProductPartial(&product, quantity, mutationID)
+	if err != nil || !applied {
+		return 0, err
 	}
 
-	go s.recordSavingsEvent(userID, &product, "consumed")
+	product.Quantity = consumed
+	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed)
 
 	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, 1)
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, consumed)
 	}
-	return nil
+	return consumed, nil
 }
 
 func (s *ProductService) WasteProduct(productID, userID uint) error {
+	_, err := s.WasteProductPartial(productID, userID, 0, nil)
+	return err
+}
+
+// WasteProductPartial records up to quantity packs as wasted. A zero quantity
+// wastes the whole stock. The product.wasted webhook fires only for a full waste.
+func (s *ProductService) WasteProductPartial(productID, userID uint, quantity int, mutationID *string) (int, error) {
 	product, err := s.repos.Products.GetProductByID(productID, userID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	if err := s.repos.Products.WasteProduct(productID, userID); err != nil {
-		return err
+	wasted, fullyWasted, applied, err := s.repos.Products.WasteProductPartial(&product, quantity, mutationID)
+	if err != nil || !applied {
+		return 0, err
 	}
 
 	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
 		if err := s.repos.Streaks.RecordWasteEvent(householdID); err != nil {
 			s.logger.Error().Msgf("WasteProduct: failed to record waste event for streak: %s", err)
 		}
-		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionWaste, productID, product.ProductName, 1)
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionWaste, productID, product.ProductName, wasted)
 	}
 
-	go func() {
-		if ws := controllers.GetWebhookService(); ws != nil {
-			ws.FireEventContext(context.Background(), "product.wasted", map[string]any{
-				"productId": productID,
-			})
-		}
-	}()
+	if fullyWasted {
+		go func() {
+			if ws := controllers.GetWebhookService(); ws != nil {
+				ws.FireEventContext(context.Background(), "product.wasted", map[string]any{
+					"productId": productID,
+				})
+			}
+		}()
+	}
 
-	go s.recordSavingsEvent(userID, &product, "wasted")
-	return nil
+	product.Quantity = wasted
+	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted)
+	return wasted, nil
 }
 
 // bulkClientMiss reports whether a bulk-operation failure is the caller's
@@ -197,7 +219,7 @@ func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]
 			continue
 		}
 
-		go s.recordSavingsEvent(userID, &product, "consumed")
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed)
 		if householdID > 0 {
 			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, 1)
 		}
@@ -241,7 +263,7 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]ui
 			}
 		}(productID)
 
-		go s.recordSavingsEvent(userID, &product, "wasted")
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted)
 	}
 	return failed, serverErr
 }
@@ -314,7 +336,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 			continue
 		}
 
-		consumedQuantity, fullyConsumed, cookErr := s.repos.Products.ConsumeProductPartial(&product, item.Quantity)
+		consumedQuantity, fullyConsumed, _, cookErr := s.repos.Products.ConsumeProductPartial(&product, item.Quantity, nil)
 		// The repo retries guarded writes once internally; a second
 		// optimistic-lock failure means the row is still hot. Re-attempting
 		// against the same product pointer is safe — the repo re-reads
@@ -322,7 +344,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 		// the whole cook only after every attempt lost the race.
 		for retry := 1; cookErr == errors.ErrProductConcurrentModification && retry < cookMaxConsumeAttempts; retry++ {
 			s.logger.Debug().Msgf("CookProducts: product %d changed concurrently, retrying (%d/%d)", item.ProductID, retry, cookMaxConsumeAttempts-1)
-			consumedQuantity, fullyConsumed, cookErr = s.repos.Products.ConsumeProductPartial(&product, item.Quantity)
+			consumedQuantity, fullyConsumed, _, cookErr = s.repos.Products.ConsumeProductPartial(&product, item.Quantity, nil)
 		}
 		if cookErr != nil {
 			if cookErr == gorm.ErrRecordNotFound || cookErr == errors.ErrProductConcurrentModification {
@@ -348,7 +370,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 		// SavingsRecord amount, price and CO2 figures. Every cooked pack is
 		// accounted for, so the ledger counts each pack exactly once.
 		product.Quantity = consumedQuantity
-		go s.recordSavingsEvent(userID, &product, "consumed")
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed)
 
 		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionCook, item.ProductID, product.ProductName, consumedQuantity)
 	}

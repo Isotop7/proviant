@@ -21,6 +21,7 @@
   "products.confidenceLabel": "Konfidenz: 0%",
   "products.consume": "Verbrauchen",
   "products.consumed": "Verbraucht",
+  "products.consuming": "Wird verbraucht...",
   "products.cook": "Kochen",
   "products.cookModalSubtitle": "Legen Sie fest, wie viel von jedem Produkt verwendet werden soll",
   "products.cookModalTitle": "Produkte kochen",
@@ -69,6 +70,9 @@
   "products.openedAtHelp": "Wann das Produkt geöffnet wurde. Wird zur Berechnung eines weiteren Ablaufdatums verwendet.",
   "products.packSize": "Packungsgröße",
   "products.packSizeHint": "Eine Packung enthält %s.",
+  "products.partialAction": "Verbrauchen / entsorgen",
+  "products.partialActionFor": "Packungen von %s verbrauchen oder entsorgen",
+  "products.partialActionTitle": "Packungen verbrauchen oder entsorgen",
   "products.pagination.label": "Seiten der Produktliste",
   "products.pagination.pageStatus": "Seite %d von %d",
   "products.photo": "Foto",
@@ -114,5 +118,6 @@
   "products.view": "Ansehen",
   "products.waste": "Entsorgen",
   "products.wasted": "Entsorgt",
-  "products.wastedConfirmBody": "Dieses Produkt wird dauerhaft als entsorgt markiert. Markieren Sie es stattdessen als verbraucht, wenn Sie den Eintrag behalten möchten."
+  "products.wastedConfirmBody": "Dieses Produkt wird dauerhaft als entsorgt markiert. Markieren Sie es stattdessen als verbraucht, wenn Sie den Eintrag behalten möchten.",
+  "products.wasting": "Wird entsorgt..."
 }

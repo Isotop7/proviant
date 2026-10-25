@@ -237,6 +237,80 @@ func TestProductRepository_GetWasteThisMonth(t *testing.T) {
 	}
 }
 
+// TestProductRepository_GetWasteThisMonthCountsEveryWaste verifies that a partial waste counts once and a full waste is not counted twice.
+func TestProductRepository_GetWasteThisMonthCountsEveryWaste(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewProductRepository(db)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+	other := authentication.User{
+		Username:    "othermember",
+		Password:    "testpassword123",
+		MailAddress: "other@example.com",
+		HouseholdID: household.ID,
+	}
+	if err := db.Create(&other).Error; err != nil {
+		t.Fatalf("create member: %v", err)
+	}
+
+	writeLedger := func(product *dbModel.Product, eventType string) {
+		record := dbModel.SavingsRecord{
+			HouseholdID: household.ID,
+			ProductID:   product.ID,
+			ProductName: product.ProductName,
+			EventType:   eventType,
+			PriceEUR:    2.5,
+			CO2Kg:       1,
+			Amount:      1,
+		}
+		if err := db.Create(&record).Error; err != nil {
+			t.Fatalf("create savings record: %v", err)
+		}
+	}
+
+	// A full waste: the product is archived and the ledger holds the event.
+	full := testutil.CreateTestProduct(db, household.ID, user.ID)
+	if err := db.Model(full).Update("removal_reason", dbModel.RemovalReasonWasted).Error; err != nil {
+		t.Fatalf("claim product: %v", err)
+	}
+	if err := db.Delete(full).Error; err != nil {
+		t.Fatalf("archive product: %v", err)
+	}
+	writeLedger(full, dbModel.SavingsEventTypeWasted)
+
+	// A partial waste: the product stays active, only the ledger knows.
+	partial := testutil.CreateTestProduct(db, household.ID, user.ID)
+	writeLedger(partial, dbModel.SavingsEventTypeWasted)
+
+	// A consumed product is not waste.
+	consumed := testutil.CreateTestProduct(db, household.ID, user.ID)
+	writeLedger(consumed, dbModel.SavingsEventTypeConsumed)
+
+	// The private product of another member stays out of this member's count.
+	private := testutil.CreateTestProduct(db, household.ID, other.ID)
+	private.IsPrivate = true
+	if err := db.Save(private).Error; err != nil {
+		t.Fatalf("save private product: %v", err)
+	}
+	writeLedger(private, dbModel.SavingsEventTypeWasted)
+
+	count, err := repo.GetWasteThisMonth(user.ID)
+	if err != nil {
+		t.Fatalf("GetWasteThisMonth() error = %v", err)
+	}
+	if count != 2 {
+		t.Errorf("GetWasteThisMonth() = %d, want 2", count)
+	}
+
+	otherCount, err := repo.GetWasteThisMonth(other.ID)
+	if err != nil {
+		t.Fatalf("GetWasteThisMonth(other) error = %v", err)
+	}
+	if otherCount != 3 {
+		t.Errorf("GetWasteThisMonth(other) = %d, want 3", otherCount)
+	}
+}
+
 func TestProductRepository_GetExpiringProductsByHousehold(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewProductRepository(db)

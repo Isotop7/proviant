@@ -267,7 +267,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	t.Run("fast-path update failure surfaces", func(t *testing.T) {
 		product := seed(t, 5)
 		failUpdatesOnTable(t, db, "products")
-		if _, _, err := repo.ConsumeProductPartial(&product, 2); err == nil {
+		if _, _, _, err := repo.ConsumeProductPartial(&product, 2, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 	})
@@ -279,7 +279,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 		stale := product
 		stale.Quantity = 3
 		failUpdatesOnTable(t, db, "products")
-		if _, _, err := repo.ConsumeProductPartial(&stale, 3); err == nil {
+		if _, _, _, err := repo.ConsumeProductPartial(&stale, 3, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 	})
@@ -287,7 +287,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	t.Run("full-consume flag update failure surfaces", func(t *testing.T) {
 		product := seed(t, 2)
 		failUpdatesOnTable(t, db, "products")
-		if _, _, err := repo.ConsumeProductPartial(&product, 5); err == nil {
+		if _, _, _, err := repo.ConsumeProductPartial(&product, 5, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 		var reloaded dbModel.Product
@@ -315,7 +315,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 		})
 		t.Cleanup(func() { db.Callback().Update().Remove("test:consume_partial_concurrent") })
 
-		_, _, err := repo.ConsumeProductPartial(&stale, 3)
+		_, _, _, err := repo.ConsumeProductPartial(&stale, 3, nil)
 		if err != errors.ErrProductConcurrentModification {
 			t.Errorf("ConsumeProductPartial() error = %v, want %v", err, errors.ErrProductConcurrentModification)
 		}

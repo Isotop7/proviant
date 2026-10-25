@@ -148,8 +148,9 @@ type ProductRepositoryInterface interface {
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
 	GetSubThresholdProducts(userID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
-	ConsumeProductPartial(product *database.Product, quantity int) (int, bool, error)
+	ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
 	WasteProduct(productID, userID uint) error
+	WasteProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
 	MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
 	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -1848,6 +1849,13 @@ type expiryCandidate struct {
 	DaysAfterOpening *int
 }
 
+// GetWasteThisMonth counts the waste events of the month. A waste event is one
+// wasted product, full or partial. The savings ledger holds one record per
+// waste, while the products table only knows the wastes that archived a
+// product — a partial waste leaves the product active and would be invisible
+// there, so the two sources would report different numbers for the same waste.
+// The archived rows without a ledger entry are the wastes from before the
+// ledger existed; they keep the count of a household that predates it.
 func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
@@ -1858,7 +1866,24 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
 
-	var count int64
+	// The ledger is joined to the product it names, so the privacy scope still
+	// applies: a member's private product is not part of another member's count.
+	var ledgerCount int64
+	err = r.DB.Table("savings_records AS s").
+		Joins("JOIN products p ON p.id = s.product_id").
+		Where("s.household_id = ?", householdID).
+		Where("s.event_type = ?", database.SavingsEventTypeWasted).
+		Where("s.created_at >= ?", monthStart).
+		Where("s.created_at <= ?", monthEnd).
+		Where("(p.is_private = 0 OR p.user_id = ?)", userID).
+		Count(&ledgerCount).Error
+	if err != nil {
+		return 0, err
+	}
+
+	// An archived waste whose ledger entry landed in the same month is already
+	// counted above; only the ones without such an entry are added here.
+	var archivedCount int64
 	err = r.DB.Unscoped().Model(&database.Product{}).
 		Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
@@ -1866,11 +1891,14 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 		Where("deleted_at >= ?", monthStart).
 		Where("deleted_at <= ?", monthEnd).
 		Where("removal_reason = ?", database.RemovalReasonWasted).
-		Count(&count).Error
+		Where("NOT EXISTS (SELECT 1 FROM savings_records s WHERE s.product_id = products.id AND s.event_type = ? AND s.created_at >= ? AND s.created_at <= ?)",
+			database.SavingsEventTypeWasted, monthStart, monthEnd).
+		Count(&archivedCount).Error
 	if err != nil {
 		return 0, err
 	}
-	return int(count), nil
+
+	return int(ledgerCount + archivedCount), nil
 }
 
 // GetExpiringProductsByHousehold returns non-private products for a household
@@ -2140,32 +2168,29 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 	})
 }
 
-// ConsumeProductPartial reduces an active product's pack count by the given
-// count, based on the product state read by the caller. A partial reduce
-// is a single guarded UPDATE on the still-active row scoped to the product's
-// household. A full consume (count of 0 or negative, or one that covers the
-// whole stock) re-reads the current count inside a transaction before
-// deciding, so a stale caller read never archives more than actually exists:
-// if the concurrent reduction still leaves more than the requested count,
-// it falls back to a partial reduce, otherwise it soft-deletes with
-// RemovalReasonConsumed and returns the current count. fullyConsumed
-// reports whether the product was archived. The guarded writes compare data
-// values only (quantity, removal_reason, deleted_at) — never updated_at: a
-// timestamp that was not round-tripped through the GORM driver (NULL on
-// legacy rows, or text written by raw SQL) never matches the bound form and
-// fails every guarded write with ErrProductConcurrentModification. The
-// removal_reason precondition is the double-apply guard: once one request
-// claims the row (consumed or wasted), a second full consume cannot archive
-// it again and duplicate the savings/activity entries. When a guarded
-// precondition fails (the row changed between read and write inside
-// the transaction)
-// the transaction is retried once with a fresh read; only a second failure
-// surfaces ErrProductConcurrentModification instead of silently applying.
-func (r *ProductRepository) ConsumeProductPartial(product *database.Product, quantity int) (consumed int, fullyConsumed bool, err error) {
-	// Fast path: the caller's read shows enough stock for a plain reduce.
-	// The guarded UPDATE re-validates the count, so a concurrent change
-	// surfaces as ErrProductConcurrentModification.
-	if quantity > 0 && quantity < product.Quantity {
+// ConsumeProductPartial removes up to quantity packs and archives the row when
+// the request covers its current stock. A zero or negative quantity consumes
+// the whole stock, preserving the recipe-cook contract.
+func (r *ProductRepository) ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error) {
+	return r.removeProductPartial(product, quantity, database.RemovalReasonConsumed, mutationID)
+}
+
+// WasteProductPartial is the waste counterpart of ConsumeProductPartial.
+func (r *ProductRepository) WasteProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error) {
+	return r.removeProductPartial(product, quantity, database.RemovalReasonWasted, mutationID)
+}
+
+// removeProductPartial compares data values only (quantity, removal_reason and
+// deleted_at), never updated_at, whose driver representation is not stable on
+// legacy rows. removal_reason also prevents a second request from claiming an
+// archived row. A mutation claim shares the transaction with the stock change,
+// so an offline replay cannot apply it twice.
+func (r *ProductRepository) removeProductPartial(product *database.Product, quantity int, reason string, mutationID *string) (removed int, fullyRemoved bool, applied bool, err error) {
+	if mutationID != nil && strings.TrimSpace(*mutationID) == "" {
+		mutationID = nil
+	}
+
+	if mutationID == nil && quantity > 0 && quantity < product.Quantity {
 		result := r.DB.Model(&database.Product{}).
 			Where("id = ?", product.ID).
 			Where("household_id = ?", product.HouseholdID).
@@ -2174,27 +2199,33 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, qua
 			Where("quantity > ?", quantity).
 			Update("quantity", gorm.Expr("quantity - ?", quantity))
 		if result.Error != nil {
-			return 0, false, result.Error
+			return 0, false, false, result.Error
 		}
 		if result.RowsAffected > 0 {
-			return quantity, false, nil
+			return quantity, false, true, nil
 		}
-		// RowsAffected == 0 means a concurrent change dropped the stock
-		// below the requested count. Fall through to the transactional
-		// path, which re-reads and resolves full vs partial consume.
 	}
 
-	// Full-consume path: the caller's read may be stale, so re-check the
-	// current count before deciding between full consume and partial
-	// reduce. A guarded precondition failure rolls back and is retried
-	// once with fresh reads before giving up.
 	var txErr error
 	for attempt := 0; attempt < 2; attempt++ {
-		consumed, fullyConsumed = 0, false
+		removed, fullyRemoved, applied = 0, false, false
 		txErr = r.DB.Transaction(func(tx *gorm.DB) error {
+			if mutationID != nil {
+				claim := database.ProductMutationClaim{ProductID: product.ID, MutationID: *mutationID}
+				claimResult := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&claim)
+				if claimResult.Error != nil {
+					return claimResult.Error
+				}
+				if claimResult.RowsAffected == 0 {
+					var claimed database.ProductMutationClaim
+					if err := tx.First(&claimed, "product_id = ? AND mutation_id = ?", product.ID, *mutationID).Error; err != nil {
+						return errMutationClaimRefused
+					}
+					return errMutationAlreadyClaimed
+				}
+			}
+
 			var current database.Product
-			// Household-scoped re-read: a stale caller read must never let a
-			// product from another household be re-read and archived here.
 			if getErr := tx.Where("id = ? AND household_id = ?", product.ID, product.HouseholdID).First(&current).Error; getErr != nil {
 				return getErr
 			}
@@ -2212,37 +2243,43 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, qua
 				if result.RowsAffected == 0 {
 					return errors.ErrProductConcurrentModification
 				}
-				consumed = quantity
+				removed = quantity
+				applied = true
 				return nil
 			}
-			consumed = current.Quantity
-			fullyConsumed = true
-			// The unclaimed-row precondition is the double-apply guard: only
-			// one request may claim the row, so concurrent full consumes
-			// cannot duplicate the savings/activity entries.
+
+			removed = current.Quantity
+			fullyRemoved = true
 			result := tx.Model(&database.Product{}).
 				Where("id = ?", current.ID).
 				Where("household_id = ?", current.HouseholdID).
 				Where(util.WhereDeletedIsNull).
 				Where(util.WhereRemovalReasonUnclaimed).
 				Where("quantity = ?", current.Quantity).
-				Update("removal_reason", database.RemovalReasonConsumed)
+				Update("removal_reason", reason)
 			if result.Error != nil {
 				return result.Error
 			}
 			if result.RowsAffected == 0 {
 				return errors.ErrProductConcurrentModification
 			}
-			return tx.Delete(&database.Product{}, current.ID).Error
+			if err := tx.Delete(&database.Product{}, current.ID).Error; err != nil {
+				return err
+			}
+			applied = true
+			return nil
 		})
 		if txErr != errors.ErrProductConcurrentModification {
 			break
 		}
 	}
-	if txErr != nil {
-		return 0, false, txErr
+	if stderrors.Is(txErr, errMutationAlreadyClaimed) {
+		return 0, false, false, nil
 	}
-	return consumed, fullyConsumed, nil
+	if txErr != nil {
+		return 0, false, false, txErr
+	}
+	return removed, fullyRemoved, applied, nil
 }
 
 func (r *ProductRepository) WasteProduct(productID, userID uint) error {

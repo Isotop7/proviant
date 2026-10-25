@@ -90,8 +90,8 @@
                     <i class="bi bi-check-circle"></i> {{ t "products.consume" }}
                 </button>
                 <button data-bulk-action="cook" class="btn-bulk">
-                    <span class="btn-text"><i class="bi bi-fire"></i> {{ t "products.cook" }}</span>
-                    <span class="btn-loading"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
+                    <span class="btn-label"><i class="bi bi-fire"></i> {{ t "products.cook" }}</span>
+                    <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
                 </button>
                 {{ end }}
                 <button data-bulk-action="delete" class="btn-bulk danger">
@@ -366,9 +366,14 @@
             {{ end }}
         </div>
         <div class="col-actions">
-            <button type="button" class="btn-add-to-shopping-list" data-product-id="{{ .Model.ID }}" title="{{ t "products.addToShoppingList" }}">
-                <i class="bi bi-cart-plus"></i>
+            <button type="button" class="btn-add-to-shopping-list" data-product-id="{{ .Model.ID }}" title="{{ t "products.addToShoppingList" }}" aria-label="{{ t "products.addToShoppingList" }}">
+                <i class="bi bi-cart-plus" aria-hidden="true"></i>
             </button>
+            {{ if not .DeletedAt.Valid }}
+            <button type="button" class="btn-partial-action--icon btn-partial-action" data-product-id="{{ .Model.ID }}" title="{{ t "products.partialActionFor" .ProductName }}" aria-label="{{ t "products.partialActionFor" .ProductName }}">
+                <i class="bi bi-clipboard-x" aria-hidden="true"></i>
+            </button>
+            {{ end }}
         </div>
     </div>
     {{ end }}
@@ -457,8 +462,8 @@
         <i class="bi bi-check-circle"></i> {{ t "products.consume" }}
       </button>
       <button data-bulk-action="cook" class="btn-bulk">
-        <span class="btn-text"><i class="bi bi-fire"></i> {{ t "products.cook" }}</span>
-        <span class="btn-loading"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
+        <span class="btn-label"><i class="bi bi-fire"></i> {{ t "products.cook" }}</span>
+        <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
       </button>
       {{ end }}
       <button data-bulk-action="delete" class="btn-bulk danger">
@@ -662,8 +667,8 @@
                         <i class="bi bi-arrow-left"></i> {{ t "common.back" }}
                     </button>
                     <button type="button" class="btn btn-solid theme-primary" id="btnAddProduct">
-                        <span class="btn-text"><i class="bi bi-plus-lg me-1"></i>{{ t "products.addToPantry" }}</span>
-                        <span class="btn-loading"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.adding" }}</span>
+                        <span class="btn-label"><i class="bi bi-plus-lg me-1"></i>{{ t "products.addToPantry" }}</span>
+                        <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.adding" }}</span>
                     </button>
                 </div>
                 <div id="modalFooterSuccess"></div>
@@ -713,6 +718,36 @@
             </div>
         </dialog>
 
+<!-- Partial consume/waste dialog: fresh stock bounds the requested pack count -->
+<dialog class="dialog" id="partialActionModal" aria-labelledby="partialActionModalLabel">
+            <div class="dialog-header">
+                <div class="dialog-icon dialog-icon-accent">
+                    <i class="bi bi-clipboard-x"></i>
+                </div><h5 class="dialog-title mb-0" id="partialActionModalLabel">{{ t "products.partialActionTitle" }}</h5>
+                <div class="dialog-subtitle" id="partialActionProductName"></div>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <label for="partialActionQuantity" class="form-label">{{ t "products.quantity" }}</label>
+                <input type="number" class="form-control" id="partialActionQuantity" min="1" step="1" required inputmode="numeric" aria-describedby="partialActionStock partialActionQuantityError">
+                <div class="invalid-feedback" id="partialActionQuantityError"></div>
+                <small class="form-text" id="partialActionStock"></small>
+            </div>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+                <button type="button" class="btn btn-solid theme-danger" id="btnPartialWasteConfirm">
+                    <span class="btn-label"><i class="bi bi-trash3 me-1"></i>{{ t "products.waste" }}</span>
+                    <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.wasting" }}</span>
+                </button>
+                <button type="button" class="btn btn-solid theme-primary" id="btnPartialConsumeConfirm">
+                    <span class="btn-label"><i class="bi bi-check-circle me-1"></i>{{ t "products.consume" }}</span>
+                    <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.consuming" }}</span>
+                </button>
+            </div>
+        </dialog>
+
 <!-- Cook dialog: per-product count inputs for the packs used -->
 <dialog class="dialog" id="cookModal" aria-labelledby="cookModalLabel">
             <div class="dialog-header">
@@ -731,8 +766,8 @@
             <div class="dialog-footer">
                 <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
                 <button type="button" class="btn btn-solid theme-primary" id="btnCookConfirm">
-                    <span class="btn-text"><i class="bi bi-fire me-1"></i>{{ t "products.cook" }}</span>
-                    <span class="btn-loading"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
+                    <span class="btn-label"><i class="bi bi-fire me-1"></i>{{ t "products.cook" }}</span>
+                    <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.cooking" }}</span>
                 </button>
             </div>
         </dialog>

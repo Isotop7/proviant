@@ -52,6 +52,14 @@ type BulkActionResponse struct {
 	FailedIDs []uint `json:"failedIds,omitempty"`
 }
 
+// ProductActionResponse is the response of a consume or waste action. Removed
+// counts the packs that actually left the stock, which is fewer than the
+// caller asked for when the stock shrank in between.
+type ProductActionResponse struct {
+	APIResponse
+	Removed int `json:"removed"`
+}
+
 // Error returns an API response object from a error object
 func Error(err error) APIResponse {
 	return APIResponse{Message: err.Error()}

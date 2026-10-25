@@ -99,15 +99,18 @@
 }
 
 // Button loading state
-.btn-loading {
+// The wrapper classes are app-owned: Bootstrap 6 uses `.btn-text` for a
+// borderless button variant, so a label span must not carry that name.
+.btn-busy {
   display: none;
 }
 .btn-primary.loading,
+.btn-solid.loading,
 .btn-bulk.loading {
-  .btn-text {
+  .btn-label {
     display: none;
   }
-  .btn-loading {
+  .btn-busy {
     display: inline-flex;
     align-items: center;
   }

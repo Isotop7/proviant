@@ -275,6 +275,44 @@ proviant.createProduct = async function (barcode, expireAt, quantity, storageLoc
   return { code: res.status, message: body.message };
 };
 
+proviant._sendProductAction = async function (action, productID, quantity, clientMutationId) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/${action}`;
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quantity, clientMutationId }),
+    });
+  } catch (cause) {
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.transport = true;
+    throw err;
+  }
+  let body;
+  try {
+    body = await res.json();
+  } catch (cause) {
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.status = res.status;
+    throw err;
+  }
+  return {
+    code: res.status,
+    message: body.message,
+    removed: typeof body.removed === "number" ? body.removed : null,
+    retryAfter: res.headers && res.headers.get ? res.headers.get("Retry-After") : null,
+  };
+};
+
+proviant.consumeProduct = async function (productID, quantity, clientMutationId) {
+  return proviant._sendProductAction("consume", productID, quantity, clientMutationId);
+};
+
+proviant.wasteProduct = async function (productID, quantity, clientMutationId) {
+  return proviant._sendProductAction("waste", productID, quantity, clientMutationId);
+};
+
 proviant.getOpenFoodFactsData = async function (barcode) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/openfoodfacts/${barcode}`;
   const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });

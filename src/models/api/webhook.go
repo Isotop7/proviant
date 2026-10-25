@@ -40,6 +40,10 @@ type DeliveryLogListResponse struct {
 	Deliveries []DeliveryLogResponse `json:"deliveries"`
 }
 
+// ValidWebhookEvents lists the events a webhook can subscribe to.
+// product.wasted fires when the whole stock of a product is wasted: a waste
+// of only some of its packs leaves the product in the pantry and fires
+// nothing, so a subscriber cannot read a partial waste from this event.
 var ValidWebhookEvents = []string{
 	"product.expiring_soon",
 	"product.expired",

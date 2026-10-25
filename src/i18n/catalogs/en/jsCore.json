@@ -9,6 +9,7 @@
   "js.app.offlineQueuePending": "(%s pending)",
   "js.app.offlineQueuePending_one": "(%s pending)",
   "js.app.offlineQueuePending_other": "(%s pending)",
+  "js.app.offlineMutationExpired": "This queued change is too old to sync safely. Please repeat it.",
   "js.app.offlineStorageUnavailable": "Offline storage is unavailable — the change was not queued.",
   "js.chart.itemCount": "%d items",
   "js.chart.itemCount_one": "%d item",
