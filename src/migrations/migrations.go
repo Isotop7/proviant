@@ -578,6 +578,11 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 		return err
 	}
 
+	logger.Debug().Msg("Fill the canonical category of the products")
+	if err := BackfillProductCategoryKeys(logger, db); err != nil {
+		return err
+	}
+
 	logger.Debug().Msg("Drop unit and net content columns")
 	if err := DropUnitColumns(logger, db); err != nil {
 		return err

@@ -590,6 +590,17 @@
                             <button type="button" class="btn btn-outline theme-secondary btn-sm" id="btnQuantityInc" aria-label="{{ t "products.quantityIncrease" }}">+</button>
                         </div>
                         <input type="hidden" id="quantity" value="1">
+                        {{ if .Categories }}
+                        <label for="productCategory" class="form-label">{{ t "products.categoryLabel" }}</label>
+                        <select class="form-control mb-5" id="productCategory" aria-label="{{ t "products.categoryLabel" }}">
+                            <option value="">{{ t "products.categoryNoneOption" }}</option>
+                            {{ range .Categories }}
+                            {{ if not .Hidden }}
+                            <option value="{{ .CategoryKey }}"{{ if .DefaultShelfLifeDays }} data-shelf-life-days="{{ .DefaultShelfLifeDays }}"{{ end }}>{{ .DisplayName }}</option>
+                            {{ end }}
+                            {{ end }}
+                        </select>
+                        {{ end }}
                         <label for="expireAt" class="form-label">
                             {{ t "products.expiryDateField" }} <span class="fg-danger" aria-hidden="true">*</span>
                         </label>
@@ -603,6 +614,7 @@
                         <div class="invalid-feedback">
                             <i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "products.expiryRequired" }}
                         </div>
+                        <small id="expirySuggestion" class="fg-secondary d-none mb-3" aria-live="polite"></small>
                         {{ if .Locations }}
                         <label for="modalStorageLocation" class="form-label mt-3">{{ t "products.storageLocationTitle" }}</label>
                         <select class="form-control" id="modalStorageLocation" aria-label="{{ t "products.storageLocation" }}">

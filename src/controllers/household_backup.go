@@ -367,6 +367,28 @@ func RestoreHouseholdBackup(
 			products = append(products, product)
 		}
 		if len(products) > 0 {
+			// The canonical category of every restored product, resolved once
+			// for the whole backup: the free text the backup carries names it.
+			resolver, resolverErr := database.LoadCategoryResolver(tx)
+			if resolverErr != nil {
+				return resolverErr
+			}
+			defaults, defaultsErr := database.NewHouseholdCategoryRepository(tx).Defaults(householdID)
+			if defaultsErr != nil {
+				return defaultsErr
+			}
+			for i := range products {
+				if products[i].CategoryKey == nil {
+					if key, ok := resolver.ResolveKey(products[i].Categories); ok {
+						products[i].CategoryKey = &key
+					}
+				}
+				// A restored product that names no date gets the shelf life
+				// the household gave its category, the same rule the create
+				// paths follow: the restore re-establishes the household's
+				// pantry, so its rules apply to it.
+				database.ApplyHouseholdShelfLife(&products[i], defaults, products[i].CategoryKey)
+			}
 			if err := insertRestoreProducts(tx, restoreProductRowMaps(products)); err != nil {
 				return err
 			}
@@ -475,6 +497,7 @@ var restoreProductColumns = []string{
 	"min_stock_amount",
 	"opened_at",
 	"days_after_opening",
+	"category_key",
 	"household_id",
 	"user_id",
 	"created_at",
@@ -575,6 +598,7 @@ func restoreProductRowMaps(products []dbModel.Product) []map[string]any {
 			"min_stock_amount":       product.MinStockAmount,
 			"opened_at":              nullable(product.OpenedAt),
 			"days_after_opening":     nullable(product.DaysAfterOpening),
+			"category_key":           nullable(product.CategoryKey),
 			"household_id":           product.HouseholdID,
 			"user_id":                product.UserID,
 			"created_at":             createdAt,

@@ -760,7 +760,7 @@
 
   if (typeof proviant.createProduct === 'function') {
     var originalCreateProduct = proviant.createProduct;
-    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId, allowDuplicate) {
+    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId, allowDuplicate, categoryKey) {
       // The sync id goes out on the online path too. Without it the server-side
       // idempotency check cannot fire, so a response lost after the server
       // committed — which is exactly what the catch below detects — would enqueue
@@ -770,12 +770,16 @@
       // server refused as a duplicate reuses the id, so that attempt is
       // idempotent as well.
       var syncId = clientSyncId || generateId();
+      // The queued draft carries the date the client resolved, not the
+      // household's default: the server fills a default only for a draft that
+      // carries no date at all.
       var draft = { barcode: barcode, expireAt: expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: syncId };
+      if (categoryKey) draft.categoryKey = categoryKey;
       if (!navigator.onLine) {
         return enqueueOrReport({ id: syncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: syncId });
       }
       try {
-        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, syncId, allowDuplicate);
+        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, syncId, allowDuplicate, categoryKey);
       } catch (_) {
         return enqueueOrReport({ id: syncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: syncId });
       }

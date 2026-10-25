@@ -307,6 +307,15 @@ var (
 	// ErrStorageLocationNotOwned is thrown when a storage location does not belong to the user's household
 	ErrStorageLocationNotOwned = errors.New("storage location does not belong to this household")
 
+	// ErrCategoryNotFound is thrown when a requested category is not one of the canonical categories
+	ErrCategoryNotFound = errors.New("category not found")
+
+	// ErrCategoryShelfLifeOutOfRange is thrown when a category shelf life is below the minimum or above the maximum
+	ErrCategoryShelfLifeOutOfRange = errors.New("category shelf life is out of range")
+
+	// ErrCategoryDaysAfterOpeningOutOfRange is thrown when a category days-after-opening value is out of range
+	ErrCategoryDaysAfterOpeningOutOfRange = errors.New("category days after opening is out of range")
+
 	// ErrHouseholdNotFound is thrown when a requested household does not exist
 	ErrHouseholdNotFound = errors.New("household not found")
 

@@ -32,6 +32,7 @@ var testModels = []any{
 	&dbModel.EmailVerification{},
 	&dbModel.PasswordReset{},
 	&dbModel.ProductCategoryPrice{},
+	&dbModel.HouseholdCategory{},
 	&dbModel.ActivityLog{},
 	&dbModel.AuditLog{},
 	&authentication.RevokedToken{},

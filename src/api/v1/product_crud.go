@@ -239,8 +239,13 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 			MinStockAmount:       product.MinStockAmount,
 			OpenedAt:             product.OpenedAt,
 			DaysAfterOpening:     product.DaysAfterOpening,
+			CategoryKey:          product.CategoryKey,
 			AllowDuplicate:       product.AllowDuplicate,
 		}
+	}
+
+	if !applyHouseholdCategory(ctx, appCtx, &product) {
+		return
 	}
 
 	// A create that would duplicate an active row is refused instead of
@@ -452,6 +457,12 @@ func updateProduct(ctx *gin.Context, appCtx *AppContext, mode updateMode) {
 		appCtx.Logger.Warn().Msgf("Rejected product update for %d: %s", productID, updateErr)
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(updateErr.Error()))
 		return
+	case errors.ErrCategoryNotFound:
+		// The request named a category that is not one of the canonical
+		// categories — user input, not a server fault.
+		appCtx.Logger.Warn().Msgf("Rejected product update for %d: %s", productID, updateErr)
+		api.RespondError(ctx, http.StatusBadRequest, updateErr)
+		return
 	default:
 		appCtx.Logger.Error().Msgf("Error saving product: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
@@ -483,6 +494,7 @@ func productResponse(stored *dbModel.Product, patch *dbModel.ProductDTOPatch) db
 		PriceOverride:        stored.PriceOverride,
 		OpenedAt:             stored.OpenedAt,
 		DaysAfterOpening:     stored.DaysAfterOpening,
+		CategoryKey:          stored.CategoryKey,
 	}
 }
 

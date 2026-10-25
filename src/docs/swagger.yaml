@@ -112,6 +112,14 @@ definitions:
         type: string
       categories:
         type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the product belongs to. It is
+          sent as null when the draft names no category.
+        type: string
+      daysAfterOpening:
+        description: DaysAfterOpening is the shelf life after opening, in days.
+        type: integer
       expireAt:
         description: ExpireAt is the expiry date the receipt carries, as an RFC 3339
           date.
@@ -465,6 +473,21 @@ definitions:
       status:
         type: string
     type: object
+  api.HouseholdCategoryResponse:
+    properties:
+      categoryKey:
+        type: string
+      defaultDaysAfterOpening:
+        type: integer
+      defaultShelfLifeDays:
+        type: integer
+      displayName:
+        type: string
+      hidden:
+        type: boolean
+      sortOrder:
+        type: integer
+    type: object
   api.HouseholdIntegrationResponse:
     properties:
       accessTokenConfigured:
@@ -656,8 +679,16 @@ definitions:
         type: string
       categories:
         type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the product belongs to. It is
+          sent as null when the draft names no category.
+        type: string
       clientSyncId:
         type: string
+      daysAfterOpening:
+        description: DaysAfterOpening is the shelf life after opening, in days.
+        type: integer
       expireAt:
         description: ExpireAt is the expiry date the receipt carries, as an RFC 3339
           date.
@@ -796,6 +827,8 @@ definitions:
       barcode:
         type: string
       categories:
+        type: string
+      categoryKey:
         type: string
       co2KgPerKg:
         type: number
@@ -1405,6 +1438,12 @@ definitions:
         type: string
       categories:
         type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the product belongs to. It is what
+          the household's shelf-life defaults are looked up by. Categories keeps
+          the free text Open Food Facts wrote, which the recipe suggestions read.
+        type: string
       clientSyncId:
         type: string
       co2KgPerKg:
@@ -1471,6 +1510,11 @@ definitions:
       ID:
         type: integer
       categories:
+        type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category of the product. It is sent as
+          null to clear it.
         type: string
       countries:
         type: string
@@ -1631,6 +1675,26 @@ definitions:
       order:
         type: integer
       w:
+        type: integer
+    type: object
+  v1.householdCategoryOrderRequest:
+    properties:
+      keys:
+        items:
+          type: string
+        type: array
+    type: object
+  v1.householdCategoryRequest:
+    properties:
+      defaultDaysAfterOpening:
+        type: integer
+      defaultShelfLifeDays:
+        type: integer
+      displayName:
+        type: string
+      hidden:
+        type: boolean
+      sortOrder:
         type: integer
     type: object
   v1.receiptScanDefaultsResponse:
@@ -2246,6 +2310,102 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Reject a household application
+      tags:
+      - household
+  /api/v1/household/categories:
+    get:
+      description: Returns every canonical category with the household's display name,
+        order, visibility and shelf-life defaults applied.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.HouseholdCategoryResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: List household categories
+      tags:
+      - household
+  /api/v1/household/categories/{categoryKey}:
+    patch:
+      consumes:
+      - application/json
+      description: Stores the household's display name, order, visibility and shelf-life
+        defaults for one canonical category. A shelf life of zero clears the stored
+        value.
+      parameters:
+      - description: Canonical category key
+        in: path
+        name: categoryKey
+        required: true
+        type: string
+      - description: Category overrides
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.householdCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdCategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Update a household category
+      tags:
+      - household
+  /api/v1/household/categories/order:
+    put:
+      consumes:
+      - application/json
+      description: Stores the household's order over the canonical categories. The
+        listed keys are written in the order they are given.
+      parameters:
+      - description: Category order
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.householdCategoryOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Reorder household categories
       tags:
       - household
   /api/v1/household/integrations:

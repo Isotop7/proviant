@@ -212,6 +212,11 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
+	categories, categoriesErr := repos.HouseholdCategories.List(user.HouseholdID)
+	if categoriesErr != nil {
+		logger.Warn().Msgf("User settings: household categories: %s", categoriesErr)
+	}
+
 	minLength := 12
 	requireUppercase := false
 	requireDigit := false
@@ -261,6 +266,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"MyApplications":            myApplications,
 		"TelegramConfigured":        telegramConfigured,
 		"Locations":                 locations,
+		"Categories":                categories,
 		"PasswordMinLength":         minLength,
 		"PasswordRequireUppercase":  requireUppercase,
 		"PasswordRequireDigit":      requireDigit,
@@ -565,6 +571,11 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		isAdmin = currentUser.Role == authentication.RoleAdmin
 	}
 
+	categories, categoriesErr := repos.HouseholdCategories.ListByUser(userID)
+	if categoriesErr != nil {
+		logger.Warn().Msgf("Products page: household categories: %s", categoriesErr)
+	}
+
 	productQuery := &productQueryParams{
 		statusFilter:   statusFilter,
 		locationFilter: locationFilter,
@@ -671,6 +682,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"Order":              order,
 		"Locations":          locations,
 		"StorageLocations":   locations,
+		"Categories":         categories,
 		"LocationFilter":     locationFilter,
 		"View":               view,
 		"StatusFilter":       statusFilter,
@@ -699,9 +711,31 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 // @Success      200  {string}  html
 // @Router       /web/products/scan [get]
 func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	// The category list is a convenience: a scan without it still works, so a
+	// caller the page cannot name a household for still gets the page.
+	var categories []dbModel.HouseholdCategoryView
+	if claims := jwt.ExtractClaims(ctx); claims != nil {
+		if idClaim, hasClaim := claims[static.TokenIdentityKey].(float64); hasClaim && idClaim > 0 {
+			listed, categoriesErr := repos.HouseholdCategories.ListByUser(uint(idClaim))
+			if categoriesErr != nil {
+				logger.Warn().Msgf("Scan page: household categories: %s", categoriesErr)
+			}
+			categories = listed
+		}
+	}
+
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),
 		"Title":       "Scan Product",
+		"Categories":  categories,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScan.tmpl", pageData)
 }
@@ -826,6 +860,14 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	}
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
+	categories, categoriesErr := repos.HouseholdCategories.ListByUser(userID)
+	if categoriesErr != nil {
+		logger.Warn().Msgf("Product edit page: household categories: %s", categoriesErr)
+	}
+	selectedCategoryKey := ""
+	if product.CategoryKey != nil {
+		selectedCategoryKey = *product.CategoryKey
+	}
 
 	pageData := map[string]any{
 		"InviteToken":                     ctx.Query("invite_token"),
@@ -833,6 +875,8 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		"PageTitle":                       "EditProduct",
 		"Product":                         product,
 		"Locations":                       locations,
+		"Categories":                      categories,
+		"SelectedCategoryKey":             selectedCategoryKey,
 		"IsArchived":                      product.DeletedAt.Valid,
 		"GlobalNotificationThresholdDays": user.NotificationPreferences.NotificationThresholdDays,
 	}

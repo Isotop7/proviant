@@ -973,6 +973,35 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	if product.Has("daysAfterOpening") {
 		dbProduct.DaysAfterOpening = product.DaysAfterOpening
 	}
+	if product.Has("categoryKey") || product.Has("categories") {
+		resolver, resolveErr := LoadCategoryResolver(r.DB)
+		if resolveErr != nil {
+			return resolveErr
+		}
+		if product.Has("categoryKey") {
+			categoryKey, categoryErr := CanonicalCategoryKey(resolver, product.CategoryKey)
+			if categoryErr != nil {
+				return categoryErr
+			}
+			dbProduct.CategoryKey = categoryKey
+		} else if key, ok := resolver.ResolveKey(dbProduct.Categories); ok {
+			// The free text names the canonical category, so a change of the
+			// text changes the category unless the request named one itself.
+			dbProduct.CategoryKey = &key
+		} else {
+			dbProduct.CategoryKey = nil
+		}
+		// A request that assigns a category and states no date leaves the
+		// product without one, so the household's default for that category
+		// fills it — the rule the create paths follow.
+		if !product.Has("expireAt") {
+			defaults, defaultsErr := NewHouseholdCategoryRepository(r.DB).Defaults(dbProduct.HouseholdID)
+			if defaultsErr != nil {
+				return defaultsErr
+			}
+			ApplyHouseholdShelfLife(&dbProduct, defaults, dbProduct.CategoryKey)
+		}
+	}
 
 	saveResult := r.DB.Save(&dbProduct)
 	return saveResult.Error

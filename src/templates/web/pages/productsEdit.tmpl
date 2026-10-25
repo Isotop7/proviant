@@ -97,6 +97,20 @@
               <input type="hidden" id="categoriesHidden" value="{{ .Product.Categories }}">
               <div class="pv-tag-wrap" data-target="categoriesHidden" data-color="accent" data-readonly="true"></div>
             </div>
+            {{ if .Categories }}
+            <div class="mb-5">
+              <label for="productCategory" class="form-label">{{ t "products.categoryLabel" }}</label>
+              <select class="form-control" id="productCategory" aria-label="{{ t "products.categoryLabel" }}" data-selected-category-key="{{ $.SelectedCategoryKey }}">
+                <option value="">{{ t "products.categoryNoneOption" }}</option>
+                {{ range .Categories }}
+                {{ if or (not .Hidden) (eq .CategoryKey $.SelectedCategoryKey) }}
+                <option value="{{ .CategoryKey }}"{{ if .DefaultShelfLifeDays }} data-shelf-life-days="{{ .DefaultShelfLifeDays }}"{{ end }}{{ if eq .CategoryKey $.SelectedCategoryKey }} selected{{ end }}>{{ .DisplayName }}</option>
+                {{ end }}
+                {{ end }}
+              </select>
+              <div class="form-text">{{ t "products.categoryHint" }}</div>
+            </div>
+            {{ end }}
             <div class="mb-5">
               <label class="form-label">{{ t "products.countriesSoldIn" }}</label>
               <input type="hidden" id="countriesHidden" value="{{ .Product.Countries }}">
@@ -127,6 +141,7 @@
                     <i class="bi bi-camera" aria-hidden="true"></i>
                   </button>
                 </div>
+                <small id="expirySuggestion" class="fg-secondary d-none mt-2" aria-live="polite"></small>
               </div>
               <div class="md:col-6">
                 <label class="form-label" for="inputQuantity">{{ t "products.quantity" }}</label>

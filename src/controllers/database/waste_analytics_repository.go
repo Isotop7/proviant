@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	apiModel "github.com/Isotop7/proviant/models/api"
@@ -128,15 +127,12 @@ func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since t
 // Product row; if a wasted product has been hard-deleted it falls into the "Other" bucket.
 // Results are sorted by `by` — "count" (default) or "cost".
 func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int, by string) ([]apiModel.WasteCategoryStat, error) {
-	// Pre-load category price table for display name lookup. Do this in Go rather than SQL
-	// to keep the query portable across SQLite and MariaDB.
-	var prices []dbModel.ProductCategoryPrice
-	if err := r.DB.Find(&prices).Error; err != nil {
+	// Pre-load the canonical categories for the display name lookup. Do this
+	// in Go rather than SQL to keep the query portable across SQLite and
+	// MariaDB.
+	resolver, err := LoadCategoryResolver(r.DB)
+	if err != nil {
 		return nil, err
-	}
-	catByKey := make(map[string]dbModel.ProductCategoryPrice, len(prices))
-	for i := range prices {
-		catByKey[prices[i].CategoryKey] = prices[i]
 	}
 
 	// Pull wasted events with the still-existing product's category (LEFT JOIN — deleted
@@ -161,11 +157,11 @@ func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, sin
 
 	agg := make(map[string]*apiModel.WasteCategoryStat)
 	for _, r := range raws {
-		key := resolveCategoryKey(r.Categories.String, catByKey)
+		key := wasteCategoryKey(resolver, r.Categories.String)
 		bucket, ok := agg[key]
 		if !ok {
 			display := key
-			if pc, found := catByKey[key]; found {
+			if pc, found := resolver.Canonical(key); found {
 				display = pc.DisplayName
 			}
 			bucket = &apiModel.WasteCategoryStat{
@@ -236,26 +232,14 @@ type ConsumedVsWastedRow struct {
 	WastedCO2Kg   float64
 }
 
-func resolveCategoryKey(categories string, prices map[string]dbModel.ProductCategoryPrice) string {
-	if categories == "" {
+// wasteCategoryKey names the bucket a product's free-text categories fall
+// into. A product that names no canonical category lands in "Other".
+func wasteCategoryKey(resolver *CategoryResolver, categories string) string {
+	key, ok := resolver.ResolveKey(categories)
+	if !ok {
 		return "Other"
 	}
-	tokens := strings.Split(categories, ",")
-	for _, token := range tokens {
-		token = strings.TrimSpace(token)
-		if idx := strings.Index(token, ":"); idx != -1 {
-			token = strings.TrimSpace(token[idx+1:])
-		}
-		token = strings.ToLower(strings.ReplaceAll(token, "-", " "))
-
-		for key := range prices {
-			lk := strings.ToLower(key)
-			if strings.Contains(token, lk) || strings.Contains(lk, token) {
-				return key
-			}
-		}
-	}
-	return "Other"
+	return key
 }
 
 // sortCategoryStats sorts in place by the given key. Recognised keys: "count", "cost".
@@ -306,13 +290,9 @@ func sortWasteProductStats(s []apiModel.WasteProductStat) {
 // The category key is resolved from the still-existing Product row; if a wasted product
 // has been hard-deleted it falls into the "Other" bucket.
 func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since time.Time, perCategoryLimit int) (map[string][]apiModel.WasteProductStat, error) {
-	var prices []dbModel.ProductCategoryPrice
-	if err := r.DB.Find(&prices).Error; err != nil {
+	resolver, err := LoadCategoryResolver(r.DB)
+	if err != nil {
 		return nil, err
-	}
-	catByKey := make(map[string]dbModel.ProductCategoryPrice, len(prices))
-	for i := range prices {
-		catByKey[prices[i].CategoryKey] = prices[i]
 	}
 
 	type rawRow struct {
@@ -337,7 +317,7 @@ func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since
 	// Two-level aggregation: outer by category, inner by product name (fallback to product id).
 	byCategory := make(map[string]map[string]*apiModel.WasteProductStat)
 	for _, row := range raws {
-		catKey := resolveCategoryKey(row.Categories.String, catByKey)
+		catKey := wasteCategoryKey(resolver, row.Categories.String)
 		prodKey := row.ProductName
 		if prodKey == "" {
 			prodKey = fmt.Sprintf("product-%d", row.ProductID)

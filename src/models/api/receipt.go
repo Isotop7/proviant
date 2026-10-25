@@ -45,6 +45,11 @@ type BulkProductDraft struct {
 	Amount    int    `json:"amount,omitempty"`
 	Unit      string `json:"unit,omitempty"`
 	IsPrivate bool   `json:"isPrivate"`
+	// CategoryKey is the canonical category the product belongs to. It is
+	// sent as null when the draft names no category.
+	CategoryKey *string `json:"categoryKey,omitempty"`
+	// DaysAfterOpening is the shelf life after opening, in days.
+	DaysAfterOpening *int `json:"daysAfterOpening,omitempty"`
 }
 
 // BulkCreateRequest is the body of POST /api/v1/products/bulk.

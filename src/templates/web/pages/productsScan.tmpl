@@ -157,12 +157,25 @@
                 </div>
                 <input type="hidden" id="quantity" value="1">
 
+                {{ if .Categories }}
+                <label for="productCategory" class="form-label fw-medium small">{{ t "products.categoryLabel" }}</label>
+                <select class="form-control mb-3" id="productCategory" aria-label="{{ t "products.categoryLabel" }}">
+                    <option value="">{{ t "products.categoryNoneOption" }}</option>
+                    {{ range .Categories }}
+                    {{ if not .Hidden }}
+                    <option value="{{ .CategoryKey }}"{{ if .DefaultShelfLifeDays }} data-shelf-life-days="{{ .DefaultShelfLifeDays }}"{{ end }}>{{ .DisplayName }}</option>
+                    {{ end }}
+                    {{ end }}
+                </select>
+                {{ end }}
+
                 <label for="expireAt" class="form-label fw-medium small">
                     {{ t "scan.expiryDate" }} <span class="fg-danger" aria-hidden="true">*</span>
                 </label>
                 <input type="date" class="form-control mb-3" id="expireAt"
                        value="{{ today }}" required aria-required="true">
                 <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "scan.expiryDateRequired" }}</div>
+                <small id="expirySuggestion" class="fg-secondary d-none mb-3" aria-live="polite"></small>
             </form>
 
             <div class="btn-group w-100 mb-5" role="group" aria-label="{{ t "scan.expiryShortcuts" }}">

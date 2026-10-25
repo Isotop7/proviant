@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Isotop7/proviant/api"
 	apiModel "github.com/Isotop7/proviant/models/api"
@@ -455,6 +456,61 @@ func TestUpdateProductPatchesOnlyTheSentFields(t *testing.T) {
 	}
 	if stored.MinStockAmount != 2 {
 		t.Errorf("min stock = %d, want 2 (a field the request did not carry stays)", stored.MinStockAmount)
+	}
+}
+
+// A category that is not one of the canonical categories is user input, not a
+// server fault: the patch is refused with a 400.
+func TestUpdateProductRefusesAnUnknownCategory(t *testing.T) {
+	env := setupHandlerTest(t)
+	seedCategoryPrices(t, env)
+	product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
+	env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(product.ID)}}
+	env.Ctx.Request = newRawJSONRequest(`{"categoryKey":"unicorns"}`)
+
+	UpdateProduct(env.Ctx, env.AppCtx)
+
+	if env.W.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body = %s", env.W.Code, env.W.Body.String())
+	}
+}
+
+// A patch that assigns a category and states no date leaves the product
+// without one, so the household's default for that category fills it.
+func TestUpdateProductFillsTheHouseholdShelfLife(t *testing.T) {
+	env := setupHandlerTest(t)
+	seedCategoryPrices(t, env)
+	product := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
+	if err := env.DB.Model(product).Updates(map[string]any{
+		"expire_at":    nil,
+		"categories":   "",
+		"category_key": nil,
+	}).Error; err != nil {
+		t.Fatalf("seed product: %v", err)
+	}
+
+	body := `{"defaultShelfLifeDays":5}`
+	env.Ctx.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/household/categories/milk", strings.NewReader(body))
+	env.Ctx.Request.Header.Set("Content-Type", "application/json")
+	env.Ctx.Params = gin.Params{{Key: "categoryKey", Value: "milk"}}
+	UpdateHouseholdCategory(env.Ctx, env.AppCtx)
+
+	env.Ctx.Request = newRawJSONRequest(`{"categoryKey":"milk"}`)
+	env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(product.ID)}}
+	UpdateProduct(env.Ctx, env.AppCtx)
+
+	if env.W.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+	}
+	var stored dbModel.Product
+	if err := env.DB.First(&stored, product.ID).Error; err != nil {
+		t.Fatalf("load product: %v", err)
+	}
+	if stored.ExpireAt.IsZero() {
+		t.Fatal("the product has no expiry date")
+	}
+	if !stored.ExpireAt.After(time.Now().AddDate(0, 0, 4)) {
+		t.Errorf("expire at = %v, want about five days from now", stored.ExpireAt)
 	}
 }
 

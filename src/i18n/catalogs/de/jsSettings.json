@@ -26,6 +26,8 @@
   "js.settings.cancelApplicationTitle": "Bewerbung abbrechen",
   "js.settings.cancelInvitationConfirm": "Diese Einladung abbrechen? Der Empfänger kann sie dann nicht mehr verwenden.",
   "js.settings.cancelInvitationTitle": "Einladung abbrechen",
+  "js.settings.categorySaved": "Kategorie gespeichert",
+  "js.settings.categorySavedMessage": "Die Einstellungen von %s sind gespeichert.",
   "js.settings.changeRoleButton": "Rolle ändern",
   "js.settings.changeRoleConfirm": "Sie sind dabei, Ihre eigene Rolle von %s in %s zu ändern. Sie verlieren Administratorrechte. Fortfahren?",
   "js.settings.changeRoleTitle": "Eigene Rolle ändern",

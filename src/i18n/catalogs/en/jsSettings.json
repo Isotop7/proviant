@@ -26,6 +26,8 @@
   "js.settings.cancelApplicationTitle": "Cancel Application",
   "js.settings.cancelInvitationConfirm": "Cancel this invitation? The recipient will no longer be able to use it.",
   "js.settings.cancelInvitationTitle": "Cancel Invitation",
+  "js.settings.categorySaved": "Category saved",
+  "js.settings.categorySavedMessage": "The settings of %s are saved.",
   "js.settings.changeRoleButton": "Change Role",
   "js.settings.changeRoleConfirm": "You are about to change your own role from %s to %s. You will lose admin privileges. Continue?",
   "js.settings.changeRoleTitle": "Change Your Role",

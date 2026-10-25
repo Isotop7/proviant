@@ -203,6 +203,20 @@ func ImportProducts(ctx *gin.Context, appCtx *AppContext) {
 		})
 	}
 
+	// The canonical category of every imported product, resolved once for the
+	// whole file: the free text the file carries names it.
+	categories := loadBatchCategories(appCtx)
+	for i := range products {
+		if products[i].Product.CategoryKey == nil && categories.resolver != nil {
+			if key, ok := categories.resolver.ResolveKey(products[i].Product.Categories); ok {
+				products[i].Product.CategoryKey = &key
+			}
+		}
+		// A row that names no date gets the shelf life the household gave
+		// its category, the same rule the single create follows.
+		database.ApplyHouseholdShelfLife(&products[i].Product, categories.defaults, products[i].Product.CategoryKey)
+	}
+
 	response := apiModel.ImportProductsResponse{
 		TotalRows: len(rows),
 		Imported:  len(products),

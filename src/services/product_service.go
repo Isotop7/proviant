@@ -33,12 +33,27 @@ func NewProductService(repos *database.RepositoryContainer, logger *zerolog.Logg
 	}
 }
 
-func (s *ProductService) recordSavingsEvent(userID uint, product *dbModel.Product, eventType string) {
+// recordSavingsEvent writes the savings record of one consume or waste event.
+// The resolver is the snapshot of the canonical categories the caller already
+// loaded; a nil resolver lets the repository load its own.
+func (s *ProductService) recordSavingsEvent(userID uint, product *dbModel.Product, eventType string, resolver *database.CategoryResolver) {
 	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		if err := s.repos.Savings.RecordSavingsEvent(householdID, product, eventType); err != nil {
+		if err := s.repos.Savings.RecordSavingsEvent(householdID, product, eventType, resolver); err != nil {
 			s.logger.Error().Msgf("RecordSavingsEvent (%s): %s", eventType, err)
 		}
 	}
+}
+
+// loadCategoryResolver reads the canonical categories once, so a bulk action
+// prices its products without a category read per product. A failed read
+// returns no resolver, and every event then loads its own.
+func (s *ProductService) loadCategoryResolver() *database.CategoryResolver {
+	resolver, err := s.repos.Savings.LoadCategoryResolver()
+	if err != nil {
+		s.logger.Warn().Msgf("Could not load the canonical categories: %s", err)
+		return nil
+	}
+	return resolver
 }
 
 func (s *ProductService) recordActivityLog(userID uint, householdID uint, action string, productID uint, productName string, quantity int) {
@@ -129,7 +144,7 @@ func (s *ProductService) ConsumeProductPartial(productID, userID uint, quantity 
 	}
 
 	product.Quantity = consumed
-	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed)
+	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, nil)
 
 	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
 		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, consumed)
@@ -173,7 +188,7 @@ func (s *ProductService) WasteProductPartial(productID, userID uint, quantity in
 	}
 
 	product.Quantity = wasted
-	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted)
+	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted, nil)
 	return wasted, nil
 }
 
@@ -202,6 +217,7 @@ func bulkClientMiss(err error) bool {
 // handler never reports success for a request that did not land.
 func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]uint, error) {
 	householdID, _ := s.repos.Users.GetUserHouseholdByID(userID)
+	resolver := s.loadCategoryResolver()
 
 	failed := make([]uint, 0)
 	var serverErr error
@@ -219,7 +235,7 @@ func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]
 			continue
 		}
 
-		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed)
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, resolver)
 		if householdID > 0 {
 			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, 1)
 		}
@@ -231,6 +247,7 @@ func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]
 // touched. Same contract as BulkConsumeProducts.
 func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]uint, error) {
 	householdID, householdErr := s.repos.Users.GetUserHouseholdByID(userID)
+	resolver := s.loadCategoryResolver()
 
 	failed := make([]uint, 0)
 	var serverErr error
@@ -263,7 +280,7 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]ui
 			}
 		}(productID)
 
-		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted)
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted, resolver)
 	}
 	return failed, serverErr
 }
@@ -296,6 +313,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 		s.logger.Error().Msgf("CookProducts: could not resolve household for user %d: %s", userID, householdErr)
 		return 0, 0, nil, householdErr
 	}
+	resolver := s.loadCategoryResolver()
 
 	// Merge duplicate product entries by summing their counts, so two
 	// rows for the same product cook as one combined consume instead of
@@ -370,7 +388,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 		// SavingsRecord amount, price and CO2 figures. Every cooked pack is
 		// accounted for, so the ledger counts each pack exactly once.
 		product.Quantity = consumedQuantity
-		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed)
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, resolver)
 
 		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionCook, item.ProductID, product.ProductName, consumedQuantity)
 	}

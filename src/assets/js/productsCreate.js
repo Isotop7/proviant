@@ -24,6 +24,10 @@ const el = Object.freeze({
     btnExpireAdd3: document.getElementById('btnExpireAdd3'),
     btnExpireAdd7: document.getElementById('btnExpireAdd7'),
     btnExpireAdd1m: document.getElementById('btnExpireAdd1m'),
+    // The household's category list and the hint that names the source of a
+    // filled expiry date — both only present on the pages that render them.
+    productCategory: document.getElementById('productCategory'),
+    expirySuggestion: document.getElementById('expirySuggestion'),
     // Batch scan mode — only present on the scan page, every use is guarded
     batchStartPanel: document.getElementById('batchStartPanel'),
     batchConfirmPanel: document.getElementById('batchConfirmPanel'),
@@ -107,7 +111,65 @@ function showProductData(product) {
             el.storageHint.classList.add('d-none');
         }
     }
+    selectResolvedCategory(product.categories);
     if (el.productDataWrapper) el.productDataWrapper.classList.remove('d-none');
+}
+
+// The household's categories, read from the rendered list. The list carries
+// the shelf life of every category, so the suggestion works without a
+// request — and therefore offline.
+function householdCategories() {
+    const select = el.productCategory;
+    if (!select) return [];
+    return Array.from(select.options)
+        .filter((option) => option.value !== '')
+        .map((option) => ({
+            categoryKey: option.value,
+            displayName: (option.textContent || '').trim(),
+            defaultShelfLifeDays: option.dataset.shelfLifeDays
+                ? Number.parseInt(option.dataset.shelfLifeDays, 10)
+                : null,
+        }));
+}
+
+// Picks the category the looked-up product belongs to and fills the expiry
+// date the household gave it.
+function selectResolvedCategory(categoriesText) {
+    const select = el.productCategory;
+    if (!select) return;
+    const categories = householdCategories();
+    const categoryKey = proviant.resolveCategoryKey(categoriesText, categories);
+    select.value = categoryKey && categories.some((category) => category.categoryKey === categoryKey)
+        ? categoryKey
+        : '';
+    applyCategorySuggestion();
+}
+
+// Fills the expiry date with the shelf life of the selected category. A date
+// the user set is theirs and is never overwritten.
+function applyCategorySuggestion() {
+    const select = el.productCategory;
+    const hint = el.expirySuggestion;
+    if (!select) return;
+    const categories = householdCategories();
+    const categoryKey = select.value;
+    const days = proviant.categoryShelfLifeDays(categories, categoryKey);
+    if (days === null) {
+        if (hint) hint.classList.add('d-none');
+        return;
+    }
+    // The hint names the source of the date, so it may only show when the
+    // suggestion really wrote the date: a date the user set is theirs.
+    const applied = proviant.applyExpirySuggestion(el.inputExpireAt, categories, categoryKey);
+    if (!applied) {
+        if (hint) hint.classList.add('d-none');
+        return;
+    }
+    if (hint) {
+        const category = proviant.categoryByKey(categories, categoryKey);
+        hint.textContent = proviant.t("js.products.expirySuggested", category ? category.displayName : categoryKey, days);
+        hint.classList.remove('d-none');
+    }
 }
 
 // UI toggle functions
@@ -236,6 +298,9 @@ function shiftExpiry(days, months) {
     if (days !== 0) base.setDate(base.getDate() + days);
     if (months !== 0) base.setMonth(base.getMonth() + months);
     inputEl.value = formatInputDate(base);
+    // A quick adjustment is the user's own date: a later suggestion must not
+    // overwrite it.
+    inputEl.dataset.userEdited = '1';
     inputEl.classList.remove('date-updated');
     void inputEl.offsetWidth;
     inputEl.classList.add('date-updated');
@@ -584,6 +649,12 @@ async function queryProductInfoRequest(barcode) {
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
+    // A new product starts with an untouched expiry field, so the shelf life
+    // of its category may fill it again.
+    if (el.inputExpireAt) {
+        delete el.inputExpireAt.dataset.userEdited;
+        delete el.inputExpireAt.dataset.suggested;
+    }
     setBarcodeLoading(true);
     queryProductInfoRequest(barcode).then((response) => {
         setBarcodeLoading(false);
@@ -684,13 +755,15 @@ function handleBtnAddProduct() {
     const quantity = qtyEl ? Number.parseInt(qtyEl.value, 10) || 1 : 1;
     const locationEl = el.modalStorageLocation;
     const storageLocationId = locationEl && locationEl.value ? Number.parseInt(locationEl.value, 10) : null;
+    const categoryEl = el.productCategory;
+    const categoryKey = categoryEl && categoryEl.value ? categoryEl.value : null;
 
     const btn = el.btnAddProduct;
     if (!btn) return;
     btn.classList.add('loading');
     btn.disabled = true;
 
-    proviant.createProduct(barcode, expireAt, quantity, storageLocationId, false, null).then((response) => {
+    proviant.createProduct(barcode, expireAt, quantity, storageLocationId, false, null, false, categoryKey).then((response) => {
         btn.classList.remove('loading');
         btn.disabled = false;
         switch (response.code) {
@@ -708,7 +781,7 @@ function handleBtnAddProduct() {
                     showAlert(false, response.message);
                     break;
                 }
-                openDuplicatePrompt(response, { barcode: barcode, expireAt: expireAt, quantity: quantity, storageLocationId: storageLocationId });
+                openDuplicatePrompt(response, { barcode: barcode, expireAt: expireAt, quantity: quantity, storageLocationId: storageLocationId, categoryKey: categoryKey });
                 break;
             case 400:
                 showAlert(false, proviant.t("js.scan.invalidRequestData"));
@@ -755,7 +828,7 @@ function openDuplicatePrompt(response, draft) {
         onAddSeparately: function () {
             // The same id as the refused attempt: nothing was written under it,
             // so the row this creates is idempotent as well.
-            proviant.createProduct(draft.barcode, draft.expireAt, draft.quantity, draft.storageLocationId, false, response.clientSyncId, true).then((result) => {
+            proviant.createProduct(draft.barcode, draft.expireAt, draft.quantity, draft.storageLocationId, false, response.clientSyncId, true, draft.categoryKey).then((result) => {
                 if (result.code === 200 || result.code === 201) {
                     showAlert(true, proviant.t("js.products.productCreatedBarcode", draft.barcode));
                     return;
@@ -1075,6 +1148,28 @@ document.addEventListener('input', function (event) {
     if (batchMode) return;
     if (target.id === 'barcode' || target.name === 'barcode') {
         handleChangedBarcode();
+    }
+});
+
+/* A date the user set is theirs: a later suggestion must not overwrite it.
+   The change event covers the expiry scan, which writes the field and fires
+   it. */
+document.addEventListener('input', function (event) {
+    const target = event.target;
+    if (target.id !== 'expireAt') return;
+    target.dataset.userEdited = '1';
+    delete target.dataset.suggested;
+});
+
+document.addEventListener('change', function (event) {
+    const target = event.target;
+    if (target.id === 'expireAt') {
+        target.dataset.userEdited = '1';
+        delete target.dataset.suggested;
+        return;
+    }
+    if (target.id === 'productCategory') {
+        applyCategorySuggestion();
     }
 });
 

@@ -56,6 +56,10 @@ type Product struct {
 	MinStockAmount       int              `gorm:"default:0"                   json:"minStockAmount"`
 	OpenedAt             *time.Time       `gorm:"default:null"                 json:"openedAt,omitempty"`
 	DaysAfterOpening     *int             `gorm:"default:null"                 json:"daysAfterOpening,omitempty"`
+	// CategoryKey is the canonical category the product belongs to. It is what
+	// the household's shelf-life defaults are looked up by. Categories keeps
+	// the free text Open Food Facts wrote, which the recipe suggestions read.
+	CategoryKey *string `gorm:"index" json:"categoryKey,omitempty"`
 
 	// AllowDuplicate says the caller has seen the duplicate refusal and wants
 	// a row of its own anyway. It is a request flag and never stored.
@@ -94,6 +98,9 @@ type ProductDTOPatch struct {
 	PriceOverride        *float64   `json:"priceOverride,omitempty"`
 	OpenedAt             *time.Time `json:"openedAt,omitempty"`
 	DaysAfterOpening     *int       `json:"daysAfterOpening,omitempty"`
+	// CategoryKey is the canonical category of the product. It is sent as
+	// null to clear it.
+	CategoryKey *string `json:"categoryKey,omitempty"`
 
 	present map[string]bool
 }

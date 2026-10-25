@@ -165,6 +165,7 @@ type ProductResponse struct {
 	MinStockAmount       int                      `json:"minStockAmount"`
 	OpenedAt             *time.Time               `json:"openedAt,omitempty"`
 	DaysAfterOpening     *int                     `json:"daysAfterOpening,omitempty"`
+	CategoryKey          *string                  `json:"categoryKey,omitempty"`
 
 	// Label is set only by NewLabelledProductResponse, to keep the format cost
 	// off list responses.
@@ -197,6 +198,7 @@ func NewProductResponse(product *dbModel.Product) ProductResponse {
 		MinStockAmount:       product.MinStockAmount,
 		OpenedAt:             product.OpenedAt,
 		DaysAfterOpening:     product.DaysAfterOpening,
+		CategoryKey:          product.CategoryKey,
 	}
 	if product.StorageLocation != nil {
 		location := NewStorageLocationResponse(product.StorageLocation)

@@ -749,6 +749,146 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/household/categories": {
+            "get": {
+                "description": "Returns every canonical category with the household's display name, order, visibility and shelf-life defaults applied.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "List household categories",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.HouseholdCategoryResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/categories/order": {
+            "put": {
+                "description": "Stores the household's order over the canonical categories. The listed keys are written in the order they are given.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Reorder household categories",
+                "parameters": [
+                    {
+                        "description": "Category order",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.householdCategoryOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/categories/{categoryKey}": {
+            "patch": {
+                "description": "Stores the household's display name, order, visibility and shelf-life defaults for one canonical category. A shelf life of zero clears the stored value.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Update a household category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Canonical category key",
+                        "name": "categoryKey",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Category overrides",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.householdCategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdCategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/household/integrations": {
             "get": {
                 "security": [
@@ -7082,6 +7222,14 @@ const docTemplate = `{
                 "categories": {
                     "type": "string"
                 },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category the product belongs to. It is\nsent as null when the draft names no category.",
+                    "type": "string"
+                },
+                "daysAfterOpening": {
+                    "description": "DaysAfterOpening is the shelf life after opening, in days.",
+                    "type": "integer"
+                },
                 "expireAt": {
                     "description": "ExpireAt is the expiry date the receipt carries, as an RFC 3339 date.",
                     "type": "string"
@@ -7592,6 +7740,29 @@ const docTemplate = `{
                 }
             }
         },
+        "api.HouseholdCategoryResponse": {
+            "type": "object",
+            "properties": {
+                "categoryKey": {
+                    "type": "string"
+                },
+                "defaultDaysAfterOpening": {
+                    "type": "integer"
+                },
+                "defaultShelfLifeDays": {
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "hidden": {
+                    "type": "boolean"
+                },
+                "sortOrder": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.HouseholdIntegrationResponse": {
             "type": "object",
             "properties": {
@@ -7878,8 +8049,16 @@ const docTemplate = `{
                 "categories": {
                     "type": "string"
                 },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category the product belongs to. It is\nsent as null when the draft names no category.",
+                    "type": "string"
+                },
                 "clientSyncId": {
                     "type": "string"
+                },
+                "daysAfterOpening": {
+                    "description": "DaysAfterOpening is the shelf life after opening, in days.",
+                    "type": "integer"
                 },
                 "expireAt": {
                     "description": "ExpireAt is the expiry date the receipt carries, as an RFC 3339 date.",
@@ -8069,6 +8248,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "categories": {
+                    "type": "string"
+                },
+                "categoryKey": {
                     "type": "string"
                 },
                 "co2KgPerKg": {
@@ -8976,6 +9158,10 @@ const docTemplate = `{
                 "categories": {
                     "type": "string"
                 },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category the product belongs to. It is what\nthe household's shelf-life defaults are looked up by. Categories keeps\nthe free text Open Food Facts wrote, which the recipe suggestions read.",
+                    "type": "string"
+                },
                 "clientSyncId": {
                     "type": "string"
                 },
@@ -9076,6 +9262,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "categories": {
+                    "type": "string"
+                },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category of the product. It is sent as\nnull to clear it.",
                     "type": "string"
                 },
                 "countries": {
@@ -9320,6 +9510,37 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "w": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.householdCategoryOrderRequest": {
+            "type": "object",
+            "properties": {
+                "keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "v1.householdCategoryRequest": {
+            "type": "object",
+            "properties": {
+                "defaultDaysAfterOpening": {
+                    "type": "integer"
+                },
+                "defaultShelfLifeDays": {
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "hidden": {
+                    "type": "boolean"
+                },
+                "sortOrder": {
                     "type": "integer"
                 }
             }

@@ -661,15 +661,17 @@ var _ database.PATRepositoryInterface = (*MockPATRepository)(nil)
 
 // MockSavingsRepository is a configurable in-memory stub for SavingsRepositoryInterface.
 type MockSavingsRepository struct {
-	CategoryPrice *dbModel.ProductCategoryPrice
-	SavingsStats  apiModel.SavingsStatsResponse
-	Err           error
+	SavingsStats apiModel.SavingsStatsResponse
+	Err          error
 }
 
-func (m *MockSavingsRepository) MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error) {
-	return m.CategoryPrice, m.Err
+func (m *MockSavingsRepository) LoadCategoryResolver() (*database.CategoryResolver, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	return database.NewCategoryResolver([]dbModel.ProductCategoryPrice{}), nil
 }
-func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error {
+func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, resolver *database.CategoryResolver) error {
 	return m.Err
 }
 func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error) {
@@ -677,6 +679,36 @@ func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.Savi
 }
 
 var _ database.SavingsRepositoryInterface = (*MockSavingsRepository)(nil)
+
+// MockHouseholdCategoryRepository is a configurable in-memory stub for
+// HouseholdCategoryRepositoryInterface.
+type MockHouseholdCategoryRepository struct {
+	Categories       []dbModel.HouseholdCategoryView
+	CategoryDefaults map[string]database.HouseholdCategoryDefaults
+	Err              error
+}
+
+func (m *MockHouseholdCategoryRepository) List(householdID uint) ([]dbModel.HouseholdCategoryView, error) {
+	return m.Categories, m.Err
+}
+
+func (m *MockHouseholdCategoryRepository) ListByUser(userID uint) ([]dbModel.HouseholdCategoryView, error) {
+	return m.Categories, m.Err
+}
+
+func (m *MockHouseholdCategoryRepository) Upsert(householdID uint, categoryKey string, override database.HouseholdCategoryOverride) (dbModel.HouseholdCategoryView, error) {
+	return dbModel.HouseholdCategoryView{CategoryKey: categoryKey}, m.Err
+}
+
+func (m *MockHouseholdCategoryRepository) Reorder(householdID uint, categoryKeys []string) error {
+	return m.Err
+}
+
+func (m *MockHouseholdCategoryRepository) Defaults(householdID uint) (map[string]database.HouseholdCategoryDefaults, error) {
+	return m.CategoryDefaults, m.Err
+}
+
+var _ database.HouseholdCategoryRepositoryInterface = (*MockHouseholdCategoryRepository)(nil)
 
 // MockRecipeCacheRepository is a configurable in-memory stub for RecipeCacheRepositoryInterface.
 type MockRecipeCacheRepository struct {
@@ -1055,6 +1087,7 @@ type MockRepositoryContainer struct {
 	Households            *MockHouseholdRepository
 	Invitations           *MockInvitationRepository
 	StorageLocations      *MockStorageLocationRepository
+	HouseholdCategories   *MockHouseholdCategoryRepository
 	Webhooks              *MockWebhookRepository
 	PATs                  *MockPATRepository
 	Savings               *MockSavingsRepository
@@ -1077,6 +1110,7 @@ func NewMockRepositoryContainer() *MockRepositoryContainer {
 		Households:            &MockHouseholdRepository{},
 		Invitations:           &MockInvitationRepository{},
 		StorageLocations:      &MockStorageLocationRepository{},
+		HouseholdCategories:   &MockHouseholdCategoryRepository{},
 		Webhooks:              &MockWebhookRepository{},
 		PATs:                  &MockPATRepository{},
 		Savings:               &MockSavingsRepository{},
@@ -1101,6 +1135,7 @@ func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryCo
 		Households:            m.Households,
 		Invitations:           m.Invitations,
 		StorageLocations:      m.StorageLocations,
+		HouseholdCategories:   m.HouseholdCategories,
 		Webhooks:              m.Webhooks,
 		PATs:                  m.PATs,
 		RecipeCaches:          m.RecipeCaches,

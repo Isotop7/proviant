@@ -88,6 +88,11 @@ func SyncOfflineProducts(ctx *gin.Context, appCtx *AppContext) {
 		bulkActorInfo.userName = user.DisplayName
 	}
 
+	// The canonical categories and the household's shelf-life defaults are read
+	// once for the whole batch, so the category of every queued item is
+	// checked against the same set.
+	categories := loadBatchCategories(appCtx)
+
 	// The fallback name below is written into the row and outlives this request, so
 	// it is resolved once for the whole batch — and it is resolved in the language
 	// active at sync time, not at render time, so a user who switches language
@@ -154,7 +159,7 @@ func SyncOfflineProducts(ctx *gin.Context, appCtx *AppContext) {
 			}
 		}
 
-		product, result := bulkCreateItem(appCtx, i, &draft.BulkProductDraft, validLocationIDs, clientSyncID)
+		product, result := bulkCreateItem(appCtx, i, &draft.BulkProductDraft, validLocationIDs, clientSyncID, categories)
 		if result.Status != apiModel.BulkItemStatusCreated {
 			// A retry may race with another worker that already inserted this
 			// client sync id; report the existing row instead of a failure.

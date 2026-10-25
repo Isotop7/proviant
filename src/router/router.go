@@ -378,6 +378,13 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdMemberAPI.PATCH("/storage-locations/:id", v1.WrapHandler(v1.UpdateStorageLocation))
 	householdMemberAPI.DELETE("/storage-locations/:id", v1.WrapHandler(v1.DeleteStorageLocation))
 
+	// Household category routes. The read is open to every member, the
+	// writes to the admins and the members — the same split the storage
+	// locations use.
+	householdAPI.GET("/categories", v1.WrapHandler(v1.ListHouseholdCategories))
+	householdMemberAPI.PATCH("/categories/:categoryKey", v1.WrapHandler(v1.UpdateHouseholdCategory))
+	householdMemberAPI.PUT("/categories/order", v1.WrapHandler(v1.ReorderHouseholdCategories))
+
 	// Admin user management routes
 	adminAPI := engine.Group("/api/v1/admin/users")
 	adminAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware(), v1.AppContextMiddleware(), RequireHouseholdAdmin())

@@ -267,11 +267,91 @@ proviant.updateProductQuantity = async function (productID, delta, clientMutatio
   return proviant._sendQuantityDelta(productID, delta, clientMutationId);
 };
 
+/* ── Household categories ────────────────────────────────────────────────────── */
+
+// The shelf life of a category is filled from today, so the date is written
+// the way a date input reads it.
+function formatDateForInput(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// A category token is prepared the way the server prepares it: the language
+// tag is dropped, the token is lower-cased and dashes become spaces.
+function normalizeCategoryToken(token) {
+  const trimmed = String(token === undefined || token === null ? "" : token).trim();
+  const colon = trimmed.indexOf(":");
+  const withoutLanguage = colon === -1 ? trimmed : trimmed.slice(colon + 1).trim();
+  return withoutLanguage.toLowerCase().replace(/-/g, " ").trim();
+}
+
+// The canonical category a free-text category string names. The rule is the
+// server's: among all categories whose key the text names, the longest key
+// wins, and a tie goes to the lexicographically smaller key. The text is never
+// rewritten — the server keeps the free text for the recipe suggestions.
+proviant.resolveCategoryKey = function (categoriesText, categories) {
+  const tokens = String(categoriesText === undefined || categoriesText === null ? "" : categoriesText)
+    .split(",")
+    .map(normalizeCategoryToken)
+    .filter(Boolean);
+  if (!tokens.length) return "";
+  let best = "";
+  let bestNormalized = "";
+  (categories || []).forEach(function (category) {
+    const normalized = normalizeCategoryToken(category.categoryKey);
+    if (!normalized) return;
+    const matches = tokens.some(function (token) {
+      return token.indexOf(normalized) !== -1 || normalized.indexOf(token) !== -1;
+    });
+    if (!matches) return;
+    if (normalized.length > bestNormalized.length || (normalized.length === bestNormalized.length && normalized < bestNormalized)) {
+      best = category.categoryKey;
+      bestNormalized = normalized;
+    }
+  });
+  return best;
+};
+
+proviant.categoryByKey = function (categories, categoryKey) {
+  if (!categoryKey) return null;
+  const found = (categories || []).find(function (category) {
+    return category.categoryKey === categoryKey;
+  });
+  return found || null;
+};
+
+// The shelf life the household gave a category, or null when it gave none.
+proviant.categoryShelfLifeDays = function (categories, categoryKey) {
+  const category = proviant.categoryByKey(categories, categoryKey);
+  if (!category) return null;
+  const days = category.defaultShelfLifeDays;
+  return typeof days === "number" && days > 0 ? days : null;
+};
+
+// Fills the expiry field with the shelf life the household gave the category.
+// A date the user set is theirs: the suggestion is only applied while the
+// field is untouched. It answers the date it wrote, or null.
+proviant.applyExpirySuggestion = function (input, categories, categoryKey) {
+  if (!input) return null;
+  if (input.dataset.userEdited === "1") return null;
+  const days = proviant.categoryShelfLifeDays(categories, categoryKey);
+  if (days === null) return null;
+  const base = new Date();
+  base.setDate(base.getDate() + days);
+  const value = formatDateForInput(base);
+  input.value = value;
+  input.dataset.suggested = "1";
+  return value;
+};
+
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId, allowDuplicate = false) {
+proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId, allowDuplicate = false, categoryKey = null) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
   const payload = { barcode, expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null };
   if (allowDuplicate) payload.allowDuplicate = true;
+  if (categoryKey) payload.categoryKey = categoryKey;
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const body = await res.json();
   // A refusal that names a duplicate carries the matched product, so the

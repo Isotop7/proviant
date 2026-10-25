@@ -41,6 +41,7 @@
   "js.products.duplicateNoExpiry": "without an expiry date",
   "js.products.duplicateNoLocation": "Stored without a storage location",
   "js.products.duplicateUnavailable": "This product is already in your pantry.",
+  "js.products.expirySuggested": "%s · %d days from purchase",
   "js.products.failedToAdd": "Failed to add",
   "js.products.failedToAddToList": "Failed to add to list",
   "js.products.importComplete": "Import complete",

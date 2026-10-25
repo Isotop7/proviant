@@ -14,6 +14,8 @@ import (
 	"github.com/Isotop7/proviant/testutil"
 	"github.com/Isotop7/proviant/util"
 
+	"github.com/Isotop7/proviant/controllers/database"
+
 	"github.com/rs/zerolog"
 )
 
@@ -87,6 +89,98 @@ func TestRestoreHouseholdBackupRejectsUnsupportedVersion(t *testing.T) {
 	}
 	if count != 1 {
 		t.Errorf("products = %d, want the existing row untouched", count)
+	}
+}
+
+// TestRestoreHouseholdBackupKeepsTheCategoryKey pins the restore of the
+// canonical category: the restore insert writes an explicit column list, so a
+// category that is missing from it is dropped without a word.
+func TestRestoreHouseholdBackupKeepsTheCategoryKey(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	user := testutil.CreateTestUser(db, 0)
+	household := testutil.CreateTestHousehold(db, user.ID)
+	user.HouseholdID = household.ID
+	if err := db.Save(user).Error; err != nil {
+		t.Fatalf("save user: %v", err)
+	}
+	if err := db.Create(&dbModel.ProductCategoryPrice{
+		CategoryKey: "milk",
+		DisplayName: "Milk",
+	}).Error; err != nil {
+		t.Fatalf("seed canonical row: %v", err)
+	}
+
+	backup := apiModel.FullExportResponse{
+		Version: apiModel.BackupSchemaVersion,
+		Products: apiModel.FullExportProducts{
+			Active: []apiModel.ExportProductResponse{
+				{ProductName: "Milk", Barcode: "1234567890123", Categories: "milk", Quantity: 1},
+			},
+		},
+	}
+
+	if _, err := RestoreHouseholdBackup(db, household.ID, user.ID, &backup); err != nil {
+		t.Fatalf("RestoreHouseholdBackup: %v", err)
+	}
+
+	var stored dbModel.Product
+	if err := db.Where("household_id = ?", household.ID).First(&stored).Error; err != nil {
+		t.Fatalf("read the restored product: %v", err)
+	}
+	if stored.CategoryKey == nil {
+		t.Fatal("the restored product has no category")
+	}
+	if *stored.CategoryKey != "milk" {
+		t.Errorf("category key = %q, want milk", *stored.CategoryKey)
+	}
+}
+
+// TestRestoreHouseholdBackupFillsTheHouseholdShelfLife covers the restore of a
+// product that names no date: the household's default for its category fills
+// it, the same rule the create paths follow.
+func TestRestoreHouseholdBackupFillsTheHouseholdShelfLife(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	user := testutil.CreateTestUser(db, 0)
+	household := testutil.CreateTestHousehold(db, user.ID)
+	user.HouseholdID = household.ID
+	if err := db.Save(user).Error; err != nil {
+		t.Fatalf("save user: %v", err)
+	}
+	if err := db.Create(&dbModel.ProductCategoryPrice{
+		CategoryKey: "milk",
+		DisplayName: "Milk",
+	}).Error; err != nil {
+		t.Fatalf("seed canonical row: %v", err)
+	}
+	shelfLife := 5
+	if _, err := database.NewHouseholdCategoryRepository(db).Upsert(household.ID, "milk", database.HouseholdCategoryOverride{
+		DefaultShelfLifeDays: &shelfLife,
+	}); err != nil {
+		t.Fatalf("seed the household shelf life: %v", err)
+	}
+
+	backup := apiModel.FullExportResponse{
+		Version: apiModel.BackupSchemaVersion,
+		Products: apiModel.FullExportProducts{
+			Active: []apiModel.ExportProductResponse{
+				{ProductName: "Milk", Barcode: "1234567890123", Categories: "milk", Quantity: 1},
+			},
+		},
+	}
+
+	if _, err := RestoreHouseholdBackup(db, household.ID, user.ID, &backup); err != nil {
+		t.Fatalf("RestoreHouseholdBackup: %v", err)
+	}
+
+	var stored dbModel.Product
+	if err := db.Where("household_id = ?", household.ID).First(&stored).Error; err != nil {
+		t.Fatalf("read the restored product: %v", err)
+	}
+	if stored.ExpireAt.IsZero() {
+		t.Fatal("the restored product has no expiry date")
+	}
+	if !stored.ExpireAt.After(time.Now().AddDate(0, 0, 4)) {
+		t.Errorf("expire at = %v, want about five days from now", stored.ExpireAt)
 	}
 }
 
