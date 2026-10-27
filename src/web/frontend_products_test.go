@@ -379,6 +379,111 @@ func TestProductsGridShowsThePackCount(t *testing.T) {
 	}
 }
 
+// TestProductsHandlerHonoursTheEffectiveExpirySort pins the link the use-first
+// tile points at: the page answers it with the effective expiry order and
+// shows that order in the sort field, so the household sees the list it asked
+// for and can tell which order it is in.
+func TestProductsHandlerHonoursTheEffectiveExpirySort(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	// Created in the reverse of the expiry order: the first product created
+	// expires last.
+	late := testutil.CreateTestProduct(db, household.ID, user.ID)
+	late.ProductName = "Effective Late"
+	late.ExpireAt = time.Now().Add(72 * time.Hour)
+	if err := db.Save(late).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	early := testutil.CreateTestProduct(db, household.ID, user.ID)
+	early.ProductName = "Effective Early"
+	early.ExpireAt = time.Now().Add(1 * time.Hour)
+	if err := db.Save(early).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products?sort=effective_expire_at", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	(&Frontend{TemplateCache: cache}).Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	earlyIdx := strings.Index(body, early.ProductName)
+	lateIdx := strings.Index(body, late.ProductName)
+	if earlyIdx < 0 || lateIdx < 0 {
+		t.Fatalf("rendered body missing one of the products: early=%d late=%d", earlyIdx, lateIdx)
+	}
+	if earlyIdx > lateIdx {
+		t.Errorf("list is not in effective expiry order: %q rendered before %q", late.ProductName, early.ProductName)
+	}
+	if !strings.Contains(body, `value="effective_expire_at" selected`) {
+		t.Errorf("the sort field does not show the effective expiry as the chosen order")
+	}
+}
+
+// TestProductsHandlerReadsTheDirectionCaseInsensitively pins that the page and
+// the repository read the direction the same way: the repository uppercases it,
+// so a page that compared it literally would answer "DESC" with the ascending
+// list the API calls descending.
+func TestProductsHandlerReadsTheDirectionCaseInsensitively(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	early := testutil.CreateTestProduct(db, household.ID, user.ID)
+	early.ProductName = "Direction Early"
+	early.ExpireAt = time.Now().Add(1 * time.Hour)
+	if err := db.Save(early).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	late := testutil.CreateTestProduct(db, household.ID, user.ID)
+	late.ProductName = "Direction Late"
+	late.ExpireAt = time.Now().Add(72 * time.Hour)
+	if err := db.Save(late).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products?sort=effective_expire_at&order=DESC", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	(&Frontend{TemplateCache: cache}).Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	earlyIdx := strings.Index(body, early.ProductName)
+	lateIdx := strings.Index(body, late.ProductName)
+	if earlyIdx < 0 || lateIdx < 0 {
+		t.Fatalf("rendered body missing one of the products: early=%d late=%d", earlyIdx, lateIdx)
+	}
+	if lateIdx > earlyIdx {
+		t.Errorf("list is ascending: %q rendered before %q", early.ProductName, late.ProductName)
+	}
+}
+
 func productNameFor(i int) string {
 	return fmt.Sprintf("Product %03d", i)
 }

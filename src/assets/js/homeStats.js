@@ -149,8 +149,10 @@ function attachInfoTooltip(trigger, text, placement) {
 }
 
 // The expiry status of a product, derived from its date with the app's own
-// thresholds: critical within three days, soon within seven.
+// thresholds: critical within three days, soon within seven. A product without
+// a date has no status to derive — it is neutral.
 function expiryStatus(expireAt) {
+  if (!expireAt) return 'neutral';
   const days = (new Date(expireAt + 'T00:00:00') - new Date()) / 86400000;
   if (days < 0) return 'expired';
   if (days < 3) return 'critical';
@@ -163,7 +165,68 @@ const EXPIRY_STATUS = {
   critical: { label: 'status.critical', icon: 'exclamation-circle-fill' },
   soon: { label: 'status.soon', icon: 'clock-fill' },
   fresh: { label: 'status.fresh', icon: 'check-circle-fill' },
+  neutral: { label: 'status.noDate', icon: 'dash-circle-fill' },
 };
+
+// The meta line of a list row: where the product lives, how many packs are
+// there and how big one pack is. The count is shown even when it is one: the
+// list says how much is there, and "3 packs" is only half of that.
+function listItemMeta(item) {
+  const parts = [];
+  if (item.storageLocationName) parts.push(item.storageLocationName);
+  if (item.quantity) parts.push(proviant.tn('js.home.packCount', item.quantity));
+  if (item.packSize) parts.push(item.packSize);
+  return parts.join(' · ');
+}
+
+// The link to the product a row names. A list that cannot be acted on is a
+// warning without a way to do anything about it.
+function listItemLink(item) {
+  const id = Number(item.id);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  return `/web/products/${id}/edit`;
+}
+
+// One row of a product list: the status stripe, the name with its meta line
+// and the date with the status chip.
+function listItemHtml(item) {
+  const status = expiryStatus(item.expireAt);
+  const meta = EXPIRY_STATUS[status];
+  const dateLabel = item.expireAt
+    ? new Date(item.expireAt + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : '';
+  const metaLine = listItemMeta(item);
+  const dateCell = dateLabel ? `<span class="expiry-text status-${status}">${dateLabel}</span>` : '';
+  const row = `
+    <span class="list-group-item__stripe list-group-item__stripe--${status}" aria-hidden="true"></span>
+    <span class="list-group-item__body">
+      <span class="list-group-item__title text-truncate">${escapeHtml(item.productName)}</span>
+      ${metaLine ? `<span class="list-group-item__meta text-truncate">${escapeHtml(metaLine)}</span>` : ''}
+    </span>
+    <span class="list-group-item__trailing">
+      ${dateCell}
+      <span class="badge badge--${status}"><i class="bi bi-${meta.icon}" aria-hidden="true"></i>${proviant.t(meta.label)}</span>
+    </span>`;
+
+  const link = listItemLink(item);
+  if (!link) {
+    return `<li class="list-group-item d-flex align-items-center gap-5 px-5 py-3">${row}</li>`;
+  }
+  return `<li class="list-group-item p-0">
+    <a class="list-group-item__link d-flex align-items-center gap-5 px-5 py-3" href="${link}">${row}</a>
+  </li>`;
+}
+
+// The products without a date are their own group at the end of the list.
+function listItemsHtml(items) {
+  const dated = items.filter((item) => item.expireAt);
+  const undated = items.filter((item) => !item.expireAt);
+  const divider = undated.length
+    ? `<li class="list-group-item px-5 py-2"><span class="list-group-item__meta">${proviant.t('status.noDate')}</span></li>`
+    : '';
+  return dated.map((item) => listItemHtml(item)).join('') + divider +
+    undated.map((item) => listItemHtml(item)).join('');
+}
 
 function renderListTile(title, items, days) {
   const col = document.createElement('div');
@@ -173,22 +236,7 @@ function renderListTile(title, items, days) {
   if (items.length === 0) {
     listHtml = `<li class="list-group-item fg-secondary small py-3">${proviant.tn("js.home.noExpiringProducts", days)}</li>`;
   } else {
-    listHtml = items.map((item) => {
-      const status = expiryStatus(item.expireAt);
-      const meta = EXPIRY_STATUS[status];
-      const date = new Date(item.expireAt + 'T00:00:00');
-      const dateLabel = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      return `<li class="list-group-item d-flex align-items-center gap-5 px-5 py-3">
-        <span class="list-group-item__stripe list-group-item__stripe--${status}" aria-hidden="true"></span>
-        <span class="list-group-item__body">
-          <span class="list-group-item__title text-truncate">${item.productName}</span>
-        </span>
-        <span class="list-group-item__trailing">
-          <span class="expiry-text status-${status}">${dateLabel}</span>
-          <span class="badge badge--${status}"><i class="bi bi-${meta.icon}" aria-hidden="true"></i>${proviant.t(meta.label)}</span>
-        </span>
-      </li>`;
-    }).join('');
+    listHtml = listItemsHtml(items);
   }
 
   const countChip = items.length
@@ -204,6 +252,41 @@ function renderListTile(title, items, days) {
         <span class="flex-grow-1">${title}</span>
         ${countChip}
         <button type="button" class="tile-threshold-info"><i class="bi bi-info-circle" aria-hidden="true"></i></button>
+      </div>
+      <div class="tile-scroll-body">
+        <ul class="list-group list-group-flush">${listHtml}</ul>
+      </div>
+    </div>`;
+
+  return col;
+}
+
+// The use-first list: the whole pantry ordered by the effective expiry, with
+// the place and the pack count of every product, and a link into the products
+// list carrying the same order.
+function renderUseFirstTile(items, total) {
+  const col = document.createElement('div');
+  col.className = 'h-100';
+
+  const listHtml = items.length === 0
+    ? `<li class="list-group-item fg-secondary small py-3">${proviant.t('js.home.useFirstEmpty')}</li>`
+    : listItemsHtml(items);
+
+  const countChip = items.length
+    ? `<span class="badge badge--neutral">${proviant.t('js.home.useFirstCount', items.length, total)}</span>`
+    : '';
+
+  col.innerHTML = `
+    <div class="card h-100" style="overflow:hidden;">
+      <div class="card-header d-flex flex-row align-items-center gap-3 fw-bold">
+        <div class="icon-chip" aria-hidden="true">
+          <i class="bi bi-1-circle-fill"></i>
+        </div>
+        <a class="flex-grow-1 text-decoration-none fg-body d-flex align-items-center gap-2" href="/web/products?sort=effective_expire_at">
+          <span>${proviant.t('js.home.useFirst')}</span>
+          <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </a>
+        ${countChip}
       </div>
       <div class="tile-scroll-body">
         <ul class="list-group list-group-flush">${listHtml}</ul>
@@ -697,7 +780,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     const dashboardList = document.getElementById('dashboard-list');
     if (dashboardList) {
       const days = s.expiringSoonDays ?? 7;
-      const listTile = renderListTile(proviant.tn("js.home.expiringWithin", days), s.expiringSoon ?? [], days);
+      const listTitle = proviant.tn("js.home.expiringWithin", days);
+      // The tile label names the tile, not its content: the count in the
+      // header would otherwise end up in the name of the move and resize
+      // handles, and it changes with every product.
+      dashboardList.dataset.tileLabel = listTitle;
+      const listTile = renderListTile(listTitle, s.expiringSoon ?? [], days);
       dashboardList.appendChild(listTile);
 
       const infoTrigger = listTile.querySelector('.tile-threshold-info');
@@ -706,6 +794,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         infoTrigger.setAttribute('aria-label', text);
         attachInfoTooltip(infoTrigger, text, 'left');
       }
+    }
+
+    const useFirstTile = document.getElementById('dashboard-use-first');
+    if (useFirstTile) {
+      useFirstTile.dataset.tileLabel = proviant.t('js.home.useFirst');
+      useFirstTile.appendChild(renderUseFirstTile(s.useFirst ?? [], s.totalActive || 0));
     }
 
     const status = document.getElementById('dashboard-status');

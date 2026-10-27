@@ -42,7 +42,9 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 
 	// Expired, critical, fresh, undated, opened-shelf-life-expired.
 	create(inHousehold(database.Product{ProductName: "Expired", Categories: "en:dairy", ExpireAt: now.AddDate(0, 0, -2)}))
-	create(inHousehold(database.Product{ProductName: "Soon", Categories: "en:bakery", ExpireAt: now.AddDate(0, 0, 1)}))
+	location := testutil.CreateTestStorageLocation(db, household.ID)
+	create(inHousehold(database.Product{ProductName: "Soon", Categories: "en:bakery", ExpireAt: now.AddDate(0, 0, 1),
+		Quantity: 2, PackSize: "250g", StorageLocationID: &location.ID}))
 	create(inHousehold(database.Product{ProductName: "Fresh", Categories: "en:produce", ExpireAt: now.AddDate(0, 0, 30)}))
 	create(inHousehold(database.Product{ProductName: "NoDate"}))
 	openedAt := now.AddDate(0, 0, -10)
@@ -153,10 +155,19 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 			continue
 		}
 		if !expiry.Before(soonStart) && !expiry.After(soonEnd) {
-			wantExpiringSoon = append(wantExpiringSoon, apiModel.StatsExpiringProduct{
+			entry := apiModel.StatsExpiringProduct{
+				ID:          fullRows[i].ID,
 				ProductName: fullRows[i].ProductName,
 				ExpireAt:    expiry.Format(util.DefaultDateFormatParseStr),
-			})
+				Quantity:    fullRows[i].Quantity,
+				PackSize:    fullRows[i].PackSize,
+			}
+			if fullRows[i].StorageLocation != nil {
+				entry.StorageLocationID = &fullRows[i].StorageLocation.ID
+				entry.StorageLocationName = fullRows[i].StorageLocation.Name
+				entry.StorageLocationIcon = fullRows[i].StorageLocation.Icon
+			}
+			wantExpiringSoon = append(wantExpiringSoon, entry)
 		}
 	}
 	sort.Slice(wantExpiringSoon, func(i, j int) bool {
@@ -196,6 +207,25 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 	if got, err := repo.GetExpiringSoonProducts(user.ID, 7); err != nil || !expiringSoonEqual(got, wantExpiringSoon) {
 		t.Errorf("GetExpiringSoonProducts() = %+v, %v; want %+v", got, err, wantExpiringSoon)
 	}
+	// The list carries the place and the pack count of every product, so a
+	// household can act on it without opening the product.
+	if got, err := repo.GetExpiringSoonProducts(user.ID, 7); err != nil {
+		t.Fatalf("GetExpiringSoonProducts() error = %v", err)
+	} else if len(got) != 1 {
+		t.Fatalf("GetExpiringSoonProducts() = %+v, want the one product in the window", got)
+	} else {
+		entry := got[0]
+		if entry.ID == 0 {
+			t.Errorf("id = 0, want the product the row leads to")
+		}
+		if entry.StorageLocationName != location.Name || entry.StorageLocationIcon != location.Icon {
+			t.Errorf("location = %q/%q, want %q/%q",
+				entry.StorageLocationName, entry.StorageLocationIcon, location.Name, location.Icon)
+		}
+		if entry.Quantity != 2 || entry.PackSize != "250g" {
+			t.Errorf("quantity/packSize = %d/%q, want 2/250g", entry.Quantity, entry.PackSize)
+		}
+	}
 }
 
 func categoryMapsEqual(a, b map[string]int) bool {
@@ -227,7 +257,15 @@ func expiringSoonEqual(a, b []apiModel.StatsExpiringProduct) bool {
 		return false
 	}
 	for i := range a {
-		if a[i] != b[i] {
+		// The location id is a pointer, so the two entries carry different
+		// pointers to the same row: the values are what has to match.
+		if a[i].ID != b[i].ID ||
+			a[i].ProductName != b[i].ProductName ||
+			a[i].ExpireAt != b[i].ExpireAt ||
+			a[i].Quantity != b[i].Quantity ||
+			a[i].PackSize != b[i].PackSize ||
+			a[i].StorageLocationName != b[i].StorageLocationName ||
+			a[i].StorageLocationIcon != b[i].StorageLocationIcon {
 			return false
 		}
 	}

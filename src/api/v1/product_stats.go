@@ -8,6 +8,7 @@ import (
 	"github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/errors"
 	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -93,7 +94,7 @@ func GetProductSummary(ctx *gin.Context, appCtx *AppContext) {
 
 // GetProductStats returns aggregated product statistics for the authenticated user
 // @Summary      Return product statistics
-// @Description  Returns waste rate, top archived products, category breakdown and expiry trend
+// @Description  Returns waste rate, top archived products, category breakdown and expiry trend. The useFirst list names the products of the whole household ordered by the effective expiry, soonest first, with the storage location and the pack count of each.
 // @Tags         product
 // @Produce      json
 // @Success      200  {object}  apiModel.ProductStatsResponse
@@ -129,6 +130,13 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
+		return
+	}
+
+	useFirst, err := appCtx.Repos.Products.GetUseFirstProducts(appCtx.UserID, util.UseFirstProductsLimit)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("GetUseFirstProducts: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -173,6 +181,7 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 		LastInsertedProduct: lastInsertedProduct,
 		ExpiringSoon:        expiringSoon,
 		ExpiringSoonDays:    expiringSoonDays,
+		UseFirst:            useFirst,
 		Categories:          categories,
 		ExpiryTrend:         expiryTrend,
 	})

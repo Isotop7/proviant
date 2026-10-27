@@ -342,6 +342,14 @@ document.addEventListener('focusout', function (event) {
 /* Event delegation for checkbox changes */
 document.addEventListener("change", function (event) {
     var target = event.target;
+
+    // The order the list is shown in. Picking one applies it right away and
+    // keeps the filters that are set — the search alone would drop them.
+    if (target.closest('#sort-param, #sort-order')) {
+        applySort();
+        return;
+    }
+
     if (!target.matches('input[type="checkbox"]')) return;
 
     if (target.id === 'selectAll') {
@@ -406,6 +414,22 @@ function performSearch() {
 
     showSkeleton();
   window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
+}
+
+// Applies the chosen order to the list. The filters of the current view stay
+// in the query, only the page number is dropped: the new order starts at the
+// first page again.
+function applySort() {
+    const sortParam = document.getElementById('sort-param');
+    const sortOrder = document.getElementById('sort-order');
+    if (!sortParam || !sortOrder) return;
+
+    const params = new URLSearchParams(window.location.search);
+    params.set('sort', sortParam.value || "created_at");
+    params.set('order', sortOrder.value || "asc");
+    params.delete('page');
+
+    window.location.href = `/web/products?${params.toString()}`;
 }
 
 /* ── Add-product modal ───────────────────────────────────────────────────────

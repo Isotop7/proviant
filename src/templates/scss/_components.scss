@@ -492,6 +492,25 @@
   justify-content: flex-end;
 }
 
+// A list row that leads to the product it names. The sheet draws the whole
+// row as the target, with the row itself as the hover surface.
+.list-group-item__link {
+  color: var(--fg);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--motion-base) var(--ease-out);
+
+  &:hover {
+    background: var(--surface-warm);
+  }
+
+  // The row fills the scroll body to its edges, so a focus ring drawn outside
+  // the row is clipped away by the container. It has to be drawn inside.
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
 // The status bar in front of a list row. It is never the only signal: the row
 // carries a status chip too.
 .list-group-item__stripe {
@@ -516,6 +535,10 @@
 
 .list-group-item__stripe--fresh {
   background: var(--status-fresh);
+}
+
+.list-group-item__stripe--neutral {
+  background: var(--status-neutral);
 }
 
 // Sidebar nav

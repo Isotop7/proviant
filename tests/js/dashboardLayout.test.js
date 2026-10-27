@@ -23,8 +23,11 @@ const PAGE_MARKUP = `
     <div class="bento__cell bento__cell--2" data-tile="consumed">
       <div class="kpi"><div class="kpi__label">Total Consumed</div></div>
     </div>
-    <div class="bento__cell bento__cell--6" data-tile="expiring-list">
+    <div class="bento__cell bento__cell--6" data-tile="expiring-list" data-tile-label="Expiring">
       <div class="card"><div class="card-header">Expiring</div></div>
+    </div>
+    <div class="bento__cell bento__cell--6" data-tile="use-first">
+      <div class="card"><div class="card-header">Use me first</div></div>
     </div>
   </div>
 `;
@@ -72,7 +75,7 @@ function stubGeometry() {
     left: 0, top: 0, right: 1200, bottom: 600, width: 1200, height: 600, x: 0, y: 0,
   });
 
-  ["hero", "consumed", "expiring-list"].forEach((id) => {
+  ["hero", "consumed", "expiring-list", "use-first"].forEach((id) => {
     const cell = tile(id);
     const order = () => Number(cell.style.getPropertyValue("--tile-order")) || 0;
     Object.defineProperty(cell, "offsetLeft", { get: () => order() * 200, configurable: true });
@@ -157,7 +160,20 @@ describe("dashboardLayout.js arrangement", () => {
     expect(span("consumed", "--tile-order")).toBe("1");
     expect(span("consumed", "--tile-w")).toBe("2");
     expect(span("expiring-list", "--tile-w")).toBe("6");
+    expect(span("use-first", "--tile-w")).toBe("6");
+    expect(span("use-first", "--tile-h")).toBe("2");
     expect(tile("hero").dataset.tileSpan).toBe("true");
+  });
+
+  it("gives a tile the dashboard did not know yet its default place", async () => {
+    await boot();
+
+    // The use-first tile joined the dashboard after the stored arrangement was
+    // written: it lands on its default place and the other tiles keep theirs.
+    expect(span("use-first", "--tile-order")).toBe("2");
+    expect(span("hero", "--tile-order")).toBe("0");
+    expect(span("consumed", "--tile-order")).toBe("1");
+    expect(span("expiring-list", "--tile-order")).toBe("3");
   });
 
   it("applies the stored arrangement", async () => {
@@ -188,7 +204,7 @@ describe("dashboardLayout.js arrangement", () => {
 
     expect(span("consumed", "--tile-order")).toBe("0");
     expect(span("hero", "--tile-order")).toBe("1");
-    expect(realm.document.querySelectorAll("[data-tile]").length).toBe(3);
+    expect(realm.document.querySelectorAll("[data-tile]").length).toBe(4);
   });
 
   it("scales the width for the narrower grids", async () => {
@@ -211,6 +227,15 @@ describe("dashboardLayout.js edit mode", () => {
     expect(realm.document.getElementById("dashboard-reset-layout").hidden).toBe(true);
     expect(realm.document.getElementById("dashboard").classList.contains("bento--editing")).toBe(false);
     handles("hero").forEach((handle) => expect(handle.hidden).toBe(true));
+  });
+
+  it("names the grips after the tile, not after its content", async () => {
+    await boot();
+
+    // The tile label is what the grip announces. The content of the tile — a
+    // count, a date — would make the name of the grip change with it.
+    const move = tile("expiring-list").querySelector(".bento__handle--move");
+    expect(move.getAttribute("aria-label")).toBe("Move Expiring");
   });
 
   it("shows the grips and the reset while the dashboard is edited", async () => {
@@ -264,7 +289,7 @@ describe("dashboardLayout.js arranging", () => {
 
     expect(span("hero", "--tile-order")).toBe("1");
     expect(span("consumed", "--tile-order")).toBe("0");
-    expect(span("expiring-list", "--tile-order")).toBe("2");
+    expect(span("expiring-list", "--tile-order")).toBe("3");
     expect(saveDashboardLayout).toHaveBeenCalledTimes(1);
     expect(saveDashboardLayout.mock.calls[0][0].tiles.hero).toEqual({ order: 1, w: 3, h: 1 });
     expect(realm.document.getElementById("dashboard-status").textContent).not.toBe("");

@@ -163,10 +163,7 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 				monthCounts[month]++
 			}
 			if !expiry.Before(startOfToday) && !expiry.After(endOfWindow) {
-				expiringSoon = append(expiringSoon, apiModel.StatsExpiringProduct{
-					ProductName: product.ProductName,
-					ExpireAt:    expiry.Format(util.DefaultDateFormatParseStr),
-				})
+				expiringSoon = append(expiringSoon, database.ExpiringProductStats(product, expiry))
 			}
 		}
 		if product.CreatedAt.After(lastInsertedAt) {
@@ -204,6 +201,7 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 		LastInsertedProduct: lastInserted,
 		ExpiringSoon:        expiringSoon,
 		ExpiringSoonDays:    expiringSoonDays,
+		UseFirst:            database.BuildUseFirstProducts(active, util.UseFirstProductsLimit),
 		Categories:          summarizeFullExportCategories(categories),
 		ExpiryTrend:         expiryTrend,
 	}

@@ -23,6 +23,7 @@ type MockProductRepository struct {
 	Users         []authentication.User
 	StatsMonthly  []apiModel.StatsMonthlyCount
 	ExpiringProds []apiModel.StatsExpiringProduct
+	UseFirstProds []apiModel.StatsUseFirstProduct
 	BoolResult    bool
 	IntResult     int
 	MapResult     map[string]int
@@ -71,6 +72,9 @@ type MockProductRepository struct {
 }
 
 func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
+func (m *MockProductRepository) GetUserProductsBulkSorted(userID uint, limit int, sortValue, orderValue string) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dbModel.Product, error) {
@@ -204,6 +208,9 @@ func (m *MockProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMon
 }
 func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error) {
 	return m.ExpiringProds, m.Err
+}
+func (m *MockProductRepository) GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error) {
+	return m.UseFirstProds, m.Err
 }
 func (m *MockProductRepository) GetLastNotifiedProduct(householdID uint) (dbModel.Product, error) {
 	return m.Product, m.Err

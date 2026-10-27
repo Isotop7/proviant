@@ -630,8 +630,16 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	// actually ran — search params can accompany the archived view, and a
 	// location filter narrows (not shadows) the search branch, which stays
 	// SQL-ordered.
+	//
+	// The effective expiry is the list's order, and the sort key names it, so
+	// a link can spell the order out. Its direction is honoured for it — the
+	// repository reads the direction case-insensitively, so the page does too.
 	if statusFilter != "archived" && !searchOrdered {
-		database.SortByEffectiveExpiry(projections)
+		if sort == database.SortEffectiveExpiry && strings.EqualFold(order, "desc") {
+			database.SortByEffectiveExpiryDescending(projections)
+		} else {
+			database.SortByEffectiveExpiry(projections)
+		}
 	}
 
 	pageIDs, page, totalPages := sliceProductPage(projections, ctx.Query("page"))

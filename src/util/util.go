@@ -68,6 +68,11 @@ const (
 	ConsumptionSourceMinStock = "min_stock"
 	ConsumptionSourceNone     = "none"
 
+	// UseFirstProductsLimit is how many products the "use me first" list
+	// carries. The list answers "what do we eat next" for the whole pantry,
+	// so it shows the head of the order, not every row.
+	UseFirstProductsLimit = 10
+
 	// Waste analytics period identifiers
 	PeriodValueMonth    = "month"
 	PeriodValue3Months  = "3months"

@@ -25,12 +25,13 @@
     'activity': { order: 6, w: 6, h: 2 },
     'savings-eur': { order: 7, w: 2, h: 1 },
     'savings-co2': { order: 8, w: 2, h: 1 },
-    'expiring-list': { order: 9, w: 6, h: 2 },
-    'chart-waste': { order: 10, w: 3, h: 2 },
-    'chart-categories': { order: 11, w: 3, h: 2 },
-    'chart-expiry': { order: 12, w: 6, h: 2 },
-    'cta-waste': { order: 13, w: 3, h: 1 },
-    'cta-recipes': { order: 14, w: 3, h: 1 },
+    'use-first': { order: 9, w: 6, h: 2 },
+    'expiring-list': { order: 10, w: 6, h: 2 },
+    'chart-waste': { order: 11, w: 3, h: 2 },
+    'chart-categories': { order: 12, w: 3, h: 2 },
+    'chart-expiry': { order: 13, w: 6, h: 2 },
+    'cta-waste': { order: 14, w: 3, h: 1 },
+    'cta-recipes': { order: 15, w: 3, h: 1 },
   };
 
   let grid = null;

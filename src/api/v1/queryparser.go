@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/errors"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +16,7 @@ type ProductListQuery struct {
 }
 
 type ProductSortQuery struct {
-	Sort  string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at"`
+	Sort  string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at effective_expire_at"`
 	Order string `form:"order" binding:"omitempty,oneof=asc desc"`
 }
 
@@ -26,7 +27,7 @@ type ArchiveOnlyQuery struct {
 type ProductSearchQuery struct {
 	QueryParam string `form:"queryParam" binding:"required"`
 	QueryValue string `form:"queryValue" binding:"required"`
-	Sort       string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at scanned_at notified_at barcode"`
+	Sort       string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at scanned_at notified_at barcode effective_expire_at"`
 	Order      string `form:"order" binding:"omitempty,oneof=asc desc"`
 }
 
@@ -46,14 +47,23 @@ func ParseProductListQuery(ctx *gin.Context) (ProductListQuery, bool) {
 	return q, true
 }
 
+// ParseProductSortQuery reads the sort key and direction of a product list.
+// The default is the effective expiry, the order the list endpoint has always
+// returned, so naming it does not reorder the clients that ask for nothing.
 func ParseProductSortQuery(ctx *gin.Context) (ProductSortQuery, bool) {
 	if ctx.Request.URL == nil {
-		return ProductSortQuery{}, true
+		return ProductSortQuery{Sort: database.SortEffectiveExpiry, Order: "asc"}, true
 	}
 	var q ProductSortQuery
 	if err := ctx.ShouldBindQuery(&q); err != nil {
 		api.RespondError(ctx, http.StatusBadRequest, errors.ErrInvalidQueryParameter)
 		return ProductSortQuery{}, false
+	}
+	if q.Sort == "" {
+		q.Sort = database.SortEffectiveExpiry
+	}
+	if q.Order == "" {
+		q.Order = "asc"
 	}
 	return q, true
 }

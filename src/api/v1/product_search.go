@@ -74,7 +74,7 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 // @Produce      	json
 // @Param        	queryParam  query  string  true  	"Search field (product_name, barcode)"
 // @Param        	queryValue  query  string  true  	"Search value"
-// @Param        	sort        query  string  false  "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode)"  default(product_name)
+// @Param        	sort        query  string  false  "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode, effective_expire_at)"  default(product_name)
 // @Param        	order       query  string  false  "Sort order (asc, desc)"  default(asc)
 // @Success      	200  {object}  []apiModel.ProductResponse
 // @Failure      	400  {object}  api.APIResponse

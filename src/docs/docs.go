@@ -2606,7 +2606,7 @@ const docTemplate = `{
         },
         "/api/v1/products": {
             "get": {
-                "description": "Return a list of products of user",
+                "description": "Return a list of products of user. The list is ordered by the effective expiry by default — the earlier of the printed expiry and the opened-shelf-life date — with the products without a date last. A product that carries a shelf life is ordered by the date it goes off, not by the date printed on it.",
                 "produces": [
                     "application/json"
                 ],
@@ -2614,6 +2614,22 @@ const docTemplate = `{
                     "product"
                 ],
                 "summary": "Return a list of products",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "effective_expire_at",
+                        "description": "Sort field (product_name, expire_at, created_at, effective_expire_at)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort order (asc, desc)",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -3563,7 +3579,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "default": "product_name",
-                        "description": "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode)",
+                        "description": "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode, effective_expire_at)",
                         "name": "sort",
                         "in": "query"
                     },
@@ -3602,7 +3618,7 @@ const docTemplate = `{
         },
         "/api/v1/products/stats": {
             "get": {
-                "description": "Returns waste rate, top archived products, category breakdown and expiry trend",
+                "description": "Returns waste rate, top archived products, category breakdown and expiry trend. The useFirst list names the products of the whole household ordered by the effective expiry, soonest first, with the storage location and the pack count of each.",
                 "produces": [
                     "application/json"
                 ],
@@ -8378,6 +8394,12 @@ const docTemplate = `{
                 "uniqueArchived": {
                     "type": "integer"
                 },
+                "useFirst": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StatsUseFirstProduct"
+                    }
+                },
                 "wasteCount": {
                     "type": "integer"
                 },
@@ -8686,7 +8708,25 @@ const docTemplate = `{
                     "description": "format: \"2006-01-02\"",
                     "type": "string"
                 },
+                "id": {
+                    "type": "integer"
+                },
+                "packSize": {
+                    "type": "string"
+                },
                 "productName": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "storageLocationIcon": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "storageLocationName": {
                     "type": "string"
                 }
             }
@@ -8699,6 +8739,36 @@ const docTemplate = `{
                 },
                 "month": {
                     "description": "format: \"2006-01\"",
+                    "type": "string"
+                }
+            }
+        },
+        "api.StatsUseFirstProduct": {
+            "type": "object",
+            "properties": {
+                "expireAt": {
+                    "description": "the effective expiry, format: \"2006-01-02\"; empty when the product has no date",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "packSize": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "storageLocationIcon": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "storageLocationName": {
                     "type": "string"
                 }
             }

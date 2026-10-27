@@ -28,9 +28,11 @@ const (
 
 // GetProducts returns the products of a user
 // @Summary      Return a list of products
-// @Description  Return a list of products of user
+// @Description  Return a list of products of user. The list is ordered by the effective expiry by default — the earlier of the printed expiry and the opened-shelf-life date — with the products without a date last. A product that carries a shelf life is ordered by the date it goes off, not by the date printed on it.
 // @Tags         product
 // @Produce      json
+// @Param        sort   query     string  false  "Sort field (product_name, expire_at, created_at, effective_expire_at)"  default(effective_expire_at)
+// @Param        order  query     string  false  "Sort order (asc, desc)"  default(asc)
 // @Success      200  {object}  []apiModel.ProductResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
@@ -53,7 +55,12 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulk(appCtx.UserID, limit)
+	sort, sortOk := ParseProductSortQuery(ctx)
+	if !sortOk {
+		return
+	}
+
+	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulkSorted(appCtx.UserID, limit, sort.Sort, sort.Order)
 	if productBulkErr != nil {
 		appCtx.Logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {

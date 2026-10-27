@@ -91,6 +91,7 @@ type ImportedProduct struct {
 
 type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
+	GetUserProductsBulkSorted(userID uint, limit int, sortValue, orderValue string) ([]database.Product, error)
 	GetUserProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
 	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
 	GetActiveProductProjections(userID, locationID uint) ([]database.Product, error)
@@ -125,6 +126,7 @@ type ProductRepositoryInterface interface {
 	GetProductCategoryBreakdown(userID uint) (map[string]int, error)
 	GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
 	GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+	GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error)
 	GetLastNotifiedProduct(householdID uint) (database.Product, error)
 	GetExpiringInDays(userID uint, days int) ([]database.Product, error)
 	GetLastInsertedProduct(householdID uint) (database.Product, error)
@@ -244,42 +246,126 @@ func (r *ProductRepository) privacyScope(userID uint) func(db *gorm.DB) *gorm.DB
 // an arbitrary tie order that differs between the projection pass and any later
 // pass over the same data lets a product land on two pages or on none.
 func SortByEffectiveExpiry(products []database.Product) {
+	sortByEffectiveExpiry(products, false)
+}
+
+// SortByEffectiveExpiryDescending orders the same rows latest first. The
+// undated rows stay at the end in both directions: a product without a date is
+// not the freshest one, it is the one nobody knows when it goes off.
+func SortByEffectiveExpiryDescending(products []database.Product) {
+	sortByEffectiveExpiry(products, true)
+}
+
+// sortByEffectiveExpiry orders the rows by their effective expiry, soonest
+// first or latest first. The undated rows come last either way, and the sort
+// is stable, so the order a caller handed in survives as the tie order.
+func sortByEffectiveExpiry(products []database.Product, descending bool) {
 	sort.SliceStable(products, func(i, j int) bool {
 		ti, tj := products[i].EffectiveExpireAt(), products[j].EffectiveExpireAt()
-		if ti.IsZero() && tj.IsZero() {
-			return false
-		}
 		if ti.IsZero() {
 			return false
 		}
 		if tj.IsZero() {
 			return true
 		}
+		if descending {
+			return tj.Before(ti)
+		}
 		return ti.Before(tj)
 	})
 }
 
+// GetUserProductsBulk returns the household's active products in the order the
+// products list uses: by effective expiry, soonest first.
 func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error) {
+	return r.GetUserProductsBulkSorted(userID, limit, SortEffectiveExpiry, "asc")
+}
+
+// GetUserProductsBulkSorted returns the household's active products in the
+// order the caller asked for: one of the columns the database can sort by, or
+// the effective expiry, which only Go can compute.
+//
+// A column sort is ordered and limited by the database in one query. The
+// effective expiry has no portable SQL form, so those rows are ordered in Go
+// and the limit is applied there too — otherwise the database would hand back
+// an arbitrary subset of the pantry and the "soonest first" order would only
+// hold inside that subset.
+func (r *ProductRepository) GetUserProductsBulkSorted(userID uint, limit int, sortValue, orderValue string) ([]database.Product, error) {
+	sort, sortErr := resolveSortClause(sortValue, orderValue)
+	if sortErr != nil {
+		return []database.Product{}, sortErr
+	}
+
+	if sort.byEffectiveExpiry {
+		products, err := r.getProductsByEffectiveExpiry(userID, limit, sort.descending)
+		if err != nil {
+			return []database.Product{}, err
+		}
+		return products, nil
+	}
+
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return []database.Product{}, err
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID))
+	query := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID)).Order(sort.clause)
 
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	queryErr := query.Find(&products).Error
-	if queryErr != nil {
-		return []database.Product{}, queryErr
+	if findErr := query.Find(&products).Error; findErr != nil {
+		return []database.Product{}, findErr
 	}
 
-	SortByEffectiveExpiry(products)
-
 	return products, nil
+}
+
+// getProductsByEffectiveExpiry returns the household's active products ordered
+// by the effective expiry, limited to the first `limit` of them.
+//
+// The narrow projection is sorted in Go and only the rows that make up the
+// list are hydrated, so the database never materialises the whole pantry as
+// full rows with their storage location.
+func (r *ProductRepository) getProductsByEffectiveExpiry(userID uint, limit int, descending bool) ([]database.Product, error) {
+	projections, err := r.GetActiveProductProjections(userID, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	if descending {
+		SortByEffectiveExpiryDescending(projections)
+	} else {
+		SortByEffectiveExpiry(projections)
+	}
+
+	if limit > 0 && len(projections) > limit {
+		projections = projections[:limit]
+	}
+
+	ids := make([]uint, 0, len(projections))
+	for i := range projections {
+		ids = append(ids, projections[i].ID)
+	}
+
+	rows, err := r.hydrateProductsByIDs(userID, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	byID := make(map[uint]database.Product, len(rows))
+	for i := range rows {
+		byID[rows[i].ID] = rows[i]
+	}
+	ordered := make([]database.Product, 0, len(ids))
+	for _, id := range ids {
+		if row, ok := byID[id]; ok {
+			ordered = append(ordered, row)
+		}
+	}
+	return ordered, nil
 }
 
 // GetUserProductsByIDs returns the active products with the given IDs that belong to the user's household.
@@ -625,10 +711,11 @@ func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (data
 	return product, nil
 }
 
-// productSortColumns is the allowlist of columns permitted in a request-driven
-// ORDER BY clause. Sort values are interpolated verbatim into SQL, so the only
-// string that may reach Order() is a value resolved through this map: the key
-// is what a caller sends, the value is the real column name.
+// productSortColumns maps a caller-supplied sort key onto the column the
+// database orders by. It is the allowlist of columns permitted in a
+// request-driven ORDER BY clause: sort values are interpolated verbatim into
+// SQL, so every value that may reach Order() is a value resolved through this
+// map — the key is what a caller sends, the value is the real column name.
 var productSortColumns = map[string]string{
 	"product_name": "product_name",
 	"created_at":   "created_at",
@@ -638,28 +725,61 @@ var productSortColumns = map[string]string{
 	"barcode":      "barcode",
 }
 
+// SortEffectiveExpiry is the sort key that orders a product list by the
+// effective expiry — the earlier of the printed expiry and the
+// opened-shelf-life date. It has no column: the opened-shelf-life date needs
+// date arithmetic that no two database engines spell the same way, so a list
+// sorted by it is ordered in Go, with SortByEffectiveExpiry.
+const SortEffectiveExpiry = "effective_expire_at"
+
+// productSort is a resolved ordering: the ORDER BY the database applies, and
+// what still has to happen to the rows in Go.
+type productSort struct {
+	clause            string
+	byEffectiveExpiry bool
+	descending        bool
+}
+
 // resolveSortClause maps a caller-supplied sort key and direction onto a safe
-// ORDER BY clause. Empty values fall back to the defaults; any value outside
-// the allowlist returns ErrDatabaseInvalidSortParameter rather than silently
-// falling back, so misuse stays visible instead of masquerading as a working
-// sort. It lives here, at the single Order() call site, so both the web and the
-// API entry points are covered by one guard.
-func resolveSortClause(sortValue, orderValue string) (string, error) {
+// ordering. A column the database can sort by becomes an ORDER BY clause; the
+// effective expiry becomes the id order that makes the Go sort stable, and the
+// resolved sort says the rows still have to be sorted in Go. Empty values fall
+// back to the defaults; any value outside the allowlist returns
+// ErrDatabaseInvalidSortParameter rather than silently falling back, so misuse
+// stays visible instead of masquerading as a working sort. It lives here, at
+// the single Order() call site, so both the web and the API entry points are
+// covered by one guard.
+func resolveSortClause(sortValue, orderValue string) (productSort, error) {
 	if sortValue == "" {
 		sortValue = "product_name"
 	}
 	if orderValue == "" {
 		orderValue = "asc"
 	}
-	column, ok := productSortColumns[sortValue]
-	if !ok {
-		return "", errors.ErrDatabaseInvalidSortParameter
-	}
 	direction := strings.ToUpper(orderValue)
 	if direction != "ASC" && direction != "DESC" {
-		return "", errors.ErrDatabaseInvalidSortParameter
+		return productSort{}, errors.ErrDatabaseInvalidSortParameter
 	}
-	return column + " " + direction, nil
+	descending := direction == "DESC"
+
+	if sortValue == SortEffectiveExpiry {
+		return productSort{clause: "id " + direction, byEffectiveExpiry: true, descending: descending}, nil
+	}
+
+	column, ok := productSortColumns[sortValue]
+	if !ok {
+		return productSort{}, errors.ErrDatabaseInvalidSortParameter
+	}
+	return productSort{clause: column + " " + direction, descending: descending}, nil
+}
+
+// applyEffectiveExpirySort orders the rows the way the resolved sort asks for.
+func applyEffectiveExpirySort(products []database.Product, sort productSort) {
+	if sort.descending {
+		SortByEffectiveExpiryDescending(products)
+		return
+	}
+	SortByEffectiveExpiry(products)
 }
 
 // searchProductsQuery builds the shared predicate for both search entry points:
@@ -695,15 +815,18 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 		return []database.Product{}, queryErr
 	}
 
-	sortClause, sortErr := resolveSortClause(sortValue, orderValue)
+	sort, sortErr := resolveSortClause(sortValue, orderValue)
 	if sortErr != nil {
 		return []database.Product{}, sortErr
 	}
 
 	var foundProducts []database.Product
-	findErr := query.Preload("StorageLocation").Order(sortClause).Find(&foundProducts)
+	findErr := query.Preload("StorageLocation").Order(sort.clause).Find(&foundProducts)
 	if findErr.Error != nil {
 		return []database.Product{}, findErr.Error
+	}
+	if sort.byEffectiveExpiry {
+		applyEffectiveExpirySort(foundProducts, sort)
 	}
 	return foundProducts, nil
 }
@@ -726,14 +849,17 @@ func (r *ProductRepository) SearchProductProjections(
 		query = query.Where("storage_location_id = ?", locationID)
 	}
 
-	sortClause, sortErr := resolveSortClause(sortValue, orderValue)
+	sort, sortErr := resolveSortClause(sortValue, orderValue)
 	if sortErr != nil {
 		return nil, sortErr
 	}
 
 	var foundProducts []database.Product
-	if err := query.Select(productProjectionColumns).Order(sortClause).Find(&foundProducts).Error; err != nil {
+	if err := query.Select(productProjectionColumns).Order(sort.clause).Find(&foundProducts).Error; err != nil {
 		return nil, err
+	}
+	if sort.byEffectiveExpiry {
+		applyEffectiveExpirySort(foundProducts, sort)
 	}
 	return foundProducts, nil
 }
@@ -1593,13 +1719,19 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 	// Candidate scope is a one-sided prune: it only drops rows whose effective
 	// expiry provably cannot reach the window, so the verdict below still runs
 	// in Go through EffectiveExpireAt. Same pattern as GetExpiringSoonCount.
+	//
+	// The id and the foreign key are part of the projection because the
+	// storage location is preloaded: without them the preload has neither a
+	// key to collect nor the pointer to follow.
 	var products []database.Product
 	err = r.DB.Model(&database.Product{}).
-		Select("product_name, expire_at, opened_at, days_after_opening").
+		Select("id, storage_location_id, product_name, quantity, pack_size, expire_at, opened_at, days_after_opening").
+		Preload("StorageLocation").
 		Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNull).
 		Scopes(effectiveExpiryCandidateScope(startOfToday, endOfWindow)).
+		Order("id").
 		Find(&products).Error
 	if err != nil {
 		return nil, err
@@ -1612,16 +1744,110 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 			continue
 		}
 		if !expirationTime.Before(startOfToday) && !expirationTime.After(endOfWindow) {
-			result = append(result, apiModel.StatsExpiringProduct{
-				ProductName: products[i].ProductName,
-				ExpireAt:    expirationTime.Format(util.DefaultDateFormatParseStr),
-			})
+			result = append(result, ExpiringProductStats(&products[i], expirationTime))
 		}
 	}
-	sort.Slice(result, func(i, j int) bool {
+	sort.SliceStable(result, func(i, j int) bool {
 		return result[i].ExpireAt < result[j].ExpireAt
 	})
 	return result, nil
+}
+
+// ExpiringProductStats projects a product onto the wire shape of the expiring
+// list. The location is a flat name and icon pair: the list is a projection,
+// not a product, so it carries no nested object. The id is there so the row
+// can lead to the product it names.
+//
+// The backup export builds the same list from the rows it already carries, so
+// the shape lives here once.
+func ExpiringProductStats(product *database.Product, expirationTime time.Time) apiModel.StatsExpiringProduct {
+	entry := apiModel.StatsExpiringProduct{
+		ID:          product.ID,
+		ProductName: product.ProductName,
+		ExpireAt:    expirationTime.Format(util.DefaultDateFormatParseStr),
+		Quantity:    product.Quantity,
+		PackSize:    product.PackSize,
+	}
+	if product.StorageLocation != nil {
+		entry.StorageLocationID = &product.StorageLocation.ID
+		entry.StorageLocationName = product.StorageLocation.Name
+		entry.StorageLocationIcon = product.StorageLocation.Icon
+	}
+	return entry
+}
+
+// GetUseFirstProducts returns the household's active products ordered by the
+// effective expiry, soonest first, with the storage location and the pack
+// count of each. It answers "what do we eat next" for the whole pantry, not
+// only for the products inside the warning window.
+//
+// The order is the one the products page uses: the narrow projection is sorted
+// with SortByEffectiveExpiry and only the rows that make up the list are
+// hydrated, so a product holds the same position in the tile and in the list.
+// A limit of zero returns the whole pantry.
+func (r *ProductRepository) GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error) {
+	rows, err := r.getProductsByEffectiveExpiry(userID, limit, false)
+	if err != nil {
+		return nil, err
+	}
+	return BuildUseFirstProducts(rows, limit), nil
+}
+
+// hydrateProductsByIDs loads the full rows for the given ids. The query binds
+// one placeholder per id and SQLite caps the number of bound variables, so a
+// list that covers the whole pantry is fetched in chunks.
+func (r *ProductRepository) hydrateProductsByIDs(userID uint, ids []uint) ([]database.Product, error) {
+	if len(ids) == 0 {
+		return []database.Product{}, nil
+	}
+	if len(ids) <= bulkQueryChunkSize {
+		return r.GetUserProductsByIDs(userID, ids)
+	}
+
+	var rows []database.Product
+	for start := 0; start < len(ids); start += bulkQueryChunkSize {
+		end := min(start+bulkQueryChunkSize, len(ids))
+		chunk, chunkErr := r.GetUserProductsByIDs(userID, ids[start:end])
+		if chunkErr != nil {
+			return nil, chunkErr
+		}
+		rows = append(rows, chunk...)
+	}
+	return rows, nil
+}
+
+// BuildUseFirstProducts projects the rows of a use-first list onto the wire
+// shape, ordered by the effective expiry, soonest first, with the products
+// without a date last. The rows are copied, so the caller's slice keeps its
+// own order. A limit of zero returns every row.
+func BuildUseFirstProducts(products []database.Product, limit int) []apiModel.StatsUseFirstProduct {
+	ordered := make([]database.Product, len(products))
+	copy(ordered, products)
+	SortByEffectiveExpiry(ordered)
+	if limit > 0 && len(ordered) > limit {
+		ordered = ordered[:limit]
+	}
+
+	result := make([]apiModel.StatsUseFirstProduct, 0, len(ordered))
+	for i := range ordered {
+		product := &ordered[i]
+		entry := apiModel.StatsUseFirstProduct{
+			ID:          product.ID,
+			ProductName: product.ProductName,
+			Quantity:    product.Quantity,
+			PackSize:    product.PackSize,
+		}
+		if expiry := product.EffectiveExpireAt(); !expiry.IsZero() {
+			entry.ExpireAt = expiry.Format(util.DefaultDateFormatParseStr)
+		}
+		if product.StorageLocation != nil {
+			entry.StorageLocationID = &product.StorageLocation.ID
+			entry.StorageLocationName = product.StorageLocation.Name
+			entry.StorageLocationIcon = product.StorageLocation.Icon
+		}
+		result = append(result, entry)
+	}
+	return result
 }
 
 func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.Product, error) {

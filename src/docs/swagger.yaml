@@ -922,6 +922,10 @@ definitions:
         type: integer
       uniqueArchived:
         type: integer
+      useFirst:
+        items:
+          $ref: '#/definitions/api.StatsUseFirstProduct'
+        type: array
       wasteCount:
         type: integer
       wastePercent:
@@ -1131,7 +1135,19 @@ definitions:
       expireAt:
         description: 'format: "2006-01-02"'
         type: string
+      id:
+        type: integer
+      packSize:
+        type: string
       productName:
+        type: string
+      quantity:
+        type: integer
+      storageLocationIcon:
+        type: string
+      storageLocationId:
+        type: integer
+      storageLocationName:
         type: string
     type: object
   api.StatsMonthlyCount:
@@ -1140,6 +1156,27 @@ definitions:
         type: integer
       month:
         description: 'format: "2006-01"'
+        type: string
+    type: object
+  api.StatsUseFirstProduct:
+    properties:
+      expireAt:
+        description: 'the effective expiry, format: "2006-01-02"; empty when the product
+          has no date'
+        type: string
+      id:
+        type: integer
+      packSize:
+        type: string
+      productName:
+        type: string
+      quantity:
+        type: integer
+      storageLocationIcon:
+        type: string
+      storageLocationId:
+        type: integer
+      storageLocationName:
         type: string
     type: object
   api.StorageLocationResponse:
@@ -3579,7 +3616,21 @@ paths:
       - onboarding
   /api/v1/products:
     get:
-      description: Return a list of products of user
+      description: Return a list of products of user. The list is ordered by the effective
+        expiry by default — the earlier of the printed expiry and the opened-shelf-life
+        date — with the products without a date last. A product that carries a shelf
+        life is ordered by the date it goes off, not by the date printed on it.
+      parameters:
+      - default: effective_expire_at
+        description: Sort field (product_name, expire_at, created_at, effective_expire_at)
+        in: query
+        name: sort
+        type: string
+      - default: asc
+        description: Sort order (asc, desc)
+        in: query
+        name: order
+        type: string
       produces:
       - application/json
       responses:
@@ -4768,7 +4819,7 @@ paths:
         type: string
       - default: product_name
         description: Sort field (product_name, expire_at, created_at, scanned_at,
-          notified_at, barcode)
+          notified_at, barcode, effective_expire_at)
         in: query
         name: sort
         type: string
@@ -4800,7 +4851,9 @@ paths:
   /api/v1/products/stats:
     get:
       description: Returns waste rate, top archived products, category breakdown and
-        expiry trend
+        expiry trend. The useFirst list names the products of the whole household
+        ordered by the effective expiry, soonest first, with the storage location
+        and the pack count of each.
       produces:
       - application/json
       responses:

@@ -17,7 +17,57 @@ import (
 	"github.com/Isotop7/proviant/controllers/database"
 
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
+
+// TestBuildFullExportStatsCarriesTheUseFirstList pins that the backup
+// document carries the same use-first list the dashboard shows: the products of
+// the household ordered by the effective expiry, with the place and the pack
+// count of each.
+func TestBuildFullExportStatsCarriesTheUseFirstList(t *testing.T) {
+	now := time.Now()
+	location := dbModel.StorageLocation{Model: gorm.Model{ID: 7}, Name: "Fridge", Icon: "🧊"}
+
+	active := []dbModel.Product{
+		{Model: gorm.Model{ID: 1}, ProductName: "Later", Quantity: 1, ExpireAt: now.AddDate(0, 0, 20)},
+		{Model: gorm.Model{ID: 2}, ProductName: "Soon", Quantity: 3, PackSize: "250g", ExpireAt: now.AddDate(0, 0, 2),
+			StorageLocation: &location, StorageLocationID: &location.ID},
+		{Model: gorm.Model{ID: 3}, ProductName: "Undated", Quantity: 1},
+	}
+
+	stats := buildFullExportStats(active, nil, 7)
+
+	if len(stats.UseFirst) != 3 {
+		t.Fatalf("useFirst = %+v, want every active product", stats.UseFirst)
+	}
+	if stats.UseFirst[0].ProductName != "Soon" {
+		t.Errorf("useFirst[0] = %q, want the product that expires first", stats.UseFirst[0].ProductName)
+	}
+	if stats.UseFirst[2].ProductName != "Undated" {
+		t.Errorf("useFirst[2] = %q, want the product without a date last", stats.UseFirst[2].ProductName)
+	}
+	if stats.UseFirst[0].Quantity != 3 || stats.UseFirst[0].PackSize != "250g" {
+		t.Errorf("quantity/packSize = %d/%q, want 3/250g",
+			stats.UseFirst[0].Quantity, stats.UseFirst[0].PackSize)
+	}
+	if stats.UseFirst[0].StorageLocationName != location.Name {
+		t.Errorf("storageLocationName = %q, want %q", stats.UseFirst[0].StorageLocationName, location.Name)
+	}
+
+	// The expiring list carries the same place and pack count as the use-first
+	// list: the backup shows what the dashboard shows.
+	if len(stats.ExpiringSoon) != 1 {
+		t.Fatalf("expiringSoon = %+v, want the one product in the window", stats.ExpiringSoon)
+	}
+	entry := stats.ExpiringSoon[0]
+	if entry.StorageLocationName != location.Name || entry.StorageLocationIcon != location.Icon {
+		t.Errorf("location = %q/%q, want %q/%q",
+			entry.StorageLocationName, entry.StorageLocationIcon, location.Name, location.Icon)
+	}
+	if entry.Quantity != 3 || entry.PackSize != "250g" {
+		t.Errorf("quantity/packSize = %d/%q, want 3/250g", entry.Quantity, entry.PackSize)
+	}
+}
 
 // TestBuildFullExportIncludesPrivateProducts pins the backup scope: a scheduled
 // backup must carry every member's stock, including private rows the user-facing
