@@ -74,6 +74,7 @@
   "js.products.partialConsumeSuccess": "%s pack(s) consumed",
   "js.products.partialConsumeSuccess_one": "%s pack consumed",
   "js.products.partialConsumeSuccess_other": "%s packs consumed",
+  "js.products.partialWasteQueued": "The waste will sync automatically when you are back online.",
   "js.products.partialWasteSuccess": "%s pack(s) wasted",
   "js.products.partialWasteSuccess_one": "%s pack wasted",
   "js.products.partialWasteSuccess_other": "%s packs wasted",

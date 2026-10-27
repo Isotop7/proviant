@@ -25,12 +25,15 @@ const (
 // ProductCategoryPrice do not retroactively alter history.
 type SavingsRecord struct {
 	gorm.Model
-	HouseholdID uint    `gorm:"index;not null" json:"-"`
-	ProductID   uint    `gorm:"index"          json:"productId"`
-	ProductName string  `gorm:"not null"       json:"productName"`
-	EventType   string  `gorm:"not null;index" json:"eventType"` // SavingsEventTypeConsumed or SavingsEventTypeWasted
-	PriceEUR    float64 `gorm:"not null"       json:"priceEur"`
-	CO2Kg       float64 `gorm:"not null"       json:"co2Kg"`
+	HouseholdID uint   `gorm:"index;not null" json:"-"`
+	ProductID   uint   `gorm:"index"          json:"productId"`
+	ProductName string `gorm:"not null"       json:"productName"`
+	EventType   string `gorm:"not null;index" json:"eventType"` // SavingsEventTypeConsumed or SavingsEventTypeWasted
+	// WasteCause is why the event wasted the product. It is empty for a
+	// consumed event and for a waste that carried no reason.
+	WasteCause string  `gorm:"default:''"          json:"wasteCause"`
+	PriceEUR   float64 `gorm:"not null"       json:"priceEur"`
+	CO2Kg      float64 `gorm:"not null"       json:"co2Kg"`
 	// Amount is the number of packs the event covered. A record written before
 	// the count model holds a net content instead, which is why such a record
 	// is marked as legacy.

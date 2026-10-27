@@ -30,6 +30,7 @@ type ExportProductResponse struct {
 	PriceOverride        *float64                 `json:"priceOverride,omitempty"`
 	CO2KgPerKg           *float64                 `json:"co2KgPerKg,omitempty"`
 	RemovalReason        string                   `json:"removalReason"`
+	WasteCause           string                   `json:"wasteCause"`
 	NotificationLeadDays *int                     `json:"notificationLeadDays,omitempty"`
 	MinStockAmount       int                      `json:"minStockAmount"`
 	OpenedAt             *time.Time               `json:"openedAt,omitempty"`
@@ -68,6 +69,7 @@ func NewExportProductResponse(product *dbModel.Product) ExportProductResponse {
 		PriceOverride:        product.PriceOverride,
 		CO2KgPerKg:           product.CO2KgPerKg,
 		RemovalReason:        product.RemovalReason,
+		WasteCause:           product.WasteCause,
 		NotificationLeadDays: product.NotificationLeadDays,
 		MinStockAmount:       product.MinStockAmount,
 		OpenedAt:             product.OpenedAt,

@@ -140,7 +140,7 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 	wasteCount := 0
 	categories := make(map[string]int)
 	monthCounts := make(map[string]int, 12)
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
 	}
 
@@ -190,7 +190,7 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 	})
 
 	expiryTrend := make([]apiModel.StatsMonthlyCount, 0, 12)
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
 		expiryTrend = append(expiryTrend, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
 	}
@@ -440,6 +440,7 @@ func restoreProductFromRow(
 		PriceOverride:        row.PriceOverride,
 		CO2KgPerKg:           row.CO2KgPerKg,
 		RemovalReason:        row.RemovalReason,
+		WasteCause:           row.WasteCause,
 		NotificationLeadDays: row.NotificationLeadDays,
 		MinStockAmount:       row.MinStockAmount,
 		OpenedAt:             row.OpenedAt,
@@ -493,6 +494,7 @@ var restoreProductColumns = []string{
 	"price_override",
 	"co2_kg_per_kg",
 	"removal_reason",
+	"waste_cause",
 	"notification_lead_days",
 	"min_stock_amount",
 	"opened_at",
@@ -594,6 +596,7 @@ func restoreProductRowMaps(products []dbModel.Product) []map[string]any {
 			"price_override":         nullable(product.PriceOverride),
 			"co2_kg_per_kg":          nullable(product.CO2KgPerKg),
 			"removal_reason":         product.RemovalReason,
+			"waste_cause":            product.WasteCause,
 			"notification_lead_days": nullable(product.NotificationLeadDays),
 			"min_stock_amount":       product.MinStockAmount,
 			"opened_at":              nullable(product.OpenedAt),

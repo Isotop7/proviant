@@ -35,10 +35,11 @@ func NewProductService(repos *database.RepositoryContainer, logger *zerolog.Logg
 
 // recordSavingsEvent writes the savings record of one consume or waste event.
 // The resolver is the snapshot of the canonical categories the caller already
-// loaded; a nil resolver lets the repository load its own.
-func (s *ProductService) recordSavingsEvent(userID uint, product *dbModel.Product, eventType string, resolver *database.CategoryResolver) {
+// loaded; a nil resolver lets the repository load its own. The cause is why
+// the event wasted the product; it stays empty for a consumed event.
+func (s *ProductService) recordSavingsEvent(userID uint, product *dbModel.Product, eventType string, cause string, resolver *database.CategoryResolver) {
 	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		if err := s.repos.Savings.RecordSavingsEvent(householdID, product, eventType, resolver); err != nil {
+		if err := s.repos.Savings.RecordSavingsEvent(householdID, product, eventType, cause, resolver); err != nil {
 			s.logger.Error().Msgf("RecordSavingsEvent (%s): %s", eventType, err)
 		}
 	}
@@ -56,12 +57,12 @@ func (s *ProductService) loadCategoryResolver() *database.CategoryResolver {
 	return resolver
 }
 
-func (s *ProductService) recordActivityLog(userID uint, householdID uint, action string, productID uint, productName string, quantity int) {
+func (s *ProductService) recordActivityLog(userID uint, householdID uint, action string, productID uint, productName string, quantity int, cause string) {
 	if householdID == 0 {
 		return
 	}
 	go func() {
-		entry := s.activityLogEntry(userID, householdID, action, s.activityLogUserName(userID), productID, productName, quantity)
+		entry := s.activityLogEntry(userID, householdID, action, s.activityLogUserName(userID), productID, productName, quantity, cause)
 		s.createActivityLog(entry)
 	}()
 }
@@ -78,7 +79,7 @@ func (s *ProductService) recordActivityLogs(userID uint, householdID uint, actio
 	go func() {
 		userName := s.activityLogUserName(userID)
 		for i := range products {
-			s.createActivityLog(s.activityLogEntry(userID, householdID, action, userName, products[i].ID, products[i].ProductName, 1))
+			s.createActivityLog(s.activityLogEntry(userID, householdID, action, userName, products[i].ID, products[i].ProductName, 1, ""))
 		}
 	}()
 }
@@ -92,10 +93,11 @@ func (s *ProductService) activityLogUserName(userID uint) string {
 }
 
 // activityLogEntry builds one entry; userName is resolved once per batch by
-// the caller via activityLogUserName.
+// the caller via activityLogUserName. The cause is why the action wasted the
+// product; it stays empty for every action but a waste that carried a reason.
 func (s *ProductService) activityLogEntry(
 	userID uint, householdID uint, action string, userName string,
-	productID uint, productName string, quantity int,
+	productID uint, productName string, quantity int, cause string,
 ) *dbModel.ActivityLog {
 	return &dbModel.ActivityLog{
 		HouseholdID: householdID,
@@ -105,6 +107,7 @@ func (s *ProductService) activityLogEntry(
 		ProductID:   productID,
 		ProductName: productName,
 		Quantity:    quantity,
+		WasteCause:  cause,
 		Timestamp:   time.Now(),
 	}
 }
@@ -144,28 +147,30 @@ func (s *ProductService) ConsumeProductPartial(productID, userID uint, quantity 
 	}
 
 	product.Quantity = consumed
-	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, nil)
+	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, "", nil)
 
 	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, consumed)
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, consumed, "")
 	}
 	return consumed, nil
 }
 
-func (s *ProductService) WasteProduct(productID, userID uint) error {
-	_, err := s.WasteProductPartial(productID, userID, 0, nil)
+// WasteProduct records the whole stock of a product as wasted.
+func (s *ProductService) WasteProduct(productID, userID uint, cause string) error {
+	_, err := s.WasteProductPartial(productID, userID, 0, nil, cause)
 	return err
 }
 
 // WasteProductPartial records up to quantity packs as wasted. A zero quantity
 // wastes the whole stock. The product.wasted webhook fires only for a full waste.
-func (s *ProductService) WasteProductPartial(productID, userID uint, quantity int, mutationID *string) (int, error) {
+// The cause is why the packs were wasted; it may be empty.
+func (s *ProductService) WasteProductPartial(productID, userID uint, quantity int, mutationID *string, cause string) (int, error) {
 	product, err := s.repos.Products.GetProductByID(productID, userID)
 	if err != nil {
 		return 0, err
 	}
 
-	wasted, fullyWasted, applied, err := s.repos.Products.WasteProductPartial(&product, quantity, mutationID)
+	wasted, fullyWasted, applied, err := s.repos.Products.WasteProductPartial(&product, quantity, mutationID, cause)
 	if err != nil || !applied {
 		return 0, err
 	}
@@ -174,21 +179,22 @@ func (s *ProductService) WasteProductPartial(productID, userID uint, quantity in
 		if err := s.repos.Streaks.RecordWasteEvent(householdID); err != nil {
 			s.logger.Error().Msgf("WasteProduct: failed to record waste event for streak: %s", err)
 		}
-		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionWaste, productID, product.ProductName, wasted)
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionWaste, productID, product.ProductName, wasted, cause)
 	}
 
 	if fullyWasted {
 		go func() {
 			if ws := controllers.GetWebhookService(); ws != nil {
 				ws.FireEventContext(context.Background(), "product.wasted", map[string]any{
-					"productId": productID,
+					"productId":  productID,
+					"wasteCause": cause,
 				})
 			}
 		}()
 	}
 
 	product.Quantity = wasted
-	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted, nil)
+	go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted, cause, nil)
 	return wasted, nil
 }
 
@@ -235,17 +241,18 @@ func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]
 			continue
 		}
 
-		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, resolver)
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, "", resolver)
 		if householdID > 0 {
-			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, 1)
+			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionConsume, productID, product.ProductName, 1, "")
 		}
 	}
 	return failed, serverErr
 }
 
-// BulkWasteProducts hard-deletes productIDs and reports which ones were not
-// touched. Same contract as BulkConsumeProducts.
-func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]uint, error) {
+// BulkWasteProducts archives productIDs and reports which ones were not
+// touched. Same contract as BulkConsumeProducts. The cause is why the products
+// were wasted; it applies to every product of the batch and may be empty.
+func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint, cause string) ([]uint, error) {
 	householdID, householdErr := s.repos.Users.GetUserHouseholdByID(userID)
 	resolver := s.loadCategoryResolver()
 
@@ -259,7 +266,7 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]ui
 			continue
 		}
 
-		if wasteErr := s.repos.Products.WasteProduct(productID, userID); wasteErr != nil {
+		if wasteErr := s.repos.Products.WasteProduct(productID, userID, cause); wasteErr != nil {
 			failed = append(failed, productID)
 			s.logBulkFailure("BulkWasteProducts", productID, wasteErr, &serverErr)
 			continue
@@ -269,18 +276,19 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]ui
 			if err := s.repos.Streaks.RecordWasteEvent(householdID); err != nil {
 				s.logger.Error().Msgf("BulkWasteProducts: failed to record waste event for streak: %s", err)
 			}
-			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionWaste, productID, product.ProductName, 1)
+			go s.recordActivityLog(userID, householdID, dbModel.ActivityActionWaste, productID, product.ProductName, 1, cause)
 		}
 
 		go func(pid uint) {
 			if ws := controllers.GetWebhookService(); ws != nil {
 				ws.FireEvent("product.wasted", map[string]any{
-					"productId": pid,
+					"productId":  pid,
+					"wasteCause": cause,
 				})
 			}
 		}(productID)
 
-		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted, resolver)
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeWasted, cause, resolver)
 	}
 	return failed, serverErr
 }
@@ -388,9 +396,9 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 		// SavingsRecord amount, price and CO2 figures. Every cooked pack is
 		// accounted for, so the ledger counts each pack exactly once.
 		product.Quantity = consumedQuantity
-		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, resolver)
+		go s.recordSavingsEvent(userID, &product, dbModel.SavingsEventTypeConsumed, "", resolver)
 
-		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionCook, item.ProductID, product.ProductName, consumedQuantity)
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionCook, item.ProductID, product.ProductName, consumedQuantity, "")
 	}
 	return consumed, partial, errs, internalErr
 }
@@ -421,7 +429,7 @@ func (s *ProductService) RestoreProduct(productID, userID uint) error {
 	}
 
 	if householdID, err := s.repos.Users.GetUserHouseholdByID(userID); err == nil && householdID > 0 {
-		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionRestore, productID, product.ProductName, 1)
+		go s.recordActivityLog(userID, householdID, dbModel.ActivityActionRestore, productID, product.ProductName, 1, "")
 	}
 	return nil
 }

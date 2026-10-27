@@ -12,7 +12,7 @@ import (
 
 type SavingsRepositoryInterface interface {
 	LoadCategoryResolver() (*CategoryResolver, error)
-	RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, resolver *CategoryResolver) error
+	RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *CategoryResolver) error
 	GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
 }
 
@@ -38,12 +38,14 @@ func (r *SavingsRepository) LoadCategoryResolver() (*CategoryResolver, error) {
 
 // RecordSavingsEvent writes a SavingsRecord for a consume or waste action.
 // eventType must be dbModel.SavingsEventTypeConsumed or dbModel.SavingsEventTypeWasted.
+// The cause is why the event wasted the product; it does not change the event
+// type and stays empty for a consumed event and for an unattributed waste.
 // CO2 priority: per-product Agribalyse rate (product.CO2KgPerKg) > seeded category fallback.
 // Price priority: product.PriceOverride > seeded category average. The override is
 // the price of one pack, so it is multiplied by the number of packs.
 // A nil resolver makes the repository load one; a caller that records many
 // events passes the resolver it already loaded.
-func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, resolver *CategoryResolver) error {
+func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *CategoryResolver) error {
 	if resolver == nil {
 		loaded, err := r.LoadCategoryResolver()
 		if err != nil {
@@ -81,6 +83,7 @@ func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbMode
 		ProductID:   product.ID,
 		ProductName: product.ProductName,
 		EventType:   eventType,
+		WasteCause:  cause,
 		PriceEUR:    priceEUR,
 		CO2Kg:       co2Kg,
 		Amount:      product.Quantity,

@@ -381,3 +381,23 @@ describe("proviant.js pure helpers", () => {
     });
   });
 });
+
+describe("proviant.js waste cause label", () => {
+  it("names a known cause in the user's language", () => {
+    const { proviant } = freshProviant();
+
+    expect(proviant.wasteCauseLabel("spoiled")).toBe("Spoiled");
+  });
+
+  it("keeps the raw token of a cause the catalog does not know", () => {
+    const { proviant } = freshProviant();
+
+    expect(proviant.wasteCauseLabel("melted")).toBe("melted");
+  });
+
+  it("names the unattributed waste", () => {
+    const { proviant } = freshProviant();
+
+    expect(proviant.wasteCauseLabel("")).toBe("No reason");
+  });
+});

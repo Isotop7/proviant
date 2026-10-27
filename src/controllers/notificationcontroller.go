@@ -541,6 +541,7 @@ func (nc *NotificationController) processMonthlyWasteReports(emailProvider *Emai
 		stats.HouseholdName = target.HouseholdName
 
 		lang := nc.recipientLanguage(0, target.HouseholdID)
+		stats.Insight, stats.InsightAvailable = WasteInsight(lang, stats.Overbuy, stats.Causes, stats.WastedEvents)
 
 		nc.sendMonthlyWasteReportToEmailRecipients(emailProvider, target.Recipients, &stats, target.HouseholdID, lang)
 		nc.sendMonthlyWasteReportToTelegramRecipients(target.TelegramRecipients, &stats, target.HouseholdID, lang)
@@ -930,7 +931,7 @@ func (nc *NotificationController) StartTelegramPollerPool() {
 	}
 
 	nc.pollerPool.wg.Add(numWorkers)
-	for workerID := 0; workerID < numWorkers; workerID++ {
+	for workerID := range numWorkers {
 		go nc.poolWorker(workerID)
 	}
 }

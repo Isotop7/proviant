@@ -77,6 +77,38 @@ describe("offlineQueue.js partial consume/waste", () => {
     expect(await proviant.offline.pendingItems()).toHaveLength(0);
   });
 
+  it("keeps the waste cause in the queue and in the replay", async () => {
+    // The reason the user gave belongs to the waste: a queued waste that lost
+    // it would be recorded as an unattributed waste.
+    const { proviant, calls } = await loadOutbox({ online: false });
+
+    await proviant.wasteProduct(9, 2, undefined, "spoiled");
+
+    const queued = await proviant.offline.pendingItems();
+    expect(queued).toHaveLength(1);
+    expect(queued[0].payload).toMatchObject({ productID: 9, quantity: 2, wasteCause: "spoiled" });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("replays the queued waste with its cause", async () => {
+    let attempt = 0;
+    const { proviant, calls } = await loadOutbox({
+      online: true,
+      responder: () => {
+        attempt++;
+        if (attempt === 1) throw new Error("response lost");
+        return { status: 200, ok: true, json: async () => ({ message: "recorded" }) };
+      },
+    });
+
+    await proviant.wasteProduct(9, 2, undefined, "spoiled");
+    await proviant.offline.sync();
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1].url).toContain("/api/v1/products/9/waste");
+    expect(calls[1].body).toMatchObject({ quantity: 2, wasteCause: "spoiled" });
+  });
+
   it("drops a replayed full action when the archived product now answers 404", async () => {
     const { proviant } = await loadOutbox({
       online: true,

@@ -28,16 +28,18 @@ func TestProductService_PartialRemovalAccounting(t *testing.T) {
 		name      string
 		action    string
 		eventType string
-		remove    func(*ProductService, uint, uint, int, *string) (int, error)
+		remove    func(*ProductService, uint, uint, int, *string, string) (int, error)
 	}{
-		{name: "consume", action: dbModel.ActivityActionConsume, eventType: "consumed", remove: (*ProductService).ConsumeProductPartial},
+		{name: "consume", action: dbModel.ActivityActionConsume, eventType: "consumed", remove: func(s *ProductService, productID, userID uint, quantity int, mutationID *string, _ string) (int, error) {
+			return s.ConsumeProductPartial(productID, userID, quantity, mutationID)
+		}},
 		{name: "waste", action: dbModel.ActivityActionWaste, eventType: "wasted", remove: (*ProductService).WasteProductPartial},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db, svc, householdID, userID, product := setupPartialService(t, 3)
 
-			removed, err := tt.remove(svc, product.ID, userID, 2, nil)
+			removed, err := tt.remove(svc, product.ID, userID, 2, nil, "")
 			if err != nil {
 				t.Fatalf("partial removal error = %v", err)
 			}
@@ -84,16 +86,18 @@ func TestProductService_FullRemovalAccounting(t *testing.T) {
 		action    string
 		eventType string
 		reason    string
-		remove    func(*ProductService, uint, uint) error
+		remove    func(*ProductService, uint, uint, string) error
 	}{
-		{name: "consume", action: dbModel.ActivityActionConsume, eventType: "consumed", reason: dbModel.RemovalReasonConsumed, remove: (*ProductService).ConsumeProduct},
+		{name: "consume", action: dbModel.ActivityActionConsume, eventType: "consumed", reason: dbModel.RemovalReasonConsumed, remove: func(s *ProductService, productID, userID uint, _ string) error {
+			return s.ConsumeProduct(productID, userID)
+		}},
 		{name: "waste", action: dbModel.ActivityActionWaste, eventType: "wasted", reason: dbModel.RemovalReasonWasted, remove: (*ProductService).WasteProduct},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db, svc, householdID, userID, product := setupPartialService(t, 3)
 
-			if err := tt.remove(svc, product.ID, userID); err != nil {
+			if err := tt.remove(svc, product.ID, userID, ""); err != nil {
 				t.Fatalf("full removal error = %v", err)
 			}
 			var archived dbModel.Product
@@ -124,9 +128,11 @@ func TestProductService_FullRemovalAccounting(t *testing.T) {
 func TestProductService_PartialRemovalReplay(t *testing.T) {
 	tests := []struct {
 		name   string
-		remove func(*ProductService, uint, uint, int, *string) (int, error)
+		remove func(*ProductService, uint, uint, int, *string, string) (int, error)
 	}{
-		{name: "consume", remove: (*ProductService).ConsumeProductPartial},
+		{name: "consume", remove: func(s *ProductService, productID, userID uint, quantity int, mutationID *string, _ string) (int, error) {
+			return s.ConsumeProductPartial(productID, userID, quantity, mutationID)
+		}},
 		{name: "waste", remove: (*ProductService).WasteProductPartial},
 	}
 	for _, tt := range tests {
@@ -134,12 +140,12 @@ func TestProductService_PartialRemovalReplay(t *testing.T) {
 			db, svc, householdID, userID, product := setupPartialService(t, 3)
 			mutationID := "offline-partial-action"
 
-			if _, err := tt.remove(svc, product.ID, userID, 1, &mutationID); err != nil {
+			if _, err := tt.remove(svc, product.ID, userID, 1, &mutationID, ""); err != nil {
 				t.Fatalf("first removal error = %v", err)
 			}
 			waitForActivityLogs(t, db, householdID, 1)
 			waitForSavingsEvents(t, db, householdID, 1)
-			removed, err := tt.remove(svc, product.ID, userID, 1, &mutationID)
+			removed, err := tt.remove(svc, product.ID, userID, 1, &mutationID, "")
 			if err != nil {
 				t.Fatalf("replayed removal error = %v", err)
 			}
@@ -166,5 +172,81 @@ func TestProductService_PartialRemovalReplay(t *testing.T) {
 				t.Errorf("Quantity after replay = %d, want 2", active.Quantity)
 			}
 		})
+	}
+}
+
+// TestProductService_WasteRecordsItsCause verifies that the reason a waste
+// happened reaches the ledger, the activity log and the archived product.
+func TestProductService_WasteRecordsItsCause(t *testing.T) {
+	db, svc, householdID, userID, product := setupPartialService(t, 2)
+
+	if _, err := svc.WasteProductPartial(product.ID, userID, 0, nil, dbModel.WasteCauseOverbought); err != nil {
+		t.Fatalf("WasteProductPartial() error = %v", err)
+	}
+
+	logs := waitForActivityLogs(t, db, householdID, 1)
+	if logs[0].WasteCause != dbModel.WasteCauseOverbought {
+		t.Errorf("activity cause = %q, want %q", logs[0].WasteCause, dbModel.WasteCauseOverbought)
+	}
+
+	waitForSavingsEvents(t, db, householdID, 1)
+	var record dbModel.SavingsRecord
+	if err := db.Where("product_id = ?", product.ID).First(&record).Error; err != nil {
+		t.Fatalf("load savings record: %v", err)
+	}
+	if record.EventType != dbModel.SavingsEventTypeWasted {
+		t.Errorf("savings event type = %q, want %q", record.EventType, dbModel.SavingsEventTypeWasted)
+	}
+	if record.WasteCause != dbModel.WasteCauseOverbought {
+		t.Errorf("savings cause = %q, want %q", record.WasteCause, dbModel.WasteCauseOverbought)
+	}
+
+	var archived dbModel.Product
+	if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
+		t.Fatalf("load archived product: %v", err)
+	}
+	if archived.RemovalReason != dbModel.RemovalReasonWasted {
+		t.Errorf("RemovalReason = %q, want %q", archived.RemovalReason, dbModel.RemovalReasonWasted)
+	}
+	if archived.WasteCause != dbModel.WasteCauseOverbought {
+		t.Errorf("archived cause = %q, want %q", archived.WasteCause, dbModel.WasteCauseOverbought)
+	}
+}
+
+// TestProductService_BulkWasteRecordsItsCause verifies that a bulk waste writes
+// the reason to every product of the batch.
+func TestProductService_BulkWasteRecordsItsCause(t *testing.T) {
+	db, svc, householdID, userID, product := setupPartialService(t, 2)
+	second := testutil.CreateTestProduct(db, householdID, userID)
+
+	if _, err := svc.BulkWasteProducts([]uint{product.ID, second.ID}, userID, dbModel.WasteCauseSpoiled); err != nil {
+		t.Fatalf("BulkWasteProducts() error = %v", err)
+	}
+
+	waitForSavingsEvents(t, db, householdID, 2)
+	var records []dbModel.SavingsRecord
+	if err := db.Where("household_id = ?", householdID).Find(&records).Error; err != nil {
+		t.Fatalf("load savings records: %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("savings records = %d, want 2", len(records))
+	}
+	for _, record := range records {
+		if record.WasteCause != dbModel.WasteCauseSpoiled {
+			t.Errorf("savings cause = %q, want %q", record.WasteCause, dbModel.WasteCauseSpoiled)
+		}
+	}
+
+	var archived []dbModel.Product
+	if err := db.Unscoped().Where("household_id = ? AND deleted_at IS NOT NULL", householdID).Find(&archived).Error; err != nil {
+		t.Fatalf("load archived products: %v", err)
+	}
+	if len(archived) != 2 {
+		t.Fatalf("archived products = %d, want 2", len(archived))
+	}
+	for _, row := range archived {
+		if row.WasteCause != dbModel.WasteCauseSpoiled {
+			t.Errorf("archived cause = %q, want %q", row.WasteCause, dbModel.WasteCauseSpoiled)
+		}
 	}
 }

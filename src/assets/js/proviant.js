@@ -34,6 +34,15 @@ proviant.tn = function (key, n) {
   return proviant.t.apply(null, [lookup, n].concat(Array.prototype.slice.call(arguments, 2)));
 };
 
+// wasteCauseLabel names the reason a product was wasted. A cause the catalog
+// does not know keeps its raw token: the key would show up as text otherwise.
+proviant.wasteCauseLabel = function (cause) {
+  if (!cause) return proviant.t("waste.cause.none");
+  const key = `waste.cause.${cause}`;
+  const label = proviant.t(key);
+  return label === key ? cause : label;
+};
+
 // quantityLabel renders a pack count the way every quantity surface does: the
 // count and the localized pack noun ("2 Stk."). A count never depends on a
 // unit, so the label is the same everywhere.
@@ -359,14 +368,16 @@ proviant.createProduct = async function (barcode, expireAt, quantity, storageLoc
   return { code: res.status, message: body.message, action: body.action, duplicate: body.duplicate || null, clientSyncId: clientSyncId || null };
 };
 
-proviant._sendProductAction = async function (action, productID, quantity, clientMutationId) {
+proviant._sendProductAction = async function (action, productID, quantity, clientMutationId, wasteCause) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/${action}`;
+  const payload = { quantity, clientMutationId };
+  if (wasteCause) payload.wasteCause = wasteCause;
   let res;
   try {
     res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ quantity, clientMutationId }),
+      body: JSON.stringify(payload),
     });
   } catch (cause) {
     const err = new Error(cause && cause.message ? cause.message : String(cause));
@@ -393,8 +404,8 @@ proviant.consumeProduct = async function (productID, quantity, clientMutationId)
   return proviant._sendProductAction("consume", productID, quantity, clientMutationId);
 };
 
-proviant.wasteProduct = async function (productID, quantity, clientMutationId) {
-  return proviant._sendProductAction("waste", productID, quantity, clientMutationId);
+proviant.wasteProduct = async function (productID, quantity, clientMutationId, wasteCause) {
+  return proviant._sendProductAction("waste", productID, quantity, clientMutationId, wasteCause);
 };
 
 proviant.getOpenFoodFactsData = async function (barcode) {
@@ -533,9 +544,11 @@ proviant.bulkConsumeProducts = async function (productIDs) {
   return { code: res.status, message: body.message, failedIds: body.failedIds || [] };
 };
 
-proviant.bulkWasteProducts = async function (productIDs) {
+proviant.bulkWasteProducts = async function (productIDs, wasteCause) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkWaste`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
+  const payload = { productIDs };
+  if (wasteCause) payload.wasteCause = wasteCause;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const body = await res.json();
   return { code: res.status, message: body.message, failedIds: body.failedIds || [] };
 };
@@ -598,7 +611,7 @@ function clearBulkSelectionAndReload() {
 }
 
 proviant.bulkAction = async function (type, ids, options = {}) {
-  const { confirm: needsConfirm = false, confirmTitle = '', confirmMsg = '', onDone = () => clearBulkSelectionAndReload() } = options;
+  const { confirm: needsConfirm = false, confirmTitle = '', confirmMsg = '', onDone = () => clearBulkSelectionAndReload(), wasteCause = '' } = options;
   const fn = { delete: proviant.bulkWasteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkConsumeProducts }[type];
   if (!fn) return;
   // Failures must reach the user, and the reload must wait for that message:
@@ -622,7 +635,7 @@ proviant.bulkAction = async function (type, ids, options = {}) {
   // a stale selection.
   const run = async () => {
     try {
-      finish(await fn(ids));
+      finish(await fn(ids, wasteCause));
     } catch (err) {
       proviant.showFeedback("error", proviant.t("js.feedback.bulkActionFailed"), (err && err.message) || proviant.t("js.feedback.requestFailed"), onDone);
     }

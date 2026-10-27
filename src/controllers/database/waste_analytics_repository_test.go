@@ -1,6 +1,7 @@
 package database
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -243,4 +244,131 @@ func keysOfProducts(m map[string][]apiModel.WasteProductStat) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// TestWasteAnalyticsRepository_CauseBreakdown verifies that the waste is
+// grouped by the reason it was wasted and that the category the household most
+// over-buys is named with its count and its share of that category's waste.
+func TestWasteAnalyticsRepository_CauseBreakdown(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewWasteAnalyticsRepository(db)
+
+	if err := db.Create(&dbModel.ProductCategoryPrice{
+		CategoryKey: "dairy",
+		DisplayName: "Dairy",
+		AvgPriceEUR: 2.0,
+		CO2KgPerKg:  1.5,
+		WeightGrams: 500,
+	}).Error; err != nil {
+		t.Fatalf("seed category: %v", err)
+	}
+
+	admin := authentication.User{Username: "a", Password: "x", MailAddress: "a@x"}
+	db.Create(&admin)
+	household := dbModel.Household{Name: "A", AdminID: admin.ID}
+	db.Create(&household)
+
+	now := time.Now()
+	since := now.AddDate(0, -1, 0)
+
+	dairy := dbModel.Product{
+		ProductName: "Yogurt", Categories: "en:dairy", HouseholdID: household.ID, UserID: admin.ID,
+		ExpireAt: now, Quantity: 1,
+	}
+	db.Create(&dairy)
+	bakery := dbModel.Product{
+		ProductName: "Bread", Categories: "en:bakery", HouseholdID: household.ID, UserID: admin.ID,
+		ExpireAt: now, Quantity: 1,
+	}
+	db.Create(&bakery)
+
+	insertWaste := func(productID uint, name, cause string, eur float64, at time.Time) {
+		record := dbModel.SavingsRecord{
+			HouseholdID: household.ID, ProductID: productID, ProductName: name,
+			EventType: dbModel.SavingsEventTypeWasted, WasteCause: cause,
+			PriceEUR: eur, CO2Kg: 1, Amount: 1,
+		}
+		record.CreatedAt = at
+		record.UpdatedAt = at
+		db.Create(&record)
+	}
+
+	insertWaste(dairy.ID, "Yogurt", dbModel.WasteCauseOverbought, 2.0, now.Add(-1*time.Hour))
+	insertWaste(dairy.ID, "Yogurt", dbModel.WasteCauseOverbought, 2.0, now.Add(-2*time.Hour))
+	insertWaste(dairy.ID, "Yogurt", dbModel.WasteCauseSpoiled, 2.0, now.Add(-3*time.Hour))
+	insertWaste(bakery.ID, "Bread", "", 1.0, now.Add(-4*time.Hour))
+
+	breakdown, err := repo.GetWasteCauseBreakdown(household.ID, since)
+	if err != nil {
+		t.Fatalf("GetWasteCauseBreakdown: %v", err)
+	}
+
+	if breakdown.WastedEvents != 4 {
+		t.Errorf("wasted events = %d, want 4", breakdown.WastedEvents)
+	}
+	if len(breakdown.Causes) != 3 {
+		t.Fatalf("causes = %d, want 3", len(breakdown.Causes))
+	}
+	if breakdown.Causes[0].Cause != dbModel.WasteCauseOverbought || breakdown.Causes[0].Count != 2 {
+		t.Errorf("top cause = %+v, want overbought with 2 events", breakdown.Causes[0])
+	}
+	if got, want := breakdown.Causes[0].Share, 50.0; got != want {
+		t.Errorf("top cause share = %v, want %v", got, want)
+	}
+	if got, want := breakdown.Causes[0].CostEUR, 4.0; got != want {
+		t.Errorf("top cause cost = %v, want %v", got, want)
+	}
+	var unattributed int
+	for _, cause := range breakdown.Causes {
+		if cause.Cause == "" {
+			unattributed = cause.Count
+		}
+	}
+	if unattributed != 1 {
+		t.Errorf("unattributed waste = %d, want 1", unattributed)
+	}
+
+	if breakdown.Overbuy.CategoryKey != "dairy" {
+		t.Errorf("overbought category = %q, want dairy", breakdown.Overbuy.CategoryKey)
+	}
+	if breakdown.Overbuy.DisplayName != "Dairy" {
+		t.Errorf("overbought display name = %q, want Dairy", breakdown.Overbuy.DisplayName)
+	}
+	if breakdown.Overbuy.Count != 2 {
+		t.Errorf("overbought count = %d, want 2", breakdown.Overbuy.Count)
+	}
+	if breakdown.Overbuy.CategoryWaste != 3 {
+		t.Errorf("category waste = %d, want 3", breakdown.Overbuy.CategoryWaste)
+	}
+	if got, want := breakdown.Overbuy.Share, 200.0/3.0; math.Abs(got-want) > 0.0001 {
+		t.Errorf("overbought share = %v, want %v", got, want)
+	}
+}
+
+// A household without over-bought waste has no over-buy answer.
+func TestWasteAnalyticsRepository_CauseBreakdownWithoutOverbuying(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewWasteAnalyticsRepository(db)
+
+	admin := authentication.User{Username: "a", Password: "x", MailAddress: "a@x"}
+	db.Create(&admin)
+	household := dbModel.Household{Name: "A", AdminID: admin.ID}
+	db.Create(&household)
+
+	now := time.Now()
+	record := dbModel.SavingsRecord{
+		HouseholdID: household.ID, ProductID: 1, ProductName: "Yogurt",
+		EventType: dbModel.SavingsEventTypeWasted, WasteCause: dbModel.WasteCauseSpoiled,
+		PriceEUR: 1, CO2Kg: 1, Amount: 1,
+	}
+	record.CreatedAt = now
+	db.Create(&record)
+
+	breakdown, err := repo.GetWasteCauseBreakdown(household.ID, now.AddDate(0, -1, 0))
+	if err != nil {
+		t.Fatalf("GetWasteCauseBreakdown: %v", err)
+	}
+	if breakdown.Overbuy.Count != 0 || breakdown.Overbuy.CategoryKey != "" {
+		t.Errorf("overbuy = %+v, want an empty answer", breakdown.Overbuy)
+	}
 }

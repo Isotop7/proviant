@@ -622,10 +622,14 @@ document.addEventListener('DOMContentLoaded', async function () {
             const actionText = actionKeyMap[a.action]
               ? proviant.t(actionKeyMap[a.action], productName)
               : `${a.action} ${productName}`;
+            // The reason belongs to a waste; every other action has none.
+            const causeText = a.wasteCause
+              ? ` <span class="fg-secondary">· ${proviant.wasteCauseLabel(a.wasteCause)}</span>`
+              : '';
             return `<li class="list-group-item d-flex justify-content-between align-items-center px-5 py-3">
               <span class="d-flex align-items-center gap-3 text-truncate me-2 small">
                 <i class="bi ${icon}" style="font-size:12px;color:var(--accent);flex-shrink:0;"></i>
-                <span class="text-truncate"><strong>${a.userName || proviant.t("js.home.someone")}</strong> ${actionText}</span>
+                <span class="text-truncate"><strong>${a.userName || proviant.t("js.home.someone")}</strong> ${actionText}${causeText}</span>
               </span>
               <span class="text-nowrap fg-secondary small" style="flex-shrink:0;">${relativeTime(a.timestamp)}</span>
             </li>`;

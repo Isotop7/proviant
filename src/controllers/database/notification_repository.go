@@ -31,6 +31,15 @@ func NewNotificationRepositoryWithLogger(db *gorm.DB, logger *zerolog.Logger) *N
 	return &NotificationRepository{DB: db, Logger: logger}
 }
 
+// warn logs a recoverable failure. A repository built without a logger (the
+// tests) stays silent instead of panicking on a nil pointer.
+func (r *NotificationRepository) warn(message string) {
+	if r.Logger == nil {
+		return
+	}
+	r.Logger.Warn().Msg(message)
+}
+
 type NotificationRepositoryInterface interface {
 	GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error)
 	GetMaxNotificationThresholdDays() int
@@ -418,7 +427,7 @@ func (r *NotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.
 
 		token, tokErr := r.getMailDigestUnsubscribeTokenForUser(user.ID)
 		if tokErr != nil && !errors.Is(tokErr, gorm.ErrRecordNotFound) {
-			r.Logger.Warn().Msgf("Mail digest: failed to get unsubscribe token for user %d: %s", user.ID, tokErr)
+			r.warn(fmt.Sprintf("Mail digest: failed to get unsubscribe token for user %d: %s", user.ID, tokErr))
 			continue
 		}
 
@@ -557,6 +566,14 @@ func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, mon
 		deltaSymbol = "&#9660;"
 	}
 
+	breakdown, breakdownErr := wasteCauseBreakdown(r.DB, householdID, start, end)
+	if breakdownErr != nil {
+		// The breakdown is an addition to the report: a ledger read fault must
+		// not discard the counts, the rate and the delta the report already
+		// confirmed. The report goes out without the reasons.
+		r.warn(fmt.Sprintf("Monthly waste report: household %d has no waste breakdown: %s", householdID, breakdownErr))
+	}
+
 	return models.WasteStats{
 		Month:            start,
 		MonthLabel:       start.Format("January 2006"),
@@ -570,6 +587,9 @@ func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, mon
 		Delta:            delta,
 		DeltaColor:       deltaColor,
 		DeltaSymbol:      deltaSymbol,
+		WastedEvents:     breakdown.WastedEvents,
+		Causes:           breakdown.Causes,
+		Overbuy:          breakdown.Overbuy,
 	}, nil
 }
 

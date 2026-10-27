@@ -699,6 +699,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"CurrentUserID":      userID,
 		"IsAdmin":            isAdmin,
 		"ReceiptScanEnabled": receiptScanEnabled,
+		"WasteCauses":        dbModel.WasteCauseList(),
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }

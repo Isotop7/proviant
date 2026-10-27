@@ -8,14 +8,17 @@ import (
 
 type ActivityLog struct {
 	gorm.Model
-	HouseholdID uint      `gorm:"index;not null" json:"householdId"`
-	UserID      *uint     `gorm:"index" json:"userId"`
-	UserName    string    `gorm:"not null" json:"userName"`
-	Action      string    `gorm:"index;not null" json:"action"`
-	ProductID   uint      `gorm:"index" json:"productId"`
-	ProductName string    `gorm:"not null" json:"productName"`
-	Quantity    int       `json:"quantity"`
-	Timestamp   time.Time `gorm:"index;not null" json:"timestamp"`
+	HouseholdID uint   `gorm:"index;not null" json:"householdId"`
+	UserID      *uint  `gorm:"index" json:"userId"`
+	UserName    string `gorm:"not null" json:"userName"`
+	Action      string `gorm:"index;not null" json:"action"`
+	ProductID   uint   `gorm:"index" json:"productId"`
+	ProductName string `gorm:"not null" json:"productName"`
+	Quantity    int    `json:"quantity"`
+	// WasteCause is why the action wasted the product. It is empty for every
+	// action but a waste that carried a reason.
+	WasteCause string    `gorm:"default:''" json:"wasteCause"`
+	Timestamp  time.Time `gorm:"index;not null" json:"timestamp"`
 }
 
 const (

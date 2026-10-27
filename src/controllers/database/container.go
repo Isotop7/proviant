@@ -52,7 +52,7 @@ func NewRepositoryContainer(db *gorm.DB, logger *zerolog.Logger) *RepositoryCont
 		MealPlans:             NewMealPlanRepository(db),
 		Savings:               NewSavingsRepository(db),
 		WasteAnalytics:        NewWasteAnalyticsRepository(db),
-		Notifications:         NewNotificationRepository(db),
+		Notifications:         NewNotificationRepositoryWithLogger(db, logger),
 		Streaks:               NewStreakRepository(db),
 		ExpiryScan:            NewExpiryScanRepository(db),
 		CalendarTokens:        NewCalendarTokenRepository(db),

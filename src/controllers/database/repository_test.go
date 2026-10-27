@@ -779,7 +779,7 @@ func TestProductRepository_WasteProduct(t *testing.T) {
 	}
 	db.Create(&product)
 
-	err := repo.WasteProduct(product.ID, user.ID)
+	err := repo.WasteProduct(product.ID, user.ID, "")
 	if err != nil {
 		t.Fatalf("WasteProduct() error = %v", err)
 	}
@@ -827,7 +827,7 @@ func TestProductRepository_WasteProduct_ConcurrentModification(t *testing.T) {
 			"UPDATE products SET removal_reason = ? WHERE id = ?", dbModel.RemovalReasonConsumed, product.ID)
 	})
 
-	err := repo.WasteProduct(product.ID, user.ID)
+	err := repo.WasteProduct(product.ID, user.ID, "")
 	if err != errors.ErrProductConcurrentModification {
 		t.Fatalf("WasteProduct() error = %v, want %v", err, errors.ErrProductConcurrentModification)
 	}
@@ -859,7 +859,7 @@ func TestProductRepository_GetActiveProductsCount(t *testing.T) {
 	}
 	db.Create(&user)
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		product := dbModel.Product{
 			ProductName: "Product",
 			Barcode:     "1234567890123",

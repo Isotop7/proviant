@@ -74,6 +74,7 @@
   "js.products.partialConsumeSuccess": "%s Packung(en) verbraucht",
   "js.products.partialConsumeSuccess_one": "%s Packung verbraucht",
   "js.products.partialConsumeSuccess_other": "%s Packungen verbraucht",
+  "js.products.partialWasteQueued": "Der Abfall wird automatisch synchronisiert, sobald Sie wieder online sind.",
   "js.products.partialWasteSuccess": "%s Packung(en) entsorgt",
   "js.products.partialWasteSuccess_one": "%s Packung entsorgt",
   "js.products.partialWasteSuccess_other": "%s Packungen entsorgt",

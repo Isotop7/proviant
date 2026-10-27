@@ -58,6 +58,12 @@
               <label class="form-label">{{ t "products.productName" }} <span class="fg-danger">*</span></label>
               <input type="text" class="form-control" id="inputProductName" value="{{ .Product.ProductName }}" required>
             </div>
+            {{ if .Product.WasteCause }}
+            <div class="mb-5">
+              <div class="form-label mb-0">{{ t "products.wasteCauseLabel" }}</div>
+              <div class="product-meta"><i class="bi bi-trash3" aria-hidden="true"></i> {{ t (printf "waste.cause.%s" .Product.WasteCause) }}</div>
+            </div>
+            {{ end }}
             <div class="mb-5">
               <label class="form-label" for="inputProductBarcode">{{ t "products.barcode" }}</label>
               <div class="position-relative">

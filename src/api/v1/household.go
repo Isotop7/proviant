@@ -442,6 +442,7 @@ func GetHouseholdActivity(ctx *gin.Context, appCtx *AppContext) {
 			ProductID:   log.ProductID,
 			ProductName: log.ProductName,
 			Quantity:    log.Quantity,
+			WasteCause:  log.WasteCause,
 			Timestamp:   log.Timestamp.Format(time.RFC3339),
 		})
 	}

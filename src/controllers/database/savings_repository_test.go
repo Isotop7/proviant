@@ -35,7 +35,7 @@ func TestRecordSavingsEventPricesTheTaggedCategoryTheSameWay(t *testing.T) {
 	product.Quantity = 1
 
 	repo := NewSavingsRepository(db)
-	if err := repo.RecordSavingsEvent(household.ID, product, dbModel.SavingsEventTypeConsumed, nil); err != nil {
+	if err := repo.RecordSavingsEvent(household.ID, product, dbModel.SavingsEventTypeConsumed, "", nil); err != nil {
 		t.Fatalf("RecordSavingsEvent() error = %v", err)
 	}
 
@@ -64,7 +64,7 @@ func TestRecordSavingsEventLeavesAnUnmatchedProductUnpriced(t *testing.T) {
 	product.Quantity = 1
 
 	repo := NewSavingsRepository(db)
-	if err := repo.RecordSavingsEvent(household.ID, product, dbModel.SavingsEventTypeConsumed, nil); err != nil {
+	if err := repo.RecordSavingsEvent(household.ID, product, dbModel.SavingsEventTypeConsumed, "", nil); err != nil {
 		t.Fatalf("RecordSavingsEvent() error = %v", err)
 	}
 
@@ -100,13 +100,47 @@ func TestRecordSavingsEventReadsTheCanonicalRowsOnce(t *testing.T) {
 	product.Categories = "dairy products, milk"
 	product.Quantity = 1
 
-	for i := 0; i < 20; i++ {
-		if err := repo.RecordSavingsEvent(household.ID, product, dbModel.SavingsEventTypeConsumed, resolver); err != nil {
+	for range 20 {
+		if err := repo.RecordSavingsEvent(household.ID, product, dbModel.SavingsEventTypeConsumed, "", resolver); err != nil {
 			t.Fatalf("RecordSavingsEvent() error = %v", err)
 		}
 	}
 
 	if got := counter.CountOf("product_category_prices"); got != 1 {
 		t.Errorf("canonical category reads = %d, want 1 for 20 products", got)
+	}
+}
+
+// A waste records the reason it was wasted beside its event type; a consume
+// records none.
+func TestRecordSavingsEventKeepsTheWasteCause(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	seedCanonicalPrices(t, db)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+	product := testutil.CreateTestProduct(db, household.ID, user.ID)
+
+	repo := NewSavingsRepository(db)
+	if err := repo.RecordSavingsEvent(household.ID, product, dbModel.SavingsEventTypeWasted, dbModel.WasteCauseSpoiled, nil); err != nil {
+		t.Fatalf("RecordSavingsEvent() error = %v", err)
+	}
+	if err := repo.RecordSavingsEvent(household.ID, product, dbModel.SavingsEventTypeConsumed, "", nil); err != nil {
+		t.Fatalf("RecordSavingsEvent() error = %v", err)
+	}
+
+	var wasted dbModel.SavingsRecord
+	if err := db.Where("household_id = ? AND event_type = ?", household.ID, dbModel.SavingsEventTypeWasted).First(&wasted).Error; err != nil {
+		t.Fatalf("read wasted savings record: %v", err)
+	}
+	if wasted.WasteCause != dbModel.WasteCauseSpoiled {
+		t.Errorf("WasteCause = %q, want %q", wasted.WasteCause, dbModel.WasteCauseSpoiled)
+	}
+
+	var consumed dbModel.SavingsRecord
+	if err := db.Where("household_id = ? AND event_type = ?", household.ID, dbModel.SavingsEventTypeConsumed).First(&consumed).Error; err != nil {
+		t.Fatalf("read consumed savings record: %v", err)
+	}
+	if consumed.WasteCause != "" {
+		t.Errorf("WasteCause = %q, want empty", consumed.WasteCause)
 	}
 }

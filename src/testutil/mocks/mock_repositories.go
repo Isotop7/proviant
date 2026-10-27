@@ -66,6 +66,8 @@ type MockProductRepository struct {
 	WastePartialMutationIDs   []*string
 	ConsumePartialQuantities  []int
 	WastePartialQuantities    []int
+	// WastePartialCauses records the cause of every recorded waste.
+	WastePartialCauses []string
 }
 
 func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
@@ -322,10 +324,13 @@ func (m *MockProductRepository) ConsumeProductPartial(product *dbModel.Product, 
 	}
 	return amount, fullyConsumed, applied, nil
 }
-func (m *MockProductRepository) WasteProduct(productID, userID uint) error { return m.Err }
-func (m *MockProductRepository) WasteProductPartial(product *dbModel.Product, amount int, mutationID *string) (int, bool, bool, error) {
+func (m *MockProductRepository) WasteProduct(productID, userID uint, cause string) error {
+	return m.Err
+}
+func (m *MockProductRepository) WasteProductPartial(product *dbModel.Product, amount int, mutationID *string, cause string) (int, bool, bool, error) {
 	m.WastePartialMutationIDs = append(m.WastePartialMutationIDs, mutationID)
 	m.WastePartialQuantities = append(m.WastePartialQuantities, amount)
+	m.WastePartialCauses = append(m.WastePartialCauses, cause)
 	if m.WastePartialErr != nil {
 		return 0, false, false, m.WastePartialErr
 	}
@@ -353,7 +358,7 @@ func (m *MockProductRepository) MarkProductOpened(productID, userID uint, opened
 func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError {
 	return nil
 }
-func (m *MockProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []database.BulkOperationError {
+func (m *MockProductRepository) BulkWasteProducts(productIDs []uint, userID uint, cause string) []database.BulkOperationError {
 	return nil
 }
 
@@ -662,7 +667,9 @@ var _ database.PATRepositoryInterface = (*MockPATRepository)(nil)
 // MockSavingsRepository is a configurable in-memory stub for SavingsRepositoryInterface.
 type MockSavingsRepository struct {
 	SavingsStats apiModel.SavingsStatsResponse
-	Err          error
+	// SavingsCauses records the cause of every recorded savings event.
+	SavingsCauses []string
+	Err           error
 }
 
 func (m *MockSavingsRepository) LoadCategoryResolver() (*database.CategoryResolver, error) {
@@ -671,7 +678,8 @@ func (m *MockSavingsRepository) LoadCategoryResolver() (*database.CategoryResolv
 	}
 	return database.NewCategoryResolver([]dbModel.ProductCategoryPrice{}), nil
 }
-func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, resolver *database.CategoryResolver) error {
+func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *database.CategoryResolver) error {
+	m.SavingsCauses = append(m.SavingsCauses, cause)
 	return m.Err
 }
 func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error) {

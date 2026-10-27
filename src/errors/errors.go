@@ -206,6 +206,10 @@ var (
 	// accepted maximum.
 	ErrWasteLimitOutOfRange = errors.New("limit must be 1..50")
 
+	// ErrInvalidWasteCause is thrown if a waste action carries a cause that is
+	// not one of the known causes.
+	ErrInvalidWasteCause = errors.New("invalid waste cause")
+
 	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
 	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
 

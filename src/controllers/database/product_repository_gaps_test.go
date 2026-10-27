@@ -624,7 +624,7 @@ func TestProductRepository_BulkWasteProducts(t *testing.T) {
 	p2 := testutil.CreateTestProduct(db, household.ID, user.ID)
 
 	t.Run("wastes valid ids and reports failures", func(t *testing.T) {
-		errs := repo.BulkWasteProducts([]uint{p1.ID, 9999, p2.ID}, user.ID)
+		errs := repo.BulkWasteProducts([]uint{p1.ID, 9999, p2.ID}, user.ID, "")
 		if len(errs) != 1 {
 			t.Fatalf("BulkWasteProducts() returned %d errors, want 1", len(errs))
 		}
@@ -643,7 +643,7 @@ func TestProductRepository_BulkWasteProducts(t *testing.T) {
 	})
 
 	t.Run("empty input returns no errors", func(t *testing.T) {
-		if errs := repo.BulkWasteProducts(nil, user.ID); len(errs) != 0 {
+		if errs := repo.BulkWasteProducts(nil, user.ID, ""); len(errs) != 0 {
 			t.Errorf("BulkWasteProducts(nil) returned %d errors, want 0", len(errs))
 		}
 	})

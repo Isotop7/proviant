@@ -282,8 +282,13 @@ document.addEventListener("click", function (event) {
             void openCookModal(ids, bulkBtn);
             return;
         }
-        var opts = action === 'delete' ? { confirm: true, confirmTitle: proviant.t("js.products.markAsWasted"), confirmMsg: proviant.tn("js.products.markWastedBulkConfirm", ids.length) } : {};
-        void proviant.bulkAction(action, ids, opts);
+        if (action === 'delete') {
+            // The bulk waste asks for the reason, so it gets its own dialog
+            // instead of the plain confirmation.
+            void openBulkWasteModal(ids);
+            return;
+        }
+        void proviant.bulkAction(action, ids, {});
         return;
     }
 
@@ -291,6 +296,13 @@ document.addEventListener("click", function (event) {
     if (target.closest('#btnCookConfirm')) {
         event.preventDefault();
         void submitCook();
+        return;
+    }
+
+    // Bulk waste dialog confirm button
+    if (target.closest('#btnBulkWasteConfirm')) {
+        event.preventDefault();
+        void submitBulkWaste();
         return;
     }
 
@@ -849,6 +861,8 @@ function setPartialActionBusy(busy, action) {
     });
     var input = document.getElementById('partialActionQuantity');
     if (input) input.disabled = busy;
+    var cause = document.getElementById('partialActionCause');
+    if (cause) cause.disabled = busy;
     document.querySelectorAll('#partialActionModal [data-bs-dismiss="dialog"]').forEach(function (button) {
         button.disabled = busy;
     });
@@ -898,6 +912,8 @@ async function openPartialActionModal(productID, triggerButton) {
         }
         var error = document.getElementById('partialActionQuantityError');
         if (error) error.textContent = '';
+        var cause = document.getElementById('partialActionCause');
+        if (cause) cause.value = '';
 
         var modal = getPartialActionModal();
         if (!modal) {
@@ -920,10 +936,16 @@ async function submitPartialAction(action) {
     var quantity = validatePartialActionQuantity();
     if (quantity === null) return;
     var productID = partialActionState.productID;
+    // The reason belongs to a waste; a consume has none.
+    var cause = '';
+    if (action === 'waste') {
+        var causeSelect = document.getElementById('partialActionCause');
+        cause = causeSelect ? causeSelect.value : '';
+    }
     setPartialActionBusy(true, action);
     try {
         var send = action === 'consume' ? proviant.consumeProduct : proviant.wasteProduct;
-        var response = await send(productID, quantity);
+        var response = await send(productID, quantity, undefined, cause);
         var modal = getPartialActionModal();
         if (response.queued && response.code === 202) {
             if (modal) modal.hide();
@@ -946,6 +968,66 @@ async function submitPartialAction(action) {
         proviant.showFeedback('error', errorTitle, error.message);
     } finally {
         setPartialActionBusy(false, null);
+    }
+}
+
+// ── Bulk waste ────────────────────────────────────────────────
+var bulkWasteModalInstance = null;
+var bulkWasteState = { productIDs: [], busy: false };
+
+function getBulkWasteModal() {
+    if (!bulkWasteModalInstance) {
+        var element = document.getElementById('bulkWasteModal');
+        if (!element || typeof bootstrap === 'undefined') return null;
+        bulkWasteModalInstance = new bootstrap.Dialog(element);
+    }
+    return bulkWasteModalInstance;
+}
+
+function setBulkWasteBusy(busy) {
+    bulkWasteState.busy = busy;
+    var button = document.getElementById('btnBulkWasteConfirm');
+    if (button) {
+        button.disabled = busy;
+        button.classList.toggle('loading', busy);
+        if (busy) button.setAttribute('aria-busy', 'true');
+        else button.removeAttribute('aria-busy');
+    }
+    var cause = document.getElementById('bulkWasteCause');
+    if (cause) cause.disabled = busy;
+    document.querySelectorAll('#bulkWasteModal [data-bs-dismiss="dialog"]').forEach(function (button) {
+        button.disabled = busy;
+    });
+}
+
+function openBulkWasteModal(ids) {
+    if (!ids || !ids.length || bulkWasteState.busy) return;
+    bulkWasteState.productIDs = ids;
+    var count = document.getElementById('bulkWasteCount');
+    if (count) count.textContent = proviant.tn('products.bulkWasteCount', ids.length);
+    var cause = document.getElementById('bulkWasteCause');
+    if (cause) cause.value = '';
+    var modal = getBulkWasteModal();
+    if (!modal) {
+        proviant.showFeedback('error', proviant.t('js.products.partialActionUnavailable'), proviant.t('js.products.uiComponentsFailed'));
+        return;
+    }
+    modal.show();
+}
+
+async function submitBulkWaste() {
+    if (bulkWasteState.busy) return;
+    var ids = bulkWasteState.productIDs;
+    if (!ids.length) return;
+    var causeSelect = document.getElementById('bulkWasteCause');
+    var cause = causeSelect ? causeSelect.value : '';
+    setBulkWasteBusy(true);
+    try {
+        await proviant.bulkAction('delete', ids, { wasteCause: cause });
+        var modal = getBulkWasteModal();
+        if (modal) modal.hide();
+    } finally {
+        setBulkWasteBusy(false);
     }
 }
 

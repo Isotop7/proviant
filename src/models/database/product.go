@@ -12,6 +12,16 @@ const (
 	RemovalReasonConsumed = "consumed"
 	RemovalReasonWasted   = "wasted"
 
+	// WasteCause names why a product was wasted. The cause is a property of the
+	// waste action, not of RemovalReason: a wasted product keeps
+	// RemovalReason == RemovalReasonWasted and carries the cause beside it.
+	// An empty cause means the waste was not attributed.
+	WasteCauseSpoiled    = "spoiled"
+	WasteCauseOverbought = "overbought"
+	WasteCauseForgotten  = "forgotten"
+	WasteCauseDisliked   = "disliked"
+	WasteCauseOther      = "other"
+
 	// MaxDaysAfterOpening is the upper bound on Product.DaysAfterOpening,
 	// enforced on every write (create and PATCH). The opened-shelf-life SQL
 	// prunes (effectiveExpiryCandidateScope and the notification candidate
@@ -22,6 +32,38 @@ const (
 	MaxDaysAfterOpening = 365
 )
 
+// wasteCauses is the fixed cause list in the order the UI offers it.
+var wasteCauses = [...]string{
+	WasteCauseSpoiled,
+	WasteCauseOverbought,
+	WasteCauseForgotten,
+	WasteCauseDisliked,
+	WasteCauseOther,
+}
+
+// WasteCauseList returns the fixed cause list in the order the UI offers it.
+// It hands out a copy: the list is shared by every request that renders it,
+// and one that could be mutated would leak into all of them.
+func WasteCauseList() []string {
+	list := make([]string, len(wasteCauses))
+	copy(list, wasteCauses[:])
+	return list
+}
+
+// IsValidWasteCause reports whether cause is one of the known causes. The empty
+// cause is valid: a waste without a reason is still a waste.
+func IsValidWasteCause(cause string) bool {
+	if cause == "" {
+		return true
+	}
+	for _, known := range wasteCauses {
+		if cause == known {
+			return true
+		}
+	}
+	return false
+}
+
 // Product is the database model of a product. A product is counted in packs:
 // Quantity is the number of packs on hand and PackSize is the size of one
 // pack, a free-text label that is never converted and never computed with.
@@ -29,33 +71,36 @@ const (
 // the override times the number of packs.
 type Product struct {
 	gorm.Model
-	Barcode              string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
-	ProductName          string           `gorm:"index:idx_products_household_name_deleted,priority:1" json:"productName"`
-	Categories           string           `json:"categories"`
-	Countries            string           `json:"countries"`
-	ImageURL             string           `json:"imageUrl"`
-	ExpireAt             time.Time        `gorm:"index" json:"expireAt"`
-	ScannedAt            time.Time        `json:"scannedAt"`
-	NotifiedAt           time.Time        `json:"notifiedAt"`
-	DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
-	HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;index:idx_products_household_clientsyncid,priority:1;not null" json:"-"`
-	Household            Household        `json:"-"`
-	UserID               uint             `gorm:"index, not null" json:"-"`
-	IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
-	Quantity             int              `gorm:"default:1" json:"quantity"`
-	PackSize             string           `json:"packSize"`
-	DisplayQuantity      string           `gorm:"-"                            json:"-"`
-	StorageLocationID    *uint            `gorm:"index"                        json:"storageLocationId"`
-	ClientSyncID         *string          `gorm:"index:idx_products_household_clientsyncid,unique,priority:2" json:"clientSyncId,omitempty"`
-	StorageLocation      *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
-	PriceOverride        *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
-	CO2KgPerKg           *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
-	RemovalReason        string           `gorm:"default:''"                   json:"removalReason"`
-	StorageHint          string           `gorm:"-"                            json:"-"`
-	NotificationLeadDays *int             `gorm:"default:null"                 json:"notificationLeadDays,omitempty"`
-	MinStockAmount       int              `gorm:"default:0"                   json:"minStockAmount"`
-	OpenedAt             *time.Time       `gorm:"default:null"                 json:"openedAt,omitempty"`
-	DaysAfterOpening     *int             `gorm:"default:null"                 json:"daysAfterOpening,omitempty"`
+	Barcode           string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
+	ProductName       string           `gorm:"index:idx_products_household_name_deleted,priority:1" json:"productName"`
+	Categories        string           `json:"categories"`
+	Countries         string           `json:"countries"`
+	ImageURL          string           `json:"imageUrl"`
+	ExpireAt          time.Time        `gorm:"index" json:"expireAt"`
+	ScannedAt         time.Time        `json:"scannedAt"`
+	NotifiedAt        time.Time        `json:"notifiedAt"`
+	DeletedAt         gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
+	HouseholdID       uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;index:idx_products_household_clientsyncid,priority:1;not null" json:"-"`
+	Household         Household        `json:"-"`
+	UserID            uint             `gorm:"index, not null" json:"-"`
+	IsPrivate         bool             `gorm:"default:false" json:"isPrivate"`
+	Quantity          int              `gorm:"default:1" json:"quantity"`
+	PackSize          string           `json:"packSize"`
+	DisplayQuantity   string           `gorm:"-"                            json:"-"`
+	StorageLocationID *uint            `gorm:"index"                        json:"storageLocationId"`
+	ClientSyncID      *string          `gorm:"index:idx_products_household_clientsyncid,unique,priority:2" json:"clientSyncId,omitempty"`
+	StorageLocation   *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
+	PriceOverride     *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
+	CO2KgPerKg        *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
+	RemovalReason     string           `gorm:"default:''"                   json:"removalReason"`
+	// WasteCause is why the product was wasted. It is set when the waste
+	// archives the row and is empty for an unattributed waste.
+	WasteCause           string     `gorm:"default:''"                   json:"wasteCause"`
+	StorageHint          string     `gorm:"-"                            json:"-"`
+	NotificationLeadDays *int       `gorm:"default:null"                 json:"notificationLeadDays,omitempty"`
+	MinStockAmount       int        `gorm:"default:0"                   json:"minStockAmount"`
+	OpenedAt             *time.Time `gorm:"default:null"                 json:"openedAt,omitempty"`
+	DaysAfterOpening     *int       `gorm:"default:null"                 json:"daysAfterOpening,omitempty"`
 	// CategoryKey is the canonical category the product belongs to. It is what
 	// the household's shelf-life defaults are looked up by. Categories keeps
 	// the free text Open Food Facts wrote, which the recipe suggestions read.

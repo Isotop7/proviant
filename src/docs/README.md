@@ -285,6 +285,7 @@ import "github.com/Isotop7/proviant/controllers"
 - [func SyncHouseholdIntegrations\(ctx context.Context, repos \*dbController.RepositoryContainer, logger \*zerolog.Logger, config \*configuration.ShoppingListSyncConfiguration, factory ShoppingListSyncProviderFactory, httpClient \*http.Client, householdID uint\) error](<#SyncHouseholdIntegrations>)
 - [func SyncSingleHouseholdIntegration\(ctx context.Context, repos \*dbController.RepositoryContainer, logger \*zerolog.Logger, config \*configuration.ShoppingListSyncConfiguration, factory ShoppingListSyncProviderFactory, httpClient \*http.Client, householdID uint, provider string\) error](<#SyncSingleHouseholdIntegration>)
 - [func ValidateAndLookupPAT\(token string, dbHandle \*gorm.DB\) \(\*authentication.PersonalAccessToken, error\)](<#ValidateAndLookupPAT>)
+- [func WasteInsight\(lang string, overbuy apiModel.WasteOverbuyStat, causes \[\]apiModel.WasteCauseStat, totalWasted int\) \(string, bool\)](<#WasteInsight>)
 - [type BackupController](<#BackupController>)
   - [func NewBackupController\(logger \*zerolog.Logger, config \*configuration.BackupConfiguration, db \*gorm.DB\) \*BackupController](<#NewBackupController>)
   - [func \(c \*BackupController\) Dispatch\(\)](<#BackupController.Dispatch>)
@@ -469,6 +470,12 @@ const TokenLength = 40
 const TokenPrefix = "proviant_pat_" // #nosec G101 -- this is a public token prefix, not a secret
 ```
 
+<a name="WasteInsightMinEvents"></a>WasteInsightMinEvents is the number of waste events a cause needs before the insight names it: one event is an anecdote, not a pattern.
+
+```go
+const WasteInsightMinEvents = 2
+```
+
 <a name="BuildFullExport"></a>
 ## func [BuildFullExport](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/household_backup.go#L31-L37>)
 
@@ -614,6 +621,15 @@ func ValidateAndLookupPAT(token string, dbHandle *gorm.DB) (*authentication.Pers
 ```
 
 
+
+<a name="WasteInsight"></a>
+## func [WasteInsight](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/waste_insight.go#L19>)
+
+```go
+func WasteInsight(lang string, overbuy apiModel.WasteOverbuyStat, causes []apiModel.WasteCauseStat, totalWasted int) (string, bool)
+```
+
+WasteInsight returns the one\-sentence insight about a household's waste and whether there is enough data to state one. The over\-buying insight comes first: the category the household buys too much of is the one that changes its behaviour. Without it the insight names the reason most of the waste has, and without enough data even for that it states the empty state.
 
 <a name="BackupController"></a>
 ## type [BackupController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/backup_controller.go#L25-L35>)
@@ -972,7 +988,7 @@ func (nc *NotificationController) DispatchMonthlyWasteReports()
 DispatchMonthlyWasteReports starts a goroutine that sends household waste reports on the configured day/hour \(UTC\) of each month to opted\-in members via all enabled providers.
 
 <a name="NotificationController.DispatchStreakUpdates"></a>
-### func \(\*NotificationController\) [DispatchStreakUpdates](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L587>)
+### func \(\*NotificationController\) [DispatchStreakUpdates](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L588>)
 
 ```go
 func (nc *NotificationController) DispatchStreakUpdates()
@@ -1035,7 +1051,7 @@ func (nc *NotificationController) SetActivityLogRepo(repo dbController.ActivityL
 SetActivityLogRepo attaches the activity log repository used for streak\-reset entries.
 
 <a name="NotificationController.StartAllUserTelegramPollers"></a>
-### func \(\*NotificationController\) [StartAllUserTelegramPollers](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L899>)
+### func \(\*NotificationController\) [StartAllUserTelegramPollers](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L900>)
 
 ```go
 func (nc *NotificationController) StartAllUserTelegramPollers()
@@ -1044,7 +1060,7 @@ func (nc *NotificationController) StartAllUserTelegramPollers()
 StartAllUserTelegramPollers queries all users with a configured bot token and starts the worker pool for Telegram polling. Called once at startup.
 
 <a name="NotificationController.StartMailDigestScheduler"></a>
-### func \(\*NotificationController\) [StartMailDigestScheduler](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L789>)
+### func \(\*NotificationController\) [StartMailDigestScheduler](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L790>)
 
 ```go
 func (nc *NotificationController) StartMailDigestScheduler(baseURL string)
@@ -1053,7 +1069,7 @@ func (nc *NotificationController) StartMailDigestScheduler(baseURL string)
 StartDigestScheduler starts a goroutine that checks every minute whether any household's digest is due, and sends expiry digest emails.
 
 <a name="NotificationController.StartTelegramPollerPool"></a>
-### func \(\*NotificationController\) [StartTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L904>)
+### func \(\*NotificationController\) [StartTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L905>)
 
 ```go
 func (nc *NotificationController) StartTelegramPollerPool()
@@ -1062,7 +1078,7 @@ func (nc *NotificationController) StartTelegramPollerPool()
 StartTelegramPollerPool initializes the worker pool and registers all users with bot tokens.
 
 <a name="NotificationController.StartUserTelegramPoller"></a>
-### func \(\*NotificationController\) [StartUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L939>)
+### func \(\*NotificationController\) [StartUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L940>)
 
 ```go
 func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string)
@@ -1071,7 +1087,7 @@ func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken 
 StartUserTelegramPoller registers or updates a user in the pool and resolves the bot username.
 
 <a name="NotificationController.StopTelegramPollerPool"></a>
-### func \(\*NotificationController\) [StopTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L968>)
+### func \(\*NotificationController\) [StopTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L969>)
 
 ```go
 func (nc *NotificationController) StopTelegramPollerPool()
@@ -1080,7 +1096,7 @@ func (nc *NotificationController) StopTelegramPollerPool()
 StopTelegramPollerPool stops all workers and cleans up.
 
 <a name="NotificationController.StopUserTelegramPoller"></a>
-### func \(\*NotificationController\) [StopUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L957>)
+### func \(\*NotificationController\) [StopUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L958>)
 
 ```go
 func (nc *NotificationController) StopUserTelegramPoller(userID uint)
@@ -1730,7 +1746,7 @@ func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product
 
 
 <a name="TelegramNotificationProvider.SendStreakMilestone"></a>
-### func \(\*TelegramNotificationProvider\) [SendStreakMilestone](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/telegram_provider.go#L70>)
+### func \(\*TelegramNotificationProvider\) [SendStreakMilestone](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/telegram_provider.go#L74>)
 
 ```go
 func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID string, lang string) error
@@ -1739,7 +1755,7 @@ func (t *TelegramNotificationProvider) SendStreakMilestone(milestone int, chatID
 SendStreakMilestone sends a streak milestone notification to a Telegram chat.
 
 <a name="TelegramNotificationProvider.SendStreakReset"></a>
-### func \(\*TelegramNotificationProvider\) [SendStreakReset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/telegram_provider.go#L77>)
+### func \(\*TelegramNotificationProvider\) [SendStreakReset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/telegram_provider.go#L81>)
 
 ```go
 func (t *TelegramNotificationProvider) SendStreakReset(previousStreak int, chatID string, lang string) error
@@ -2175,6 +2191,10 @@ var (
     // ErrWasteLimitOutOfRange is thrown if the waste analytics limit exceeds the
     // accepted maximum.
     ErrWasteLimitOutOfRange = errors.New("limit must be 1..50")
+
+    // ErrInvalidWasteCause is thrown if a waste action carries a cause that is
+    // not one of the known causes.
+    ErrInvalidWasteCause = errors.New("invalid waste cause")
 
     // ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
     ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
@@ -2646,7 +2666,7 @@ var (
 ```
 
 <a name="ReceiptEndpointError"></a>
-## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L680-L682>)
+## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L684-L686>)
 
 ReceiptEndpointError marks an OCR scan failure as originating from the upstream vision endpoint rather than from Proviant itself. The API layer maps it to 502 Bad Gateway instead of 500 via errors.As.
 
@@ -2657,7 +2677,7 @@ type ReceiptEndpointError struct {
 ```
 
 <a name="ReceiptEndpointError.Error"></a>
-### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L684>)
+### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L688>)
 
 ```go
 func (e *ReceiptEndpointError) Error() string
@@ -2666,7 +2686,7 @@ func (e *ReceiptEndpointError) Error() string
 
 
 <a name="ReceiptEndpointError.Unwrap"></a>
-### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L686>)
+### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L690>)
 
 ```go
 func (e *ReceiptEndpointError) Unwrap() error
@@ -3126,7 +3146,7 @@ import "github.com/Isotop7/proviant/models"
 
 
 <a name="HouseholdMailDigestTarget"></a>
-## type [HouseholdMailDigestTarget](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L37-L41>)
+## type [HouseholdMailDigestTarget](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L57-L61>)
 
 HouseholdMailDigestTarget pairs a household with users that have digest enabled.
 
@@ -3139,7 +3159,7 @@ type HouseholdMailDigestTarget struct {
 ```
 
 <a name="HouseholdReportTarget"></a>
-## type [HouseholdReportTarget](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L29-L34>)
+## type [HouseholdReportTarget](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L49-L54>)
 
 HouseholdReportTarget pairs a household with the opted\-in members for email and Telegram.
 
@@ -3153,7 +3173,7 @@ type HouseholdReportTarget struct {
 ```
 
 <a name="MailDigestUser"></a>
-## type [MailDigestUser](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L44-L49>)
+## type [MailDigestUser](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L64-L69>)
 
 MailDigestUser holds user info for digest email delivery.
 
@@ -3189,7 +3209,7 @@ type NotificationRecipientInfo struct {
 ```
 
 <a name="TelegramRecipient"></a>
-## type [TelegramRecipient](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L23-L26>)
+## type [TelegramRecipient](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L43-L46>)
 
 TelegramRecipient pairs a Telegram chat ID with the user's own bot token.
 
@@ -3201,7 +3221,7 @@ type TelegramRecipient struct {
 ```
 
 <a name="WasteStats"></a>
-## type [WasteStats](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L6-L20>)
+## type [WasteStats](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L10-L40>)
 
 WasteStats holds aggregated waste data for one household for one calendar month.
 
@@ -3220,6 +3240,22 @@ type WasteStats struct {
     Delta            float64 // WasteRatePct - PrevWasteRatePct (positive = worse)
     DeltaColor       string  // inline CSS hex color for the trend indicator
     DeltaSymbol      string  // "▲", "▼", or "="
+    // WastedEvents counts the wasted ledger events of the month. It is not the
+    // same measure as WastedCount: that one counts the products that left the
+    // pantry plus the ones that expired in it, this one counts the waste
+    // actions the savings ledger holds.
+    WastedEvents int
+    // Causes breaks the month's wasted events down by the reason they were
+    // wasted. A waste without a reason lands in the empty cause.
+    Causes []apiModel.WasteCauseStat
+    // Overbuy names the category the household most over-buys.
+    Overbuy apiModel.WasteOverbuyStat
+    // Insight is the one-sentence insight about the month's waste, in the
+    // recipient's language.
+    Insight string
+    // InsightAvailable is false when there is too little data to state an
+    // insight; the Insight then holds the empty-state sentence.
+    InsightAvailable bool
 }
 ```
 
@@ -3454,14 +3490,14 @@ import "github.com/Isotop7/proviant/services"
   - [func NewProductService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*ProductService](<#NewProductService>)
   - [func \(s \*ProductService\) BulkConsumeProducts\(productIDs \[\]uint, userID uint\) \(\[\]uint, error\)](<#ProductService.BulkConsumeProducts>)
   - [func \(s \*ProductService\) BulkRestoreProducts\(productIDs \[\]uint, userID uint\) \(\[\]uint, error\)](<#ProductService.BulkRestoreProducts>)
-  - [func \(s \*ProductService\) BulkWasteProducts\(productIDs \[\]uint, userID uint\) \(\[\]uint, error\)](<#ProductService.BulkWasteProducts>)
+  - [func \(s \*ProductService\) BulkWasteProducts\(productIDs \[\]uint, userID uint, cause string\) \(\[\]uint, error\)](<#ProductService.BulkWasteProducts>)
   - [func \(s \*ProductService\) ConsumeProduct\(productID, userID uint\) error](<#ProductService.ConsumeProduct>)
   - [func \(s \*ProductService\) ConsumeProductPartial\(productID, userID uint, quantity int, mutationID \*string\) \(int, error\)](<#ProductService.ConsumeProductPartial>)
   - [func \(s \*ProductService\) CookProducts\(items \[\]apiModel.CookItemAPIModel, userID uint\) \(consumed, partial int, errs \[\]string, internalErr error\)](<#ProductService.CookProducts>)
   - [func \(s \*ProductService\) DeleteProduct\(productID, userID uint, archiveOnly bool\) error](<#ProductService.DeleteProduct>)
   - [func \(s \*ProductService\) RestoreProduct\(productID, userID uint\) error](<#ProductService.RestoreProduct>)
-  - [func \(s \*ProductService\) WasteProduct\(productID, userID uint\) error](<#ProductService.WasteProduct>)
-  - [func \(s \*ProductService\) WasteProductPartial\(productID, userID uint, quantity int, mutationID \*string\) \(int, error\)](<#ProductService.WasteProductPartial>)
+  - [func \(s \*ProductService\) WasteProduct\(productID, userID uint, cause string\) error](<#ProductService.WasteProduct>)
+  - [func \(s \*ProductService\) WasteProductPartial\(productID, userID uint, quantity int, mutationID \*string, cause string\) \(int, error\)](<#ProductService.WasteProductPartial>)
 - [type RecipeService](<#RecipeService>)
   - [func NewRecipeService\(repos \*database.RepositoryContainer, logger \*zerolog.Logger\) \*RecipeService](<#NewRecipeService>)
   - [func \(s \*RecipeService\) CookRecipe\(recipeID uint, servings int, userID uint\) \(consumed, partial int, errs \[\]string, internalErr error\)](<#RecipeService.CookRecipe>)
@@ -3581,7 +3617,7 @@ func NewProductService(repos *database.RepositoryContainer, logger *zerolog.Logg
 
 
 <a name="ProductService.BulkConsumeProducts"></a>
-### func \(\*ProductService\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L218>)
+### func \(\*ProductService\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L224>)
 
 ```go
 func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]uint, error)
@@ -3590,7 +3626,7 @@ func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]
 BulkConsumeProducts archives productIDs and reports which ones were not touched. Mirrors BulkRestoreProducts: the failed list carries the ids the caller can fix, the error is non\-nil only for a server\-side failure, so the handler never reports success for a request that did not land.
 
 <a name="ProductService.BulkRestoreProducts"></a>
-### func \(\*ProductService\) [BulkRestoreProducts](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L434>)
+### func \(\*ProductService\) [BulkRestoreProducts](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L442>)
 
 ```go
 func (s *ProductService) BulkRestoreProducts(productIDs []uint, userID uint) ([]uint, error)
@@ -3599,16 +3635,16 @@ func (s *ProductService) BulkRestoreProducts(productIDs []uint, userID uint) ([]
 BulkRestoreProducts restores productIDs and reports which ones were not restored. The returned error is non\-nil only when a failure was server\-side \(so the caller can surface a 500\); unknown or foreign ids come back in the failed list instead, which keeps the client from being told "restored" for ids that were not.
 
 <a name="ProductService.BulkWasteProducts"></a>
-### func \(\*ProductService\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L248>)
+### func \(\*ProductService\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L255>)
 
 ```go
-func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint) ([]uint, error)
+func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint, cause string) ([]uint, error)
 ```
 
-BulkWasteProducts hard\-deletes productIDs and reports which ones were not touched. Same contract as BulkConsumeProducts.
+BulkWasteProducts archives productIDs and reports which ones were not touched. Same contract as BulkConsumeProducts. The cause is why the products were wasted; it applies to every product of the batch and may be empty.
 
 <a name="ProductService.ConsumeProduct"></a>
-### func \(\*ProductService\) [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L126>)
+### func \(\*ProductService\) [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L129>)
 
 ```go
 func (s *ProductService) ConsumeProduct(productID, userID uint) error
@@ -3617,7 +3653,7 @@ func (s *ProductService) ConsumeProduct(productID, userID uint) error
 
 
 <a name="ProductService.ConsumeProductPartial"></a>
-### func \(\*ProductService\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L135>)
+### func \(\*ProductService\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L138>)
 
 ```go
 func (s *ProductService) ConsumeProductPartial(productID, userID uint, quantity int, mutationID *string) (int, error)
@@ -3626,7 +3662,7 @@ func (s *ProductService) ConsumeProductPartial(productID, userID uint, quantity 
 ConsumeProductPartial records up to quantity packs as consumed. A zero quantity consumes the whole stock; mutationID deduplicates offline replays. The returned count is what actually left the stock, which is fewer than the requested count when the stock shrank in between.
 
 <a name="ProductService.CookProducts"></a>
-### func \(\*ProductService\) [CookProducts](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L307>)
+### func \(\*ProductService\) [CookProducts](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L315>)
 
 ```go
 func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID uint) (consumed, partial int, errs []string, internalErr error)
@@ -3635,7 +3671,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 CookProducts consumes the given products, partially or fully. errs carries client\-facing per\-item failures; internalErr carries the first server\-side failure \(household resolution, DB errors\) so the handler can answer 5xx instead of blaming the client.
 
 <a name="ProductService.DeleteProduct"></a>
-### func \(\*ProductService\) [DeleteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L499>)
+### func \(\*ProductService\) [DeleteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L507>)
 
 ```go
 func (s *ProductService) DeleteProduct(productID, userID uint, archiveOnly bool) error
@@ -3644,7 +3680,7 @@ func (s *ProductService) DeleteProduct(productID, userID uint, archiveOnly bool)
 
 
 <a name="ProductService.RestoreProduct"></a>
-### func \(\*ProductService\) [RestoreProduct](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L413>)
+### func \(\*ProductService\) [RestoreProduct](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L421>)
 
 ```go
 func (s *ProductService) RestoreProduct(productID, userID uint) error
@@ -3653,22 +3689,22 @@ func (s *ProductService) RestoreProduct(productID, userID uint) error
 
 
 <a name="ProductService.WasteProduct"></a>
-### func \(\*ProductService\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L155>)
+### func \(\*ProductService\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L159>)
 
 ```go
-func (s *ProductService) WasteProduct(productID, userID uint) error
+func (s *ProductService) WasteProduct(productID, userID uint, cause string) error
 ```
 
-
+WasteProduct records the whole stock of a product as wasted.
 
 <a name="ProductService.WasteProductPartial"></a>
-### func \(\*ProductService\) [WasteProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L162>)
+### func \(\*ProductService\) [WasteProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/services/product_service.go#L167>)
 
 ```go
-func (s *ProductService) WasteProductPartial(productID, userID uint, quantity int, mutationID *string) (int, error)
+func (s *ProductService) WasteProductPartial(productID, userID uint, quantity int, mutationID *string, cause string) (int, error)
 ```
 
-WasteProductPartial records up to quantity packs as wasted. A zero quantity wastes the whole stock. The product.wasted webhook fires only for a full waste.
+WasteProductPartial records up to quantity packs as wasted. A zero quantity wastes the whole stock. The product.wasted webhook fires only for a full waste. The cause is why the packs were wasted; it may be empty.
 
 <a name="RecipeService"></a>
 ## type [RecipeService](<https://github.com/Isotop7/proviant/blob/develop/src/services/recipe_service.go#L15-L19>)
@@ -4595,7 +4631,7 @@ const (
 ```
 
 <a name="BrandFeature"></a>
-## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1349-L1352>)
+## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1350-L1353>)
 
 BrandFeature is a single icon\+text row in the brand panel of the split\-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
 
@@ -4618,7 +4654,7 @@ type Frontend struct {
 ```
 
 <a name="Frontend.AcceptInvite"></a>
-### func \(\*Frontend\) [AcceptInvite](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L898>)
+### func \(\*Frontend\) [AcceptInvite](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L899>)
 
 ```go
 func (frontend *Frontend) AcceptInvite(ctx *gin.Context)
@@ -4636,7 +4672,7 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 Auth renders the authentication page @Summary Auth page @Description Renders the authentication page for login/signup @Tags web @Produce html @Success 200 \{string\} html @Router /web/auth \[get\]
 
 <a name="Frontend.ForgotPassword"></a>
-### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1291>)
+### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1292>)
 
 ```go
 func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
@@ -4654,7 +4690,7 @@ func (frontend *Frontend) Licenses(ctx *gin.Context)
 Licenses renders the data attribution and open\-source license page @Summary Licenses page @Description Renders third\-party data attribution and license information @Tags web @Produce html @Success 200 \{string\} html @Router /web/licenses \[get\]
 
 <a name="Frontend.MealPlan"></a>
-### func \(\*Frontend\) [MealPlan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1090>)
+### func \(\*Frontend\) [MealPlan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1091>)
 
 ```go
 func (frontend *Frontend) MealPlan(ctx *gin.Context)
@@ -4663,7 +4699,7 @@ func (frontend *Frontend) MealPlan(ctx *gin.Context)
 MealPlan renders the weekly meal plan page @Summary Meal Plan page @Description Renders the weekly meal plan with planned meals and shopping list generation @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/mealplan \[get\]
 
 <a name="Frontend.Offline"></a>
-### func \(\*Frontend\) [Offline](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1343>)
+### func \(\*Frontend\) [Offline](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1344>)
 
 ```go
 func (frontend *Frontend) Offline(ctx *gin.Context)
@@ -4674,7 +4710,7 @@ Offline renders the fallback screen the service worker serves when a navigation 
 @Summary Offline fallback page @Description Renders the app\-styled offline screen the service worker serves from its cache when a navigation fails. @Tags web @Produce html @Success 200 \{string\} html @Router /offline \[get\]
 
 <a name="Frontend.Onboarding"></a>
-### func \(\*Frontend\) [Onboarding](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1032>)
+### func \(\*Frontend\) [Onboarding](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1033>)
 
 ```go
 func (frontend *Frontend) Onboarding(ctx *gin.Context)
@@ -4692,7 +4728,7 @@ func (frontend *Frontend) Products(ctx *gin.Context)
 Products renders the products list page @Summary Products page @Description Renders the products list page with optional search @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products \[get\]
 
 <a name="Frontend.ProductsEdit"></a>
-### func \(\*Frontend\) [ProductsEdit](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L817>)
+### func \(\*Frontend\) [ProductsEdit](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L818>)
 
 ```go
 func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
@@ -4701,7 +4737,7 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context)
 ProductsEdit renders the product edit page @Summary Product edit page @Description Renders the page for editing a product @Tags web @Produce html @Param id path int true "Product ID" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/products/\{id\}/edit \[get\]
 
 <a name="Frontend.ProductsScan"></a>
-### func \(\*Frontend\) [ProductsScan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L713>)
+### func \(\*Frontend\) [ProductsScan](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L714>)
 
 ```go
 func (frontend *Frontend) ProductsScan(ctx *gin.Context)
@@ -4710,7 +4746,7 @@ func (frontend *Frontend) ProductsScan(ctx *gin.Context)
 ProductsScan renders the barcode scanning page @Summary Product scan page @Description Renders the product barcode scanning page @Tags web @Produce html @Success 200 \{string\} html @Router /web/products/scan \[get\]
 
 <a name="Frontend.ProductsScanReceipt"></a>
-### func \(\*Frontend\) [ProductsScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L753>)
+### func \(\*Frontend\) [ProductsScanReceipt](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L754>)
 
 ```go
 func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context)
@@ -4719,7 +4755,7 @@ func (frontend *Frontend) ProductsScanReceipt(ctx *gin.Context)
 ProductsScanReceipt renders the receipt photo scan page \(issue \#61\). Storage locations are prefetched server\-side so the review form can offer the household's locations without an extra API round\-trip. @Summary Receipt scan page @Description Renders the receipt photo scanning page @Tags web @Produce html @Success 200 \{string\} html @Failure 500 \{object\} api.APIResponse @Router /web/products/scan\-receipt \[get\]
 
 <a name="Frontend.Recipes"></a>
-### func \(\*Frontend\) [Recipes](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1061>)
+### func \(\*Frontend\) [Recipes](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1062>)
 
 ```go
 func (frontend *Frontend) Recipes(ctx *gin.Context)
@@ -4728,7 +4764,7 @@ func (frontend *Frontend) Recipes(ctx *gin.Context)
 Recipes renders the recipe suggestions page @Summary Recipes page @Description Shows recipe suggestions for expiring products @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/recipes \[get\]
 
 <a name="Frontend.ResetPassword"></a>
-### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1311>)
+### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1312>)
 
 ```go
 func (frontend *Frontend) ResetPassword(ctx *gin.Context)
@@ -4746,7 +4782,7 @@ func (frontend *Frontend) Root(ctx *gin.Context)
 Root renders the home page for authenticated users @Summary Home page @Description Renders the home page showing product dashboard @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web \[get\]
 
 <a name="Frontend.ShoppingList"></a>
-### func \(\*Frontend\) [ShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1148>)
+### func \(\*Frontend\) [ShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1149>)
 
 ```go
 func (frontend *Frontend) ShoppingList(ctx *gin.Context)
@@ -4755,7 +4791,7 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context)
 ShoppingList renders the shopping list page @Summary Shopping List page @Description Renders the shared household shopping list with custom items and import banner @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/shopping\-list \[get\]
 
 <a name="Frontend.Unsubscribe"></a>
-### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1231>)
+### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1232>)
 
 ```go
 func (frontend *Frontend) Unsubscribe(ctx *gin.Context)
@@ -4782,7 +4818,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context)
 UserSettings renders the user settings page @Summary User settings page @Description Renders the user settings page with household management @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/user/settings \[get\]
 
 <a name="Frontend.VerifyEmail"></a>
-### func \(\*Frontend\) [VerifyEmail](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1005>)
+### func \(\*Frontend\) [VerifyEmail](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1006>)
 
 ```go
 func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
@@ -4791,7 +4827,7 @@ func (frontend *Frontend) VerifyEmail(ctx *gin.Context)
 VerifyEmail renders the email verification page @Summary Verify email page @Description Renders the email verification status page @Tags web @Produce html @Param token query string false "Verification token" @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Router /web/verify\-email \[get\]
 
 <a name="Frontend.WasteAnalytics"></a>
-### func \(\*Frontend\) [WasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1119>)
+### func \(\*Frontend\) [WasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1120>)
 
 ```go
 func (frontend *Frontend) WasteAnalytics(ctx *gin.Context)
@@ -5308,7 +5344,7 @@ func ApproveHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
 ApproveHouseholdApplication approves a pending join application. @Summary Approve a household application @Description Moves the applicant into the household. Caller must be the household admin. @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\}/approve \[post\]
 
 <a name="BulkConsumeProducts"></a>
-## func [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_actions.go#L26>)
+## func [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_actions.go#L28>)
 
 ```go
 func BulkConsumeProducts(ctx *gin.Context, appCtx *AppContext)
@@ -5335,13 +5371,13 @@ func BulkRestoreProducts(ctx *gin.Context, appCtx *AppContext)
 BulkRestoreProducts restores a list of products of a user @Summary Restores a list of product @Description Restores a list of product of a user. Reports the ids that were not restored: 404 when none could be restored \(unknown or foreign ids\), 200 with the failed ids in failedIds when only some fail, 500 \(also carrying failedIds\) when a failure was server\-side. @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.BulkActionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.BulkActionResponse @Failure 500 \{object\} api.BulkActionResponse @Router /api/v1/products/bulkRestore \[post\]
 
 <a name="BulkWasteProducts"></a>
-## func [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_actions.go#L49>)
+## func [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_actions.go#L51>)
 
 ```go
 func BulkWasteProducts(ctx *gin.Context, appCtx *AppContext)
 ```
 
-BulkWasteProducts marks multiple products as wasted \(hard\-delete, fires product.wasted webhook per product\) @Summary Mark multiple products as wasted @Description Hard\-deletes multiple products and fires the product.wasted webhook per product. Reports the ids that were not touched: 404 when none could be wasted \(unknown or foreign ids\), 200 with the failed ids in failedIds when only some fail, 500 \(also carrying failedIds\) when a failure was server\-side. @Tags product @Accept json @Produce json @Param productIDs body \[\]int true "Product IDs" @Success 200 \{object\} api.BulkActionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.BulkActionResponse @Failure 500 \{object\} api.BulkActionResponse @Router /api/v1/products/bulkWaste \[post\]
+BulkWasteProducts marks multiple products as wasted \(hard\-delete, fires product.wasted webhook per product\) @Summary Mark multiple products as wasted @Description Hard\-deletes multiple products and fires the product.wasted webhook per product. The optional waste cause names why the products were wasted \(spoiled, overbought, forgotten, disliked, other\) and applies to every product of the request. Reports the ids that were not touched: 404 when none could be wasted \(unknown or foreign ids\), 200 with the failed ids in failedIds when only some fail, 500 \(also carrying failedIds\) when a failure was server\-side. @Tags product @Accept json @Produce json @Param request body apiModel.BulkProductsAPIModel true "Product IDs and the optional waste cause" @Success 200 \{object\} api.BulkActionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.BulkActionResponse @Failure 500 \{object\} api.BulkActionResponse @Router /api/v1/products/bulkWaste \[post\]
 
 <a name="CancelHouseholdApplication"></a>
 ## func [CancelHouseholdApplication](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L360>)
@@ -5362,16 +5398,16 @@ func CancelInvitation(ctx *gin.Context, appCtx *AppContext)
 CancelInvitation cancels a pending invitation. @Summary Cancel invitation @Description Cancels a pending invitation by ID @Tags Invitation @Produce json @Param id path int true "Invitation ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/invitations/\{id\} \[delete\]
 
 <a name="ConsumeProduct"></a>
-## func [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_actions.go#L114>)
+## func [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_actions.go#L131>)
 
 ```go
 func ConsumeProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
-ConsumeProduct records a full or partial consume \(soft\-delete when all packs are gone\) @Summary Consume product packs @Description Consumes the requested number of packs. Omitting the body or quantity consumes the whole stock. A partial consume leaves the remaining packs active; a full consume soft\-deletes the row with removal reason consumed. The response carries the number of packs that actually left the stock. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param action body apiModel.ProductActionDTO false "Pack quantity and optional offline mutation ID" @Success 200 \{object\} api.ProductActionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/consume \[post\]
+ConsumeProduct records a full or partial consume \(soft\-delete when all packs are gone\) @Summary Consume product packs @Description Consumes the requested number of packs. Omitting the body or quantity consumes the whole stock. A partial consume leaves the remaining packs active; a full consume soft\-deletes the row with removal reason consumed. A cause in the body is ignored: a consume has no reason. The response carries the number of packs that actually left the stock. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param action body apiModel.ProductActionDTO false "Pack quantity, optional waste cause and optional offline mutation ID" @Success 200 \{object\} api.ProductActionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/consume \[post\]
 
 <a name="CookProducts"></a>
-## func [CookProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_actions.go#L71>)
+## func [CookProducts](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_bulk_actions.go#L83>)
 
 ```go
 func CookProducts(ctx *gin.Context, appCtx *AppContext)
@@ -5877,13 +5913,13 @@ func GetUserReceiptScanSettings(ctx *gin.Context, appCtx *AppContext)
 GetUserReceiptScanSettings gets a user's receipt scan settings @Summary Gets a user's receipt scan settings @Description Retrieves the current user's receipt scan vision model override settings and the app\-level defaults. API keys are never returned. @Tags user @Accept json @Produce json @Success 200 \{object\} receiptScanSettingsResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/user/receipt\-scan\-settings \[get\]
 
 <a name="GetWasteAnalytics"></a>
-## func [GetWasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/waste_analytics.go#L34>)
+## func [GetWasteAnalytics](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/waste_analytics.go#L38>)
 
 ```go
 func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext)
 ```
 
-GetWasteAnalytics returns consumed vs. wasted aggregations, monthly breakdown, most\-wasted categories, and a trend for the authenticated user's household. @Summary Get waste analytics @Description Returns per\-month consumed vs. wasted metrics, top wasted categories @Description with monetary and CO2 impact \(each category nests its top wasted products\), @Description and a 6\-month trend. EUR prices come from per\-product overrides \(if set\) @Description or category averages; CO2 is sourced from the Agribalyse LCA database via @Description Open Food Facts ecoscore\_data. @Tags stats @Produce json @Param period query string false "Period window: month | 3months | 6months | 12months \(default 6months\). The window is floored to the first of the month for monthly\-breakdown contiguity." @Param sort query string false "Sort mostWastedCategories by: count | cost \(default count\)" @Param limit query int false "Max number of categories to return \(default 5, max 50\)" @Success 200 \{object\} apiModel.WasteAnalyticsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/stats/waste \[get\]
+GetWasteAnalytics returns consumed vs. wasted aggregations, monthly breakdown, most\-wasted categories, and a trend for the authenticated user's household. @Summary Get waste analytics @Description Returns per\-month consumed vs. wasted metrics, top wasted categories @Description with monetary and CO2 impact \(each category nests its top wasted products\), @Description the waste broken down by the reason it was wasted, the category the household @Description most over\-buys and a one\-sentence insight about it, and a 6\-month trend. @Description EUR prices come from per\-product overrides \(if set\) @Description or category averages; CO2 is sourced from the Agribalyse LCA database via @Description Open Food Facts ecoscore\_data. @Tags stats @Produce json @Param period query string false "Period window: month | 3months | 6months | 12months \(default 6months\). The window is floored to the first of the month for monthly\-breakdown contiguity." @Param sort query string false "Sort mostWastedCategories by: count | cost \(default count\)" @Param limit query int false "Max number of categories to return \(default 5, max 50\)" @Success 200 \{object\} apiModel.WasteAnalyticsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/stats/waste \[get\]
 
 <a name="GetWebPushVAPIDPublicKey"></a>
 ## func [GetWebPushVAPIDPublicKey](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/notifications_webpush.go#L31>)
@@ -6064,7 +6100,7 @@ func RejectHouseholdApplication(ctx *gin.Context, appCtx *AppContext)
 RejectHouseholdApplication rejects a pending join application. @Summary Reject a household application @Description Marks the application as rejected. Caller must be the household admin. @Tags household @Produce json @Param id path int true "Application ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/applications/\{id\}/reject \[post\]
 
 <a name="RemoveHouseholdMember"></a>
-## func [RemoveHouseholdMember](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L468>)
+## func [RemoveHouseholdMember](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L469>)
 
 ```go
 func RemoveHouseholdMember(ctx *gin.Context, appCtx *AppContext)
@@ -6235,7 +6271,7 @@ func UpdateHouseholdIntegration(ctx *gin.Context, appCtx *AppContext)
 UpdateHouseholdIntegration updates an existing shopping list integration for the caller's household. @Summary Updates a household shopping list integration @Description Updates settings or credentials for a shopping list sync integration \(admin only\). Empty token fields keep stored credentials unless clear flags are set. @Tags household @Accept json @Produce json @Param provider path string true "Provider identifier \(bring or todoist\)" @Param request body apiModel.UpdateHouseholdIntegrationRequest true "Integration fields to update" @Success 200 \{object\} apiModel.HouseholdIntegrationResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/household/integrations/\{provider\} \[patch\] @Security BearerAuth
 
 <a name="UpdateHouseholdMemberRole"></a>
-## func [UpdateHouseholdMemberRole](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L504>)
+## func [UpdateHouseholdMemberRole](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/household.go#L505>)
 
 ```go
 func UpdateHouseholdMemberRole(ctx *gin.Context, appCtx *AppContext)
@@ -6401,13 +6437,13 @@ func UpdateWebhook(ctx *gin.Context, appCtx *AppContext)
 UpdateWebhook updates a webhook owned by the authenticated user @Summary Updates a webhook @Description Updates URL, secret, events and active state of the webhook with the given ID @Tags webhook @Accept json @Produce json @Param id path int true "Webhook ID" @Param request body apiModel.UpdateWebhookRequest true "Webhook" @Success 200 \{object\} apiModel.WebhookResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\} \[patch\] @Security BearerAuth
 
 <a name="WasteProduct"></a>
-## func [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_actions.go#L150>)
+## func [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_actions.go#L167>)
 
 ```go
 func WasteProduct(ctx *gin.Context, appCtx *AppContext)
 ```
 
-WasteProduct records a full or partial waste \(soft\-delete and product.wasted event only when all packs are gone\) @Summary Waste product packs @Description Wastes the requested number of packs. Omitting the body or quantity wastes the whole stock. A partial waste leaves the remaining packs active; a full waste soft\-deletes the row with removal reason wasted and fires the product.wasted webhook. The response carries the number of packs that actually left the stock. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param action body apiModel.ProductActionDTO false "Pack quantity and optional offline mutation ID" @Success 200 \{object\} api.ProductActionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/waste \[post\]
+WasteProduct records a full or partial waste \(soft\-delete and product.wasted event only when all packs are gone\) @Summary Waste product packs @Description Wastes the requested number of packs. Omitting the body or quantity wastes the whole stock. A partial waste leaves the remaining packs active; a full waste soft\-deletes the row with removal reason wasted and fires the product.wasted webhook. The optional waste cause names why the packs were wasted \(spoiled, overbought, forgotten, disliked, other\); a waste without a cause is recorded as unattributed waste. The response carries the number of packs that actually left the stock. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param action body apiModel.ProductActionDTO false "Pack quantity, optional waste cause and optional offline mutation ID" @Success 200 \{object\} api.ProductActionResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/waste \[post\]
 
 <a name="WrapHandler"></a>
 ## func [WrapHandler](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/context.go#L79>)
@@ -6804,7 +6840,7 @@ import "github.com/Isotop7/proviant/controllers/database"
   - [func NewProductRepository\(db \*gorm.DB\) \*ProductRepository](<#NewProductRepository>)
   - [func \(r \*ProductRepository\) BulkConsumeProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkConsumeProducts>)
   - [func \(r \*ProductRepository\) BulkRestoreProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkRestoreProducts>)
-  - [func \(r \*ProductRepository\) BulkWasteProducts\(productIDs \[\]uint, userID uint\) \[\]BulkOperationError](<#ProductRepository.BulkWasteProducts>)
+  - [func \(r \*ProductRepository\) BulkWasteProducts\(productIDs \[\]uint, userID uint, cause string\) \[\]BulkOperationError](<#ProductRepository.BulkWasteProducts>)
   - [func \(r \*ProductRepository\) ConsumeProduct\(productID, userID uint\) error](<#ProductRepository.ConsumeProduct>)
   - [func \(r \*ProductRepository\) ConsumeProductPartial\(product \*database.Product, quantity int, mutationID \*string\) \(int, bool, bool, error\)](<#ProductRepository.ConsumeProductPartial>)
   - [func \(r \*ProductRepository\) CreateOpenFoodFactsCache\(entry \*database.OpenFoodFactsCache\) error](<#ProductRepository.CreateOpenFoodFactsCache>)
@@ -6871,8 +6907,8 @@ import "github.com/Isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) UpdateProduct\(productID uint, userID uint, product \*database.ProductDTOPatch\) error](<#ProductRepository.UpdateProduct>)
   - [func \(r \*ProductRepository\) UpdateProductQuantity\(productID uint, userID uint, delta int, mutationID \*string\) \(bool, applied bool, err error\)](<#ProductRepository.UpdateProductQuantity>)
   - [func \(r \*ProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#ProductRepository.UserHasProductAccess>)
-  - [func \(r \*ProductRepository\) WasteProduct\(productID, userID uint\) error](<#ProductRepository.WasteProduct>)
-  - [func \(r \*ProductRepository\) WasteProductPartial\(product \*database.Product, quantity int, mutationID \*string\) \(int, bool, bool, error\)](<#ProductRepository.WasteProductPartial>)
+  - [func \(r \*ProductRepository\) WasteProduct\(productID, userID uint, cause string\) error](<#ProductRepository.WasteProduct>)
+  - [func \(r \*ProductRepository\) WasteProductPartial\(product \*database.Product, quantity int, mutationID \*string, cause string\) \(int, bool, bool, error\)](<#ProductRepository.WasteProductPartial>)
 - [type ProductRepositoryInterface](<#ProductRepositoryInterface>)
 - [type RecipeCacheRepository](<#RecipeCacheRepository>)
   - [func NewRecipeCacheRepository\(db \*gorm.DB\) \*RecipeCacheRepository](<#NewRecipeCacheRepository>)
@@ -6896,7 +6932,7 @@ import "github.com/Isotop7/proviant/controllers/database"
   - [func NewSavingsRepository\(db \*gorm.DB\) \*SavingsRepository](<#NewSavingsRepository>)
   - [func \(r \*SavingsRepository\) GetSavingsStats\(householdID uint\) \(apiModel.SavingsStatsResponse, error\)](<#SavingsRepository.GetSavingsStats>)
   - [func \(r \*SavingsRepository\) LoadCategoryResolver\(\) \(\*CategoryResolver, error\)](<#SavingsRepository.LoadCategoryResolver>)
-  - [func \(r \*SavingsRepository\) RecordSavingsEvent\(householdID uint, product \*dbModel.Product, eventType string, resolver \*CategoryResolver\) error](<#SavingsRepository.RecordSavingsEvent>)
+  - [func \(r \*SavingsRepository\) RecordSavingsEvent\(householdID uint, product \*dbModel.Product, eventType string, cause string, resolver \*CategoryResolver\) error](<#SavingsRepository.RecordSavingsEvent>)
 - [type SavingsRepositoryInterface](<#SavingsRepositoryInterface>)
 - [type SearchParameterEnum](<#SearchParameterEnum>)
   - [func SearchParameterEnumFromString\(str string\) SearchParameterEnum](<#SearchParameterEnumFromString>)
@@ -6987,6 +7023,8 @@ import "github.com/Isotop7/proviant/controllers/database"
   - [func \(r \*WasteAnalyticsRepository\) GetMostWastedCategories\(householdID uint, since time.Time, limit int, by string\) \(\[\]apiModel.WasteCategoryStat, error\)](<#WasteAnalyticsRepository.GetMostWastedCategories>)
   - [func \(r \*WasteAnalyticsRepository\) GetMostWastedProducts\(householdID uint, since time.Time, perCategoryLimit int\) \(map\[string\]\[\]apiModel.WasteProductStat, error\)](<#WasteAnalyticsRepository.GetMostWastedProducts>)
   - [func \(r \*WasteAnalyticsRepository\) GetTrendMonths\(householdID uint, months int\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#WasteAnalyticsRepository.GetTrendMonths>)
+  - [func \(r \*WasteAnalyticsRepository\) GetWasteCauseBreakdown\(householdID uint, since time.Time\) \(WasteCauseBreakdown, error\)](<#WasteAnalyticsRepository.GetWasteCauseBreakdown>)
+- [type WasteCauseBreakdown](<#WasteCauseBreakdown>)
 - [type WebhookRepository](<#WebhookRepository>)
   - [func NewWebhookRepository\(db \*gorm.DB\) \*WebhookRepository](<#NewWebhookRepository>)
   - [func \(r \*WebhookRepository\) CheckOwnership\(webhookID, userID uint\) error](<#WebhookRepository.CheckOwnership>)
@@ -7224,7 +7262,7 @@ func (b *BulkOperationError) ProductID() uint
 ProductID exposes which product a bulk operation error refers to, so callers can distinguish failed items from succeeded ones \(the error list is sparse — it only contains failures, not one entry per requested id\).
 
 <a name="CalendarTokenRepository"></a>
-## type [CalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2419-L2421>)
+## type [CalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2429-L2431>)
 
 
 
@@ -7235,7 +7273,7 @@ type CalendarTokenRepository struct {
 ```
 
 <a name="NewCalendarTokenRepository"></a>
-### func [NewCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2423>)
+### func [NewCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2433>)
 
 ```go
 func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository
@@ -7244,7 +7282,7 @@ func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository
 
 
 <a name="CalendarTokenRepository.Create"></a>
-### func \(\*CalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2449>)
+### func \(\*CalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2459>)
 
 ```go
 func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error
@@ -7253,7 +7291,7 @@ func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error
 
 
 <a name="CalendarTokenRepository.DeleteByUserID"></a>
-### func \(\*CalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2439>)
+### func \(\*CalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2449>)
 
 ```go
 func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error
@@ -7262,7 +7300,7 @@ func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error
 
 
 <a name="CalendarTokenRepository.GetByToken"></a>
-### func \(\*CalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2427>)
+### func \(\*CalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2437>)
 
 ```go
 func (r *CalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error)
@@ -7271,7 +7309,7 @@ func (r *CalendarTokenRepository) GetByToken(token string) (authentication.Calen
 
 
 <a name="CalendarTokenRepository.GetByUserID"></a>
-### func \(\*CalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2443>)
+### func \(\*CalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2453>)
 
 ```go
 func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error)
@@ -7280,7 +7318,7 @@ func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.Calen
 
 
 <a name="CalendarTokenRepository.Update"></a>
-### func \(\*CalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2453>)
+### func \(\*CalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2463>)
 
 ```go
 func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error
@@ -7289,7 +7327,7 @@ func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error
 
 
 <a name="CalendarTokenRepositoryInterface"></a>
-## type [CalendarTokenRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2409-L2415>)
+## type [CalendarTokenRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2419-L2425>)
 
 
 
@@ -7373,7 +7411,7 @@ func (r *CategoryResolver) ResolveKey(categories string) (string, bool)
 ResolveKey returns the canonical key the free text names, and whether one was found.
 
 <a name="ConsumedVsWastedRow"></a>
-## type [ConsumedVsWastedRow](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L226-L233>)
+## type [ConsumedVsWastedRow](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L396-L403>)
 
 ConsumedVsWastedRow is the aggregate over a time window.
 
@@ -7999,7 +8037,7 @@ type InvitationRepositoryInterface interface {
 ```
 
 <a name="MailDigestProductGroup"></a>
-## type [MailDigestProductGroup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2169-L2173>)
+## type [MailDigestProductGroup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2171-L2175>)
 
 
 
@@ -8122,7 +8160,7 @@ func NewNotificationRepositoryWithLogger(db *gorm.DB, logger *zerolog.Logger) *N
 
 
 <a name="NotificationRepository.AcceptInvitation"></a>
-### func \(\*NotificationRepository\) [AcceptInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L206>)
+### func \(\*NotificationRepository\) [AcceptInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L215>)
 
 ```go
 func (r *NotificationRepository) AcceptInvitation(token, email string, userID uint) error
@@ -8131,7 +8169,7 @@ func (r *NotificationRepository) AcceptInvitation(token, email string, userID ui
 
 
 <a name="NotificationRepository.CancelInvitation"></a>
-### func \(\*NotificationRepository\) [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L211>)
+### func \(\*NotificationRepository\) [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L220>)
 
 ```go
 func (r *NotificationRepository) CancelInvitation(invitationID, userID uint) error
@@ -8140,7 +8178,7 @@ func (r *NotificationRepository) CancelInvitation(invitationID, userID uint) err
 
 
 <a name="NotificationRepository.CreateInvitation"></a>
-### func \(\*NotificationRepository\) [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L191>)
+### func \(\*NotificationRepository\) [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L200>)
 
 ```go
 func (r *NotificationRepository) CreateInvitation(householdID, inviterID uint, email string) (database.HouseholdInvitation, error)
@@ -8149,7 +8187,7 @@ func (r *NotificationRepository) CreateInvitation(householdID, inviterID uint, e
 
 
 <a name="NotificationRepository.DeleteMailDigestUnsubscribeToken"></a>
-### func \(\*NotificationRepository\) [DeleteMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L472>)
+### func \(\*NotificationRepository\) [DeleteMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L481>)
 
 ```go
 func (r *NotificationRepository) DeleteMailDigestUnsubscribeToken(tokenStr string) error
@@ -8158,7 +8196,7 @@ func (r *NotificationRepository) DeleteMailDigestUnsubscribeToken(tokenStr strin
 
 
 <a name="NotificationRepository.DeleteWebPushSubscription"></a>
-### func \(\*NotificationRepository\) [DeleteWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L353>)
+### func \(\*NotificationRepository\) [DeleteWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L362>)
 
 ```go
 func (r *NotificationRepository) DeleteWebPushSubscription(userID uint) error
@@ -8167,7 +8205,7 @@ func (r *NotificationRepository) DeleteWebPushSubscription(userID uint) error
 
 
 <a name="NotificationRepository.FindUserByTelegramLinkToken"></a>
-### func \(\*NotificationRepository\) [FindUserByTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L310>)
+### func \(\*NotificationRepository\) [FindUserByTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L319>)
 
 ```go
 func (r *NotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error)
@@ -8176,7 +8214,7 @@ func (r *NotificationRepository) FindUserByTelegramLinkToken(token string) (auth
 
 
 <a name="NotificationRepository.GenerateMailDigestUnsubscribeToken"></a>
-### func \(\*NotificationRepository\) [GenerateMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L446>)
+### func \(\*NotificationRepository\) [GenerateMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L455>)
 
 ```go
 func (r *NotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint) (string, error)
@@ -8185,7 +8223,7 @@ func (r *NotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint)
 
 
 <a name="NotificationRepository.GetAllUsersWithTelegramBotToken"></a>
-### func \(\*NotificationRepository\) [GetAllUsersWithTelegramBotToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L338>)
+### func \(\*NotificationRepository\) [GetAllUsersWithTelegramBotToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L347>)
 
 ```go
 func (r *NotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
@@ -8194,7 +8232,7 @@ func (r *NotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentica
 
 
 <a name="NotificationRepository.GetHouseholdByID"></a>
-### func \(\*NotificationRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L221>)
+### func \(\*NotificationRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L230>)
 
 ```go
 func (r *NotificationRepository) GetHouseholdByID(householdID uint) (database.Household, error)
@@ -8203,7 +8241,7 @@ func (r *NotificationRepository) GetHouseholdByID(householdID uint) (database.Ho
 
 
 <a name="NotificationRepository.GetHouseholdMembersMailAddressesByID"></a>
-### func \(\*NotificationRepository\) [GetHouseholdMembersMailAddressesByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L122>)
+### func \(\*NotificationRepository\) [GetHouseholdMembersMailAddressesByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L131>)
 
 ```go
 func (r *NotificationRepository) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
@@ -8212,7 +8250,7 @@ func (r *NotificationRepository) GetHouseholdMembersMailAddressesByID(householdI
 
 
 <a name="NotificationRepository.GetHouseholdMembersNotificationPreferences"></a>
-### func \(\*NotificationRepository\) [GetHouseholdMembersNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L141>)
+### func \(\*NotificationRepository\) [GetHouseholdMembersNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L150>)
 
 ```go
 func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
@@ -8221,7 +8259,7 @@ func (r *NotificationRepository) GetHouseholdMembersNotificationPreferences(hous
 
 
 <a name="NotificationRepository.GetHouseholdsWithMailDigestEnabled"></a>
-### func \(\*NotificationRepository\) [GetHouseholdsWithMailDigestEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L395>)
+### func \(\*NotificationRepository\) [GetHouseholdsWithMailDigestEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L404>)
 
 ```go
 func (r *NotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
@@ -8230,7 +8268,7 @@ func (r *NotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.
 
 
 <a name="NotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled"></a>
-### func \(\*NotificationRepository\) [GetHouseholdsWithMonthlyWasteReportEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L271>)
+### func \(\*NotificationRepository\) [GetHouseholdsWithMonthlyWasteReportEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L280>)
 
 ```go
 func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
@@ -8239,7 +8277,7 @@ func (r *NotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([
 
 
 <a name="NotificationRepository.GetInvitationByToken"></a>
-### func \(\*NotificationRepository\) [GetInvitationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L201>)
+### func \(\*NotificationRepository\) [GetInvitationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L210>)
 
 ```go
 func (r *NotificationRepository) GetInvitationByToken(token string) (database.HouseholdInvitation, error)
@@ -8248,7 +8286,7 @@ func (r *NotificationRepository) GetInvitationByToken(token string) (database.Ho
 
 
 <a name="NotificationRepository.GetInvitationsForHousehold"></a>
-### func \(\*NotificationRepository\) [GetInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L196>)
+### func \(\*NotificationRepository\) [GetInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L205>)
 
 ```go
 func (r *NotificationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]database.HouseholdInvitation, error)
@@ -8257,7 +8295,7 @@ func (r *NotificationRepository) GetInvitationsForHousehold(householdID, inviter
 
 
 <a name="NotificationRepository.GetMaxNotificationThresholdDays"></a>
-### func \(\*NotificationRepository\) [GetMaxNotificationThresholdDays](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L114>)
+### func \(\*NotificationRepository\) [GetMaxNotificationThresholdDays](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L123>)
 
 ```go
 func (r *NotificationRepository) GetMaxNotificationThresholdDays() int
@@ -8266,7 +8304,7 @@ func (r *NotificationRepository) GetMaxNotificationThresholdDays() int
 
 
 <a name="NotificationRepository.GetOnboardingState"></a>
-### func \(\*NotificationRepository\) [GetOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L246>)
+### func \(\*NotificationRepository\) [GetOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L255>)
 
 ```go
 func (r *NotificationRepository) GetOnboardingState(userID uint) (database.OnboardingState, error)
@@ -8275,7 +8313,7 @@ func (r *NotificationRepository) GetOnboardingState(userID uint) (database.Onboa
 
 
 <a name="NotificationRepository.GetPendingInvitationsNotSent"></a>
-### func \(\*NotificationRepository\) [GetPendingInvitationsNotSent](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L226>)
+### func \(\*NotificationRepository\) [GetPendingInvitationsNotSent](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L235>)
 
 ```go
 func (r *NotificationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]database.HouseholdInvitation, error)
@@ -8284,7 +8322,7 @@ func (r *NotificationRepository) GetPendingInvitationsNotSent(retryInterval time
 
 
 <a name="NotificationRepository.GetProductsExpiredAndNotificationPending"></a>
-### func \(\*NotificationRepository\) [GetProductsExpiredAndNotificationPending](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L72>)
+### func \(\*NotificationRepository\) [GetProductsExpiredAndNotificationPending](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L81>)
 
 ```go
 func (r *NotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]database.Product, error)
@@ -8293,7 +8331,7 @@ func (r *NotificationRepository) GetProductsExpiredAndNotificationPending(sleepI
 
 
 <a name="NotificationRepository.GetPublicHouseholds"></a>
-### func \(\*NotificationRepository\) [GetPublicHouseholds](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L266>)
+### func \(\*NotificationRepository\) [GetPublicHouseholds](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L275>)
 
 ```go
 func (r *NotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
@@ -8302,7 +8340,7 @@ func (r *NotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([
 
 
 <a name="NotificationRepository.GetUserByID"></a>
-### func \(\*NotificationRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L216>)
+### func \(\*NotificationRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L225>)
 
 ```go
 func (r *NotificationRepository) GetUserByID(userID uint) (authentication.User, error)
@@ -8311,7 +8349,7 @@ func (r *NotificationRepository) GetUserByID(userID uint) (authentication.User, 
 
 
 <a name="NotificationRepository.GetUserByMailDigestUnsubscribeToken"></a>
-### func \(\*NotificationRepository\) [GetUserByMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L464>)
+### func \(\*NotificationRepository\) [GetUserByMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L473>)
 
 ```go
 func (r *NotificationRepository) GetUserByMailDigestUnsubscribeToken(tokenStr string) (authentication.User, error)
@@ -8320,7 +8358,7 @@ func (r *NotificationRepository) GetUserByMailDigestUnsubscribeToken(tokenStr st
 
 
 <a name="NotificationRepository.GetVAPIDKeys"></a>
-### func \(\*NotificationRepository\) [GetVAPIDKeys](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L362>)
+### func \(\*NotificationRepository\) [GetVAPIDKeys](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L371>)
 
 ```go
 func (r *NotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error)
@@ -8329,7 +8367,7 @@ func (r *NotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, e
 
 
 <a name="NotificationRepository.GetWasteStatsForHousehold"></a>
-### func \(\*NotificationRepository\) [GetWasteStatsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L476>)
+### func \(\*NotificationRepository\) [GetWasteStatsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L485>)
 
 ```go
 func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
@@ -8338,7 +8376,7 @@ func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, mon
 
 
 <a name="NotificationRepository.MarkHouseholdStepDone"></a>
-### func \(\*NotificationRepository\) [MarkHouseholdStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L256>)
+### func \(\*NotificationRepository\) [MarkHouseholdStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L265>)
 
 ```go
 func (r *NotificationRepository) MarkHouseholdStepDone(userID uint) error
@@ -8347,7 +8385,7 @@ func (r *NotificationRepository) MarkHouseholdStepDone(userID uint) error
 
 
 <a name="NotificationRepository.MarkInvitationSendFailed"></a>
-### func \(\*NotificationRepository\) [MarkInvitationSendFailed](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L241>)
+### func \(\*NotificationRepository\) [MarkInvitationSendFailed](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L250>)
 
 ```go
 func (r *NotificationRepository) MarkInvitationSendFailed(invitationID uint) error
@@ -8356,7 +8394,7 @@ func (r *NotificationRepository) MarkInvitationSendFailed(invitationID uint) err
 
 
 <a name="NotificationRepository.MarkInvitationSent"></a>
-### func \(\*NotificationRepository\) [MarkInvitationSent](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L231>)
+### func \(\*NotificationRepository\) [MarkInvitationSent](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L240>)
 
 ```go
 func (r *NotificationRepository) MarkInvitationSent(invitationID uint) error
@@ -8365,7 +8403,7 @@ func (r *NotificationRepository) MarkInvitationSent(invitationID uint) error
 
 
 <a name="NotificationRepository.MarkInvitationSentTx"></a>
-### func \(\*NotificationRepository\) [MarkInvitationSentTx](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L236>)
+### func \(\*NotificationRepository\) [MarkInvitationSentTx](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L245>)
 
 ```go
 func (r *NotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
@@ -8374,7 +8412,7 @@ func (r *NotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID 
 
 
 <a name="NotificationRepository.MarkNotificationsSetup"></a>
-### func \(\*NotificationRepository\) [MarkNotificationsSetup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L251>)
+### func \(\*NotificationRepository\) [MarkNotificationsSetup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L260>)
 
 ```go
 func (r *NotificationRepository) MarkNotificationsSetup(userID uint) error
@@ -8383,7 +8421,7 @@ func (r *NotificationRepository) MarkNotificationsSetup(userID uint) error
 
 
 <a name="NotificationRepository.MarkOnboardingComplete"></a>
-### func \(\*NotificationRepository\) [MarkOnboardingComplete](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L261>)
+### func \(\*NotificationRepository\) [MarkOnboardingComplete](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L270>)
 
 ```go
 func (r *NotificationRepository) MarkOnboardingComplete(userID uint) error
@@ -8392,7 +8430,7 @@ func (r *NotificationRepository) MarkOnboardingComplete(userID uint) error
 
 
 <a name="NotificationRepository.SaveWebPushSubscription"></a>
-### func \(\*NotificationRepository\) [SaveWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L344>)
+### func \(\*NotificationRepository\) [SaveWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L353>)
 
 ```go
 func (r *NotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error
@@ -8401,7 +8439,7 @@ func (r *NotificationRepository) SaveWebPushSubscription(userID uint, subscripti
 
 
 <a name="NotificationRepository.SetProductNotifiedAt"></a>
-### func \(\*NotificationRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L176>)
+### func \(\*NotificationRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L185>)
 
 ```go
 func (r *NotificationRepository) SetProductNotifiedAt(productID uint) error
@@ -8410,7 +8448,7 @@ func (r *NotificationRepository) SetProductNotifiedAt(productID uint) error
 
 
 <a name="NotificationRepository.SetTelegramBotUsername"></a>
-### func \(\*NotificationRepository\) [SetTelegramBotUsername](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L332>)
+### func \(\*NotificationRepository\) [SetTelegramBotUsername](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L341>)
 
 ```go
 func (r *NotificationRepository) SetTelegramBotUsername(userID uint, username string) error
@@ -8419,7 +8457,7 @@ func (r *NotificationRepository) SetTelegramBotUsername(userID uint, username st
 
 
 <a name="NotificationRepository.SetTelegramChatID"></a>
-### func \(\*NotificationRepository\) [SetTelegramChatID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L316>)
+### func \(\*NotificationRepository\) [SetTelegramChatID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L325>)
 
 ```go
 func (r *NotificationRepository) SetTelegramChatID(userID uint, chatID string) error
@@ -8428,7 +8466,7 @@ func (r *NotificationRepository) SetTelegramChatID(userID uint, chatID string) e
 
 
 <a name="NotificationRepository.SetTelegramLinkToken"></a>
-### func \(\*NotificationRepository\) [SetTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L326>)
+### func \(\*NotificationRepository\) [SetTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L335>)
 
 ```go
 func (r *NotificationRepository) SetTelegramLinkToken(userID uint, token string) error
@@ -8437,7 +8475,7 @@ func (r *NotificationRepository) SetTelegramLinkToken(userID uint, token string)
 
 
 <a name="NotificationRepositoryInterface"></a>
-## type [NotificationRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L34-L70>)
+## type [NotificationRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/notification_repository.go#L43-L79>)
 
 
 
@@ -8675,7 +8713,7 @@ func NewProductRepository(db *gorm.DB) *ProductRepository
 
 
 <a name="ProductRepository.BulkConsumeProducts"></a>
-### func \(\*ProductRepository\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2389>)
+### func \(\*ProductRepository\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2399>)
 
 ```go
 func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -8684,7 +8722,7 @@ func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) 
 
 
 <a name="ProductRepository.BulkRestoreProducts"></a>
-### func \(\*ProductRepository\) [BulkRestoreProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1182>)
+### func \(\*ProductRepository\) [BulkRestoreProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1183>)
 
 ```go
 func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -8693,16 +8731,16 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 
 
 <a name="ProductRepository.BulkWasteProducts"></a>
-### func \(\*ProductRepository\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2399>)
+### func \(\*ProductRepository\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2409>)
 
 ```go
-func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
+func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint, cause string) []BulkOperationError
 ```
 
 
 
 <a name="ProductRepository.ConsumeProduct"></a>
-### func \(\*ProductRepository\) [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2233>)
+### func \(\*ProductRepository\) [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2235>)
 
 ```go
 func (r *ProductRepository) ConsumeProduct(productID, userID uint) error
@@ -8711,7 +8749,7 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error
 
 
 <a name="ProductRepository.ConsumeProductPartial"></a>
-### func \(\*ProductRepository\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2252>)
+### func \(\*ProductRepository\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2254>)
 
 ```go
 func (r *ProductRepository) ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
@@ -8720,7 +8758,7 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, qua
 ConsumeProductPartial removes up to quantity packs and archives the row when the request covers its current stock. A zero or negative quantity consumes the whole stock, preserving the recipe\-cook contract.
 
 <a name="ProductRepository.CreateOpenFoodFactsCache"></a>
-### func \(\*ProductRepository\) [CreateOpenFoodFactsCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1749>)
+### func \(\*ProductRepository\) [CreateOpenFoodFactsCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1751>)
 
 ```go
 func (r *ProductRepository) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
@@ -8771,7 +8809,7 @@ The lookup is scoped to the household and to privacyScope, so another member's p
 The candidate set is the household's rows with that barcode, so the comparison runs in Go through Product.IsDuplicateOf and the rule cannot drift from the one the client is told about. The candidate query trims the stored barcode as well, because a row written with a padded barcode is the same barcode and must not slip past the rule.
 
 <a name="ProductRepository.GetActiveExpiryCounts"></a>
-### func \(\*ProductRepository\) [GetActiveExpiryCounts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1880>)
+### func \(\*ProductRepository\) [GetActiveExpiryCounts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1882>)
 
 ```go
 func (r *ProductRepository) GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (expired, critical int, err error)
@@ -8791,7 +8829,7 @@ func (r *ProductRepository) GetActiveProductProjections(userID, locationID uint)
 GetActiveProductProjections returns the household's active rows narrowed to productProjectionColumns, ordered by id. locationID narrows the result to one storage location; pass 0 for every location. Callers sort, filter by status and slice a single page out of the result before hydrating it.
 
 <a name="ProductRepository.GetActiveProductsCount"></a>
-### func \(\*ProductRepository\) [GetActiveProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1408>)
+### func \(\*ProductRepository\) [GetActiveProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1410>)
 
 ```go
 func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error)
@@ -8818,7 +8856,7 @@ func (r *ProductRepository) GetArchivedProductProjections(userID uint) ([]databa
 GetArchivedProductProjections is the archived\-view counterpart of GetActiveProductProjections. The archived view has no expiry ordering of its own, so id order is what keeps a row on exactly one page.
 
 <a name="ProductRepository.GetArchivedProductsCount"></a>
-### func \(\*ProductRepository\) [GetArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1430>)
+### func \(\*ProductRepository\) [GetArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1432>)
 
 ```go
 func (r *ProductRepository) GetArchivedProductsCount(userID uint) (int, error)
@@ -8827,7 +8865,7 @@ func (r *ProductRepository) GetArchivedProductsCount(userID uint) (int, error)
 GetArchivedProductsCount returns how many products the household has archived. It is the count\-only sibling of GetUserArchivedProductsBulk, which materialises every archived row \(and preloads StorageLocation\) for callers that only need a number.
 
 <a name="ProductRepository.GetConsumedSamples"></a>
-### func \(\*ProductRepository\) [GetConsumedSamples](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2457>)
+### func \(\*ProductRepository\) [GetConsumedSamples](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2467>)
 
 ```go
 func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
@@ -8836,7 +8874,7 @@ func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode
 
 
 <a name="ProductRepository.GetExpiredProductsCount"></a>
-### func \(\*ProductRepository\) [GetExpiredProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1322>)
+### func \(\*ProductRepository\) [GetExpiredProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1324>)
 
 ```go
 func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error)
@@ -8847,7 +8885,7 @@ GetExpiredProductsCount returns how many of the user's active products are alrea
 The prune deliberately also matches rows with a zero expire\_at, which the Go loop below skips — a product with no expiry set is never expired.
 
 <a name="ProductRepository.GetExpiringInDays"></a>
-### func \(\*ProductRepository\) [GetExpiringInDays](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1641>)
+### func \(\*ProductRepository\) [GetExpiringInDays](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1643>)
 
 ```go
 func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database.Product, error)
@@ -8856,7 +8894,7 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 
 
 <a name="ProductRepository.GetExpiringProductsByHousehold"></a>
-### func \(\*ProductRepository\) [GetExpiringProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1985>)
+### func \(\*ProductRepository\) [GetExpiringProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1987>)
 
 ```go
 func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
@@ -8865,7 +8903,7 @@ func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, day
 GetExpiringProductsByHousehold returns non\-private products for a household whose effective expiry \(earlier of printed ExpireAt and OpenedAt\+DaysAfterOpening\) falls in the window \[startOfToday, endOfWindow\].
 
 <a name="ProductRepository.GetExpiringProductsForMailDigest"></a>
-### func \(\*ProductRepository\) [GetExpiringProductsForMailDigest](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2175>)
+### func \(\*ProductRepository\) [GetExpiringProductsForMailDigest](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2177>)
 
 ```go
 func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
@@ -8874,7 +8912,7 @@ func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (
 
 
 <a name="ProductRepository.GetExpiringSoonCount"></a>
-### func \(\*ProductRepository\) [GetExpiringSoonCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1843>)
+### func \(\*ProductRepository\) [GetExpiringSoonCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1845>)
 
 ```go
 func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error)
@@ -8883,7 +8921,7 @@ func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, er
 
 
 <a name="ProductRepository.GetExpiringSoonProducts"></a>
-### func \(\*ProductRepository\) [GetExpiringSoonProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1584>)
+### func \(\*ProductRepository\) [GetExpiringSoonProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1586>)
 
 ```go
 func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
@@ -8892,7 +8930,7 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 
 
 <a name="ProductRepository.GetExpiryTrend"></a>
-### func \(\*ProductRepository\) [GetExpiryTrend](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1543>)
+### func \(\*ProductRepository\) [GetExpiryTrend](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1545>)
 
 ```go
 func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
@@ -8901,7 +8939,7 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 GetExpiryTrend buckets the next 12 months of expiries. Only the three columns EffectiveExpireAt reads are projected, so the query cost tracks the row count rather than the row width.
 
 <a name="ProductRepository.GetHouseholdArchivedProductsForBackup"></a>
-### func \(\*ProductRepository\) [GetHouseholdArchivedProductsForBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2039>)
+### func \(\*ProductRepository\) [GetHouseholdArchivedProductsForBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2041>)
 
 ```go
 func (r *ProductRepository) GetHouseholdArchivedProductsForBackup(householdID uint) ([]database.Product, error)
@@ -8910,7 +8948,7 @@ func (r *ProductRepository) GetHouseholdArchivedProductsForBackup(householdID ui
 GetHouseholdArchivedProductsForBackup is the archived counterpart of GetHouseholdProductsForBackup: every soft\-deleted household row, private ones included.
 
 <a name="ProductRepository.GetHouseholdByID"></a>
-### func \(\*ProductRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1785>)
+### func \(\*ProductRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1787>)
 
 ```go
 func (r *ProductRepository) GetHouseholdByID(householdID uint) (database.Household, error)
@@ -8919,7 +8957,7 @@ func (r *ProductRepository) GetHouseholdByID(householdID uint) (database.Househo
 
 
 <a name="ProductRepository.GetHouseholdProductsForBackup"></a>
-### func \(\*ProductRepository\) [GetHouseholdProductsForBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2027>)
+### func \(\*ProductRepository\) [GetHouseholdProductsForBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2029>)
 
 ```go
 func (r *ProductRepository) GetHouseholdProductsForBackup(householdID uint) ([]database.Product, error)
@@ -8928,7 +8966,7 @@ func (r *ProductRepository) GetHouseholdProductsForBackup(householdID uint) ([]d
 GetHouseholdProductsForBackup returns every active household product including private rows. A backup exists to reproduce the household, so the privacy scope every user\-facing query applies must not silently drop a member's private stock from the file.
 
 <a name="ProductRepository.GetLastInsertedProduct"></a>
-### func \(\*ProductRepository\) [GetLastInsertedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1684>)
+### func \(\*ProductRepository\) [GetLastInsertedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1686>)
 
 ```go
 func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.Product, error)
@@ -8937,7 +8975,7 @@ func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.P
 
 
 <a name="ProductRepository.GetLastNotifiedProduct"></a>
-### func \(\*ProductRepository\) [GetLastNotifiedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1628>)
+### func \(\*ProductRepository\) [GetLastNotifiedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1630>)
 
 ```go
 func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.Product, error)
@@ -8946,7 +8984,7 @@ func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.P
 
 
 <a name="ProductRepository.GetMatchableProductsByHousehold"></a>
-### func \(\*ProductRepository\) [GetMatchableProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2058>)
+### func \(\*ProductRepository\) [GetMatchableProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2060>)
 
 ```go
 func (r *ProductRepository) GetMatchableProductsByHousehold(householdID uint) ([]database.Product, error)
@@ -8957,7 +8995,7 @@ GetMatchableProductsByHousehold returns the household's matchable products with 
 The returned Products are a read projection, NOT fully populated rows: every field other than ID, ProductName and Categories is the zero value. Callers must not read anything else off them; use GetProductsByHousehold for that.
 
 <a name="ProductRepository.GetOpenFoodFactsCacheByBarcode"></a>
-### func \(\*ProductRepository\) [GetOpenFoodFactsCacheByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1723>)
+### func \(\*ProductRepository\) [GetOpenFoodFactsCacheByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1725>)
 
 ```go
 func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
@@ -8966,7 +9004,7 @@ func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (data
 
 
 <a name="ProductRepository.GetOpenFoodFactsCacheWithRemoteImageURL"></a>
-### func \(\*ProductRepository\) [GetOpenFoodFactsCacheWithRemoteImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1767>)
+### func \(\*ProductRepository\) [GetOpenFoodFactsCacheWithRemoteImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1769>)
 
 ```go
 func (r *ProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]database.OpenFoodFactsCache, error)
@@ -8975,7 +9013,7 @@ func (r *ProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]databas
 
 
 <a name="ProductRepository.GetOpenFoodFactsCacheWithoutStorageHint"></a>
-### func \(\*ProductRepository\) [GetOpenFoodFactsCacheWithoutStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1757>)
+### func \(\*ProductRepository\) [GetOpenFoodFactsCacheWithoutStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1759>)
 
 ```go
 func (r *ProductRepository) GetOpenFoodFactsCacheWithoutStorageHint() ([]database.OpenFoodFactsCache, error)
@@ -8984,7 +9022,7 @@ func (r *ProductRepository) GetOpenFoodFactsCacheWithoutStorageHint() ([]databas
 
 
 <a name="ProductRepository.GetOpenFoodFactsCachesByBarcodes"></a>
-### func \(\*ProductRepository\) [GetOpenFoodFactsCachesByBarcodes](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1733>)
+### func \(\*ProductRepository\) [GetOpenFoodFactsCachesByBarcodes](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1735>)
 
 ```go
 func (r *ProductRepository) GetOpenFoodFactsCachesByBarcodes(barcodes []string) ([]database.OpenFoodFactsCache, error)
@@ -9011,7 +9049,7 @@ func (r *ProductRepository) GetProductBySyncID(userID uint, clientSyncID string)
 
 
 <a name="ProductRepository.GetProductCategoryBreakdown"></a>
-### func \(\*ProductRepository\) [GetProductCategoryBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1471>)
+### func \(\*ProductRepository\) [GetProductCategoryBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1473>)
 
 ```go
 func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
@@ -9029,7 +9067,7 @@ func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database
 GetProductIdentity returns a product's identity \(household \+ barcode \+ name \+ pack count \+ min stock \+ private flag \+ owner\) without the StorageLocation preload. It exists for hot read paths that only need those fields and would otherwise pay for a useless JOIN.
 
 <a name="ProductRepository.GetProductSetFingerprint"></a>
-### func \(\*ProductRepository\) [GetProductSetFingerprint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2120>)
+### func \(\*ProductRepository\) [GetProductSetFingerprint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2122>)
 
 ```go
 func (r *ProductRepository) GetProductSetFingerprint(householdID uint) (string, error)
@@ -9044,7 +9082,7 @@ Expiry is included as the ranking day bucket — the whole 24\-hour spans betwee
 The bucket is what makes the key track the ranking exactly. A calendar date does not: two timestamps inside one UTC date can still straddle a 24\-hour bucket boundary, so encoding the date lets the order change while the key stays put, and an edit that does move the order can go unnoticed. Bucketing also keeps the key stable against edits that cannot move the order — a time\-of\-day change within one bucket — which is what stops quantity and scan writes from rekeying the cache. A product leaves its bucket at most once a day, the same cadence at which the expiring\-ID component of the key already moves.
 
 <a name="ProductRepository.GetProductsByHousehold"></a>
-### func \(\*ProductRepository\) [GetProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2017>)
+### func \(\*ProductRepository\) [GetProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2019>)
 
 ```go
 func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database.Product, error)
@@ -9053,7 +9091,7 @@ func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database
 GetProductsByHousehold returns all non\-deleted products for a household.
 
 <a name="ProductRepository.GetProductsExpired"></a>
-### func \(\*ProductRepository\) [GetProductsExpired](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1297>)
+### func \(\*ProductRepository\) [GetProductsExpired](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1299>)
 
 ```go
 func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product, error)
@@ -9062,7 +9100,7 @@ func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product
 GetProductsExpired returns the user's products whose effective expiry lies in the past, matching GetExpiredProductsCount. A zero effective expiry means the product has no expiry set — it is never expired.
 
 <a name="ProductRepository.GetSubThresholdProducts"></a>
-### func \(\*ProductRepository\) [GetSubThresholdProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2152>)
+### func \(\*ProductRepository\) [GetSubThresholdProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2154>)
 
 ```go
 func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Product, error)
@@ -9071,7 +9109,7 @@ func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Pro
 
 
 <a name="ProductRepository.GetTopArchivedProducts"></a>
-### func \(\*ProductRepository\) [GetTopArchivedProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1356>)
+### func \(\*ProductRepository\) [GetTopArchivedProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1358>)
 
 ```go
 func (r *ProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
@@ -9080,7 +9118,7 @@ func (r *ProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]da
 
 
 <a name="ProductRepository.GetUniqueArchivedProductsCount"></a>
-### func \(\*ProductRepository\) [GetUniqueArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1452>)
+### func \(\*ProductRepository\) [GetUniqueArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1454>)
 
 ```go
 func (r *ProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, error)
@@ -9089,7 +9127,7 @@ func (r *ProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, er
 GetUniqueArchivedProductsCount counts distinct barcodes among archived products. COUNT\(DISTINCT barcode\) returns the same number as grouping the rows in Go by barcode and counting the groups — an empty barcode is one group on both sides.
 
 <a name="ProductRepository.GetUserActiveProductsFiltered"></a>
-### func \(\*ProductRepository\) [GetUserActiveProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1791>)
+### func \(\*ProductRepository\) [GetUserActiveProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1793>)
 
 ```go
 func (r *ProductRepository) GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
@@ -9116,7 +9154,7 @@ func (r *ProductRepository) GetUserArchivedProductsByIDs(userID uint, ids []uint
 GetUserArchivedProductsByIDs hydrates one page of the archived view: full rows with their StorageLocation, for the given IDs only.
 
 <a name="ProductRepository.GetUserArchivedProductsFiltered"></a>
-### func \(\*ProductRepository\) [GetUserArchivedProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1814>)
+### func \(\*ProductRepository\) [GetUserArchivedProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1816>)
 
 ```go
 func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
@@ -9125,7 +9163,7 @@ func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, t
 
 
 <a name="ProductRepository.GetUserByID"></a>
-### func \(\*ProductRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1773>)
+### func \(\*ProductRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1775>)
 
 ```go
 func (r *ProductRepository) GetUserByID(userID uint) (authentication.User, error)
@@ -9134,7 +9172,7 @@ func (r *ProductRepository) GetUserByID(userID uint) (authentication.User, error
 
 
 <a name="ProductRepository.GetUserHouseholdByID"></a>
-### func \(\*ProductRepository\) [GetUserHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1779>)
+### func \(\*ProductRepository\) [GetUserHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1781>)
 
 ```go
 func (r *ProductRepository) GetUserHouseholdByID(userID uint) (uint, error)
@@ -9181,7 +9219,7 @@ func (r *ProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dat
 GetUserProductsByIDs returns the active products with the given IDs that belong to the user's household. Used for lightweight lookups of a small, known set of products \(e.g. cook workflow\).
 
 <a name="ProductRepository.GetUsersByHouseholdID"></a>
-### func \(\*ProductRepository\) [GetUsersByHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1837>)
+### func \(\*ProductRepository\) [GetUsersByHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1839>)
 
 ```go
 func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
@@ -9190,7 +9228,7 @@ func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentic
 
 
 <a name="ProductRepository.GetWasteThisMonth"></a>
-### func \(\*ProductRepository\) [GetWasteThisMonth](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1937>)
+### func \(\*ProductRepository\) [GetWasteThisMonth](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1939>)
 
 ```go
 func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error)
@@ -9208,7 +9246,7 @@ func (r *ProductRepository) ListProductsWithoutPackSize(afterID uint, limit int)
 ListProductsWithoutPackSize returns the active products that have a barcode but no pack size yet, starting after the given id. The backfill walks the table with that cursor so a barcode the data source does not know cannot hold the queue in place: the rows it cannot resolve are retried only after a full pass.
 
 <a name="ProductRepository.MarkProductOpened"></a>
-### func \(\*ProductRepository\) [MarkProductOpened](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1252>)
+### func \(\*ProductRepository\) [MarkProductOpened](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1254>)
 
 ```go
 func (r *ProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
@@ -9246,7 +9284,7 @@ func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, query
 
 
 <a name="ProductRepository.SetProductExpireAt"></a>
-### func \(\*ProductRepository\) [SetProductExpireAt](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1204>)
+### func \(\*ProductRepository\) [SetProductExpireAt](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1206>)
 
 ```go
 func (r *ProductRepository) SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
@@ -9255,7 +9293,7 @@ func (r *ProductRepository) SetProductExpireAt(productID uint, userID uint, expi
 
 
 <a name="ProductRepository.SetProductNotifiedAt"></a>
-### func \(\*ProductRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1226>)
+### func \(\*ProductRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1228>)
 
 ```go
 func (r *ProductRepository) SetProductNotifiedAt(productID uint) error
@@ -9273,7 +9311,7 @@ func (r *ProductRepository) SetProductPackSize(productID uint, packSize string) 
 SetProductPackSize stores the size of one pack of a product.
 
 <a name="ProductRepository.UpdateOpenFoodFactsCacheImageURL"></a>
-### func \(\*ProductRepository\) [UpdateOpenFoodFactsCacheImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1753>)
+### func \(\*ProductRepository\) [UpdateOpenFoodFactsCacheImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1755>)
 
 ```go
 func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
@@ -9282,7 +9320,7 @@ func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL s
 
 
 <a name="ProductRepository.UpdateOpenFoodFactsCacheStorageHint"></a>
-### func \(\*ProductRepository\) [UpdateOpenFoodFactsCacheStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1763>)
+### func \(\*ProductRepository\) [UpdateOpenFoodFactsCacheStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1765>)
 
 ```go
 func (r *ProductRepository) UpdateOpenFoodFactsCacheStorageHint(barcode, storageHint string) error
@@ -9309,7 +9347,7 @@ func (r *ProductRepository) UpdateProductQuantity(productID uint, userID uint, d
 UpdateProductQuantity applies delta to the product and reports it as \(deleted, applied, err\). applied is false when the mutation id was already applied, so callers can skip side effects a replay must not repeat twice. Claims outlive this call and expire through the claim sweep in proviant.go, which is the only thing that bounds the table: pruning per product here would never run for a product whose last mutation was its only claim. The count stays inside the range a product may hold: the delta is clamped there, so no path can write a count the create and the patch would refuse.
 
 <a name="ProductRepository.UserHasProductAccess"></a>
-### func \(\*ProductRepository\) [UserHasProductAccess](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1697>)
+### func \(\*ProductRepository\) [UserHasProductAccess](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1699>)
 
 ```go
 func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) bool
@@ -9318,19 +9356,19 @@ func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) boo
 
 
 <a name="ProductRepository.WasteProduct"></a>
-### func \(\*ProductRepository\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2363>)
+### func \(\*ProductRepository\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2370>)
 
 ```go
-func (r *ProductRepository) WasteProduct(productID, userID uint) error
+func (r *ProductRepository) WasteProduct(productID, userID uint, cause string) error
 ```
 
 
 
 <a name="ProductRepository.WasteProductPartial"></a>
-### func \(\*ProductRepository\) [WasteProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2257>)
+### func \(\*ProductRepository\) [WasteProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2259>)
 
 ```go
-func (r *ProductRepository) WasteProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
+func (r *ProductRepository) WasteProductPartial(product *database.Product, quantity int, mutationID *string, cause string) (int, bool, bool, error)
 ```
 
 WasteProductPartial is the waste counterpart of ConsumeProductPartial.
@@ -9402,11 +9440,11 @@ type ProductRepositoryInterface interface {
     GetSubThresholdProducts(userID uint) ([]database.Product, error)
     ConsumeProduct(productID, userID uint) error
     ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
-    WasteProduct(productID, userID uint) error
-    WasteProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
+    WasteProduct(productID, userID uint, cause string) error
+    WasteProductPartial(product *database.Product, quantity int, mutationID *string, cause string) (int, bool, bool, error)
     MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
     BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
-    BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
+    BulkWasteProducts(productIDs []uint, userID uint, cause string) []BulkOperationError
     GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
     GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
 }
@@ -9636,7 +9674,7 @@ func NewSavingsRepository(db *gorm.DB) *SavingsRepository
 NewSavingsRepository creates a new SavingsRepository.
 
 <a name="SavingsRepository.GetSavingsStats"></a>
-### func \(\*SavingsRepository\) [GetSavingsStats](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/savings_repository.go#L96>)
+### func \(\*SavingsRepository\) [GetSavingsStats](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/savings_repository.go#L99>)
 
 ```go
 func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
@@ -9654,13 +9692,13 @@ func (r *SavingsRepository) LoadCategoryResolver() (*CategoryResolver, error)
 LoadCategoryResolver reads the canonical category rows and prepares them for resolution. A caller that prices many products loads the resolver once and hands it to every RecordSavingsEvent, so the canonical rows are read once per request instead of once per product.
 
 <a name="SavingsRepository.RecordSavingsEvent"></a>
-### func \(\*SavingsRepository\) [RecordSavingsEvent](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/savings_repository.go#L46>)
+### func \(\*SavingsRepository\) [RecordSavingsEvent](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/savings_repository.go#L48>)
 
 ```go
-func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, resolver *CategoryResolver) error
+func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *CategoryResolver) error
 ```
 
-RecordSavingsEvent writes a SavingsRecord for a consume or waste action. eventType must be dbModel.SavingsEventTypeConsumed or dbModel.SavingsEventTypeWasted. CO2 priority: per\-product Agribalyse rate \(product.CO2KgPerKg\) \> seeded category fallback. Price priority: product.PriceOverride \> seeded category average. The override is the price of one pack, so it is multiplied by the number of packs. A nil resolver makes the repository load one; a caller that records many events passes the resolver it already loaded.
+RecordSavingsEvent writes a SavingsRecord for a consume or waste action. eventType must be dbModel.SavingsEventTypeConsumed or dbModel.SavingsEventTypeWasted. The cause is why the event wasted the product; it does not change the event type and stays empty for a consumed event and for an unattributed waste. CO2 priority: per\-product Agribalyse rate \(product.CO2KgPerKg\) \> seeded category fallback. Price priority: product.PriceOverride \> seeded category average. The override is the price of one pack, so it is multiplied by the number of packs. A nil resolver makes the repository load one; a caller that records many events passes the resolver it already loaded.
 
 <a name="SavingsRepositoryInterface"></a>
 ## type [SavingsRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/savings_repository.go#L13-L17>)
@@ -9670,7 +9708,7 @@ RecordSavingsEvent writes a SavingsRecord for a consume or waste action. eventTy
 ```go
 type SavingsRepositoryInterface interface {
     LoadCategoryResolver() (*CategoryResolver, error)
-    RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, resolver *CategoryResolver) error
+    RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *CategoryResolver) error
     GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
 }
 ```
@@ -10520,7 +10558,7 @@ type UserRepositoryInterface interface {
 ```
 
 <a name="WasteAnalyticsRepository"></a>
-## type [WasteAnalyticsRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L16-L18>)
+## type [WasteAnalyticsRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L17-L19>)
 
 WasteAnalyticsRepository handles aggregations of consume/waste events for analytics.
 
@@ -10531,7 +10569,7 @@ type WasteAnalyticsRepository struct {
 ```
 
 <a name="NewWasteAnalyticsRepository"></a>
-### func [NewWasteAnalyticsRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L21>)
+### func [NewWasteAnalyticsRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L22>)
 
 ```go
 func NewWasteAnalyticsRepository(db *gorm.DB) *WasteAnalyticsRepository
@@ -10540,7 +10578,7 @@ func NewWasteAnalyticsRepository(db *gorm.DB) *WasteAnalyticsRepository
 NewWasteAnalyticsRepository creates a new WasteAnalyticsRepository.
 
 <a name="WasteAnalyticsRepository.GetConsumedVsWasted"></a>
-### func \(\*WasteAnalyticsRepository\) [GetConsumedVsWasted](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L27>)
+### func \(\*WasteAnalyticsRepository\) [GetConsumedVsWasted](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L28>)
 
 ```go
 func (r *WasteAnalyticsRepository) GetConsumedVsWasted(householdID uint, since time.Time) (ConsumedVsWastedRow, error)
@@ -10549,7 +10587,7 @@ func (r *WasteAnalyticsRepository) GetConsumedVsWasted(householdID uint, since t
 GetConsumedVsWasted returns the aggregate count/EUR/CO2 for consumed and wasted events in the window \[since, now\].
 
 <a name="WasteAnalyticsRepository.GetMonthlyBreakdown"></a>
-### func \(\*WasteAnalyticsRepository\) [GetMonthlyBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L65>)
+### func \(\*WasteAnalyticsRepository\) [GetMonthlyBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L66>)
 
 ```go
 func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since time.Time, months int) ([]apiModel.WasteMonthly, error)
@@ -10558,7 +10596,7 @@ func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since t
 GetMonthlyBreakdown returns per\-month consumed and wasted aggregates, padded with zero buckets for months that have no data so the response is contiguous from \`since\`.
 
 <a name="WasteAnalyticsRepository.GetMostWastedCategories"></a>
-### func \(\*WasteAnalyticsRepository\) [GetMostWastedCategories](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L129>)
+### func \(\*WasteAnalyticsRepository\) [GetMostWastedCategories](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L130>)
 
 ```go
 func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int, by string) ([]apiModel.WasteCategoryStat, error)
@@ -10567,7 +10605,7 @@ func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, sin
 GetMostWastedCategories returns the top \`limit\` categories of wasted products for the household in the window \[since, now\]. Categories are resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket. Results are sorted by \`by\` — "count" \(default\) or "cost".
 
 <a name="WasteAnalyticsRepository.GetMostWastedProducts"></a>
-### func \(\*WasteAnalyticsRepository\) [GetMostWastedProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L292>)
+### func \(\*WasteAnalyticsRepository\) [GetMostWastedProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L462>)
 
 ```go
 func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since time.Time, perCategoryLimit int) (map[string][]apiModel.WasteProductStat, error)
@@ -10576,13 +10614,39 @@ func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since
 GetMostWastedProducts returns the top wasted products grouped by category for the household in the window \[since, now\]. Each category's slice is capped at perCategoryLimit. The category key is resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket.
 
 <a name="WasteAnalyticsRepository.GetTrendMonths"></a>
-### func \(\*WasteAnalyticsRepository\) [GetTrendMonths](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L193>)
+### func \(\*WasteAnalyticsRepository\) [GetTrendMonths](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L363>)
 
 ```go
 func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int) ([]apiModel.StatsMonthlyCount, error)
 ```
 
 GetTrendMonths returns wasted\-count\-per\-month for the last \`months\` months \(ascending\).
+
+<a name="WasteAnalyticsRepository.GetWasteCauseBreakdown"></a>
+### func \(\*WasteAnalyticsRepository\) [GetWasteCauseBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L208>)
+
+```go
+func (r *WasteAnalyticsRepository) GetWasteCauseBreakdown(householdID uint, since time.Time) (WasteCauseBreakdown, error)
+```
+
+GetWasteCauseBreakdown returns the wasted events of the household since the given instant, grouped by the reason they were wasted, together with the category the household most over\-buys.
+
+<a name="WasteCauseBreakdown"></a>
+## type [WasteCauseBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L195-L203>)
+
+WasteCauseBreakdown holds the wasted events of a household grouped by the reason they were wasted, plus the category the household most over\-buys.
+
+```go
+type WasteCauseBreakdown struct {
+    // Causes holds one entry per cause, the unattributed waste in the entry
+    // with the empty cause.
+    Causes []apiModel.WasteCauseStat
+    // Overbuy names the category with the most over-bought waste.
+    Overbuy apiModel.WasteOverbuyStat
+    // WastedEvents is the number of wasted events the breakdown covers.
+    WastedEvents int
+}
+```
 
 <a name="WebhookRepository"></a>
 ## type [WebhookRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/webhook_repository.go#L27-L29>)
@@ -10832,7 +10896,9 @@ import "github.com/Isotop7/proviant/models/api"
 - [type UpdateWebhookRequest](<#UpdateWebhookRequest>)
 - [type WasteAnalyticsResponse](<#WasteAnalyticsResponse>)
 - [type WasteCategoryStat](<#WasteCategoryStat>)
+- [type WasteCauseStat](<#WasteCauseStat>)
 - [type WasteMonthly](<#WasteMonthly>)
+- [type WasteOverbuyStat](<#WasteOverbuyStat>)
 - [type WasteProductStat](<#WasteProductStat>)
 - [type WebhookListResponse](<#WebhookListResponse>)
 - [type WebhookResponse](<#WebhookResponse>)
@@ -10892,7 +10958,7 @@ var ValidWebhookEvents = []string{
 ```
 
 <a name="AssignExportProductOwners"></a>
-## func [AssignExportProductOwners](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L92>)
+## func [AssignExportProductOwners](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L94>)
 
 ```go
 func AssignExportProductOwners(rows []ExportProductResponse, ownerNames map[uint]string)
@@ -10919,7 +10985,7 @@ func SupportsBackupVersion(version int) bool
 SupportsBackupVersion reports whether the restore endpoint can read a document of the given version.
 
 <a name="ActivityEntry"></a>
-## type [ActivityEntry](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/activity.go#L10-L18>)
+## type [ActivityEntry](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/activity.go#L10-L21>)
 
 
 
@@ -10931,7 +10997,10 @@ type ActivityEntry struct {
     ProductID   uint   `json:"productId"`
     ProductName string `json:"productName"`
     Quantity    int    `json:"quantity"`
-    Timestamp   string `json:"timestamp"`
+    // WasteCause is why the action wasted the product. It is empty for every
+    // action but a waste that carried a reason.
+    WasteCause string `json:"wasteCause"`
+    Timestamp  string `json:"timestamp"`
 }
 ```
 
@@ -11069,13 +11138,16 @@ type BulkProductDraft struct {
 ```
 
 <a name="BulkProductsAPIModel"></a>
-## type [BulkProductsAPIModel](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L4-L6>)
+## type [BulkProductsAPIModel](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L4-L9>)
 
 BulkProductsAPIModel represents a bulk product operation request
 
 ```go
 type BulkProductsAPIModel struct {
     ProductIDs []uint `json:"productIDs"`
+    // WasteCause is why the products are wasted. It applies to every product
+    // of the request and is ignored by a bulk consume.
+    WasteCause *string `json:"wasteCause,omitempty"`
 }
 ```
 
@@ -11097,7 +11169,7 @@ type ConsumptionRateResponse struct {
 ```
 
 <a name="CookItemAPIModel"></a>
-## type [CookItemAPIModel](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L9-L12>)
+## type [CookItemAPIModel](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L12-L15>)
 
 CookItemAPIModel is one product entry of a cook request
 
@@ -11109,7 +11181,7 @@ type CookItemAPIModel struct {
 ```
 
 <a name="CookProductsAPIModel"></a>
-## type [CookProductsAPIModel](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L15-L17>)
+## type [CookProductsAPIModel](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L18-L20>)
 
 CookProductsAPIModel represents a cook request
 
@@ -11131,7 +11203,7 @@ type CookRecipeRequest struct {
 ```
 
 <a name="CookResponse"></a>
-## type [CookResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L20-L24>)
+## type [CookResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L23-L27>)
 
 CookResponse represents the result of a cook request
 
@@ -11289,7 +11361,7 @@ type ExpiryScanResponse struct {
 ```
 
 <a name="ExportProductResponse"></a>
-## type [ExportProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L15-L46>)
+## type [ExportProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L15-L47>)
 
 ExportProductResponse is the product shape in a JSON data export. Unlike ProductResponse it keeps createdAt and archivedAt: the CSV export carries the same two as added\_at and archived\_at, so a backup that dropped them would lose when a product was bought and when it was archived. UpdatedAt is the one GORM field left out — the bookkeeping timestamp says nothing to whoever reads the file. ID is serialized as the lowercase wire field "id".
 
@@ -11312,6 +11384,7 @@ type ExportProductResponse struct {
     PriceOverride        *float64                 `json:"priceOverride,omitempty"`
     CO2KgPerKg           *float64                 `json:"co2KgPerKg,omitempty"`
     RemovalReason        string                   `json:"removalReason"`
+    WasteCause           string                   `json:"wasteCause"`
     NotificationLeadDays *int                     `json:"notificationLeadDays,omitempty"`
     MinStockAmount       int                      `json:"minStockAmount"`
     OpenedAt             *time.Time               `json:"openedAt,omitempty"`
@@ -11329,7 +11402,7 @@ type ExportProductResponse struct {
 ```
 
 <a name="NewExportProductResponse"></a>
-### func [NewExportProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L50>)
+### func [NewExportProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L51>)
 
 ```go
 func NewExportProductResponse(product *dbModel.Product) ExportProductResponse
@@ -11338,7 +11411,7 @@ func NewExportProductResponse(product *dbModel.Product) ExportProductResponse
 NewExportProductResponse projects a product onto the export shape. An archived product carries archivedAt; an active one omits the field entirely.
 
 <a name="NewExportProductResponses"></a>
-### func [NewExportProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L102>)
+### func [NewExportProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/export.go#L104>)
 
 ```go
 func NewExportProductResponses[T dbModel.Product | *dbModel.Product](products []T) []ExportProductResponse
@@ -11417,7 +11490,7 @@ type GenerateShoppingListRequest struct {
 ```
 
 <a name="HouseholdApplicationResponse"></a>
-## type [HouseholdApplicationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L352-L358>)
+## type [HouseholdApplicationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L354-L360>)
 
 HouseholdApplicationResponse is the client\-facing view of a household application.
 
@@ -11432,7 +11505,7 @@ type HouseholdApplicationResponse struct {
 ```
 
 <a name="NewHouseholdApplicationResponses"></a>
-### func [NewHouseholdApplicationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L361>)
+### func [NewHouseholdApplicationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L363>)
 
 ```go
 func NewHouseholdApplicationResponses[T dbModel.HouseholdApplication | *dbModel.HouseholdApplication](applications []T) []HouseholdApplicationResponse
@@ -11513,7 +11586,7 @@ func NewHouseholdIntegrationResponses(integrations []dbModel.HouseholdIntegratio
 NewHouseholdIntegrationResponses converts a slice of HouseholdIntegration models into response DTOs.
 
 <a name="HouseholdInvitationResponse"></a>
-## type [HouseholdInvitationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L311-L318>)
+## type [HouseholdInvitationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L313-L320>)
 
 HouseholdInvitationResponse is the client\-facing view of a pending invitation.
 
@@ -11529,7 +11602,7 @@ type HouseholdInvitationResponse struct {
 ```
 
 <a name="NewHouseholdInvitationResponses"></a>
-### func [NewHouseholdInvitationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L321>)
+### func [NewHouseholdInvitationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L323>)
 
 ```go
 func NewHouseholdInvitationResponses[T dbModel.HouseholdInvitation | *dbModel.HouseholdInvitation](invitations []T) []HouseholdInvitationResponse
@@ -11538,7 +11611,7 @@ func NewHouseholdInvitationResponses[T dbModel.HouseholdInvitation | *dbModel.Ho
 NewHouseholdInvitationResponses projects a slice of invitations.
 
 <a name="HouseholdListItem"></a>
-## type [HouseholdListItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L48-L53>)
+## type [HouseholdListItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L53-L58>)
 
 HouseholdListItem represents a household in the discovery list
 
@@ -11789,7 +11862,7 @@ type OfflineSyncResult struct {
 ```
 
 <a name="OnboardingStateResponse"></a>
-## type [OnboardingStateResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L27-L32>)
+## type [OnboardingStateResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L30-L35>)
 
 OnboardingStateResponse represents the current onboarding progress
 
@@ -11803,7 +11876,7 @@ type OnboardingStateResponse struct {
 ```
 
 <a name="OpenFoodFactsCacheResponse"></a>
-## type [OpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L392-L401>)
+## type [OpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L394-L403>)
 
 OpenFoodFactsCacheResponse is the client\-facing view of a cached OpenFoodFacts lookup.
 
@@ -11821,7 +11894,7 @@ type OpenFoodFactsCacheResponse struct {
 ```
 
 <a name="NewOpenFoodFactsCacheResponse"></a>
-### func [NewOpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L404>)
+### func [NewOpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L406>)
 
 ```go
 func NewOpenFoodFactsCacheResponse(entry *dbModel.OpenFoodFactsCache) OpenFoodFactsCacheResponse
@@ -11830,7 +11903,7 @@ func NewOpenFoodFactsCacheResponse(entry *dbModel.OpenFoodFactsCache) OpenFoodFa
 NewOpenFoodFactsCacheResponse projects a cache row onto the wire shape.
 
 <a name="ProductActionDTO"></a>
-## type [ProductActionDTO](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L42-L45>)
+## type [ProductActionDTO](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L45-L50>)
 
 ProductActionDTO is the optional request body for consuming or wasting packs. A nil Quantity records the whole remaining stock.
 
@@ -11838,11 +11911,13 @@ ProductActionDTO is the optional request body for consuming or wasting packs. A 
 type ProductActionDTO struct {
     Quantity         *int    `json:"quantity,omitempty"`
     ClientMutationID *string `json:"clientMutationId,omitempty"`
+    // WasteCause is why the packs are wasted. It is ignored by a consume.
+    WasteCause *string `json:"wasteCause,omitempty"`
 }
 ```
 
 <a name="ProductQuantityDTO"></a>
-## type [ProductQuantityDTO](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L35-L38>)
+## type [ProductQuantityDTO](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/api.go#L38-L41>)
 
 ProductQuantityDTO is the request body for updating a product's pack count
 
@@ -11854,7 +11929,7 @@ type ProductQuantityDTO struct {
 ```
 
 <a name="ProductResponse"></a>
-## type [ProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L146-L173>)
+## type [ProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L146-L174>)
 
 ProductResponse is the client\-facing view of a product. ID is serialized as the lowercase wire field "id".
 
@@ -11877,6 +11952,7 @@ type ProductResponse struct {
     PriceOverride        *float64                 `json:"priceOverride,omitempty"`
     CO2KgPerKg           *float64                 `json:"co2KgPerKg,omitempty"`
     RemovalReason        string                   `json:"removalReason"`
+    WasteCause           string                   `json:"wasteCause"`
     NotificationLeadDays *int                     `json:"notificationLeadDays,omitempty"`
     MinStockAmount       int                      `json:"minStockAmount"`
     OpenedAt             *time.Time               `json:"openedAt,omitempty"`
@@ -11890,7 +11966,7 @@ type ProductResponse struct {
 ```
 
 <a name="NewLabelledProductResponse"></a>
-### func [NewLabelledProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L229>)
+### func [NewLabelledProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L231>)
 
 ```go
 func NewLabelledProductResponse(product *dbModel.Product) ProductResponse
@@ -11899,7 +11975,7 @@ func NewLabelledProductResponse(product *dbModel.Product) ProductResponse
 NewLabelledProductResponse projects a product and renders its dropdown label.
 
 <a name="NewLabelledProductResponses"></a>
-### func [NewLabelledProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L243>)
+### func [NewLabelledProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L245>)
 
 ```go
 func NewLabelledProductResponses[T dbModel.Product | *dbModel.Product](products []T) []ProductResponse
@@ -11908,7 +11984,7 @@ func NewLabelledProductResponses[T dbModel.Product | *dbModel.Product](products 
 NewLabelledProductResponses projects a slice of products with labels rendered.
 
 <a name="NewProductResponse"></a>
-### func [NewProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L176>)
+### func [NewProductResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L177>)
 
 ```go
 func NewProductResponse(product *dbModel.Product) ProductResponse
@@ -11917,7 +11993,7 @@ func NewProductResponse(product *dbModel.Product) ProductResponse
 NewProductResponse projects a product onto the wire shape, without a label.
 
 <a name="NewProductResponses"></a>
-### func [NewProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L212>)
+### func [NewProductResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L214>)
 
 ```go
 func NewProductResponses[T dbModel.Product | *dbModel.Product](products []T) []ProductResponse
@@ -12129,7 +12205,7 @@ type SavingsStatsResponse struct {
 ```
 
 <a name="ShoppingListItemResponse"></a>
-## type [ShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L260-L272>)
+## type [ShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L262-L274>)
 
 ShoppingListItemResponse is the client\-facing view of a shopping list entry.
 
@@ -12150,7 +12226,7 @@ type ShoppingListItemResponse struct {
 ```
 
 <a name="NewShoppingListItemResponse"></a>
-### func [NewShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L275>)
+### func [NewShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L277>)
 
 ```go
 func NewShoppingListItemResponse[T dbModel.ShoppingListItem | *dbModel.ShoppingListItem](item T) ShoppingListItemResponse
@@ -12159,7 +12235,7 @@ func NewShoppingListItemResponse[T dbModel.ShoppingListItem | *dbModel.ShoppingL
 NewShoppingListItemResponse projects a shopping list entry onto the wire shape.
 
 <a name="NewShoppingListItemResponses"></a>
-### func [NewShoppingListItemResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L299>)
+### func [NewShoppingListItemResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L301>)
 
 ```go
 func NewShoppingListItemResponses[T dbModel.ShoppingListItem | *dbModel.ShoppingListItem](items []T) []ShoppingListItemResponse
@@ -12374,7 +12450,7 @@ type UpdateWebhookRequest struct {
 ```
 
 <a name="WasteAnalyticsResponse"></a>
-## type [WasteAnalyticsResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/waste.go#L32-L45>)
+## type [WasteAnalyticsResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/waste.go#L54-L77>)
 
 WasteAnalyticsResponse is the response body for GET /api/v1/stats/waste
 
@@ -12392,6 +12468,16 @@ type WasteAnalyticsResponse struct {
     MostWastedCategories []WasteCategoryStat `json:"mostWastedCategories"`
     Trend                []StatsMonthlyCount `json:"trend"`
     CO2Source            string              `json:"co2Source"`
+    // Causes breaks the wasted events down by the reason they were wasted.
+    Causes []WasteCauseStat `json:"causes"`
+    // Overbuy names the category the household most over-buys.
+    Overbuy WasteOverbuyStat `json:"overbuy"`
+    // Insight is the one-sentence insight about the household's waste, in the
+    // user's language.
+    Insight string `json:"insight"`
+    // InsightAvailable is false when there is too little data to state an
+    // insight; the Insight then holds the empty-state sentence.
+    InsightAvailable bool `json:"insightAvailable"`
 }
 ```
 
@@ -12411,6 +12497,21 @@ type WasteCategoryStat struct {
 }
 ```
 
+<a name="WasteCauseStat"></a>
+## type [WasteCauseStat](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/waste.go#L33-L39>)
+
+WasteCauseStat is the waste attributed to one cause. The cause of an unattributed waste is the empty string.
+
+```go
+type WasteCauseStat struct {
+    Cause   string  `json:"cause"`
+    Count   int     `json:"count"`
+    CostEUR float64 `json:"costEur"`
+    // Share is the cause's share of all wasted events in the window, in percent.
+    Share float64 `json:"share"`
+}
+```
+
 <a name="WasteMonthly"></a>
 ## type [WasteMonthly](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/waste.go#L23-L29>)
 
@@ -12423,6 +12524,24 @@ type WasteMonthly struct {
     WastedCount   int     `json:"wastedCount"`
     WastedEUR     float64 `json:"wastedEur"`
     WastedCO2Kg   float64 `json:"wastedCo2Kg"`
+}
+```
+
+<a name="WasteOverbuyStat"></a>
+## type [WasteOverbuyStat](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/waste.go#L42-L51>)
+
+WasteOverbuyStat names the category the household most over\-buys.
+
+```go
+type WasteOverbuyStat struct {
+    CategoryKey string `json:"categoryKey"`
+    DisplayName string `json:"displayName"`
+    // Count is the number of over-bought waste events in the category.
+    Count int `json:"count"`
+    // CategoryWaste is the number of all waste events in the category.
+    CategoryWaste int `json:"categoryWaste"`
+    // Share is Count as a percentage of CategoryWaste.
+    Share float64 `json:"share"`
 }
 ```
 
@@ -13390,7 +13509,9 @@ import "github.com/Isotop7/proviant/models/database"
 - [func ExpiryRankingDaysLeft\(expireAt, now time.Time\) int](<#ExpiryRankingDaysLeft>)
 - [func GenerateCacheKey\(provider, baseURL, productSetFingerprint string, productIDs \[\]uint\) string](<#GenerateCacheKey>)
 - [func HashPasswordResetToken\(raw string\) string](<#HashPasswordResetToken>)
+- [func IsValidWasteCause\(cause string\) bool](<#IsValidWasteCause>)
 - [func NormalizeBarcode\(barcode string\) string](<#NormalizeBarcode>)
+- [func WasteCauseList\(\) \[\]string](<#WasteCauseList>)
 - [type ActivityLog](<#ActivityLog>)
 - [type AuditLog](<#AuditLog>)
 - [type Date](<#Date>)
@@ -13534,6 +13655,16 @@ const (
     RemovalReasonConsumed = "consumed"
     RemovalReasonWasted   = "wasted"
 
+    // WasteCause names why a product was wasted. The cause is a property of the
+    // waste action, not of RemovalReason: a wasted product keeps
+    // RemovalReason == RemovalReasonWasted and carries the cause beside it.
+    // An empty cause means the waste was not attributed.
+    WasteCauseSpoiled    = "spoiled"
+    WasteCauseOverbought = "overbought"
+    WasteCauseForgotten  = "forgotten"
+    WasteCauseDisliked   = "disliked"
+    WasteCauseOther      = "other"
+
     // MaxDaysAfterOpening is the upper bound on Product.DaysAfterOpening,
     // enforced on every write (create and PATCH). The opened-shelf-life SQL
     // prunes (effectiveExpiryCandidateScope and the notification candidate
@@ -13600,6 +13731,15 @@ func HashPasswordResetToken(raw string) string
 
 HashPasswordResetToken returns the SHA\-256 hex digest of a raw reset token. Use this when persisting a new PasswordReset or looking one up by token.
 
+<a name="IsValidWasteCause"></a>
+## func [IsValidWasteCause](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L55>)
+
+```go
+func IsValidWasteCause(cause string) bool
+```
+
+IsValidWasteCause reports whether cause is one of the known causes. The empty cause is valid: a waste without a reason is still a waste.
+
 <a name="NormalizeBarcode"></a>
 ## func [NormalizeBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/productduplicate.go#L34>)
 
@@ -13609,22 +13749,34 @@ func NormalizeBarcode(barcode string) string
 
 NormalizeBarcode is the barcode as the app stores and compares it: trimmed. A padded barcode is the same barcode, so a row written with padding must still match a row written without it.
 
+<a name="WasteCauseList"></a>
+## func [WasteCauseList](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L47>)
+
+```go
+func WasteCauseList() []string
+```
+
+WasteCauseList returns the fixed cause list in the order the UI offers it. It hands out a copy: the list is shared by every request that renders it, and one that could be mutated would leak into all of them.
+
 <a name="ActivityLog"></a>
-## type [ActivityLog](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/activity_log.go#L9-L19>)
+## type [ActivityLog](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/activity_log.go#L9-L22>)
 
 
 
 ```go
 type ActivityLog struct {
     gorm.Model
-    HouseholdID uint      `gorm:"index;not null" json:"householdId"`
-    UserID      *uint     `gorm:"index" json:"userId"`
-    UserName    string    `gorm:"not null" json:"userName"`
-    Action      string    `gorm:"index;not null" json:"action"`
-    ProductID   uint      `gorm:"index" json:"productId"`
-    ProductName string    `gorm:"not null" json:"productName"`
-    Quantity    int       `json:"quantity"`
-    Timestamp   time.Time `gorm:"index;not null" json:"timestamp"`
+    HouseholdID uint   `gorm:"index;not null" json:"householdId"`
+    UserID      *uint  `gorm:"index" json:"userId"`
+    UserName    string `gorm:"not null" json:"userName"`
+    Action      string `gorm:"index;not null" json:"action"`
+    ProductID   uint   `gorm:"index" json:"productId"`
+    ProductName string `gorm:"not null" json:"productName"`
+    Quantity    int    `json:"quantity"`
+    // WasteCause is why the action wasted the product. It is empty for every
+    // action but a waste that carried a reason.
+    WasteCause string    `gorm:"default:''" json:"wasteCause"`
+    Timestamp  time.Time `gorm:"index;not null" json:"timestamp"`
 }
 ```
 
@@ -13990,40 +14142,43 @@ type PasswordReset struct {
 ```
 
 <a name="Product"></a>
-## type [Product](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L30-L67>)
+## type [Product](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L72-L112>)
 
 Product is the database model of a product. A product is counted in packs: Quantity is the number of packs on hand and PackSize is the size of one pack, a free\-text label that is never converted and never computed with. PriceOverride is the price of one pack, so the savings of a product are the override times the number of packs.
 
 ```go
 type Product struct {
     gorm.Model
-    Barcode              string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
-    ProductName          string           `gorm:"index:idx_products_household_name_deleted,priority:1" json:"productName"`
-    Categories           string           `json:"categories"`
-    Countries            string           `json:"countries"`
-    ImageURL             string           `json:"imageUrl"`
-    ExpireAt             time.Time        `gorm:"index" json:"expireAt"`
-    ScannedAt            time.Time        `json:"scannedAt"`
-    NotifiedAt           time.Time        `json:"notifiedAt"`
-    DeletedAt            gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
-    HouseholdID          uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;index:idx_products_household_clientsyncid,priority:1;not null" json:"-"`
-    Household            Household        `json:"-"`
-    UserID               uint             `gorm:"index, not null" json:"-"`
-    IsPrivate            bool             `gorm:"default:false" json:"isPrivate"`
-    Quantity             int              `gorm:"default:1" json:"quantity"`
-    PackSize             string           `json:"packSize"`
-    DisplayQuantity      string           `gorm:"-"                            json:"-"`
-    StorageLocationID    *uint            `gorm:"index"                        json:"storageLocationId"`
-    ClientSyncID         *string          `gorm:"index:idx_products_household_clientsyncid,unique,priority:2" json:"clientSyncId,omitempty"`
-    StorageLocation      *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
-    PriceOverride        *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
-    CO2KgPerKg           *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
-    RemovalReason        string           `gorm:"default:''"                   json:"removalReason"`
-    StorageHint          string           `gorm:"-"                            json:"-"`
-    NotificationLeadDays *int             `gorm:"default:null"                 json:"notificationLeadDays,omitempty"`
-    MinStockAmount       int              `gorm:"default:0"                   json:"minStockAmount"`
-    OpenedAt             *time.Time       `gorm:"default:null"                 json:"openedAt,omitempty"`
-    DaysAfterOpening     *int             `gorm:"default:null"                 json:"daysAfterOpening,omitempty"`
+    Barcode           string           `gorm:"index:idx_products_barcode_household,priority:1" json:"barcode"`
+    ProductName       string           `gorm:"index:idx_products_household_name_deleted,priority:1" json:"productName"`
+    Categories        string           `json:"categories"`
+    Countries         string           `json:"countries"`
+    ImageURL          string           `json:"imageUrl"`
+    ExpireAt          time.Time        `gorm:"index" json:"expireAt"`
+    ScannedAt         time.Time        `json:"scannedAt"`
+    NotifiedAt        time.Time        `json:"notifiedAt"`
+    DeletedAt         gorm.DeletedAt   `gorm:"index:idx_products_household_deleted,priority:2"`
+    HouseholdID       uint             `gorm:"index;index:idx_products_household_deleted,priority:1;index:idx_products_barcode_household,priority:2;index:idx_products_household_name_deleted,priority:2;index:idx_products_household_clientsyncid,priority:1;not null" json:"-"`
+    Household         Household        `json:"-"`
+    UserID            uint             `gorm:"index, not null" json:"-"`
+    IsPrivate         bool             `gorm:"default:false" json:"isPrivate"`
+    Quantity          int              `gorm:"default:1" json:"quantity"`
+    PackSize          string           `json:"packSize"`
+    DisplayQuantity   string           `gorm:"-"                            json:"-"`
+    StorageLocationID *uint            `gorm:"index"                        json:"storageLocationId"`
+    ClientSyncID      *string          `gorm:"index:idx_products_household_clientsyncid,unique,priority:2" json:"clientSyncId,omitempty"`
+    StorageLocation   *StorageLocation `gorm:"foreignKey:StorageLocationID" json:"storageLocation,omitempty"`
+    PriceOverride     *float64         `gorm:"default:null"                 json:"priceOverride,omitempty"`
+    CO2KgPerKg        *float64         `gorm:"default:null"                 json:"co2KgPerKg,omitempty"`
+    RemovalReason     string           `gorm:"default:''"                   json:"removalReason"`
+    // WasteCause is why the product was wasted. It is set when the waste
+    // archives the row and is empty for an unattributed waste.
+    WasteCause           string     `gorm:"default:''"                   json:"wasteCause"`
+    StorageHint          string     `gorm:"-"                            json:"-"`
+    NotificationLeadDays *int       `gorm:"default:null"                 json:"notificationLeadDays,omitempty"`
+    MinStockAmount       int        `gorm:"default:0"                   json:"minStockAmount"`
+    OpenedAt             *time.Time `gorm:"default:null"                 json:"openedAt,omitempty"`
+    DaysAfterOpening     *int       `gorm:"default:null"                 json:"daysAfterOpening,omitempty"`
     // CategoryKey is the canonical category the product belongs to. It is what
     // the household's shelf-life defaults are looked up by. Categories keeps
     // the free text Open Food Facts wrote, which the recipe suggestions read.
@@ -14085,7 +14240,7 @@ type ProductCategoryPrice struct {
 ```
 
 <a name="ProductDTOBarcode"></a>
-## type [ProductDTOBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L77-L79>)
+## type [ProductDTOBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L122-L124>)
 
 ProductDTOBarcode is a simplified DTO only containing a barcode
 
@@ -14096,7 +14251,7 @@ type ProductDTOBarcode struct {
 ```
 
 <a name="ProductDTOExpire"></a>
-## type [ProductDTOExpire](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L70-L74>)
+## type [ProductDTOExpire](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L115-L119>)
 
 ProductDTOExpire is a simplified DTO for product expiration
 
@@ -14109,7 +14264,7 @@ type ProductDTOExpire struct {
 ```
 
 <a name="ProductDTOPatch"></a>
-## type [ProductDTOPatch](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L85-L106>)
+## type [ProductDTOPatch](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L130-L151>)
 
 ProductDTOPatch is a simplified DTO for the patchable elements. A field the request did not carry keeps its stored value; a field the request carried is written, so a scalar sent as null clears the field and a scalar sent with a value replaces it. PriceOverride is the price of one pack.
 
@@ -14138,7 +14293,7 @@ type ProductDTOPatch struct {
 ```
 
 <a name="ProductDTOPatch.Has"></a>
-### func \(\*ProductDTOPatch\) [Has](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L111>)
+### func \(\*ProductDTOPatch\) [Has](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L156>)
 
 ```go
 func (p *ProductDTOPatch) Has(field string) bool
@@ -14147,7 +14302,7 @@ func (p *ProductDTOPatch) Has(field string) bool
 Has reports whether the request carried the given field. A patch that was not decoded from a request body reports every field as present, so a direct call keeps its full\-replacement meaning.
 
 <a name="ProductDTOPatch.MarkAllPresent"></a>
-### func \(\*ProductDTOPatch\) [MarkAllPresent](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L121>)
+### func \(\*ProductDTOPatch\) [MarkAllPresent](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L166>)
 
 ```go
 func (p *ProductDTOPatch) MarkAllPresent()
@@ -14156,7 +14311,7 @@ func (p *ProductDTOPatch) MarkAllPresent()
 MarkAllPresent makes every field count as carried, so a patch written to a product replaces it: a field the request did not carry is cleared instead of keeping its stored value.
 
 <a name="ProductDTOPatch.UnmarshalJSON"></a>
-### func \(\*ProductDTOPatch\) [UnmarshalJSON](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L133>)
+### func \(\*ProductDTOPatch\) [UnmarshalJSON](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/product.go#L178>)
 
 ```go
 func (p *ProductDTOPatch) UnmarshalJSON(data []byte) error
@@ -14262,19 +14417,22 @@ type RecipeIngredient struct {
 ```
 
 <a name="SavingsRecord"></a>
-## type [SavingsRecord](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/savings.go#L26-L42>)
+## type [SavingsRecord](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/savings.go#L26-L45>)
 
 SavingsRecord is written once per consume or waste action. It captures the monetary value and CO2 equivalent at the time of the event so that later changes to ProductCategoryPrice do not retroactively alter history.
 
 ```go
 type SavingsRecord struct {
     gorm.Model
-    HouseholdID uint    `gorm:"index;not null" json:"-"`
-    ProductID   uint    `gorm:"index"          json:"productId"`
-    ProductName string  `gorm:"not null"       json:"productName"`
-    EventType   string  `gorm:"not null;index" json:"eventType"` // SavingsEventTypeConsumed or SavingsEventTypeWasted
-    PriceEUR    float64 `gorm:"not null"       json:"priceEur"`
-    CO2Kg       float64 `gorm:"not null"       json:"co2Kg"`
+    HouseholdID uint   `gorm:"index;not null" json:"-"`
+    ProductID   uint   `gorm:"index"          json:"productId"`
+    ProductName string `gorm:"not null"       json:"productName"`
+    EventType   string `gorm:"not null;index" json:"eventType"` // SavingsEventTypeConsumed or SavingsEventTypeWasted
+    // WasteCause is why the event wasted the product. It is empty for a
+    // consumed event and for a waste that carried no reason.
+    WasteCause string  `gorm:"default:''"          json:"wasteCause"`
+    PriceEUR   float64 `gorm:"not null"       json:"priceEur"`
+    CO2Kg      float64 `gorm:"not null"       json:"co2Kg"`
     // Amount is the number of packs the event covered. A record written before
     // the count model holds a net content instead, which is why such a record
     // is marked as legacy.
@@ -14670,7 +14828,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
 - [type MockProductRepository](<#MockProductRepository>)
   - [func \(m \*MockProductRepository\) BulkConsumeProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkConsumeProducts>)
   - [func \(m \*MockProductRepository\) BulkRestoreProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkRestoreProducts>)
-  - [func \(m \*MockProductRepository\) BulkWasteProducts\(productIDs \[\]uint, userID uint\) \[\]database.BulkOperationError](<#MockProductRepository.BulkWasteProducts>)
+  - [func \(m \*MockProductRepository\) BulkWasteProducts\(productIDs \[\]uint, userID uint, cause string\) \[\]database.BulkOperationError](<#MockProductRepository.BulkWasteProducts>)
   - [func \(m \*MockProductRepository\) ConsumeProduct\(productID, userID uint\) error](<#MockProductRepository.ConsumeProduct>)
   - [func \(m \*MockProductRepository\) ConsumeProductPartial\(product \*dbModel.Product, amount int, mutationID \*string\) \(int, bool, bool, error\)](<#MockProductRepository.ConsumeProductPartial>)
   - [func \(m \*MockProductRepository\) CreateOpenFoodFactsCache\(entry \*dbModel.OpenFoodFactsCache\) error](<#MockProductRepository.CreateOpenFoodFactsCache>)
@@ -14733,8 +14891,8 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) UpdateProduct\(productID uint, userID uint, product \*dbModel.ProductDTOPatch\) error](<#MockProductRepository.UpdateProduct>)
   - [func \(m \*MockProductRepository\) UpdateProductQuantity\(productID uint, userID uint, delta int, mutationID \*string\) \(bool, bool, error\)](<#MockProductRepository.UpdateProductQuantity>)
   - [func \(m \*MockProductRepository\) UserHasProductAccess\(userID uint, productID int\) bool](<#MockProductRepository.UserHasProductAccess>)
-  - [func \(m \*MockProductRepository\) WasteProduct\(productID, userID uint\) error](<#MockProductRepository.WasteProduct>)
-  - [func \(m \*MockProductRepository\) WasteProductPartial\(product \*dbModel.Product, amount int, mutationID \*string\) \(int, bool, bool, error\)](<#MockProductRepository.WasteProductPartial>)
+  - [func \(m \*MockProductRepository\) WasteProduct\(productID, userID uint, cause string\) error](<#MockProductRepository.WasteProduct>)
+  - [func \(m \*MockProductRepository\) WasteProductPartial\(product \*dbModel.Product, amount int, mutationID \*string, cause string\) \(int, bool, bool, error\)](<#MockProductRepository.WasteProductPartial>)
 - [type MockRecipeCacheRepository](<#MockRecipeCacheRepository>)
   - [func \(m \*MockRecipeCacheRepository\) CleanupExpiredCaches\(\) error](<#MockRecipeCacheRepository.CleanupExpiredCaches>)
   - [func \(m \*MockRecipeCacheRepository\) CreateCache\(cache \*dbModel.RecipeCache\) error](<#MockRecipeCacheRepository.CreateCache>)
@@ -14753,7 +14911,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
 - [type MockSavingsRepository](<#MockSavingsRepository>)
   - [func \(m \*MockSavingsRepository\) GetSavingsStats\(householdID uint\) \(apiModel.SavingsStatsResponse, error\)](<#MockSavingsRepository.GetSavingsStats>)
   - [func \(m \*MockSavingsRepository\) LoadCategoryResolver\(\) \(\*database.CategoryResolver, error\)](<#MockSavingsRepository.LoadCategoryResolver>)
-  - [func \(m \*MockSavingsRepository\) RecordSavingsEvent\(householdID uint, product \*dbModel.Product, eventType string, resolver \*database.CategoryResolver\) error](<#MockSavingsRepository.RecordSavingsEvent>)
+  - [func \(m \*MockSavingsRepository\) RecordSavingsEvent\(householdID uint, product \*dbModel.Product, eventType string, cause string, resolver \*database.CategoryResolver\) error](<#MockSavingsRepository.RecordSavingsEvent>)
 - [type MockShoppingListItemSyncRefRepository](<#MockShoppingListItemSyncRefRepository>)
   - [func \(m \*MockShoppingListItemSyncRefRepository\) DeleteByExternalID\(householdID uint, provider, externalID string\) error](<#MockShoppingListItemSyncRefRepository.DeleteByExternalID>)
   - [func \(m \*MockShoppingListItemSyncRefRepository\) DeleteByHouseholdAndProvider\(householdID uint, provider string\) error](<#MockShoppingListItemSyncRefRepository.DeleteByHouseholdAndProvider>)
@@ -14846,7 +15004,7 @@ func SetupGinContextWithMocks(m *MockRepositoryContainer) (*gin.Context, *httpte
 SetupGinContextWithMocks creates a Gin test context backed by mock repositories. No database connection is needed; use this for handler unit tests.
 
 <a name="MockCalendarTokenRepository"></a>
-## type [MockCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L924-L927>)
+## type [MockCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L932-L935>)
 
 MockCalendarTokenRepository is a configurable in\-memory stub for CalendarTokenRepositoryInterface.
 
@@ -14858,7 +15016,7 @@ type MockCalendarTokenRepository struct {
 ```
 
 <a name="MockCalendarTokenRepository.Create"></a>
-### func \(\*MockCalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L936>)
+### func \(\*MockCalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L944>)
 
 ```go
 func (m *MockCalendarTokenRepository) Create(ct *authentication.CalendarToken) error
@@ -14867,7 +15025,7 @@ func (m *MockCalendarTokenRepository) Create(ct *authentication.CalendarToken) e
 
 
 <a name="MockCalendarTokenRepository.DeleteByUserID"></a>
-### func \(\*MockCalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L932>)
+### func \(\*MockCalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L940>)
 
 ```go
 func (m *MockCalendarTokenRepository) DeleteByUserID(userID uint) error
@@ -14876,7 +15034,7 @@ func (m *MockCalendarTokenRepository) DeleteByUserID(userID uint) error
 
 
 <a name="MockCalendarTokenRepository.GetByToken"></a>
-### func \(\*MockCalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L929>)
+### func \(\*MockCalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L937>)
 
 ```go
 func (m *MockCalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error)
@@ -14885,7 +15043,7 @@ func (m *MockCalendarTokenRepository) GetByToken(token string) (authentication.C
 
 
 <a name="MockCalendarTokenRepository.GetByUserID"></a>
-### func \(\*MockCalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L933>)
+### func \(\*MockCalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L941>)
 
 ```go
 func (m *MockCalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error)
@@ -14894,7 +15052,7 @@ func (m *MockCalendarTokenRepository) GetByUserID(userID uint) (authentication.C
 
 
 <a name="MockCalendarTokenRepository.Update"></a>
-### func \(\*MockCalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L937>)
+### func \(\*MockCalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L945>)
 
 ```go
 func (m *MockCalendarTokenRepository) Update(ct *authentication.CalendarToken) error
@@ -14903,7 +15061,7 @@ func (m *MockCalendarTokenRepository) Update(ct *authentication.CalendarToken) e
 
 
 <a name="MockExpiryScanRepository"></a>
-## type [MockExpiryScanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L911-L914>)
+## type [MockExpiryScanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L919-L922>)
 
 MockExpiryScanRepository is a configurable in\-memory stub for ExpiryScanRepositoryInterface.
 
@@ -14915,7 +15073,7 @@ type MockExpiryScanRepository struct {
 ```
 
 <a name="MockExpiryScanRepository.Create"></a>
-### func \(\*MockExpiryScanRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L916>)
+### func \(\*MockExpiryScanRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L924>)
 
 ```go
 func (m *MockExpiryScanRepository) Create(scan *dbModel.ExpiryScan) error
@@ -14924,7 +15082,7 @@ func (m *MockExpiryScanRepository) Create(scan *dbModel.ExpiryScan) error
 
 
 <a name="MockExpiryScanRepository.GetByUser"></a>
-### func \(\*MockExpiryScanRepository\) [GetByUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L917>)
+### func \(\*MockExpiryScanRepository\) [GetByUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L925>)
 
 ```go
 func (m *MockExpiryScanRepository) GetByUser(userID uint, limit int) ([]dbModel.ExpiryScan, error)
@@ -14933,7 +15091,7 @@ func (m *MockExpiryScanRepository) GetByUser(userID uint, limit int) ([]dbModel.
 
 
 <a name="MockHouseholdCategoryRepository"></a>
-## type [MockHouseholdCategoryRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L685-L689>)
+## type [MockHouseholdCategoryRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L693-L697>)
 
 MockHouseholdCategoryRepository is a configurable in\-memory stub for HouseholdCategoryRepositoryInterface.
 
@@ -14946,7 +15104,7 @@ type MockHouseholdCategoryRepository struct {
 ```
 
 <a name="MockHouseholdCategoryRepository.Defaults"></a>
-### func \(\*MockHouseholdCategoryRepository\) [Defaults](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L707>)
+### func \(\*MockHouseholdCategoryRepository\) [Defaults](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L715>)
 
 ```go
 func (m *MockHouseholdCategoryRepository) Defaults(householdID uint) (map[string]database.HouseholdCategoryDefaults, error)
@@ -14955,7 +15113,7 @@ func (m *MockHouseholdCategoryRepository) Defaults(householdID uint) (map[string
 
 
 <a name="MockHouseholdCategoryRepository.List"></a>
-### func \(\*MockHouseholdCategoryRepository\) [List](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L691>)
+### func \(\*MockHouseholdCategoryRepository\) [List](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L699>)
 
 ```go
 func (m *MockHouseholdCategoryRepository) List(householdID uint) ([]dbModel.HouseholdCategoryView, error)
@@ -14964,7 +15122,7 @@ func (m *MockHouseholdCategoryRepository) List(householdID uint) ([]dbModel.Hous
 
 
 <a name="MockHouseholdCategoryRepository.ListByUser"></a>
-### func \(\*MockHouseholdCategoryRepository\) [ListByUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L695>)
+### func \(\*MockHouseholdCategoryRepository\) [ListByUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L703>)
 
 ```go
 func (m *MockHouseholdCategoryRepository) ListByUser(userID uint) ([]dbModel.HouseholdCategoryView, error)
@@ -14973,7 +15131,7 @@ func (m *MockHouseholdCategoryRepository) ListByUser(userID uint) ([]dbModel.Hou
 
 
 <a name="MockHouseholdCategoryRepository.Reorder"></a>
-### func \(\*MockHouseholdCategoryRepository\) [Reorder](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L703>)
+### func \(\*MockHouseholdCategoryRepository\) [Reorder](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L711>)
 
 ```go
 func (m *MockHouseholdCategoryRepository) Reorder(householdID uint, categoryKeys []string) error
@@ -14982,7 +15140,7 @@ func (m *MockHouseholdCategoryRepository) Reorder(householdID uint, categoryKeys
 
 
 <a name="MockHouseholdCategoryRepository.Upsert"></a>
-### func \(\*MockHouseholdCategoryRepository\) [Upsert](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L699>)
+### func \(\*MockHouseholdCategoryRepository\) [Upsert](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L707>)
 
 ```go
 func (m *MockHouseholdCategoryRepository) Upsert(householdID uint, categoryKey string, override database.HouseholdCategoryOverride) (dbModel.HouseholdCategoryView, error)
@@ -14991,7 +15149,7 @@ func (m *MockHouseholdCategoryRepository) Upsert(householdID uint, categoryKey s
 
 
 <a name="MockHouseholdIntegrationRepository"></a>
-## type [MockHouseholdIntegrationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L942-L945>)
+## type [MockHouseholdIntegrationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L950-L953>)
 
 MockHouseholdIntegrationRepository mocks HouseholdIntegrationRepository.
 
@@ -15003,7 +15161,7 @@ type MockHouseholdIntegrationRepository struct {
 ```
 
 <a name="MockHouseholdIntegrationRepository.Create"></a>
-### func \(\*MockHouseholdIntegrationRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L986>)
+### func \(\*MockHouseholdIntegrationRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L994>)
 
 ```go
 func (m *MockHouseholdIntegrationRepository) Create(integration *dbModel.HouseholdIntegration) error
@@ -15012,7 +15170,7 @@ func (m *MockHouseholdIntegrationRepository) Create(integration *dbModel.Househo
 
 
 <a name="MockHouseholdIntegrationRepository.Delete"></a>
-### func \(\*MockHouseholdIntegrationRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1021>)
+### func \(\*MockHouseholdIntegrationRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1029>)
 
 ```go
 func (m *MockHouseholdIntegrationRepository) Delete(householdID uint, provider string) error
@@ -15021,7 +15179,7 @@ func (m *MockHouseholdIntegrationRepository) Delete(householdID uint, provider s
 
 
 <a name="MockHouseholdIntegrationRepository.GetByHouseholdAndProvider"></a>
-### func \(\*MockHouseholdIntegrationRepository\) [GetByHouseholdAndProvider](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L947>)
+### func \(\*MockHouseholdIntegrationRepository\) [GetByHouseholdAndProvider](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L955>)
 
 ```go
 func (m *MockHouseholdIntegrationRepository) GetByHouseholdAndProvider(householdID uint, provider string) (*dbModel.HouseholdIntegration, error)
@@ -15030,7 +15188,7 @@ func (m *MockHouseholdIntegrationRepository) GetByHouseholdAndProvider(household
 
 
 <a name="MockHouseholdIntegrationRepository.ListByHousehold"></a>
-### func \(\*MockHouseholdIntegrationRepository\) [ListByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L960>)
+### func \(\*MockHouseholdIntegrationRepository\) [ListByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L968>)
 
 ```go
 func (m *MockHouseholdIntegrationRepository) ListByHousehold(householdID uint) ([]dbModel.HouseholdIntegration, error)
@@ -15039,7 +15197,7 @@ func (m *MockHouseholdIntegrationRepository) ListByHousehold(householdID uint) (
 
 
 <a name="MockHouseholdIntegrationRepository.ListEnabled"></a>
-### func \(\*MockHouseholdIntegrationRepository\) [ListEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L973>)
+### func \(\*MockHouseholdIntegrationRepository\) [ListEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L981>)
 
 ```go
 func (m *MockHouseholdIntegrationRepository) ListEnabled() ([]dbModel.HouseholdIntegration, error)
@@ -15048,7 +15206,7 @@ func (m *MockHouseholdIntegrationRepository) ListEnabled() ([]dbModel.HouseholdI
 
 
 <a name="MockHouseholdIntegrationRepository.Update"></a>
-### func \(\*MockHouseholdIntegrationRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L994>)
+### func \(\*MockHouseholdIntegrationRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1002>)
 
 ```go
 func (m *MockHouseholdIntegrationRepository) Update(integration *dbModel.HouseholdIntegration) error
@@ -15057,7 +15215,7 @@ func (m *MockHouseholdIntegrationRepository) Update(integration *dbModel.Househo
 
 
 <a name="MockHouseholdIntegrationRepository.Upsert"></a>
-### func \(\*MockHouseholdIntegrationRepository\) [Upsert](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1007>)
+### func \(\*MockHouseholdIntegrationRepository\) [Upsert](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1015>)
 
 ```go
 func (m *MockHouseholdIntegrationRepository) Upsert(integration *dbModel.HouseholdIntegration) error
@@ -15066,7 +15224,7 @@ func (m *MockHouseholdIntegrationRepository) Upsert(integration *dbModel.Househo
 
 
 <a name="MockHouseholdRepository"></a>
-## type [MockHouseholdRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L488-L495>)
+## type [MockHouseholdRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L493-L500>)
 
 MockHouseholdRepository is a configurable in\-memory stub for HouseholdRepositoryInterface.
 
@@ -15082,7 +15240,7 @@ type MockHouseholdRepository struct {
 ```
 
 <a name="MockHouseholdRepository.ApplyForHousehold"></a>
-### func \(\*MockHouseholdRepository\) [ApplyForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L510>)
+### func \(\*MockHouseholdRepository\) [ApplyForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L515>)
 
 ```go
 func (m *MockHouseholdRepository) ApplyForHousehold(applicantID, householdID uint) error
@@ -15091,7 +15249,7 @@ func (m *MockHouseholdRepository) ApplyForHousehold(applicantID, householdID uin
 
 
 <a name="MockHouseholdRepository.ApproveApplication"></a>
-### func \(\*MockHouseholdRepository\) [ApproveApplication](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L516>)
+### func \(\*MockHouseholdRepository\) [ApproveApplication](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L521>)
 
 ```go
 func (m *MockHouseholdRepository) ApproveApplication(applicationID, adminUserID uint) error
@@ -15100,7 +15258,7 @@ func (m *MockHouseholdRepository) ApproveApplication(applicationID, adminUserID 
 
 
 <a name="MockHouseholdRepository.CancelApplication"></a>
-### func \(\*MockHouseholdRepository\) [CancelApplication](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L525>)
+### func \(\*MockHouseholdRepository\) [CancelApplication](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L530>)
 
 ```go
 func (m *MockHouseholdRepository) CancelApplication(applicationID, applicantUserID uint) error
@@ -15109,7 +15267,7 @@ func (m *MockHouseholdRepository) CancelApplication(applicationID, applicantUser
 
 
 <a name="MockHouseholdRepository.CreateAndSwitchHousehold"></a>
-### func \(\*MockHouseholdRepository\) [CreateAndSwitchHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L507>)
+### func \(\*MockHouseholdRepository\) [CreateAndSwitchHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L512>)
 
 ```go
 func (m *MockHouseholdRepository) CreateAndSwitchHousehold(userID uint, name string) error
@@ -15118,7 +15276,7 @@ func (m *MockHouseholdRepository) CreateAndSwitchHousehold(userID uint, name str
 
 
 <a name="MockHouseholdRepository.GetHouseholdByID"></a>
-### func \(\*MockHouseholdRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L497>)
+### func \(\*MockHouseholdRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L502>)
 
 ```go
 func (m *MockHouseholdRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
@@ -15127,7 +15285,7 @@ func (m *MockHouseholdRepository) GetHouseholdByID(householdID uint) (dbModel.Ho
 
 
 <a name="MockHouseholdRepository.GetHouseholdMemberCount"></a>
-### func \(\*MockHouseholdRepository\) [GetHouseholdMemberCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L500>)
+### func \(\*MockHouseholdRepository\) [GetHouseholdMemberCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L505>)
 
 ```go
 func (m *MockHouseholdRepository) GetHouseholdMemberCount(householdID uint) (int64, error)
@@ -15136,7 +15294,7 @@ func (m *MockHouseholdRepository) GetHouseholdMemberCount(householdID uint) (int
 
 
 <a name="MockHouseholdRepository.GetHouseholdMembers"></a>
-### func \(\*MockHouseholdRepository\) [GetHouseholdMembers](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L503>)
+### func \(\*MockHouseholdRepository\) [GetHouseholdMembers](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L508>)
 
 ```go
 func (m *MockHouseholdRepository) GetHouseholdMembers(householdID uint) ([]authentication.User, error)
@@ -15145,7 +15303,7 @@ func (m *MockHouseholdRepository) GetHouseholdMembers(householdID uint) ([]authe
 
 
 <a name="MockHouseholdRepository.GetPendingApplicationsForAdmin"></a>
-### func \(\*MockHouseholdRepository\) [GetPendingApplicationsForAdmin](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L513>)
+### func \(\*MockHouseholdRepository\) [GetPendingApplicationsForAdmin](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L518>)
 
 ```go
 func (m *MockHouseholdRepository) GetPendingApplicationsForAdmin(adminUserID uint) ([]dbModel.HouseholdApplication, error)
@@ -15154,7 +15312,7 @@ func (m *MockHouseholdRepository) GetPendingApplicationsForAdmin(adminUserID uin
 
 
 <a name="MockHouseholdRepository.GetPendingApplicationsForApplicant"></a>
-### func \(\*MockHouseholdRepository\) [GetPendingApplicationsForApplicant](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L522>)
+### func \(\*MockHouseholdRepository\) [GetPendingApplicationsForApplicant](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L527>)
 
 ```go
 func (m *MockHouseholdRepository) GetPendingApplicationsForApplicant(applicantUserID uint) ([]dbModel.HouseholdApplication, error)
@@ -15163,7 +15321,7 @@ func (m *MockHouseholdRepository) GetPendingApplicationsForApplicant(applicantUs
 
 
 <a name="MockHouseholdRepository.GetPublicHouseholds"></a>
-### func \(\*MockHouseholdRepository\) [GetPublicHouseholds](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L540>)
+### func \(\*MockHouseholdRepository\) [GetPublicHouseholds](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L545>)
 
 ```go
 func (m *MockHouseholdRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error)
@@ -15172,7 +15330,7 @@ func (m *MockHouseholdRepository) GetPublicHouseholds(excludeHouseholdID uint) (
 
 
 <a name="MockHouseholdRepository.LeaveHousehold"></a>
-### func \(\*MockHouseholdRepository\) [LeaveHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L506>)
+### func \(\*MockHouseholdRepository\) [LeaveHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L511>)
 
 ```go
 func (m *MockHouseholdRepository) LeaveHousehold(userID uint) error
@@ -15181,7 +15339,7 @@ func (m *MockHouseholdRepository) LeaveHousehold(userID uint) error
 
 
 <a name="MockHouseholdRepository.RejectApplication"></a>
-### func \(\*MockHouseholdRepository\) [RejectApplication](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L519>)
+### func \(\*MockHouseholdRepository\) [RejectApplication](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L524>)
 
 ```go
 func (m *MockHouseholdRepository) RejectApplication(applicationID, adminUserID uint) error
@@ -15190,7 +15348,7 @@ func (m *MockHouseholdRepository) RejectApplication(applicationID, adminUserID u
 
 
 <a name="MockHouseholdRepository.RemoveMemberFromHousehold"></a>
-### func \(\*MockHouseholdRepository\) [RemoveMemberFromHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L534>)
+### func \(\*MockHouseholdRepository\) [RemoveMemberFromHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L539>)
 
 ```go
 func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
@@ -15199,7 +15357,7 @@ func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminU
 
 
 <a name="MockHouseholdRepository.SetHouseholdMemberRole"></a>
-### func \(\*MockHouseholdRepository\) [SetHouseholdMemberRole](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L537>)
+### func \(\*MockHouseholdRepository\) [SetHouseholdMemberRole](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L542>)
 
 ```go
 func (m *MockHouseholdRepository) SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
@@ -15208,7 +15366,7 @@ func (m *MockHouseholdRepository) SetHouseholdMemberRole(memberUserID, adminUser
 
 
 <a name="MockHouseholdRepository.UpdateHouseholdName"></a>
-### func \(\*MockHouseholdRepository\) [UpdateHouseholdName](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L528>)
+### func \(\*MockHouseholdRepository\) [UpdateHouseholdName](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L533>)
 
 ```go
 func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error
@@ -15217,7 +15375,7 @@ func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID u
 
 
 <a name="MockHouseholdRepository.UpdateHouseholdSettings"></a>
-### func \(\*MockHouseholdRepository\) [UpdateHouseholdSettings](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L531>)
+### func \(\*MockHouseholdRepository\) [UpdateHouseholdSettings](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L536>)
 
 ```go
 func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language *string) error
@@ -15226,7 +15384,7 @@ func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUser
 
 
 <a name="MockInvitationRepository"></a>
-## type [MockInvitationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L547-L551>)
+## type [MockInvitationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L552-L556>)
 
 MockInvitationRepository is a configurable in\-memory stub for InvitationRepositoryInterface.
 
@@ -15239,7 +15397,7 @@ type MockInvitationRepository struct {
 ```
 
 <a name="MockInvitationRepository.AcceptInvitation"></a>
-### func \(\*MockInvitationRepository\) [AcceptInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L568>)
+### func \(\*MockInvitationRepository\) [AcceptInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L573>)
 
 ```go
 func (m *MockInvitationRepository) AcceptInvitation(token, email string, userID uint) error
@@ -15248,7 +15406,7 @@ func (m *MockInvitationRepository) AcceptInvitation(token, email string, userID 
 
 
 <a name="MockInvitationRepository.CancelInvitation"></a>
-### func \(\*MockInvitationRepository\) [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L571>)
+### func \(\*MockInvitationRepository\) [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L576>)
 
 ```go
 func (m *MockInvitationRepository) CancelInvitation(invitationID, userID uint) error
@@ -15257,7 +15415,7 @@ func (m *MockInvitationRepository) CancelInvitation(invitationID, userID uint) e
 
 
 <a name="MockInvitationRepository.CreateInvitation"></a>
-### func \(\*MockInvitationRepository\) [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L553>)
+### func \(\*MockInvitationRepository\) [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L558>)
 
 ```go
 func (m *MockInvitationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error)
@@ -15266,7 +15424,7 @@ func (m *MockInvitationRepository) CreateInvitation(householdID, inviterID uint,
 
 
 <a name="MockInvitationRepository.CreateInvitationTx"></a>
-### func \(\*MockInvitationRepository\) [CreateInvitationTx](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L556>)
+### func \(\*MockInvitationRepository\) [CreateInvitationTx](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L561>)
 
 ```go
 func (m *MockInvitationRepository) CreateInvitationTx(tx *gorm.DB, householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error)
@@ -15275,7 +15433,7 @@ func (m *MockInvitationRepository) CreateInvitationTx(tx *gorm.DB, householdID, 
 
 
 <a name="MockInvitationRepository.GetInvitationByToken"></a>
-### func \(\*MockInvitationRepository\) [GetInvitationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L565>)
+### func \(\*MockInvitationRepository\) [GetInvitationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L570>)
 
 ```go
 func (m *MockInvitationRepository) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error)
@@ -15284,7 +15442,7 @@ func (m *MockInvitationRepository) GetInvitationByToken(token string) (dbModel.H
 
 
 <a name="MockInvitationRepository.GetInvitationsForHousehold"></a>
-### func \(\*MockInvitationRepository\) [GetInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L559>)
+### func \(\*MockInvitationRepository\) [GetInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L564>)
 
 ```go
 func (m *MockInvitationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error)
@@ -15293,7 +15451,7 @@ func (m *MockInvitationRepository) GetInvitationsForHousehold(householdID, invit
 
 
 <a name="MockInvitationRepository.GetPendingInvitationsForHousehold"></a>
-### func \(\*MockInvitationRepository\) [GetPendingInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L562>)
+### func \(\*MockInvitationRepository\) [GetPendingInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L567>)
 
 ```go
 func (m *MockInvitationRepository) GetPendingInvitationsForHousehold(householdID uint) ([]dbModel.HouseholdInvitation, error)
@@ -15302,7 +15460,7 @@ func (m *MockInvitationRepository) GetPendingInvitationsForHousehold(householdID
 
 
 <a name="MockInvitationRepository.GetPendingInvitationsNotSent"></a>
-### func \(\*MockInvitationRepository\) [GetPendingInvitationsNotSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L572>)
+### func \(\*MockInvitationRepository\) [GetPendingInvitationsNotSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L577>)
 
 ```go
 func (m *MockInvitationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error)
@@ -15311,7 +15469,7 @@ func (m *MockInvitationRepository) GetPendingInvitationsNotSent(retryInterval ti
 
 
 <a name="MockInvitationRepository.MarkInvitationExpired"></a>
-### func \(\*MockInvitationRepository\) [MarkInvitationExpired](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L580>)
+### func \(\*MockInvitationRepository\) [MarkInvitationExpired](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L585>)
 
 ```go
 func (m *MockInvitationRepository) MarkInvitationExpired(invitationID uint) error
@@ -15320,7 +15478,7 @@ func (m *MockInvitationRepository) MarkInvitationExpired(invitationID uint) erro
 
 
 <a name="MockInvitationRepository.MarkInvitationSendFailed"></a>
-### func \(\*MockInvitationRepository\) [MarkInvitationSendFailed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L579>)
+### func \(\*MockInvitationRepository\) [MarkInvitationSendFailed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L584>)
 
 ```go
 func (m *MockInvitationRepository) MarkInvitationSendFailed(invitationID uint) error
@@ -15329,7 +15487,7 @@ func (m *MockInvitationRepository) MarkInvitationSendFailed(invitationID uint) e
 
 
 <a name="MockInvitationRepository.MarkInvitationSent"></a>
-### func \(\*MockInvitationRepository\) [MarkInvitationSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L575>)
+### func \(\*MockInvitationRepository\) [MarkInvitationSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L580>)
 
 ```go
 func (m *MockInvitationRepository) MarkInvitationSent(invitationID uint) error
@@ -15338,7 +15496,7 @@ func (m *MockInvitationRepository) MarkInvitationSent(invitationID uint) error
 
 
 <a name="MockInvitationRepository.MarkInvitationSentTx"></a>
-### func \(\*MockInvitationRepository\) [MarkInvitationSentTx](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L576>)
+### func \(\*MockInvitationRepository\) [MarkInvitationSentTx](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L581>)
 
 ```go
 func (m *MockInvitationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
@@ -15347,7 +15505,7 @@ func (m *MockInvitationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationI
 
 
 <a name="MockMealPlanRepository"></a>
-## type [MockMealPlanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L760-L764>)
+## type [MockMealPlanRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L768-L772>)
 
 MockMealPlanRepository is a configurable in\-memory stub for MealPlanRepositoryInterface.
 
@@ -15360,7 +15518,7 @@ type MockMealPlanRepository struct {
 ```
 
 <a name="MockMealPlanRepository.Create"></a>
-### func \(\*MockMealPlanRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L766>)
+### func \(\*MockMealPlanRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L774>)
 
 ```go
 func (m *MockMealPlanRepository) Create(entry *dbModel.MealPlanEntry) error
@@ -15369,7 +15527,7 @@ func (m *MockMealPlanRepository) Create(entry *dbModel.MealPlanEntry) error
 
 
 <a name="MockMealPlanRepository.Delete"></a>
-### func \(\*MockMealPlanRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L774>)
+### func \(\*MockMealPlanRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L782>)
 
 ```go
 func (m *MockMealPlanRepository) Delete(id, householdID uint) error
@@ -15378,7 +15536,7 @@ func (m *MockMealPlanRepository) Delete(id, householdID uint) error
 
 
 <a name="MockMealPlanRepository.GetByID"></a>
-### func \(\*MockMealPlanRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L767>)
+### func \(\*MockMealPlanRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L775>)
 
 ```go
 func (m *MockMealPlanRepository) GetByID(id, householdID uint) (*dbModel.MealPlanEntry, error)
@@ -15387,7 +15545,7 @@ func (m *MockMealPlanRepository) GetByID(id, householdID uint) (*dbModel.MealPla
 
 
 <a name="MockMealPlanRepository.ListByRange"></a>
-### func \(\*MockMealPlanRepository\) [ListByRange](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L770>)
+### func \(\*MockMealPlanRepository\) [ListByRange](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L778>)
 
 ```go
 func (m *MockMealPlanRepository) ListByRange(householdID uint, from, to time.Time) ([]dbModel.MealPlanEntry, error)
@@ -15396,7 +15554,7 @@ func (m *MockMealPlanRepository) ListByRange(householdID uint, from, to time.Tim
 
 
 <a name="MockMealPlanRepository.Update"></a>
-### func \(\*MockMealPlanRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L773>)
+### func \(\*MockMealPlanRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L781>)
 
 ```go
 func (m *MockMealPlanRepository) Update(entry *dbModel.MealPlanEntry) error
@@ -15405,7 +15563,7 @@ func (m *MockMealPlanRepository) Update(entry *dbModel.MealPlanEntry) error
 
 
 <a name="MockNotificationRepository"></a>
-## type [MockNotificationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L779-L794>)
+## type [MockNotificationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L787-L802>)
 
 MockNotificationRepository is a configurable in\-memory stub for NotificationRepositoryInterface.
 
@@ -15429,7 +15587,7 @@ type MockNotificationRepository struct {
 ```
 
 <a name="MockNotificationRepository.AcceptInvitation"></a>
-### func \(\*MockNotificationRepository\) [AcceptInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L816>)
+### func \(\*MockNotificationRepository\) [AcceptInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L824>)
 
 ```go
 func (m *MockNotificationRepository) AcceptInvitation(token, email string, userID uint) error
@@ -15438,7 +15596,7 @@ func (m *MockNotificationRepository) AcceptInvitation(token, email string, userI
 
 
 <a name="MockNotificationRepository.CancelInvitation"></a>
-### func \(\*MockNotificationRepository\) [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L819>)
+### func \(\*MockNotificationRepository\) [CancelInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L827>)
 
 ```go
 func (m *MockNotificationRepository) CancelInvitation(invitationID, userID uint) error
@@ -15447,7 +15605,7 @@ func (m *MockNotificationRepository) CancelInvitation(invitationID, userID uint)
 
 
 <a name="MockNotificationRepository.CreateInvitation"></a>
-### func \(\*MockNotificationRepository\) [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L807>)
+### func \(\*MockNotificationRepository\) [CreateInvitation](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L815>)
 
 ```go
 func (m *MockNotificationRepository) CreateInvitation(householdID, inviterID uint, email string) (dbModel.HouseholdInvitation, error)
@@ -15456,7 +15614,7 @@ func (m *MockNotificationRepository) CreateInvitation(householdID, inviterID uin
 
 
 <a name="MockNotificationRepository.DeleteMailDigestUnsubscribeToken"></a>
-### func \(\*MockNotificationRepository\) [DeleteMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L883>)
+### func \(\*MockNotificationRepository\) [DeleteMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L891>)
 
 ```go
 func (m *MockNotificationRepository) DeleteMailDigestUnsubscribeToken(token string) error
@@ -15465,7 +15623,7 @@ func (m *MockNotificationRepository) DeleteMailDigestUnsubscribeToken(token stri
 
 
 <a name="MockNotificationRepository.DeleteWebPushSubscription"></a>
-### func \(\*MockNotificationRepository\) [DeleteWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L871>)
+### func \(\*MockNotificationRepository\) [DeleteWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L879>)
 
 ```go
 func (m *MockNotificationRepository) DeleteWebPushSubscription(userID uint) error
@@ -15474,7 +15632,7 @@ func (m *MockNotificationRepository) DeleteWebPushSubscription(userID uint) erro
 
 
 <a name="MockNotificationRepository.FindUserByTelegramLinkToken"></a>
-### func \(\*MockNotificationRepository\) [FindUserByTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L853>)
+### func \(\*MockNotificationRepository\) [FindUserByTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L861>)
 
 ```go
 func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (authentication.User, error)
@@ -15483,7 +15641,7 @@ func (m *MockNotificationRepository) FindUserByTelegramLinkToken(token string) (
 
 
 <a name="MockNotificationRepository.GenerateMailDigestUnsubscribeToken"></a>
-### func \(\*MockNotificationRepository\) [GenerateMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L877>)
+### func \(\*MockNotificationRepository\) [GenerateMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L885>)
 
 ```go
 func (m *MockNotificationRepository) GenerateMailDigestUnsubscribeToken(userID uint) (string, error)
@@ -15492,7 +15650,7 @@ func (m *MockNotificationRepository) GenerateMailDigestUnsubscribeToken(userID u
 
 
 <a name="MockNotificationRepository.GetAllUsersWithTelegramBotToken"></a>
-### func \(\*MockNotificationRepository\) [GetAllUsersWithTelegramBotToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L865>)
+### func \(\*MockNotificationRepository\) [GetAllUsersWithTelegramBotToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L873>)
 
 ```go
 func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authentication.User, error)
@@ -15501,7 +15659,7 @@ func (m *MockNotificationRepository) GetAllUsersWithTelegramBotToken() ([]authen
 
 
 <a name="MockNotificationRepository.GetHouseholdByID"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L825>)
+### func \(\*MockNotificationRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L833>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
@@ -15510,7 +15668,7 @@ func (m *MockNotificationRepository) GetHouseholdByID(householdID uint) (dbModel
 
 
 <a name="MockNotificationRepository.GetHouseholdMembersMailAddressesByID"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdMembersMailAddressesByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L800>)
+### func \(\*MockNotificationRepository\) [GetHouseholdMembersMailAddressesByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L808>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdMembersMailAddressesByID(householdID uint) ([]string, error)
@@ -15519,7 +15677,7 @@ func (m *MockNotificationRepository) GetHouseholdMembersMailAddressesByID(househ
 
 
 <a name="MockNotificationRepository.GetHouseholdMembersNotificationPreferences"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdMembersNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L803>)
+### func \(\*MockNotificationRepository\) [GetHouseholdMembersNotificationPreferences](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L811>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdMembersNotificationPreferences(householdID uint) ([]models.NotificationRecipientInfo, error)
@@ -15528,7 +15686,7 @@ func (m *MockNotificationRepository) GetHouseholdMembersNotificationPreferences(
 
 
 <a name="MockNotificationRepository.GetHouseholdsWithMailDigestEnabled"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdsWithMailDigestEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L886>)
+### func \(\*MockNotificationRepository\) [GetHouseholdsWithMailDigestEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L894>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]models.HouseholdMailDigestTarget, error)
@@ -15537,7 +15695,7 @@ func (m *MockNotificationRepository) GetHouseholdsWithMailDigestEnabled() ([]mod
 
 
 <a name="MockNotificationRepository.GetHouseholdsWithMonthlyWasteReportEnabled"></a>
-### func \(\*MockNotificationRepository\) [GetHouseholdsWithMonthlyWasteReportEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L838>)
+### func \(\*MockNotificationRepository\) [GetHouseholdsWithMonthlyWasteReportEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L846>)
 
 ```go
 func (m *MockNotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled() ([]models.HouseholdReportTarget, error)
@@ -15546,7 +15704,7 @@ func (m *MockNotificationRepository) GetHouseholdsWithMonthlyWasteReportEnabled(
 
 
 <a name="MockNotificationRepository.GetInvitationByToken"></a>
-### func \(\*MockNotificationRepository\) [GetInvitationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L813>)
+### func \(\*MockNotificationRepository\) [GetInvitationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L821>)
 
 ```go
 func (m *MockNotificationRepository) GetInvitationByToken(token string) (dbModel.HouseholdInvitation, error)
@@ -15555,7 +15713,7 @@ func (m *MockNotificationRepository) GetInvitationByToken(token string) (dbModel
 
 
 <a name="MockNotificationRepository.GetInvitationsForHousehold"></a>
-### func \(\*MockNotificationRepository\) [GetInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L810>)
+### func \(\*MockNotificationRepository\) [GetInvitationsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L818>)
 
 ```go
 func (m *MockNotificationRepository) GetInvitationsForHousehold(householdID, inviterID uint) ([]dbModel.HouseholdInvitation, error)
@@ -15564,7 +15722,7 @@ func (m *MockNotificationRepository) GetInvitationsForHousehold(householdID, inv
 
 
 <a name="MockNotificationRepository.GetMaxNotificationThresholdDays"></a>
-### func \(\*MockNotificationRepository\) [GetMaxNotificationThresholdDays](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L799>)
+### func \(\*MockNotificationRepository\) [GetMaxNotificationThresholdDays](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L807>)
 
 ```go
 func (m *MockNotificationRepository) GetMaxNotificationThresholdDays() int
@@ -15573,7 +15731,7 @@ func (m *MockNotificationRepository) GetMaxNotificationThresholdDays() int
 
 
 <a name="MockNotificationRepository.GetOnboardingState"></a>
-### func \(\*MockNotificationRepository\) [GetOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L844>)
+### func \(\*MockNotificationRepository\) [GetOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L852>)
 
 ```go
 func (m *MockNotificationRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error)
@@ -15582,7 +15740,7 @@ func (m *MockNotificationRepository) GetOnboardingState(userID uint) (dbModel.On
 
 
 <a name="MockNotificationRepository.GetPendingInvitationsNotSent"></a>
-### func \(\*MockNotificationRepository\) [GetPendingInvitationsNotSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L828>)
+### func \(\*MockNotificationRepository\) [GetPendingInvitationsNotSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L836>)
 
 ```go
 func (m *MockNotificationRepository) GetPendingInvitationsNotSent(retryInterval time.Duration) ([]dbModel.HouseholdInvitation, error)
@@ -15591,7 +15749,7 @@ func (m *MockNotificationRepository) GetPendingInvitationsNotSent(retryInterval 
 
 
 <a name="MockNotificationRepository.GetProductsExpiredAndNotificationPending"></a>
-### func \(\*MockNotificationRepository\) [GetProductsExpiredAndNotificationPending](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L796>)
+### func \(\*MockNotificationRepository\) [GetProductsExpiredAndNotificationPending](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L804>)
 
 ```go
 func (m *MockNotificationRepository) GetProductsExpiredAndNotificationPending(sleepInterval time.Duration, maxLookAheadDays int) ([]dbModel.Product, error)
@@ -15600,7 +15758,7 @@ func (m *MockNotificationRepository) GetProductsExpiredAndNotificationPending(sl
 
 
 <a name="MockNotificationRepository.GetPublicHouseholds"></a>
-### func \(\*MockNotificationRepository\) [GetPublicHouseholds](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L850>)
+### func \(\*MockNotificationRepository\) [GetPublicHouseholds](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L858>)
 
 ```go
 func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint) ([]dbModel.HouseholdWithMemberCount, error)
@@ -15609,7 +15767,7 @@ func (m *MockNotificationRepository) GetPublicHouseholds(excludeHouseholdID uint
 
 
 <a name="MockNotificationRepository.GetUserByID"></a>
-### func \(\*MockNotificationRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L822>)
+### func \(\*MockNotificationRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L830>)
 
 ```go
 func (m *MockNotificationRepository) GetUserByID(userID uint) (authentication.User, error)
@@ -15618,7 +15776,7 @@ func (m *MockNotificationRepository) GetUserByID(userID uint) (authentication.Us
 
 
 <a name="MockNotificationRepository.GetUserByMailDigestUnsubscribeToken"></a>
-### func \(\*MockNotificationRepository\) [GetUserByMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L880>)
+### func \(\*MockNotificationRepository\) [GetUserByMailDigestUnsubscribeToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L888>)
 
 ```go
 func (m *MockNotificationRepository) GetUserByMailDigestUnsubscribeToken(token string) (authentication.User, error)
@@ -15627,7 +15785,7 @@ func (m *MockNotificationRepository) GetUserByMailDigestUnsubscribeToken(token s
 
 
 <a name="MockNotificationRepository.GetVAPIDKeys"></a>
-### func \(\*MockNotificationRepository\) [GetVAPIDKeys](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L874>)
+### func \(\*MockNotificationRepository\) [GetVAPIDKeys](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L882>)
 
 ```go
 func (m *MockNotificationRepository) GetVAPIDKeys() (publicKey, privateKey string, err error)
@@ -15636,7 +15794,7 @@ func (m *MockNotificationRepository) GetVAPIDKeys() (publicKey, privateKey strin
 
 
 <a name="MockNotificationRepository.GetWasteStatsForHousehold"></a>
-### func \(\*MockNotificationRepository\) [GetWasteStatsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L841>)
+### func \(\*MockNotificationRepository\) [GetWasteStatsForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L849>)
 
 ```go
 func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error)
@@ -15645,7 +15803,7 @@ func (m *MockNotificationRepository) GetWasteStatsForHousehold(householdID uint,
 
 
 <a name="MockNotificationRepository.MarkHouseholdStepDone"></a>
-### func \(\*MockNotificationRepository\) [MarkHouseholdStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L848>)
+### func \(\*MockNotificationRepository\) [MarkHouseholdStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L856>)
 
 ```go
 func (m *MockNotificationRepository) MarkHouseholdStepDone(userID uint) error
@@ -15654,7 +15812,7 @@ func (m *MockNotificationRepository) MarkHouseholdStepDone(userID uint) error
 
 
 <a name="MockNotificationRepository.MarkInvitationSendFailed"></a>
-### func \(\*MockNotificationRepository\) [MarkInvitationSendFailed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L835>)
+### func \(\*MockNotificationRepository\) [MarkInvitationSendFailed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L843>)
 
 ```go
 func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint) error
@@ -15663,7 +15821,7 @@ func (m *MockNotificationRepository) MarkInvitationSendFailed(invitationID uint)
 
 
 <a name="MockNotificationRepository.MarkInvitationSent"></a>
-### func \(\*MockNotificationRepository\) [MarkInvitationSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L831>)
+### func \(\*MockNotificationRepository\) [MarkInvitationSent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L839>)
 
 ```go
 func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error
@@ -15672,7 +15830,7 @@ func (m *MockNotificationRepository) MarkInvitationSent(invitationID uint) error
 
 
 <a name="MockNotificationRepository.MarkInvitationSentTx"></a>
-### func \(\*MockNotificationRepository\) [MarkInvitationSentTx](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L832>)
+### func \(\*MockNotificationRepository\) [MarkInvitationSentTx](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L840>)
 
 ```go
 func (m *MockNotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitationID uint) error
@@ -15681,7 +15839,7 @@ func (m *MockNotificationRepository) MarkInvitationSentTx(tx *gorm.DB, invitatio
 
 
 <a name="MockNotificationRepository.MarkNotificationsSetup"></a>
-### func \(\*MockNotificationRepository\) [MarkNotificationsSetup](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L847>)
+### func \(\*MockNotificationRepository\) [MarkNotificationsSetup](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L855>)
 
 ```go
 func (m *MockNotificationRepository) MarkNotificationsSetup(userID uint) error
@@ -15690,7 +15848,7 @@ func (m *MockNotificationRepository) MarkNotificationsSetup(userID uint) error
 
 
 <a name="MockNotificationRepository.MarkOnboardingComplete"></a>
-### func \(\*MockNotificationRepository\) [MarkOnboardingComplete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L849>)
+### func \(\*MockNotificationRepository\) [MarkOnboardingComplete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L857>)
 
 ```go
 func (m *MockNotificationRepository) MarkOnboardingComplete(userID uint) error
@@ -15699,7 +15857,7 @@ func (m *MockNotificationRepository) MarkOnboardingComplete(userID uint) error
 
 
 <a name="MockNotificationRepository.SaveWebPushSubscription"></a>
-### func \(\*MockNotificationRepository\) [SaveWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L868>)
+### func \(\*MockNotificationRepository\) [SaveWebPushSubscription](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L876>)
 
 ```go
 func (m *MockNotificationRepository) SaveWebPushSubscription(userID uint, subscriptionJSON string) error
@@ -15708,7 +15866,7 @@ func (m *MockNotificationRepository) SaveWebPushSubscription(userID uint, subscr
 
 
 <a name="MockNotificationRepository.SetProductNotifiedAt"></a>
-### func \(\*MockNotificationRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L806>)
+### func \(\*MockNotificationRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L814>)
 
 ```go
 func (m *MockNotificationRepository) SetProductNotifiedAt(productID uint) error
@@ -15717,7 +15875,7 @@ func (m *MockNotificationRepository) SetProductNotifiedAt(productID uint) error
 
 
 <a name="MockNotificationRepository.SetTelegramBotUsername"></a>
-### func \(\*MockNotificationRepository\) [SetTelegramBotUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L862>)
+### func \(\*MockNotificationRepository\) [SetTelegramBotUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L870>)
 
 ```go
 func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, username string) error
@@ -15726,7 +15884,7 @@ func (m *MockNotificationRepository) SetTelegramBotUsername(userID uint, usernam
 
 
 <a name="MockNotificationRepository.SetTelegramChatID"></a>
-### func \(\*MockNotificationRepository\) [SetTelegramChatID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L856>)
+### func \(\*MockNotificationRepository\) [SetTelegramChatID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L864>)
 
 ```go
 func (m *MockNotificationRepository) SetTelegramChatID(userID uint, chatID string) error
@@ -15735,7 +15893,7 @@ func (m *MockNotificationRepository) SetTelegramChatID(userID uint, chatID strin
 
 
 <a name="MockNotificationRepository.SetTelegramLinkToken"></a>
-### func \(\*MockNotificationRepository\) [SetTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L859>)
+### func \(\*MockNotificationRepository\) [SetTelegramLinkToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L867>)
 
 ```go
 func (m *MockNotificationRepository) SetTelegramLinkToken(userID uint, token string) error
@@ -15744,7 +15902,7 @@ func (m *MockNotificationRepository) SetTelegramLinkToken(userID uint, token str
 
 
 <a name="MockPATRepository"></a>
-## type [MockPATRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L639-L643>)
+## type [MockPATRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L644-L648>)
 
 MockPATRepository is a configurable in\-memory stub for PATRepositoryInterface.
 
@@ -15757,7 +15915,7 @@ type MockPATRepository struct {
 ```
 
 <a name="MockPATRepository.CreatePAT"></a>
-### func \(\*MockPATRepository\) [CreatePAT](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L645>)
+### func \(\*MockPATRepository\) [CreatePAT](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L650>)
 
 ```go
 func (m *MockPATRepository) CreatePAT(userID uint, name, tokenHash string, expiresAt *time.Time, scopes string) (*authentication.PersonalAccessToken, error)
@@ -15766,7 +15924,7 @@ func (m *MockPATRepository) CreatePAT(userID uint, name, tokenHash string, expir
 
 
 <a name="MockPATRepository.DeletePAT"></a>
-### func \(\*MockPATRepository\) [DeletePAT](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L657>)
+### func \(\*MockPATRepository\) [DeletePAT](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L662>)
 
 ```go
 func (m *MockPATRepository) DeletePAT(patID, userID uint) error
@@ -15775,7 +15933,7 @@ func (m *MockPATRepository) DeletePAT(patID, userID uint) error
 
 
 <a name="MockPATRepository.GetPATByID"></a>
-### func \(\*MockPATRepository\) [GetPATByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L654>)
+### func \(\*MockPATRepository\) [GetPATByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L659>)
 
 ```go
 func (m *MockPATRepository) GetPATByID(patID uint) (*authentication.PersonalAccessToken, error)
@@ -15784,7 +15942,7 @@ func (m *MockPATRepository) GetPATByID(patID uint) (*authentication.PersonalAcce
 
 
 <a name="MockPATRepository.GetPATByTokenHash"></a>
-### func \(\*MockPATRepository\) [GetPATByTokenHash](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L648>)
+### func \(\*MockPATRepository\) [GetPATByTokenHash](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L653>)
 
 ```go
 func (m *MockPATRepository) GetPATByTokenHash(tokenHash string) (*authentication.PersonalAccessToken, error)
@@ -15793,7 +15951,7 @@ func (m *MockPATRepository) GetPATByTokenHash(tokenHash string) (*authentication
 
 
 <a name="MockPATRepository.GetPATsByUserID"></a>
-### func \(\*MockPATRepository\) [GetPATsByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L651>)
+### func \(\*MockPATRepository\) [GetPATsByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L656>)
 
 ```go
 func (m *MockPATRepository) GetPATsByUserID(userID uint) ([]authentication.PersonalAccessToken, error)
@@ -15802,7 +15960,7 @@ func (m *MockPATRepository) GetPATsByUserID(userID uint) ([]authentication.Perso
 
 
 <a name="MockPATRepository.UpdateLastUsed"></a>
-### func \(\*MockPATRepository\) [UpdateLastUsed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L658>)
+### func \(\*MockPATRepository\) [UpdateLastUsed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L663>)
 
 ```go
 func (m *MockPATRepository) UpdateLastUsed(patID uint) error
@@ -15811,7 +15969,7 @@ func (m *MockPATRepository) UpdateLastUsed(patID uint) error
 
 
 <a name="MockProductRepository"></a>
-## type [MockProductRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L17-L69>)
+## type [MockProductRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L17-L71>)
 
 MockProductRepository is a configurable in\-memory stub for ProductRepositoryInterface.
 
@@ -15868,11 +16026,13 @@ type MockProductRepository struct {
     WastePartialMutationIDs   []*string
     ConsumePartialQuantities  []int
     WastePartialQuantities    []int
+    // WastePartialCauses records the cause of every recorded waste.
+    WastePartialCauses []string
 }
 ```
 
 <a name="MockProductRepository.BulkConsumeProducts"></a>
-### func \(\*MockProductRepository\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L353>)
+### func \(\*MockProductRepository\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L358>)
 
 ```go
 func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError
@@ -15881,7 +16041,7 @@ func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID ui
 
 
 <a name="MockProductRepository.BulkRestoreProducts"></a>
-### func \(\*MockProductRepository\) [BulkRestoreProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L161>)
+### func \(\*MockProductRepository\) [BulkRestoreProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L163>)
 
 ```go
 func (m *MockProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) []database.BulkOperationError
@@ -15890,16 +16050,16 @@ func (m *MockProductRepository) BulkRestoreProducts(productIDs []uint, userID ui
 
 
 <a name="MockProductRepository.BulkWasteProducts"></a>
-### func \(\*MockProductRepository\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L356>)
+### func \(\*MockProductRepository\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L361>)
 
 ```go
-func (m *MockProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []database.BulkOperationError
+func (m *MockProductRepository) BulkWasteProducts(productIDs []uint, userID uint, cause string) []database.BulkOperationError
 ```
 
 
 
 <a name="MockProductRepository.ConsumeProduct"></a>
-### func \(\*MockProductRepository\) [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L305>)
+### func \(\*MockProductRepository\) [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L307>)
 
 ```go
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error
@@ -15908,7 +16068,7 @@ func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error
 
 
 <a name="MockProductRepository.ConsumeProductPartial"></a>
-### func \(\*MockProductRepository\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L306>)
+### func \(\*MockProductRepository\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L308>)
 
 ```go
 func (m *MockProductRepository) ConsumeProductPartial(product *dbModel.Product, amount int, mutationID *string) (int, bool, bool, error)
@@ -15917,7 +16077,7 @@ func (m *MockProductRepository) ConsumeProductPartial(product *dbModel.Product, 
 
 
 <a name="MockProductRepository.CreateOpenFoodFactsCache"></a>
-### func \(\*MockProductRepository\) [CreateOpenFoodFactsCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L224>)
+### func \(\*MockProductRepository\) [CreateOpenFoodFactsCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L226>)
 
 ```go
 func (m *MockProductRepository) CreateOpenFoodFactsCache(entry *dbModel.OpenFoodFactsCache) error
@@ -15926,7 +16086,7 @@ func (m *MockProductRepository) CreateOpenFoodFactsCache(entry *dbModel.OpenFood
 
 
 <a name="MockProductRepository.CreateProduct"></a>
-### func \(\*MockProductRepository\) [CreateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L119>)
+### func \(\*MockProductRepository\) [CreateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L121>)
 
 ```go
 func (m *MockProductRepository) CreateProduct(userID uint, product *dbModel.Product) error
@@ -15935,7 +16095,7 @@ func (m *MockProductRepository) CreateProduct(userID uint, product *dbModel.Prod
 
 
 <a name="MockProductRepository.CreateProductsBulk"></a>
-### func \(\*MockProductRepository\) [CreateProductsBulk](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L138>)
+### func \(\*MockProductRepository\) [CreateProductsBulk](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L140>)
 
 ```go
 func (m *MockProductRepository) CreateProductsBulk(userID uint, rows []database.ImportedProduct) ([]string, error)
@@ -15944,7 +16104,7 @@ func (m *MockProductRepository) CreateProductsBulk(userID uint, rows []database.
 
 
 <a name="MockProductRepository.DeleteProduct"></a>
-### func \(\*MockProductRepository\) [DeleteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L157>)
+### func \(\*MockProductRepository\) [DeleteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L159>)
 
 ```go
 func (m *MockProductRepository) DeleteProduct(productID uint, userID uint, archiveOnly bool) error
@@ -15953,7 +16113,7 @@ func (m *MockProductRepository) DeleteProduct(productID uint, userID uint, archi
 
 
 <a name="MockProductRepository.FindDuplicateProduct"></a>
-### func \(\*MockProductRepository\) [FindDuplicateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L95>)
+### func \(\*MockProductRepository\) [FindDuplicateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L97>)
 
 ```go
 func (m *MockProductRepository) FindDuplicateProduct(userID uint, draft *dbModel.Product) (dbModel.Product, bool, error)
@@ -15962,7 +16122,7 @@ func (m *MockProductRepository) FindDuplicateProduct(userID uint, draft *dbModel
 
 
 <a name="MockProductRepository.GetActiveExpiryCounts"></a>
-### func \(\*MockProductRepository\) [GetActiveExpiryCounts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L260>)
+### func \(\*MockProductRepository\) [GetActiveExpiryCounts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L262>)
 
 ```go
 func (m *MockProductRepository) GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (int, int, error)
@@ -15971,7 +16131,7 @@ func (m *MockProductRepository) GetActiveExpiryCounts(userID uint, now time.Time
 
 
 <a name="MockProductRepository.GetActiveProductProjections"></a>
-### func \(\*MockProductRepository\) [GetActiveProductProjections](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L80>)
+### func \(\*MockProductRepository\) [GetActiveProductProjections](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L82>)
 
 ```go
 func (m *MockProductRepository) GetActiveProductProjections(userID, locationID uint) ([]dbModel.Product, error)
@@ -15980,7 +16140,7 @@ func (m *MockProductRepository) GetActiveProductProjections(userID, locationID u
 
 
 <a name="MockProductRepository.GetActiveProductsCount"></a>
-### func \(\*MockProductRepository\) [GetActiveProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L194>)
+### func \(\*MockProductRepository\) [GetActiveProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L196>)
 
 ```go
 func (m *MockProductRepository) GetActiveProductsCount(userID uint) (int, error)
@@ -15989,7 +16149,7 @@ func (m *MockProductRepository) GetActiveProductsCount(userID uint) (int, error)
 
 
 <a name="MockProductRepository.GetArchivedProductByID"></a>
-### func \(\*MockProductRepository\) [GetArchivedProductByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L110>)
+### func \(\*MockProductRepository\) [GetArchivedProductByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L112>)
 
 ```go
 func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (dbModel.Product, error)
@@ -15998,7 +16158,7 @@ func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (
 
 
 <a name="MockProductRepository.GetArchivedProductProjections"></a>
-### func \(\*MockProductRepository\) [GetArchivedProductProjections](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L83>)
+### func \(\*MockProductRepository\) [GetArchivedProductProjections](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L85>)
 
 ```go
 func (m *MockProductRepository) GetArchivedProductProjections(userID uint) ([]dbModel.Product, error)
@@ -16007,7 +16167,7 @@ func (m *MockProductRepository) GetArchivedProductProjections(userID uint) ([]db
 
 
 <a name="MockProductRepository.GetArchivedProductsCount"></a>
-### func \(\*MockProductRepository\) [GetArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L185>)
+### func \(\*MockProductRepository\) [GetArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L187>)
 
 ```go
 func (m *MockProductRepository) GetArchivedProductsCount(userID uint) (int, error)
@@ -16016,7 +16176,7 @@ func (m *MockProductRepository) GetArchivedProductsCount(userID uint) (int, erro
 
 
 <a name="MockProductRepository.GetConsumedSamples"></a>
-### func \(\*MockProductRepository\) [GetConsumedSamples](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L302>)
+### func \(\*MockProductRepository\) [GetConsumedSamples](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L304>)
 
 ```go
 func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]dbModel.Product, error)
@@ -16025,7 +16185,7 @@ func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, bar
 
 
 <a name="MockProductRepository.GetExpiredProductsCount"></a>
-### func \(\*MockProductRepository\) [GetExpiredProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L182>)
+### func \(\*MockProductRepository\) [GetExpiredProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L184>)
 
 ```go
 func (m *MockProductRepository) GetExpiredProductsCount(userID uint) (int, error)
@@ -16034,7 +16194,7 @@ func (m *MockProductRepository) GetExpiredProductsCount(userID uint) (int, error
 
 
 <a name="MockProductRepository.GetExpiringInDays"></a>
-### func \(\*MockProductRepository\) [GetExpiringInDays](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L209>)
+### func \(\*MockProductRepository\) [GetExpiringInDays](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L211>)
 
 ```go
 func (m *MockProductRepository) GetExpiringInDays(userID uint, days int) ([]dbModel.Product, error)
@@ -16043,7 +16203,7 @@ func (m *MockProductRepository) GetExpiringInDays(userID uint, days int) ([]dbMo
 
 
 <a name="MockProductRepository.GetExpiringProductsByHousehold"></a>
-### func \(\*MockProductRepository\) [GetExpiringProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L290>)
+### func \(\*MockProductRepository\) [GetExpiringProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L292>)
 
 ```go
 func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]dbModel.Product, error)
@@ -16052,7 +16212,7 @@ func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint,
 
 
 <a name="MockProductRepository.GetExpiringProductsForMailDigest"></a>
-### func \(\*MockProductRepository\) [GetExpiringProductsForMailDigest](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L299>)
+### func \(\*MockProductRepository\) [GetExpiringProductsForMailDigest](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L301>)
 
 ```go
 func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uint) (database.MailDigestProductGroup, error)
@@ -16061,7 +16221,7 @@ func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uin
 
 
 <a name="MockProductRepository.GetExpiringSoonCount"></a>
-### func \(\*MockProductRepository\) [GetExpiringSoonCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L257>)
+### func \(\*MockProductRepository\) [GetExpiringSoonCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L259>)
 
 ```go
 func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error)
@@ -16070,7 +16230,7 @@ func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int) (int
 
 
 <a name="MockProductRepository.GetExpiringSoonProducts"></a>
-### func \(\*MockProductRepository\) [GetExpiringSoonProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L203>)
+### func \(\*MockProductRepository\) [GetExpiringSoonProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L205>)
 
 ```go
 func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
@@ -16079,7 +16239,7 @@ func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int) (
 
 
 <a name="MockProductRepository.GetExpiryTrend"></a>
-### func \(\*MockProductRepository\) [GetExpiryTrend](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L200>)
+### func \(\*MockProductRepository\) [GetExpiryTrend](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L202>)
 
 ```go
 func (m *MockProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
@@ -16088,7 +16248,7 @@ func (m *MockProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMon
 
 
 <a name="MockProductRepository.GetHouseholdByID"></a>
-### func \(\*MockProductRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L245>)
+### func \(\*MockProductRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L247>)
 
 ```go
 func (m *MockProductRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
@@ -16097,7 +16257,7 @@ func (m *MockProductRepository) GetHouseholdByID(householdID uint) (dbModel.Hous
 
 
 <a name="MockProductRepository.GetLastInsertedProduct"></a>
-### func \(\*MockProductRepository\) [GetLastInsertedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L212>)
+### func \(\*MockProductRepository\) [GetLastInsertedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L214>)
 
 ```go
 func (m *MockProductRepository) GetLastInsertedProduct(householdID uint) (dbModel.Product, error)
@@ -16106,7 +16266,7 @@ func (m *MockProductRepository) GetLastInsertedProduct(householdID uint) (dbMode
 
 
 <a name="MockProductRepository.GetLastNotifiedProduct"></a>
-### func \(\*MockProductRepository\) [GetLastNotifiedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L206>)
+### func \(\*MockProductRepository\) [GetLastNotifiedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L208>)
 
 ```go
 func (m *MockProductRepository) GetLastNotifiedProduct(householdID uint) (dbModel.Product, error)
@@ -16115,7 +16275,7 @@ func (m *MockProductRepository) GetLastNotifiedProduct(householdID uint) (dbMode
 
 
 <a name="MockProductRepository.GetOpenFoodFactsCacheByBarcode"></a>
-### func \(\*MockProductRepository\) [GetOpenFoodFactsCacheByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L218>)
+### func \(\*MockProductRepository\) [GetOpenFoodFactsCacheByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L220>)
 
 ```go
 func (m *MockProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (dbModel.OpenFoodFactsCache, error)
@@ -16124,7 +16284,7 @@ func (m *MockProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (
 
 
 <a name="MockProductRepository.GetOpenFoodFactsCacheWithRemoteImageURL"></a>
-### func \(\*MockProductRepository\) [GetOpenFoodFactsCacheWithRemoteImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L236>)
+### func \(\*MockProductRepository\) [GetOpenFoodFactsCacheWithRemoteImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L238>)
 
 ```go
 func (m *MockProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]dbModel.OpenFoodFactsCache, error)
@@ -16133,7 +16293,7 @@ func (m *MockProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]dbM
 
 
 <a name="MockProductRepository.GetOpenFoodFactsCacheWithoutStorageHint"></a>
-### func \(\*MockProductRepository\) [GetOpenFoodFactsCacheWithoutStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L230>)
+### func \(\*MockProductRepository\) [GetOpenFoodFactsCacheWithoutStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L232>)
 
 ```go
 func (m *MockProductRepository) GetOpenFoodFactsCacheWithoutStorageHint() ([]dbModel.OpenFoodFactsCache, error)
@@ -16142,7 +16302,7 @@ func (m *MockProductRepository) GetOpenFoodFactsCacheWithoutStorageHint() ([]dbM
 
 
 <a name="MockProductRepository.GetOpenFoodFactsCachesByBarcodes"></a>
-### func \(\*MockProductRepository\) [GetOpenFoodFactsCachesByBarcodes](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L221>)
+### func \(\*MockProductRepository\) [GetOpenFoodFactsCachesByBarcodes](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L223>)
 
 ```go
 func (m *MockProductRepository) GetOpenFoodFactsCachesByBarcodes(barcodes []string) ([]dbModel.OpenFoodFactsCache, error)
@@ -16151,7 +16311,7 @@ func (m *MockProductRepository) GetOpenFoodFactsCachesByBarcodes(barcodes []stri
 
 
 <a name="MockProductRepository.GetProductByID"></a>
-### func \(\*MockProductRepository\) [GetProductByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L104>)
+### func \(\*MockProductRepository\) [GetProductByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L106>)
 
 ```go
 func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error)
@@ -16160,7 +16320,7 @@ func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.
 
 
 <a name="MockProductRepository.GetProductBySyncID"></a>
-### func \(\*MockProductRepository\) [GetProductBySyncID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L125>)
+### func \(\*MockProductRepository\) [GetProductBySyncID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L127>)
 
 ```go
 func (m *MockProductRepository) GetProductBySyncID(userID uint, clientSyncID string) (dbModel.Product, error)
@@ -16169,7 +16329,7 @@ func (m *MockProductRepository) GetProductBySyncID(userID uint, clientSyncID str
 
 
 <a name="MockProductRepository.GetProductCategoryBreakdown"></a>
-### func \(\*MockProductRepository\) [GetProductCategoryBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L197>)
+### func \(\*MockProductRepository\) [GetProductCategoryBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L199>)
 
 ```go
 func (m *MockProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
@@ -16178,7 +16338,7 @@ func (m *MockProductRepository) GetProductCategoryBreakdown(userID uint) (map[st
 
 
 <a name="MockProductRepository.GetProductIdentity"></a>
-### func \(\*MockProductRepository\) [GetProductIdentity](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L107>)
+### func \(\*MockProductRepository\) [GetProductIdentity](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L109>)
 
 ```go
 func (m *MockProductRepository) GetProductIdentity(productID, userID uint) (dbModel.Product, error)
@@ -16187,7 +16347,7 @@ func (m *MockProductRepository) GetProductIdentity(productID, userID uint) (dbMo
 
 
 <a name="MockProductRepository.GetProductsByHousehold"></a>
-### func \(\*MockProductRepository\) [GetProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L293>)
+### func \(\*MockProductRepository\) [GetProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L295>)
 
 ```go
 func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbModel.Product, error)
@@ -16196,7 +16356,7 @@ func (m *MockProductRepository) GetProductsByHousehold(householdID uint) ([]dbMo
 
 
 <a name="MockProductRepository.GetProductsExpired"></a>
-### func \(\*MockProductRepository\) [GetProductsExpired](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L175>)
+### func \(\*MockProductRepository\) [GetProductsExpired](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L177>)
 
 ```go
 func (m *MockProductRepository) GetProductsExpired(userID uint) ([]*dbModel.Product, error)
@@ -16205,7 +16365,7 @@ func (m *MockProductRepository) GetProductsExpired(userID uint) ([]*dbModel.Prod
 
 
 <a name="MockProductRepository.GetSubThresholdProducts"></a>
-### func \(\*MockProductRepository\) [GetSubThresholdProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L296>)
+### func \(\*MockProductRepository\) [GetSubThresholdProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L298>)
 
 ```go
 func (m *MockProductRepository) GetSubThresholdProducts(userID uint) ([]dbModel.Product, error)
@@ -16214,7 +16374,7 @@ func (m *MockProductRepository) GetSubThresholdProducts(userID uint) ([]dbModel.
 
 
 <a name="MockProductRepository.GetTopArchivedProducts"></a>
-### func \(\*MockProductRepository\) [GetTopArchivedProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L191>)
+### func \(\*MockProductRepository\) [GetTopArchivedProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L193>)
 
 ```go
 func (m *MockProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]dbModel.Product, error)
@@ -16223,7 +16383,7 @@ func (m *MockProductRepository) GetTopArchivedProducts(userID uint, limit int) (
 
 
 <a name="MockProductRepository.GetUniqueArchivedProductsCount"></a>
-### func \(\*MockProductRepository\) [GetUniqueArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L188>)
+### func \(\*MockProductRepository\) [GetUniqueArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L190>)
 
 ```go
 func (m *MockProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, error)
@@ -16232,7 +16392,7 @@ func (m *MockProductRepository) GetUniqueArchivedProductsCount(userID uint) (int
 
 
 <a name="MockProductRepository.GetUserActiveProductsFiltered"></a>
-### func \(\*MockProductRepository\) [GetUserActiveProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L248>)
+### func \(\*MockProductRepository\) [GetUserActiveProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L250>)
 
 ```go
 func (m *MockProductRepository) GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]dbModel.Product, error)
@@ -16241,7 +16401,7 @@ func (m *MockProductRepository) GetUserActiveProductsFiltered(userID uint, from,
 
 
 <a name="MockProductRepository.GetUserArchivedProductsBulk"></a>
-### func \(\*MockProductRepository\) [GetUserArchivedProductsBulk](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L77>)
+### func \(\*MockProductRepository\) [GetUserArchivedProductsBulk](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L79>)
 
 ```go
 func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]dbModel.Product, error)
@@ -16250,7 +16410,7 @@ func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit i
 
 
 <a name="MockProductRepository.GetUserArchivedProductsByIDs"></a>
-### func \(\*MockProductRepository\) [GetUserArchivedProductsByIDs](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L86>)
+### func \(\*MockProductRepository\) [GetUserArchivedProductsByIDs](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L88>)
 
 ```go
 func (m *MockProductRepository) GetUserArchivedProductsByIDs(userID uint, ids []uint) ([]dbModel.Product, error)
@@ -16259,7 +16419,7 @@ func (m *MockProductRepository) GetUserArchivedProductsByIDs(userID uint, ids []
 
 
 <a name="MockProductRepository.GetUserArchivedProductsFiltered"></a>
-### func \(\*MockProductRepository\) [GetUserArchivedProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L251>)
+### func \(\*MockProductRepository\) [GetUserArchivedProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L253>)
 
 ```go
 func (m *MockProductRepository) GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]dbModel.Product, error)
@@ -16268,7 +16428,7 @@ func (m *MockProductRepository) GetUserArchivedProductsFiltered(userID uint, fro
 
 
 <a name="MockProductRepository.GetUserByID"></a>
-### func \(\*MockProductRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L239>)
+### func \(\*MockProductRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L241>)
 
 ```go
 func (m *MockProductRepository) GetUserByID(userID uint) (authentication.User, error)
@@ -16277,7 +16437,7 @@ func (m *MockProductRepository) GetUserByID(userID uint) (authentication.User, e
 
 
 <a name="MockProductRepository.GetUserHouseholdByID"></a>
-### func \(\*MockProductRepository\) [GetUserHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L242>)
+### func \(\*MockProductRepository\) [GetUserHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L244>)
 
 ```go
 func (m *MockProductRepository) GetUserHouseholdByID(userID uint) (uint, error)
@@ -16286,7 +16446,7 @@ func (m *MockProductRepository) GetUserHouseholdByID(userID uint) (uint, error)
 
 
 <a name="MockProductRepository.GetUserProductsBulk"></a>
-### func \(\*MockProductRepository\) [GetUserProductsBulk](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L71>)
+### func \(\*MockProductRepository\) [GetUserProductsBulk](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L73>)
 
 ```go
 func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]dbModel.Product, error)
@@ -16295,7 +16455,7 @@ func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]d
 
 
 <a name="MockProductRepository.GetUserProductsBulkByBarcode"></a>
-### func \(\*MockProductRepository\) [GetUserProductsBulkByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L89>)
+### func \(\*MockProductRepository\) [GetUserProductsBulkByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L91>)
 
 ```go
 func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcode int) ([]dbModel.Product, error)
@@ -16304,7 +16464,7 @@ func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcod
 
 
 <a name="MockProductRepository.GetUserProductsBulkByBarcodes"></a>
-### func \(\*MockProductRepository\) [GetUserProductsBulkByBarcodes](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L92>)
+### func \(\*MockProductRepository\) [GetUserProductsBulkByBarcodes](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L94>)
 
 ```go
 func (m *MockProductRepository) GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]dbModel.Product, error)
@@ -16313,7 +16473,7 @@ func (m *MockProductRepository) GetUserProductsBulkByBarcodes(userID uint, barco
 
 
 <a name="MockProductRepository.GetUserProductsByIDs"></a>
-### func \(\*MockProductRepository\) [GetUserProductsByIDs](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L74>)
+### func \(\*MockProductRepository\) [GetUserProductsByIDs](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L76>)
 
 ```go
 func (m *MockProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dbModel.Product, error)
@@ -16322,7 +16482,7 @@ func (m *MockProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([
 
 
 <a name="MockProductRepository.GetUsersByHouseholdID"></a>
-### func \(\*MockProductRepository\) [GetUsersByHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L254>)
+### func \(\*MockProductRepository\) [GetUsersByHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L256>)
 
 ```go
 func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
@@ -16331,7 +16491,7 @@ func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authe
 
 
 <a name="MockProductRepository.GetWasteThisMonth"></a>
-### func \(\*MockProductRepository\) [GetWasteThisMonth](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L287>)
+### func \(\*MockProductRepository\) [GetWasteThisMonth](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L289>)
 
 ```go
 func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error)
@@ -16340,7 +16500,7 @@ func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error)
 
 
 <a name="MockProductRepository.ListProductsWithoutPackSize"></a>
-### func \(\*MockProductRepository\) [ListProductsWithoutPackSize](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L151>)
+### func \(\*MockProductRepository\) [ListProductsWithoutPackSize](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L153>)
 
 ```go
 func (m *MockProductRepository) ListProductsWithoutPackSize(afterID uint, limit int) ([]dbModel.Product, error)
@@ -16349,7 +16509,7 @@ func (m *MockProductRepository) ListProductsWithoutPackSize(afterID uint, limit 
 
 
 <a name="MockProductRepository.MarkProductOpened"></a>
-### func \(\*MockProductRepository\) [MarkProductOpened](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L345>)
+### func \(\*MockProductRepository\) [MarkProductOpened](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L350>)
 
 ```go
 func (m *MockProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (dbModel.Product, *time.Time, bool, error)
@@ -16358,7 +16518,7 @@ func (m *MockProductRepository) MarkProductOpened(productID, userID uint, opened
 
 
 <a name="MockProductRepository.RestoreProduct"></a>
-### func \(\*MockProductRepository\) [RestoreProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L160>)
+### func \(\*MockProductRepository\) [RestoreProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L162>)
 
 ```go
 func (m *MockProductRepository) RestoreProduct(productID, userID uint) error
@@ -16367,7 +16527,7 @@ func (m *MockProductRepository) RestoreProduct(productID, userID uint) error
 
 
 <a name="MockProductRepository.SearchProductProjections"></a>
-### func \(\*MockProductRepository\) [SearchProductProjections](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L116>)
+### func \(\*MockProductRepository\) [SearchProductProjections](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L118>)
 
 ```go
 func (m *MockProductRepository) SearchProductProjections(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]dbModel.Product, error)
@@ -16376,7 +16536,7 @@ func (m *MockProductRepository) SearchProductProjections(queryParam database.Sea
 
 
 <a name="MockProductRepository.SearchProducts"></a>
-### func \(\*MockProductRepository\) [SearchProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L113>)
+### func \(\*MockProductRepository\) [SearchProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L115>)
 
 ```go
 func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error)
@@ -16385,7 +16545,7 @@ func (m *MockProductRepository) SearchProducts(queryParam database.SearchParamet
 
 
 <a name="MockProductRepository.SetProductExpireAt"></a>
-### func \(\*MockProductRepository\) [SetProductExpireAt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L171>)
+### func \(\*MockProductRepository\) [SetProductExpireAt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L173>)
 
 ```go
 func (m *MockProductRepository) SetProductExpireAt(productID uint, userID uint, expireAt dbModel.Timestamp) error
@@ -16394,7 +16554,7 @@ func (m *MockProductRepository) SetProductExpireAt(productID uint, userID uint, 
 
 
 <a name="MockProductRepository.SetProductNotifiedAt"></a>
-### func \(\*MockProductRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L174>)
+### func \(\*MockProductRepository\) [SetProductNotifiedAt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L176>)
 
 ```go
 func (m *MockProductRepository) SetProductNotifiedAt(productID uint) error
@@ -16403,7 +16563,7 @@ func (m *MockProductRepository) SetProductNotifiedAt(productID uint) error
 
 
 <a name="MockProductRepository.SetProductPackSize"></a>
-### func \(\*MockProductRepository\) [SetProductPackSize](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L154>)
+### func \(\*MockProductRepository\) [SetProductPackSize](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L156>)
 
 ```go
 func (m *MockProductRepository) SetProductPackSize(productID uint, packSize string) error
@@ -16412,7 +16572,7 @@ func (m *MockProductRepository) SetProductPackSize(productID uint, packSize stri
 
 
 <a name="MockProductRepository.UpdateOpenFoodFactsCacheImageURL"></a>
-### func \(\*MockProductRepository\) [UpdateOpenFoodFactsCacheImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L227>)
+### func \(\*MockProductRepository\) [UpdateOpenFoodFactsCacheImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L229>)
 
 ```go
 func (m *MockProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
@@ -16421,7 +16581,7 @@ func (m *MockProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageU
 
 
 <a name="MockProductRepository.UpdateOpenFoodFactsCacheStorageHint"></a>
-### func \(\*MockProductRepository\) [UpdateOpenFoodFactsCacheStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L233>)
+### func \(\*MockProductRepository\) [UpdateOpenFoodFactsCacheStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L235>)
 
 ```go
 func (m *MockProductRepository) UpdateOpenFoodFactsCacheStorageHint(barcode, storageHint string) error
@@ -16430,7 +16590,7 @@ func (m *MockProductRepository) UpdateOpenFoodFactsCacheStorageHint(barcode, sto
 
 
 <a name="MockProductRepository.UpdateProduct"></a>
-### func \(\*MockProductRepository\) [UpdateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L144>)
+### func \(\*MockProductRepository\) [UpdateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L146>)
 
 ```go
 func (m *MockProductRepository) UpdateProduct(productID uint, userID uint, product *dbModel.ProductDTOPatch) error
@@ -16439,7 +16599,7 @@ func (m *MockProductRepository) UpdateProduct(productID uint, userID uint, produ
 
 
 <a name="MockProductRepository.UpdateProductQuantity"></a>
-### func \(\*MockProductRepository\) [UpdateProductQuantity](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L147>)
+### func \(\*MockProductRepository\) [UpdateProductQuantity](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L149>)
 
 ```go
 func (m *MockProductRepository) UpdateProductQuantity(productID uint, userID uint, delta int, mutationID *string) (bool, bool, error)
@@ -16448,7 +16608,7 @@ func (m *MockProductRepository) UpdateProductQuantity(productID uint, userID uin
 
 
 <a name="MockProductRepository.UserHasProductAccess"></a>
-### func \(\*MockProductRepository\) [UserHasProductAccess](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L215>)
+### func \(\*MockProductRepository\) [UserHasProductAccess](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L217>)
 
 ```go
 func (m *MockProductRepository) UserHasProductAccess(userID uint, productID int) bool
@@ -16457,25 +16617,25 @@ func (m *MockProductRepository) UserHasProductAccess(userID uint, productID int)
 
 
 <a name="MockProductRepository.WasteProduct"></a>
-### func \(\*MockProductRepository\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L325>)
+### func \(\*MockProductRepository\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L327>)
 
 ```go
-func (m *MockProductRepository) WasteProduct(productID, userID uint) error
+func (m *MockProductRepository) WasteProduct(productID, userID uint, cause string) error
 ```
 
 
 
 <a name="MockProductRepository.WasteProductPartial"></a>
-### func \(\*MockProductRepository\) [WasteProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L326>)
+### func \(\*MockProductRepository\) [WasteProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L330>)
 
 ```go
-func (m *MockProductRepository) WasteProductPartial(product *dbModel.Product, amount int, mutationID *string) (int, bool, bool, error)
+func (m *MockProductRepository) WasteProductPartial(product *dbModel.Product, amount int, mutationID *string, cause string) (int, bool, bool, error)
 ```
 
 
 
 <a name="MockRecipeCacheRepository"></a>
-## type [MockRecipeCacheRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L714-L723>)
+## type [MockRecipeCacheRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L722-L731>)
 
 MockRecipeCacheRepository is a configurable in\-memory stub for RecipeCacheRepositoryInterface.
 
@@ -16493,7 +16653,7 @@ type MockRecipeCacheRepository struct {
 ```
 
 <a name="MockRecipeCacheRepository.CleanupExpiredCaches"></a>
-### func \(\*MockRecipeCacheRepository\) [CleanupExpiredCaches](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L736>)
+### func \(\*MockRecipeCacheRepository\) [CleanupExpiredCaches](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L744>)
 
 ```go
 func (m *MockRecipeCacheRepository) CleanupExpiredCaches() error
@@ -16502,7 +16662,7 @@ func (m *MockRecipeCacheRepository) CleanupExpiredCaches() error
 
 
 <a name="MockRecipeCacheRepository.CreateCache"></a>
-### func \(\*MockRecipeCacheRepository\) [CreateCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L728>)
+### func \(\*MockRecipeCacheRepository\) [CreateCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L736>)
 
 ```go
 func (m *MockRecipeCacheRepository) CreateCache(cache *dbModel.RecipeCache) error
@@ -16511,7 +16671,7 @@ func (m *MockRecipeCacheRepository) CreateCache(cache *dbModel.RecipeCache) erro
 
 
 <a name="MockRecipeCacheRepository.GetCacheByQueryHash"></a>
-### func \(\*MockRecipeCacheRepository\) [GetCacheByQueryHash](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L725>)
+### func \(\*MockRecipeCacheRepository\) [GetCacheByQueryHash](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L733>)
 
 ```go
 func (m *MockRecipeCacheRepository) GetCacheByQueryHash(hash string) (dbModel.RecipeCache, error)
@@ -16520,7 +16680,7 @@ func (m *MockRecipeCacheRepository) GetCacheByQueryHash(hash string) (dbModel.Re
 
 
 <a name="MockRecipeCacheRepository.HasPopulatedCache"></a>
-### func \(\*MockRecipeCacheRepository\) [HasPopulatedCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L732>)
+### func \(\*MockRecipeCacheRepository\) [HasPopulatedCache](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L740>)
 
 ```go
 func (m *MockRecipeCacheRepository) HasPopulatedCache(hash string) (bool, error)
@@ -16529,7 +16689,7 @@ func (m *MockRecipeCacheRepository) HasPopulatedCache(hash string) (bool, error)
 
 
 <a name="MockRecipeCacheRepository.UpdateCacheHit"></a>
-### func \(\*MockRecipeCacheRepository\) [UpdateCacheHit](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L735>)
+### func \(\*MockRecipeCacheRepository\) [UpdateCacheHit](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L743>)
 
 ```go
 func (m *MockRecipeCacheRepository) UpdateCacheHit(hash string) error
@@ -16538,7 +16698,7 @@ func (m *MockRecipeCacheRepository) UpdateCacheHit(hash string) error
 
 
 <a name="MockRecipeRepository"></a>
-## type [MockRecipeRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L741-L745>)
+## type [MockRecipeRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L749-L753>)
 
 MockRecipeRepository is a configurable in\-memory stub for RecipeRepositoryInterface.
 
@@ -16551,7 +16711,7 @@ type MockRecipeRepository struct {
 ```
 
 <a name="MockRecipeRepository.Create"></a>
-### func \(\*MockRecipeRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L747>)
+### func \(\*MockRecipeRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L755>)
 
 ```go
 func (m *MockRecipeRepository) Create(recipe *dbModel.Recipe) error
@@ -16560,7 +16720,7 @@ func (m *MockRecipeRepository) Create(recipe *dbModel.Recipe) error
 
 
 <a name="MockRecipeRepository.Delete"></a>
-### func \(\*MockRecipeRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L755>)
+### func \(\*MockRecipeRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L763>)
 
 ```go
 func (m *MockRecipeRepository) Delete(id, householdID uint) error
@@ -16569,7 +16729,7 @@ func (m *MockRecipeRepository) Delete(id, householdID uint) error
 
 
 <a name="MockRecipeRepository.GetByID"></a>
-### func \(\*MockRecipeRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L748>)
+### func \(\*MockRecipeRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L756>)
 
 ```go
 func (m *MockRecipeRepository) GetByID(id, householdID uint) (*dbModel.Recipe, error)
@@ -16578,7 +16738,7 @@ func (m *MockRecipeRepository) GetByID(id, householdID uint) (*dbModel.Recipe, e
 
 
 <a name="MockRecipeRepository.ListByHousehold"></a>
-### func \(\*MockRecipeRepository\) [ListByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L751>)
+### func \(\*MockRecipeRepository\) [ListByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L759>)
 
 ```go
 func (m *MockRecipeRepository) ListByHousehold(householdID uint) ([]dbModel.Recipe, error)
@@ -16587,7 +16747,7 @@ func (m *MockRecipeRepository) ListByHousehold(householdID uint) ([]dbModel.Reci
 
 
 <a name="MockRecipeRepository.Update"></a>
-### func \(\*MockRecipeRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L754>)
+### func \(\*MockRecipeRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L762>)
 
 ```go
 func (m *MockRecipeRepository) Update(recipe *dbModel.Recipe) error
@@ -16596,7 +16756,7 @@ func (m *MockRecipeRepository) Update(recipe *dbModel.Recipe) error
 
 
 <a name="MockRepositoryContainer"></a>
-## type [MockRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1084-L1103>)
+## type [MockRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1092-L1111>)
 
 MockRepositoryContainer holds mock implementations of all repository interfaces.
 
@@ -16624,7 +16784,7 @@ type MockRepositoryContainer struct {
 ```
 
 <a name="NewMockRepositoryContainer"></a>
-### func [NewMockRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1106>)
+### func [NewMockRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1114>)
 
 ```go
 func NewMockRepositoryContainer() *MockRepositoryContainer
@@ -16633,7 +16793,7 @@ func NewMockRepositoryContainer() *MockRepositoryContainer
 NewMockRepositoryContainer creates a MockRepositoryContainer with all mocks initialised.
 
 <a name="MockRepositoryContainer.ToRepositoryContainer"></a>
-### func \(\*MockRepositoryContainer\) [ToRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1131>)
+### func \(\*MockRepositoryContainer\) [ToRepositoryContainer](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1139>)
 
 ```go
 func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryContainer
@@ -16642,19 +16802,21 @@ func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryCo
 ToRepositoryContainer converts the mock container to a database.RepositoryContainer suitable for injection into the Gin context via ctx.Set\(util.ContextKeyRepos, ...\).
 
 <a name="MockSavingsRepository"></a>
-## type [MockSavingsRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L663-L666>)
+## type [MockSavingsRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L668-L673>)
 
 MockSavingsRepository is a configurable in\-memory stub for SavingsRepositoryInterface.
 
 ```go
 type MockSavingsRepository struct {
     SavingsStats apiModel.SavingsStatsResponse
-    Err          error
+    // SavingsCauses records the cause of every recorded savings event.
+    SavingsCauses []string
+    Err           error
 }
 ```
 
 <a name="MockSavingsRepository.GetSavingsStats"></a>
-### func \(\*MockSavingsRepository\) [GetSavingsStats](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L677>)
+### func \(\*MockSavingsRepository\) [GetSavingsStats](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L685>)
 
 ```go
 func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
@@ -16663,7 +16825,7 @@ func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.Savi
 
 
 <a name="MockSavingsRepository.LoadCategoryResolver"></a>
-### func \(\*MockSavingsRepository\) [LoadCategoryResolver](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L668>)
+### func \(\*MockSavingsRepository\) [LoadCategoryResolver](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L675>)
 
 ```go
 func (m *MockSavingsRepository) LoadCategoryResolver() (*database.CategoryResolver, error)
@@ -16672,16 +16834,16 @@ func (m *MockSavingsRepository) LoadCategoryResolver() (*database.CategoryResolv
 
 
 <a name="MockSavingsRepository.RecordSavingsEvent"></a>
-### func \(\*MockSavingsRepository\) [RecordSavingsEvent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L674>)
+### func \(\*MockSavingsRepository\) [RecordSavingsEvent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L681>)
 
 ```go
-func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, resolver *database.CategoryResolver) error
+func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *database.CategoryResolver) error
 ```
 
 
 
 <a name="MockShoppingListItemSyncRefRepository"></a>
-## type [MockShoppingListItemSyncRefRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1037-L1040>)
+## type [MockShoppingListItemSyncRefRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1045-L1048>)
 
 MockShoppingListItemSyncRefRepository mocks ShoppingListItemSyncRefRepository.
 
@@ -16693,7 +16855,7 @@ type MockShoppingListItemSyncRefRepository struct {
 ```
 
 <a name="MockShoppingListItemSyncRefRepository.DeleteByExternalID"></a>
-### func \(\*MockShoppingListItemSyncRefRepository\) [DeleteByExternalID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1073>)
+### func \(\*MockShoppingListItemSyncRefRepository\) [DeleteByExternalID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1081>)
 
 ```go
 func (m *MockShoppingListItemSyncRefRepository) DeleteByExternalID(householdID uint, provider, externalID string) error
@@ -16702,7 +16864,7 @@ func (m *MockShoppingListItemSyncRefRepository) DeleteByExternalID(householdID u
 
 
 <a name="MockShoppingListItemSyncRefRepository.DeleteByHouseholdAndProvider"></a>
-### func \(\*MockShoppingListItemSyncRefRepository\) [DeleteByHouseholdAndProvider](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1077>)
+### func \(\*MockShoppingListItemSyncRefRepository\) [DeleteByHouseholdAndProvider](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1085>)
 
 ```go
 func (m *MockShoppingListItemSyncRefRepository) DeleteByHouseholdAndProvider(householdID uint, provider string) error
@@ -16711,7 +16873,7 @@ func (m *MockShoppingListItemSyncRefRepository) DeleteByHouseholdAndProvider(hou
 
 
 <a name="MockShoppingListItemSyncRefRepository.DeleteByID"></a>
-### func \(\*MockShoppingListItemSyncRefRepository\) [DeleteByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1069>)
+### func \(\*MockShoppingListItemSyncRefRepository\) [DeleteByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1077>)
 
 ```go
 func (m *MockShoppingListItemSyncRefRepository) DeleteByID(id, householdID uint) error
@@ -16720,7 +16882,7 @@ func (m *MockShoppingListItemSyncRefRepository) DeleteByID(id, householdID uint)
 
 
 <a name="MockShoppingListItemSyncRefRepository.ListByHouseholdAndProvider"></a>
-### func \(\*MockShoppingListItemSyncRefRepository\) [ListByHouseholdAndProvider](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1042>)
+### func \(\*MockShoppingListItemSyncRefRepository\) [ListByHouseholdAndProvider](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1050>)
 
 ```go
 func (m *MockShoppingListItemSyncRefRepository) ListByHouseholdAndProvider(householdID uint, provider string) ([]dbModel.ShoppingListItemSyncRef, error)
@@ -16729,7 +16891,7 @@ func (m *MockShoppingListItemSyncRefRepository) ListByHouseholdAndProvider(house
 
 
 <a name="MockShoppingListItemSyncRefRepository.Upsert"></a>
-### func \(\*MockShoppingListItemSyncRefRepository\) [Upsert](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1055>)
+### func \(\*MockShoppingListItemSyncRefRepository\) [Upsert](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L1063>)
 
 ```go
 func (m *MockShoppingListItemSyncRefRepository) Upsert(ref *dbModel.ShoppingListItemSyncRef) error
@@ -16738,7 +16900,7 @@ func (m *MockShoppingListItemSyncRefRepository) Upsert(ref *dbModel.ShoppingList
 
 
 <a name="MockStorageLocationRepository"></a>
-## type [MockStorageLocationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L585-L589>)
+## type [MockStorageLocationRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L590-L594>)
 
 MockStorageLocationRepository is a configurable in\-memory stub for StorageLocationRepositoryInterface.
 
@@ -16751,7 +16913,7 @@ type MockStorageLocationRepository struct {
 ```
 
 <a name="MockStorageLocationRepository.Create"></a>
-### func \(\*MockStorageLocationRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L597>)
+### func \(\*MockStorageLocationRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L602>)
 
 ```go
 func (m *MockStorageLocationRepository) Create(userID uint, name, icon string, sortOrder int) (dbModel.StorageLocation, error)
@@ -16760,7 +16922,7 @@ func (m *MockStorageLocationRepository) Create(userID uint, name, icon string, s
 
 
 <a name="MockStorageLocationRepository.Delete"></a>
-### func \(\*MockStorageLocationRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L603>)
+### func \(\*MockStorageLocationRepository\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L608>)
 
 ```go
 func (m *MockStorageLocationRepository) Delete(locationID, userID uint) error
@@ -16769,7 +16931,7 @@ func (m *MockStorageLocationRepository) Delete(locationID, userID uint) error
 
 
 <a name="MockStorageLocationRepository.GetByHousehold"></a>
-### func \(\*MockStorageLocationRepository\) [GetByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L591>)
+### func \(\*MockStorageLocationRepository\) [GetByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L596>)
 
 ```go
 func (m *MockStorageLocationRepository) GetByHousehold(userID uint) ([]dbModel.StorageLocation, error)
@@ -16778,7 +16940,7 @@ func (m *MockStorageLocationRepository) GetByHousehold(userID uint) ([]dbModel.S
 
 
 <a name="MockStorageLocationRepository.GetByID"></a>
-### func \(\*MockStorageLocationRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L594>)
+### func \(\*MockStorageLocationRepository\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L599>)
 
 ```go
 func (m *MockStorageLocationRepository) GetByID(locationID, userID uint) (dbModel.StorageLocation, error)
@@ -16787,7 +16949,7 @@ func (m *MockStorageLocationRepository) GetByID(locationID, userID uint) (dbMode
 
 
 <a name="MockStorageLocationRepository.Update"></a>
-### func \(\*MockStorageLocationRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L600>)
+### func \(\*MockStorageLocationRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L605>)
 
 ```go
 func (m *MockStorageLocationRepository) Update(locationID, userID uint, name, icon string, sortOrder int) (dbModel.StorageLocation, error)
@@ -16796,7 +16958,7 @@ func (m *MockStorageLocationRepository) Update(locationID, userID uint, name, ic
 
 
 <a name="MockStreakRepository"></a>
-## type [MockStreakRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L893-L897>)
+## type [MockStreakRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L901-L905>)
 
 MockStreakRepository is a configurable in\-memory stub for StreakRepositoryInterface.
 
@@ -16809,7 +16971,7 @@ type MockStreakRepository struct {
 ```
 
 <a name="MockStreakRepository.GetAllStreaks"></a>
-### func \(\*MockStreakRepository\) [GetAllStreaks](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L904>)
+### func \(\*MockStreakRepository\) [GetAllStreaks](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L912>)
 
 ```go
 func (m *MockStreakRepository) GetAllStreaks() ([]dbModel.WasteStreak, error)
@@ -16818,7 +16980,7 @@ func (m *MockStreakRepository) GetAllStreaks() ([]dbModel.WasteStreak, error)
 
 
 <a name="MockStreakRepository.GetOrCreateStreakForHousehold"></a>
-### func \(\*MockStreakRepository\) [GetOrCreateStreakForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L899>)
+### func \(\*MockStreakRepository\) [GetOrCreateStreakForHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L907>)
 
 ```go
 func (m *MockStreakRepository) GetOrCreateStreakForHousehold(householdID uint) (*dbModel.WasteStreak, error)
@@ -16827,7 +16989,7 @@ func (m *MockStreakRepository) GetOrCreateStreakForHousehold(householdID uint) (
 
 
 <a name="MockStreakRepository.RecordWasteEvent"></a>
-### func \(\*MockStreakRepository\) [RecordWasteEvent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L902>)
+### func \(\*MockStreakRepository\) [RecordWasteEvent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L910>)
 
 ```go
 func (m *MockStreakRepository) RecordWasteEvent(householdID uint) error
@@ -16836,7 +16998,7 @@ func (m *MockStreakRepository) RecordWasteEvent(householdID uint) error
 
 
 <a name="MockStreakRepository.UpdateStreak"></a>
-### func \(\*MockStreakRepository\) [UpdateStreak](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L903>)
+### func \(\*MockStreakRepository\) [UpdateStreak](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L911>)
 
 ```go
 func (m *MockStreakRepository) UpdateStreak(streak *dbModel.WasteStreak) error
@@ -16845,7 +17007,7 @@ func (m *MockStreakRepository) UpdateStreak(streak *dbModel.WasteStreak) error
 
 
 <a name="MockUserRepository"></a>
-## type [MockUserRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L363-L376>)
+## type [MockUserRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L368-L381>)
 
 MockUserRepository is a configurable in\-memory stub for UserRepositoryInterface.
 
@@ -16867,7 +17029,7 @@ type MockUserRepository struct {
 ```
 
 <a name="MockUserRepository.ApplyPasswordReset"></a>
-### func \(\*MockUserRepository\) [ApplyPasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L456>)
+### func \(\*MockUserRepository\) [ApplyPasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L461>)
 
 ```go
 func (m *MockUserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPassword string, usedAt time.Time) (bool, error)
@@ -16876,7 +17038,7 @@ func (m *MockUserRepository) ApplyPasswordReset(userID uint, tokenHash, hashedPa
 
 
 <a name="MockUserRepository.ConsumePasswordReset"></a>
-### func \(\*MockUserRepository\) [ConsumePasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L453>)
+### func \(\*MockUserRepository\) [ConsumePasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L458>)
 
 ```go
 func (m *MockUserRepository) ConsumePasswordReset(tokenHash string, usedAt time.Time) (bool, error)
@@ -16885,7 +17047,7 @@ func (m *MockUserRepository) ConsumePasswordReset(tokenHash string, usedAt time.
 
 
 <a name="MockUserRepository.CreateEmailVerification"></a>
-### func \(\*MockUserRepository\) [CreateEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L426>)
+### func \(\*MockUserRepository\) [CreateEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L431>)
 
 ```go
 func (m *MockUserRepository) CreateEmailVerification(userID uint, token string, expiresAt time.Time) error
@@ -16894,7 +17056,7 @@ func (m *MockUserRepository) CreateEmailVerification(userID uint, token string, 
 
 
 <a name="MockUserRepository.CreatePasswordReset"></a>
-### func \(\*MockUserRepository\) [CreatePasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L444>)
+### func \(\*MockUserRepository\) [CreatePasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L449>)
 
 ```go
 func (m *MockUserRepository) CreatePasswordReset(userID uint, token string, expiresAt time.Time, ipAddress string) error
@@ -16903,7 +17065,7 @@ func (m *MockUserRepository) CreatePasswordReset(userID uint, token string, expi
 
 
 <a name="MockUserRepository.CreateUser"></a>
-### func \(\*MockUserRepository\) [CreateUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L402>)
+### func \(\*MockUserRepository\) [CreateUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L407>)
 
 ```go
 func (m *MockUserRepository) CreateUser(user *authentication.User) error
@@ -16912,7 +17074,7 @@ func (m *MockUserRepository) CreateUser(user *authentication.User) error
 
 
 <a name="MockUserRepository.DeleteExpiredPasswordResets"></a>
-### func \(\*MockUserRepository\) [DeleteExpiredPasswordResets](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L459>)
+### func \(\*MockUserRepository\) [DeleteExpiredPasswordResets](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L464>)
 
 ```go
 func (m *MockUserRepository) DeleteExpiredPasswordResets(before time.Time) error
@@ -16921,7 +17083,7 @@ func (m *MockUserRepository) DeleteExpiredPasswordResets(before time.Time) error
 
 
 <a name="MockUserRepository.DeleteUser"></a>
-### func \(\*MockUserRepository\) [DeleteUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L483>)
+### func \(\*MockUserRepository\) [DeleteUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L488>)
 
 ```go
 func (m *MockUserRepository) DeleteUser(userID uint) error
@@ -16930,7 +17092,7 @@ func (m *MockUserRepository) DeleteUser(userID uint) error
 
 
 <a name="MockUserRepository.EnsureOnboardingState"></a>
-### func \(\*MockUserRepository\) [EnsureOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L476>)
+### func \(\*MockUserRepository\) [EnsureOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L481>)
 
 ```go
 func (m *MockUserRepository) EnsureOnboardingState(userID uint) error
@@ -16939,7 +17101,7 @@ func (m *MockUserRepository) EnsureOnboardingState(userID uint) error
 
 
 <a name="MockUserRepository.GetEmailVerificationByToken"></a>
-### func \(\*MockUserRepository\) [GetEmailVerificationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L429>)
+### func \(\*MockUserRepository\) [GetEmailVerificationByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L434>)
 
 ```go
 func (m *MockUserRepository) GetEmailVerificationByToken(token string) (dbModel.EmailVerification, error)
@@ -16948,7 +17110,7 @@ func (m *MockUserRepository) GetEmailVerificationByToken(token string) (dbModel.
 
 
 <a name="MockUserRepository.GetHouseholdByID"></a>
-### func \(\*MockUserRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L477>)
+### func \(\*MockUserRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L482>)
 
 ```go
 func (m *MockUserRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error)
@@ -16957,7 +17119,7 @@ func (m *MockUserRepository) GetHouseholdByID(householdID uint) (dbModel.Househo
 
 
 <a name="MockUserRepository.GetOnboardingState"></a>
-### func \(\*MockUserRepository\) [GetOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L468>)
+### func \(\*MockUserRepository\) [GetOnboardingState](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L473>)
 
 ```go
 func (m *MockUserRepository) GetOnboardingState(userID uint) (dbModel.OnboardingState, error)
@@ -16966,7 +17128,7 @@ func (m *MockUserRepository) GetOnboardingState(userID uint) (dbModel.Onboarding
 
 
 <a name="MockUserRepository.GetPasswordResetByToken"></a>
-### func \(\*MockUserRepository\) [GetPasswordResetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L447>)
+### func \(\*MockUserRepository\) [GetPasswordResetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L452>)
 
 ```go
 func (m *MockUserRepository) GetPasswordResetByToken(token string) (dbModel.PasswordReset, error)
@@ -16975,7 +17137,7 @@ func (m *MockUserRepository) GetPasswordResetByToken(token string) (dbModel.Pass
 
 
 <a name="MockUserRepository.GetUserByID"></a>
-### func \(\*MockUserRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L381>)
+### func \(\*MockUserRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L386>)
 
 ```go
 func (m *MockUserRepository) GetUserByID(userID uint) (authentication.User, error)
@@ -16984,7 +17146,7 @@ func (m *MockUserRepository) GetUserByID(userID uint) (authentication.User, erro
 
 
 <a name="MockUserRepository.GetUserByMailAddress"></a>
-### func \(\*MockUserRepository\) [GetUserByMailAddress](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L441>)
+### func \(\*MockUserRepository\) [GetUserByMailAddress](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L446>)
 
 ```go
 func (m *MockUserRepository) GetUserByMailAddress(mailAddress string) (authentication.User, error)
@@ -16993,7 +17155,7 @@ func (m *MockUserRepository) GetUserByMailAddress(mailAddress string) (authentic
 
 
 <a name="MockUserRepository.GetUserByUsername"></a>
-### func \(\*MockUserRepository\) [GetUserByUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L378>)
+### func \(\*MockUserRepository\) [GetUserByUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L383>)
 
 ```go
 func (m *MockUserRepository) GetUserByUsername(username string) (authentication.User, error)
@@ -17002,7 +17164,7 @@ func (m *MockUserRepository) GetUserByUsername(username string) (authentication.
 
 
 <a name="MockUserRepository.GetUserDisplayPreferencesByID"></a>
-### func \(\*MockUserRepository\) [GetUserDisplayPreferencesByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L387>)
+### func \(\*MockUserRepository\) [GetUserDisplayPreferencesByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L392>)
 
 ```go
 func (m *MockUserRepository) GetUserDisplayPreferencesByID(userID uint) (string, string, error)
@@ -17011,7 +17173,7 @@ func (m *MockUserRepository) GetUserDisplayPreferencesByID(userID uint) (string,
 
 
 <a name="MockUserRepository.GetUserHouseholdByID"></a>
-### func \(\*MockUserRepository\) [GetUserHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L384>)
+### func \(\*MockUserRepository\) [GetUserHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L389>)
 
 ```go
 func (m *MockUserRepository) GetUserHouseholdByID(userID uint) (uint, error)
@@ -17020,7 +17182,7 @@ func (m *MockUserRepository) GetUserHouseholdByID(userID uint) (uint, error)
 
 
 <a name="MockUserRepository.GetUserHouseholdRole"></a>
-### func \(\*MockUserRepository\) [GetUserHouseholdRole](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L390>)
+### func \(\*MockUserRepository\) [GetUserHouseholdRole](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L395>)
 
 ```go
 func (m *MockUserRepository) GetUserHouseholdRole(userID uint) (string, error)
@@ -17029,7 +17191,7 @@ func (m *MockUserRepository) GetUserHouseholdRole(userID uint) (string, error)
 
 
 <a name="MockUserRepository.GetUsersByHouseholdID"></a>
-### func \(\*MockUserRepository\) [GetUsersByHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L480>)
+### func \(\*MockUserRepository\) [GetUsersByHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L485>)
 
 ```go
 func (m *MockUserRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
@@ -17038,7 +17200,7 @@ func (m *MockUserRepository) GetUsersByHouseholdID(householdID uint) ([]authenti
 
 
 <a name="MockUserRepository.InvalidatePendingPasswordResetsForUser"></a>
-### func \(\*MockUserRepository\) [InvalidatePendingPasswordResetsForUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L462>)
+### func \(\*MockUserRepository\) [InvalidatePendingPasswordResetsForUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L467>)
 
 ```go
 func (m *MockUserRepository) InvalidatePendingPasswordResetsForUser(userID uint) error
@@ -17047,7 +17209,7 @@ func (m *MockUserRepository) InvalidatePendingPasswordResetsForUser(userID uint)
 
 
 <a name="MockUserRepository.IsAccountLocked"></a>
-### func \(\*MockUserRepository\) [IsAccountLocked](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L419>)
+### func \(\*MockUserRepository\) [IsAccountLocked](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L424>)
 
 ```go
 func (m *MockUserRepository) IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration)
@@ -17056,7 +17218,7 @@ func (m *MockUserRepository) IsAccountLocked(userID uint, maxLoginAttempts int, 
 
 
 <a name="MockUserRepository.MarkHouseholdStepDone"></a>
-### func \(\*MockUserRepository\) [MarkHouseholdStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L474>)
+### func \(\*MockUserRepository\) [MarkHouseholdStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L479>)
 
 ```go
 func (m *MockUserRepository) MarkHouseholdStepDone(userID uint) error
@@ -17065,7 +17227,7 @@ func (m *MockUserRepository) MarkHouseholdStepDone(userID uint) error
 
 
 <a name="MockUserRepository.MarkNotificationsSetup"></a>
-### func \(\*MockUserRepository\) [MarkNotificationsSetup](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L471>)
+### func \(\*MockUserRepository\) [MarkNotificationsSetup](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L476>)
 
 ```go
 func (m *MockUserRepository) MarkNotificationsSetup(userID uint) error
@@ -17074,7 +17236,7 @@ func (m *MockUserRepository) MarkNotificationsSetup(userID uint) error
 
 
 <a name="MockUserRepository.MarkOnboardingComplete"></a>
-### func \(\*MockUserRepository\) [MarkOnboardingComplete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L475>)
+### func \(\*MockUserRepository\) [MarkOnboardingComplete](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L480>)
 
 ```go
 func (m *MockUserRepository) MarkOnboardingComplete(userID uint) error
@@ -17083,7 +17245,7 @@ func (m *MockUserRepository) MarkOnboardingComplete(userID uint) error
 
 
 <a name="MockUserRepository.MarkPasswordResetUsed"></a>
-### func \(\*MockUserRepository\) [MarkPasswordResetUsed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L450>)
+### func \(\*MockUserRepository\) [MarkPasswordResetUsed](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L455>)
 
 ```go
 func (m *MockUserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error
@@ -17092,7 +17254,7 @@ func (m *MockUserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Tim
 
 
 <a name="MockUserRepository.MarkProfileStepDone"></a>
-### func \(\*MockUserRepository\) [MarkProfileStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L473>)
+### func \(\*MockUserRepository\) [MarkProfileStepDone](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L478>)
 
 ```go
 func (m *MockUserRepository) MarkProfileStepDone(userID uint) error
@@ -17101,7 +17263,7 @@ func (m *MockUserRepository) MarkProfileStepDone(userID uint) error
 
 
 <a name="MockUserRepository.RecordFailedLoginAttempt"></a>
-### func \(\*MockUserRepository\) [RecordFailedLoginAttempt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L422>)
+### func \(\*MockUserRepository\) [RecordFailedLoginAttempt](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L427>)
 
 ```go
 func (m *MockUserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error
@@ -17110,7 +17272,7 @@ func (m *MockUserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttem
 
 
 <a name="MockUserRepository.ResetFailedLoginAttempts"></a>
-### func \(\*MockUserRepository\) [ResetFailedLoginAttempts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L425>)
+### func \(\*MockUserRepository\) [ResetFailedLoginAttempts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L430>)
 
 ```go
 func (m *MockUserRepository) ResetFailedLoginAttempts(userID uint) error
@@ -17119,7 +17281,7 @@ func (m *MockUserRepository) ResetFailedLoginAttempts(userID uint) error
 
 
 <a name="MockUserRepository.SetUserPasswordHash"></a>
-### func \(\*MockUserRepository\) [SetUserPasswordHash](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L465>)
+### func \(\*MockUserRepository\) [SetUserPasswordHash](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L470>)
 
 ```go
 func (m *MockUserRepository) SetUserPasswordHash(userID uint, hashedPassword string) error
@@ -17128,7 +17290,7 @@ func (m *MockUserRepository) SetUserPasswordHash(userID uint, hashedPassword str
 
 
 <a name="MockUserRepository.UpdateAdminUserFields"></a>
-### func \(\*MockUserRepository\) [UpdateAdminUserFields](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L412>)
+### func \(\*MockUserRepository\) [UpdateAdminUserFields](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L417>)
 
 ```go
 func (m *MockUserRepository) UpdateAdminUserFields(userID uint, username, mailAddress string) error
@@ -17137,7 +17299,7 @@ func (m *MockUserRepository) UpdateAdminUserFields(userID uint, username, mailAd
 
 
 <a name="MockUserRepository.UpdateDisplayName"></a>
-### func \(\*MockUserRepository\) [UpdateDisplayName](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L415>)
+### func \(\*MockUserRepository\) [UpdateDisplayName](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L420>)
 
 ```go
 func (m *MockUserRepository) UpdateDisplayName(userID uint, displayName string) error
@@ -17146,7 +17308,7 @@ func (m *MockUserRepository) UpdateDisplayName(userID uint, displayName string) 
 
 
 <a name="MockUserRepository.UpdateEmailVerification"></a>
-### func \(\*MockUserRepository\) [UpdateEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L435>)
+### func \(\*MockUserRepository\) [UpdateEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L440>)
 
 ```go
 func (m *MockUserRepository) UpdateEmailVerification(userID uint, verifiedAt *time.Time) error
@@ -17155,7 +17317,7 @@ func (m *MockUserRepository) UpdateEmailVerification(userID uint, verifiedAt *ti
 
 
 <a name="MockUserRepository.UpdateEmailVerificationStatus"></a>
-### func \(\*MockUserRepository\) [UpdateEmailVerificationStatus](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L438>)
+### func \(\*MockUserRepository\) [UpdateEmailVerificationStatus](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L443>)
 
 ```go
 func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string) error
@@ -17164,7 +17326,7 @@ func (m *MockUserRepository) UpdateEmailVerificationStatus(token, status string)
 
 
 <a name="MockUserRepository.UpdateUser"></a>
-### func \(\*MockUserRepository\) [UpdateUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L403>)
+### func \(\*MockUserRepository\) [UpdateUser](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L408>)
 
 ```go
 func (m *MockUserRepository) UpdateUser(userID uint, user *authentication.User) error
@@ -17173,7 +17335,7 @@ func (m *MockUserRepository) UpdateUser(userID uint, user *authentication.User) 
 
 
 <a name="MockUserRepository.UpdateUserDashboardLayout"></a>
-### func \(\*MockUserRepository\) [UpdateUserDashboardLayout](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L409>)
+### func \(\*MockUserRepository\) [UpdateUserDashboardLayout](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L414>)
 
 ```go
 func (m *MockUserRepository) UpdateUserDashboardLayout(userID uint, layout string) error
@@ -17182,7 +17344,7 @@ func (m *MockUserRepository) UpdateUserDashboardLayout(userID uint, layout strin
 
 
 <a name="MockUserRepository.UpdateUserEmailVerified"></a>
-### func \(\*MockUserRepository\) [UpdateUserEmailVerified](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L432>)
+### func \(\*MockUserRepository\) [UpdateUserEmailVerified](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L437>)
 
 ```go
 func (m *MockUserRepository) UpdateUserEmailVerified(userID uint, verifiedAt time.Time) error
@@ -17191,7 +17353,7 @@ func (m *MockUserRepository) UpdateUserEmailVerified(userID uint, verifiedAt tim
 
 
 <a name="MockUserRepository.UpdateUserHouseholdRole"></a>
-### func \(\*MockUserRepository\) [UpdateUserHouseholdRole](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L393>)
+### func \(\*MockUserRepository\) [UpdateUserHouseholdRole](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L398>)
 
 ```go
 func (m *MockUserRepository) UpdateUserHouseholdRole(userID, householdID uint, role string) error
@@ -17200,7 +17362,7 @@ func (m *MockUserRepository) UpdateUserHouseholdRole(userID, householdID uint, r
 
 
 <a name="MockUserRepository.UpdateUserPassword"></a>
-### func \(\*MockUserRepository\) [UpdateUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L416>)
+### func \(\*MockUserRepository\) [UpdateUserPassword](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L421>)
 
 ```go
 func (m *MockUserRepository) UpdateUserPassword(userID uint, login *authentication.Login) error
@@ -17209,7 +17371,7 @@ func (m *MockUserRepository) UpdateUserPassword(userID uint, login *authenticati
 
 
 <a name="MockUserRepository.UpdateUserReceiptScanSettings"></a>
-### func \(\*MockUserRepository\) [UpdateUserReceiptScanSettings](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L406>)
+### func \(\*MockUserRepository\) [UpdateUserReceiptScanSettings](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L411>)
 
 ```go
 func (m *MockUserRepository) UpdateUserReceiptScanSettings(userID uint, prefs authentication.ReceiptScanPreferences, apiKey *string) error
@@ -17218,7 +17380,7 @@ func (m *MockUserRepository) UpdateUserReceiptScanSettings(userID uint, prefs au
 
 
 <a name="MockUserRepository.UpdateUsername"></a>
-### func \(\*MockUserRepository\) [UpdateUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L472>)
+### func \(\*MockUserRepository\) [UpdateUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L477>)
 
 ```go
 func (m *MockUserRepository) UpdateUsername(userID uint, username string) error
@@ -17227,7 +17389,7 @@ func (m *MockUserRepository) UpdateUsername(userID uint, username string) error
 
 
 <a name="MockUserRepository.UserExistsByMailAddress"></a>
-### func \(\*MockUserRepository\) [UserExistsByMailAddress](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L399>)
+### func \(\*MockUserRepository\) [UserExistsByMailAddress](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L404>)
 
 ```go
 func (m *MockUserRepository) UserExistsByMailAddress(user *authentication.User) bool
@@ -17236,7 +17398,7 @@ func (m *MockUserRepository) UserExistsByMailAddress(user *authentication.User) 
 
 
 <a name="MockUserRepository.UserExistsByUsername"></a>
-### func \(\*MockUserRepository\) [UserExistsByUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L396>)
+### func \(\*MockUserRepository\) [UserExistsByUsername](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L401>)
 
 ```go
 func (m *MockUserRepository) UserExistsByUsername(user *authentication.User) bool
@@ -17245,7 +17407,7 @@ func (m *MockUserRepository) UserExistsByUsername(user *authentication.User) boo
 
 
 <a name="MockWebhookRepository"></a>
-## type [MockWebhookRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L608-L613>)
+## type [MockWebhookRepository](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L613-L618>)
 
 MockWebhookRepository is a configurable in\-memory stub for WebhookRepositoryInterface.
 
@@ -17259,7 +17421,7 @@ type MockWebhookRepository struct {
 ```
 
 <a name="MockWebhookRepository.CheckOwnership"></a>
-### func \(\*MockWebhookRepository\) [CheckOwnership](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L634>)
+### func \(\*MockWebhookRepository\) [CheckOwnership](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L639>)
 
 ```go
 func (m *MockWebhookRepository) CheckOwnership(webhookID, userID uint) error
@@ -17268,7 +17430,7 @@ func (m *MockWebhookRepository) CheckOwnership(webhookID, userID uint) error
 
 
 <a name="MockWebhookRepository.CreateDeliveryLog"></a>
-### func \(\*MockWebhookRepository\) [CreateDeliveryLog](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L627>)
+### func \(\*MockWebhookRepository\) [CreateDeliveryLog](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L632>)
 
 ```go
 func (m *MockWebhookRepository) CreateDeliveryLog(log *dbModel.WebhookDeliveryLog) error
@@ -17277,7 +17439,7 @@ func (m *MockWebhookRepository) CreateDeliveryLog(log *dbModel.WebhookDeliveryLo
 
 
 <a name="MockWebhookRepository.CreateWebhook"></a>
-### func \(\*MockWebhookRepository\) [CreateWebhook](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L615>)
+### func \(\*MockWebhookRepository\) [CreateWebhook](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L620>)
 
 ```go
 func (m *MockWebhookRepository) CreateWebhook(webhook *dbModel.Webhook) error
@@ -17286,7 +17448,7 @@ func (m *MockWebhookRepository) CreateWebhook(webhook *dbModel.Webhook) error
 
 
 <a name="MockWebhookRepository.DeleteWebhook"></a>
-### func \(\*MockWebhookRepository\) [DeleteWebhook](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L626>)
+### func \(\*MockWebhookRepository\) [DeleteWebhook](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L631>)
 
 ```go
 func (m *MockWebhookRepository) DeleteWebhook(webhookID uint) error
@@ -17295,7 +17457,7 @@ func (m *MockWebhookRepository) DeleteWebhook(webhookID uint) error
 
 
 <a name="MockWebhookRepository.GetActiveWebhooksByEvent"></a>
-### func \(\*MockWebhookRepository\) [GetActiveWebhooksByEvent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L622>)
+### func \(\*MockWebhookRepository\) [GetActiveWebhooksByEvent](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L627>)
 
 ```go
 func (m *MockWebhookRepository) GetActiveWebhooksByEvent(event string) ([]dbModel.Webhook, error)
@@ -17304,7 +17466,7 @@ func (m *MockWebhookRepository) GetActiveWebhooksByEvent(event string) ([]dbMode
 
 
 <a name="MockWebhookRepository.GetDeliveryLogs"></a>
-### func \(\*MockWebhookRepository\) [GetDeliveryLogs](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L630>)
+### func \(\*MockWebhookRepository\) [GetDeliveryLogs](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L635>)
 
 ```go
 func (m *MockWebhookRepository) GetDeliveryLogs(webhookID uint, limit int) ([]dbModel.WebhookDeliveryLog, error)
@@ -17313,7 +17475,7 @@ func (m *MockWebhookRepository) GetDeliveryLogs(webhookID uint, limit int) ([]db
 
 
 <a name="MockWebhookRepository.GetWebhookByID"></a>
-### func \(\*MockWebhookRepository\) [GetWebhookByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L619>)
+### func \(\*MockWebhookRepository\) [GetWebhookByID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L624>)
 
 ```go
 func (m *MockWebhookRepository) GetWebhookByID(webhookID uint) (dbModel.Webhook, error)
@@ -17322,7 +17484,7 @@ func (m *MockWebhookRepository) GetWebhookByID(webhookID uint) (dbModel.Webhook,
 
 
 <a name="MockWebhookRepository.GetWebhooksByUserID"></a>
-### func \(\*MockWebhookRepository\) [GetWebhooksByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L616>)
+### func \(\*MockWebhookRepository\) [GetWebhooksByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L621>)
 
 ```go
 func (m *MockWebhookRepository) GetWebhooksByUserID(userID uint) ([]dbModel.Webhook, error)
@@ -17331,7 +17493,7 @@ func (m *MockWebhookRepository) GetWebhooksByUserID(userID uint) ([]dbModel.Webh
 
 
 <a name="MockWebhookRepository.TrimDeliveryLogs"></a>
-### func \(\*MockWebhookRepository\) [TrimDeliveryLogs](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L633>)
+### func \(\*MockWebhookRepository\) [TrimDeliveryLogs](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L638>)
 
 ```go
 func (m *MockWebhookRepository) TrimDeliveryLogs(webhookID uint, keep int) error
@@ -17340,7 +17502,7 @@ func (m *MockWebhookRepository) TrimDeliveryLogs(webhookID uint, keep int) error
 
 
 <a name="MockWebhookRepository.UpdateWebhook"></a>
-### func \(\*MockWebhookRepository\) [UpdateWebhook](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L625>)
+### func \(\*MockWebhookRepository\) [UpdateWebhook](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L630>)
 
 ```go
 func (m *MockWebhookRepository) UpdateWebhook(webhook *dbModel.Webhook) error

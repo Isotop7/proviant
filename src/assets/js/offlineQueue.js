@@ -435,7 +435,7 @@
       result = await proviant._sendQuantityDelta(item.payload.productID, item.payload.delta, item.payload.clientMutationId);
     } else {
       var action = item.type === 'consumeProduct' ? 'consume' : 'waste';
-      result = await proviant._sendProductAction(action, item.payload.productID, item.payload.quantity, item.payload.clientMutationId);
+      result = await proviant._sendProductAction(action, item.payload.productID, item.payload.quantity, item.payload.clientMutationId, item.payload.wasteCause);
     }
     // The send helpers resolve for every JSON error body, so status is the only
     // signal that the mutation was not applied. Dropping the op on a non-2xx
@@ -806,18 +806,24 @@
   }
 
   function wrapOfflineProductAction(action, original) {
-    return async function (productID, quantity) {
+    // The caller's mutation id is dropped: the wrapper mints one that covers
+    // the first send and every replay. It keeps its place in the argument
+    // list so the cause still lands on the right parameter.
+    return async function (productID, quantity, _clientMutationId, wasteCause) {
       // One token covers the first send and every replay, including a send whose
       // response was lost after the server committed the stock mutation.
       var clientMutationId = generateId();
       var draft = { productID: productID, clientMutationId: clientMutationId };
       if (quantity !== undefined) draft.quantity = quantity;
+      // The cause belongs to the waste, so a queued waste keeps it: the
+      // replay sends the same reason the user gave.
+      if (wasteCause) draft.wasteCause = wasteCause;
       var operation = { id: clientMutationId, type: action + 'Product', payload: draft };
       if (!navigator.onLine) {
         return enqueueOrReport(operation, 202, { clientMutationId: clientMutationId });
       }
       try {
-        return await original(productID, quantity, clientMutationId);
+        return await original(productID, quantity, clientMutationId, wasteCause);
       } catch (_) {
         return enqueueOrReport(operation, 202, { clientMutationId: clientMutationId });
       }

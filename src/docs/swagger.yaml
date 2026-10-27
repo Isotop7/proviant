@@ -23,6 +23,11 @@ definitions:
         type: integer
       userName:
         type: string
+      wasteCause:
+        description: |-
+          WasteCause is why the action wasted the product. It is empty for every
+          action but a waste that carried a reason.
+        type: string
     type: object
   api.ActivityLogResponse:
     properties:
@@ -152,6 +157,18 @@ definitions:
         description: StorageLocationID is the location the product is stored in.
         type: integer
       unit:
+        type: string
+    type: object
+  api.BulkProductsAPIModel:
+    properties:
+      productIDs:
+        items:
+          type: integer
+        type: array
+      wasteCause:
+        description: |-
+          WasteCause is why the products are wasted. It applies to every product
+          of the request and is ignored by a bulk consume.
         type: string
     type: object
   api.ConsumptionRateResponse:
@@ -413,6 +430,8 @@ definitions:
       storageLocationId:
         type: integer
       unit:
+        type: string
+      wasteCause:
         type: string
     type: object
   api.FullExportHousehold:
@@ -793,6 +812,9 @@ definitions:
         type: string
       quantity:
         type: integer
+      wasteCause:
+        description: WasteCause is why the packs are wasted. It is ignored by a consume.
+        type: string
     type: object
   api.ProductActionResponse:
     properties:
@@ -873,6 +895,8 @@ definitions:
         $ref: '#/definitions/api.StorageLocationResponse'
       storageLocationId:
         type: integer
+      wasteCause:
+        type: string
     type: object
   api.ProductStatsResponse:
     properties:
@@ -1270,10 +1294,26 @@ definitions:
     type: object
   api.WasteAnalyticsResponse:
     properties:
+      causes:
+        description: Causes breaks the wasted events down by the reason they were
+          wasted.
+        items:
+          $ref: '#/definitions/api.WasteCauseStat'
+        type: array
       co2Source:
         type: string
       consumedCount:
         type: integer
+      insight:
+        description: |-
+          Insight is the one-sentence insight about the household's waste, in the
+          user's language.
+        type: string
+      insightAvailable:
+        description: |-
+          InsightAvailable is false when there is too little data to state an
+          insight; the Insight then holds the empty-state sentence.
+        type: boolean
       monthly:
         items:
           $ref: '#/definitions/api.WasteMonthly'
@@ -1282,6 +1322,10 @@ definitions:
         items:
           $ref: '#/definitions/api.WasteCategoryStat'
         type: array
+      overbuy:
+        allOf:
+        - $ref: '#/definitions/api.WasteOverbuyStat'
+        description: Overbuy names the category the household most over-buys.
       period:
         description: '"month" | "3months" | "6months" | "12months"'
         type: string
@@ -1320,6 +1364,19 @@ definitions:
           $ref: '#/definitions/api.WasteProductStat'
         type: array
     type: object
+  api.WasteCauseStat:
+    properties:
+      cause:
+        type: string
+      costEur:
+        type: number
+      count:
+        type: integer
+      share:
+        description: Share is the cause's share of all wasted events in the window,
+          in percent.
+        type: number
+    type: object
   api.WasteMonthly:
     properties:
       consumedCount:
@@ -1332,6 +1389,22 @@ definitions:
       wastedCount:
         type: integer
       wastedEur:
+        type: number
+    type: object
+  api.WasteOverbuyStat:
+    properties:
+      categoryKey:
+        type: string
+      categoryWaste:
+        description: CategoryWaste is the number of all waste events in the category.
+        type: integer
+      count:
+        description: Count is the number of over-bought waste events in the category.
+        type: integer
+      displayName:
+        type: string
+      share:
+        description: Share is Count as a percentage of CategoryWaste.
         type: number
     type: object
   api.WasteProductStat:
@@ -1489,6 +1562,11 @@ definitions:
       storageLocationId:
         type: integer
       updatedAt:
+        type: string
+      wasteCause:
+        description: |-
+          WasteCause is why the product was wasted. It is set when the waste
+          archives the row and is empty for an unattributed waste.
         type: string
     type: object
   database.ProductDTOBarcode:
@@ -3763,17 +3841,19 @@ paths:
     post:
       consumes:
       - application/json
-      description: Consumes the requested number of packs. Omitting the body or quantity
+      description: 'Consumes the requested number of packs. Omitting the body or quantity
         consumes the whole stock. A partial consume leaves the remaining packs active;
-        a full consume soft-deletes the row with removal reason consumed. The response
-        carries the number of packs that actually left the stock.
+        a full consume soft-deletes the row with removal reason consumed. A cause
+        in the body is ignored: a consume has no reason. The response carries the
+        number of packs that actually left the stock.'
       parameters:
       - description: Product ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Pack quantity and optional offline mutation ID
+      - description: Pack quantity, optional waste cause and optional offline mutation
+          ID
         in: body
         name: action
         schema:
@@ -4039,15 +4119,18 @@ paths:
       description: Wastes the requested number of packs. Omitting the body or quantity
         wastes the whole stock. A partial waste leaves the remaining packs active;
         a full waste soft-deletes the row with removal reason wasted and fires the
-        product.wasted webhook. The response carries the number of packs that actually
-        left the stock.
+        product.wasted webhook. The optional waste cause names why the packs were
+        wasted (spoiled, overbought, forgotten, disliked, other); a waste without
+        a cause is recorded as unattributed waste. The response carries the number
+        of packs that actually left the stock.
       parameters:
       - description: Product ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Pack quantity and optional offline mutation ID
+      - description: Pack quantity, optional waste cause and optional offline mutation
+          ID
         in: body
         name: action
         schema:
@@ -4221,18 +4304,18 @@ paths:
       consumes:
       - application/json
       description: 'Hard-deletes multiple products and fires the product.wasted webhook
-        per product. Reports the ids that were not touched: 404 when none could be
-        wasted (unknown or foreign ids), 200 with the failed ids in failedIds when
-        only some fail, 500 (also carrying failedIds) when a failure was server-side.'
+        per product. The optional waste cause names why the products were wasted (spoiled,
+        overbought, forgotten, disliked, other) and applies to every product of the
+        request. Reports the ids that were not touched: 404 when none could be wasted
+        (unknown or foreign ids), 200 with the failed ids in failedIds when only some
+        fail, 500 (also carrying failedIds) when a failure was server-side.'
       parameters:
-      - description: Product IDs
+      - description: Product IDs and the optional waste cause
         in: body
-        name: productIDs
+        name: request
         required: true
         schema:
-          items:
-            type: integer
-          type: array
+          $ref: '#/definitions/api.BulkProductsAPIModel'
       produces:
       - application/json
       responses:
@@ -5246,7 +5329,9 @@ paths:
       description: |-
         Returns per-month consumed vs. wasted metrics, top wasted categories
         with monetary and CO2 impact (each category nests its top wasted products),
-        and a 6-month trend. EUR prices come from per-product overrides (if set)
+        the waste broken down by the reason it was wasted, the category the household
+        most over-buys and a one-sentence insight about it, and a 6-month trend.
+        EUR prices come from per-product overrides (if set)
         or category averages; CO2 is sourced from the Agribalyse LCA database via
         Open Food Facts ecoscore_data.
       parameters:

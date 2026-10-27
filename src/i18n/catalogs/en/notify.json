@@ -48,6 +48,7 @@
   "notify.monthly.totalWaste": "Total waste this month",
   "notify.monthly.vsLastMonth": "vs. last month",
   "notify.monthly.wasteRate": "Waste rate",
+  "notify.monthly.whyWasted": "Why it was wasted",
   "notify.ntfy.streakMilestoneBody": "%d-day waste-free streak — your household has gone %d consecutive days without wasting food.",
   "notify.ntfy.streakResetBody": "Your %d-day waste-free streak has been reset. Time to start a new one!",
   "notify.ntfy.title.productExpired": "proviant - Product '%s' expired",

@@ -39,16 +39,18 @@ func setupPartialRemoval(t *testing.T, quantity int) (*gorm.DB, *ProductReposito
 func TestProductRepository_PartialRemovalPreservesStock(t *testing.T) {
 	tests := []struct {
 		name   string
-		remove func(*ProductRepository, *dbModel.Product, int, *string) (int, bool, bool, error)
+		remove func(*ProductRepository, *dbModel.Product, int, *string, string) (int, bool, bool, error)
 	}{
-		{name: "consume", remove: (*ProductRepository).ConsumeProductPartial},
+		{name: "consume", remove: func(r *ProductRepository, p *dbModel.Product, q int, m *string, _ string) (int, bool, bool, error) {
+			return r.ConsumeProductPartial(p, q, m)
+		}},
 		{name: "waste", remove: (*ProductRepository).WasteProductPartial},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db, repo, product := setupPartialRemoval(t, 3)
 
-			removed, fullyRemoved, applied, err := tt.remove(repo, product, 1, nil)
+			removed, fullyRemoved, applied, err := tt.remove(repo, product, 1, nil, "")
 			if err != nil {
 				t.Fatalf("partial removal error = %v", err)
 			}
@@ -81,16 +83,18 @@ func TestProductRepository_RemovalOverCountArchivesActualStock(t *testing.T) {
 	tests := []struct {
 		name   string
 		reason string
-		remove func(*ProductRepository, *dbModel.Product, int, *string) (int, bool, bool, error)
+		remove func(*ProductRepository, *dbModel.Product, int, *string, string) (int, bool, bool, error)
 	}{
-		{name: "consume", reason: dbModel.RemovalReasonConsumed, remove: (*ProductRepository).ConsumeProductPartial},
+		{name: "consume", reason: dbModel.RemovalReasonConsumed, remove: func(r *ProductRepository, p *dbModel.Product, q int, m *string, _ string) (int, bool, bool, error) {
+			return r.ConsumeProductPartial(p, q, m)
+		}},
 		{name: "waste", reason: dbModel.RemovalReasonWasted, remove: (*ProductRepository).WasteProductPartial},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db, repo, product := setupPartialRemoval(t, 3)
 
-			removed, fullyRemoved, applied, err := tt.remove(repo, product, 5, nil)
+			removed, fullyRemoved, applied, err := tt.remove(repo, product, 5, nil, "")
 			if err != nil {
 				t.Fatalf("over-count removal error = %v", err)
 			}
@@ -144,10 +148,10 @@ func TestProductRepository_RemovalMutationReplay(t *testing.T) {
 		db, repo, product := setupPartialRemoval(t, 2)
 		mutationID := "offline-waste-1"
 
-		if _, _, applied, err := repo.WasteProductPartial(product, 0, &mutationID); err != nil || !applied {
+		if _, _, applied, err := repo.WasteProductPartial(product, 0, &mutationID, ""); err != nil || !applied {
 			t.Fatalf("first waste = (applied %v, error %v), want (true, nil)", applied, err)
 		}
-		if _, _, applied, err := repo.WasteProductPartial(product, 0, &mutationID); err != nil || applied {
+		if _, _, applied, err := repo.WasteProductPartial(product, 0, &mutationID, ""); err != nil || applied {
 			t.Fatalf("replayed waste = (applied %v, error %v), want (false, nil)", applied, err)
 		}
 
@@ -168,7 +172,7 @@ func TestProductRepository_WastePartialConcurrentModification(t *testing.T) {
 		t.Fatalf("claim product: %v", err)
 	}
 
-	_, _, _, err := repo.WasteProductPartial(product, 1, nil)
+	_, _, _, err := repo.WasteProductPartial(product, 1, nil, "")
 	if !errors.Is(err, apperrors.ErrProductConcurrentModification) {
 		t.Fatalf("WasteProductPartial() error = %v, want %v", err, apperrors.ErrProductConcurrentModification)
 	}
@@ -179,4 +183,63 @@ func TestProductRepository_WastePartialConcurrentModification(t *testing.T) {
 	if unchanged.Quantity != 3 || unchanged.RemovalReason != dbModel.RemovalReasonConsumed || unchanged.DeletedAt.Valid {
 		t.Errorf("failed removal changed row: Quantity=%d RemovalReason=%q DeletedAt=%v", unchanged.Quantity, unchanged.RemovalReason, unchanged.DeletedAt.Valid)
 	}
+}
+
+// TestProductRepository_WasteKeepsItsCause verifies that the archived row
+// carries the reason it was wasted beside the removal reason, and that a
+// consume leaves the reason empty.
+func TestProductRepository_WasteKeepsItsCause(t *testing.T) {
+	t.Run("waste archives the row with the cause", func(t *testing.T) {
+		db, repo, product := setupPartialRemoval(t, 2)
+
+		if _, _, _, err := repo.WasteProductPartial(product, 0, nil, dbModel.WasteCauseSpoiled); err != nil {
+			t.Fatalf("waste error = %v", err)
+		}
+
+		var archived dbModel.Product
+		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
+			t.Fatalf("reload archived product: %v", err)
+		}
+		if archived.RemovalReason != dbModel.RemovalReasonWasted {
+			t.Errorf("RemovalReason = %q, want %q", archived.RemovalReason, dbModel.RemovalReasonWasted)
+		}
+		if archived.WasteCause != dbModel.WasteCauseSpoiled {
+			t.Errorf("WasteCause = %q, want %q", archived.WasteCause, dbModel.WasteCauseSpoiled)
+		}
+	})
+
+	t.Run("consume leaves the cause empty", func(t *testing.T) {
+		db, repo, product := setupPartialRemoval(t, 2)
+
+		if _, _, _, err := repo.ConsumeProductPartial(product, 0, nil); err != nil {
+			t.Fatalf("consume error = %v", err)
+		}
+
+		var archived dbModel.Product
+		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
+			t.Fatalf("reload archived product: %v", err)
+		}
+		if archived.WasteCause != "" {
+			t.Errorf("WasteCause = %q, want empty", archived.WasteCause)
+		}
+	})
+
+	t.Run("a restored product loses the cause", func(t *testing.T) {
+		db, repo, product := setupPartialRemoval(t, 2)
+
+		if err := repo.WasteProduct(product.ID, product.UserID, dbModel.WasteCauseForgotten); err != nil {
+			t.Fatalf("waste error = %v", err)
+		}
+		if err := repo.RestoreProduct(product.ID, product.UserID); err != nil {
+			t.Fatalf("restore error = %v", err)
+		}
+
+		var restored dbModel.Product
+		if err := db.First(&restored, product.ID).Error; err != nil {
+			t.Fatalf("reload restored product: %v", err)
+		}
+		if restored.WasteCause != "" {
+			t.Errorf("WasteCause = %q, want empty", restored.WasteCause)
+		}
+	})
 }

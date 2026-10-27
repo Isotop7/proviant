@@ -2888,7 +2888,7 @@ const docTemplate = `{
         },
         "/api/v1/products/bulkWaste": {
             "post": {
-                "description": "Hard-deletes multiple products and fires the product.wasted webhook per product. Reports the ids that were not touched: 404 when none could be wasted (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.",
+                "description": "Hard-deletes multiple products and fires the product.wasted webhook per product. The optional waste cause names why the products were wasted (spoiled, overbought, forgotten, disliked, other) and applies to every product of the request. Reports the ids that were not touched: 404 when none could be wasted (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2901,15 +2901,12 @@ const docTemplate = `{
                 "summary": "Mark multiple products as wasted",
                 "parameters": [
                     {
-                        "description": "Product IDs",
-                        "name": "productIDs",
+                        "description": "Product IDs and the optional waste cause",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
-                            }
+                            "$ref": "#/definitions/api.BulkProductsAPIModel"
                         }
                     }
                 ],
@@ -3983,7 +3980,7 @@ const docTemplate = `{
         },
         "/api/v1/products/{id}/consume": {
             "post": {
-                "description": "Consumes the requested number of packs. Omitting the body or quantity consumes the whole stock. A partial consume leaves the remaining packs active; a full consume soft-deletes the row with removal reason consumed. The response carries the number of packs that actually left the stock.",
+                "description": "Consumes the requested number of packs. Omitting the body or quantity consumes the whole stock. A partial consume leaves the remaining packs active; a full consume soft-deletes the row with removal reason consumed. A cause in the body is ignored: a consume has no reason. The response carries the number of packs that actually left the stock.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4003,7 +4000,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Pack quantity and optional offline mutation ID",
+                        "description": "Pack quantity, optional waste cause and optional offline mutation ID",
                         "name": "action",
                         "in": "body",
                         "schema": {
@@ -4373,7 +4370,7 @@ const docTemplate = `{
         },
         "/api/v1/products/{id}/waste": {
             "post": {
-                "description": "Wastes the requested number of packs. Omitting the body or quantity wastes the whole stock. A partial waste leaves the remaining packs active; a full waste soft-deletes the row with removal reason wasted and fires the product.wasted webhook. The response carries the number of packs that actually left the stock.",
+                "description": "Wastes the requested number of packs. Omitting the body or quantity wastes the whole stock. A partial waste leaves the remaining packs active; a full waste soft-deletes the row with removal reason wasted and fires the product.wasted webhook. The optional waste cause names why the packs were wasted (spoiled, overbought, forgotten, disliked, other); a waste without a cause is recorded as unattributed waste. The response carries the number of packs that actually left the stock.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4393,7 +4390,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Pack quantity and optional offline mutation ID",
+                        "description": "Pack quantity, optional waste cause and optional offline mutation ID",
                         "name": "action",
                         "in": "body",
                         "schema": {
@@ -5119,7 +5116,7 @@ const docTemplate = `{
         },
         "/api/v1/stats/waste": {
             "get": {
-                "description": "Returns per-month consumed vs. wasted metrics, top wasted categories\nwith monetary and CO2 impact (each category nests its top wasted products),\nand a 6-month trend. EUR prices come from per-product overrides (if set)\nor category averages; CO2 is sourced from the Agribalyse LCA database via\nOpen Food Facts ecoscore_data.",
+                "description": "Returns per-month consumed vs. wasted metrics, top wasted categories\nwith monetary and CO2 impact (each category nests its top wasted products),\nthe waste broken down by the reason it was wasted, the category the household\nmost over-buys and a one-sentence insight about it, and a 6-month trend.\nEUR prices come from per-product overrides (if set)\nor category averages; CO2 is sourced from the Agribalyse LCA database via\nOpen Food Facts ecoscore_data.",
                 "produces": [
                     "application/json"
                 ],
@@ -7097,6 +7094,10 @@ const docTemplate = `{
                 },
                 "userName": {
                     "type": "string"
+                },
+                "wasteCause": {
+                    "description": "WasteCause is why the action wasted the product. It is empty for every\naction but a waste that carried a reason.",
+                    "type": "string"
                 }
             }
         },
@@ -7261,6 +7262,21 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.BulkProductsAPIModel": {
+            "type": "object",
+            "properties": {
+                "productIDs": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "wasteCause": {
+                    "description": "WasteCause is why the products are wasted. It applies to every product\nof the request and is ignored by a bulk consume.",
                     "type": "string"
                 }
             }
@@ -7647,6 +7663,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "unit": {
+                    "type": "string"
+                },
+                "wasteCause": {
                     "type": "string"
                 }
             }
@@ -8195,6 +8214,10 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "integer"
+                },
+                "wasteCause": {
+                    "description": "WasteCause is why the packs are wasted. It is ignored by a consume.",
+                    "type": "string"
                 }
             }
         },
@@ -8313,6 +8336,9 @@ const docTemplate = `{
                 },
                 "storageLocationId": {
                     "type": "integer"
+                },
+                "wasteCause": {
+                    "type": "string"
                 }
             }
         },
@@ -8907,11 +8933,26 @@ const docTemplate = `{
         "api.WasteAnalyticsResponse": {
             "type": "object",
             "properties": {
+                "causes": {
+                    "description": "Causes breaks the wasted events down by the reason they were wasted.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WasteCauseStat"
+                    }
+                },
                 "co2Source": {
                     "type": "string"
                 },
                 "consumedCount": {
                     "type": "integer"
+                },
+                "insight": {
+                    "description": "Insight is the one-sentence insight about the household's waste, in the\nuser's language.",
+                    "type": "string"
+                },
+                "insightAvailable": {
+                    "description": "InsightAvailable is false when there is too little data to state an\ninsight; the Insight then holds the empty-state sentence.",
+                    "type": "boolean"
                 },
                 "monthly": {
                     "type": "array",
@@ -8924,6 +8965,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/api.WasteCategoryStat"
                     }
+                },
+                "overbuy": {
+                    "description": "Overbuy names the category the household most over-buys.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/api.WasteOverbuyStat"
+                        }
+                    ]
                 },
                 "period": {
                     "description": "\"month\" | \"3months\" | \"6months\" | \"12months\"",
@@ -8982,6 +9031,24 @@ const docTemplate = `{
                 }
             }
         },
+        "api.WasteCauseStat": {
+            "type": "object",
+            "properties": {
+                "cause": {
+                    "type": "string"
+                },
+                "costEur": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "share": {
+                    "description": "Share is the cause's share of all wasted events in the window, in percent.",
+                    "type": "number"
+                }
+            }
+        },
         "api.WasteMonthly": {
             "type": "object",
             "properties": {
@@ -8999,6 +9066,29 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "wastedEur": {
+                    "type": "number"
+                }
+            }
+        },
+        "api.WasteOverbuyStat": {
+            "type": "object",
+            "properties": {
+                "categoryKey": {
+                    "type": "string"
+                },
+                "categoryWaste": {
+                    "description": "CategoryWaste is the number of all waste events in the category.",
+                    "type": "integer"
+                },
+                "count": {
+                    "description": "Count is the number of over-bought waste events in the category.",
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "share": {
+                    "description": "Share is Count as a percentage of CategoryWaste.",
                     "type": "number"
                 }
             }
@@ -9229,6 +9319,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "updatedAt": {
+                    "type": "string"
+                },
+                "wasteCause": {
+                    "description": "WasteCause is why the product was wasted. It is set when the waste\narchives the row and is empty for an unattributed waste.",
                     "type": "string"
                 }
             }

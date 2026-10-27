@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"time"
 
 	apiModel "github.com/Isotop7/proviant/models/api"
@@ -187,6 +188,175 @@ func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, sin
 		out = out[:limit]
 	}
 	return out, nil
+}
+
+// WasteCauseBreakdown holds the wasted events of a household grouped by the
+// reason they were wasted, plus the category the household most over-buys.
+type WasteCauseBreakdown struct {
+	// Causes holds one entry per cause, the unattributed waste in the entry
+	// with the empty cause.
+	Causes []apiModel.WasteCauseStat
+	// Overbuy names the category with the most over-bought waste.
+	Overbuy apiModel.WasteOverbuyStat
+	// WastedEvents is the number of wasted events the breakdown covers.
+	WastedEvents int
+}
+
+// GetWasteCauseBreakdown returns the wasted events of the household since the
+// given instant, grouped by the reason they were wasted, together with the
+// category the household most over-buys.
+func (r *WasteAnalyticsRepository) GetWasteCauseBreakdown(householdID uint, since time.Time) (WasteCauseBreakdown, error) {
+	return wasteCauseBreakdown(r.DB, householdID, since, time.Time{})
+}
+
+// wasteCauseBreakdown aggregates the wasted savings records of a household in
+// the window [since, until) by cause and by category. A zero until leaves the
+// window open. The cause of a waste is read from the savings record: the
+// ledger holds one row per waste action, so a partial waste and a repeated
+// waste of the same product keep their own cause, and the breakdown survives
+// a hard delete of the product row.
+func wasteCauseBreakdown(db *gorm.DB, householdID uint, since, until time.Time) (WasteCauseBreakdown, error) {
+	var breakdown WasteCauseBreakdown
+
+	resolver, err := LoadCategoryResolver(db)
+	if err != nil {
+		return breakdown, err
+	}
+
+	type rawRow struct {
+		PriceEUR   float64
+		Categories sql.NullString
+		Cause      string
+	}
+
+	query := db.
+		Table("savings_records AS s").
+		Select("s.price_eur AS price_eur, p.categories AS categories, s.waste_cause AS cause").
+		Joins("LEFT JOIN products p ON p.id = s.product_id").
+		Where("s.household_id = ? AND s.event_type = ? AND s.created_at >= ?", householdID, dbModel.SavingsEventTypeWasted, since).
+		Where("s.legacy = ?", false)
+	if !until.IsZero() {
+		query = query.Where("s.created_at < ?", until)
+	}
+
+	var raws []rawRow
+	if err := query.Scan(&raws).Error; err != nil {
+		return breakdown, err
+	}
+
+	type causeBucket struct {
+		count int
+		cost  float64
+	}
+
+	causes := make(map[string]*causeBucket)
+	categories := make(map[string]*wasteCategoryBucket)
+	total := 0
+
+	for _, row := range raws {
+		total++
+		bucket, ok := causes[row.Cause]
+		if !ok {
+			bucket = &causeBucket{}
+			causes[row.Cause] = bucket
+		}
+		bucket.count++
+		bucket.cost += row.PriceEUR
+
+		key := wasteCategoryKey(resolver, row.Categories.String)
+		category, ok := categories[key]
+		if !ok {
+			category = &wasteCategoryBucket{}
+			categories[key] = category
+		}
+		category.waste++
+		if row.Cause == dbModel.WasteCauseOverbought {
+			category.overbought++
+		}
+	}
+
+	breakdown.WastedEvents = total
+	breakdown.Causes = make([]apiModel.WasteCauseStat, 0, len(causes))
+	for cause, bucket := range causes {
+		share := 0.0
+		if total > 0 {
+			share = float64(bucket.count) / float64(total) * 100
+		}
+		breakdown.Causes = append(breakdown.Causes, apiModel.WasteCauseStat{
+			Cause:   cause,
+			Count:   bucket.count,
+			CostEUR: bucket.cost,
+			Share:   share,
+		})
+	}
+	sort.Slice(breakdown.Causes, func(i, j int) bool {
+		if breakdown.Causes[i].Count != breakdown.Causes[j].Count {
+			return breakdown.Causes[i].Count > breakdown.Causes[j].Count
+		}
+		return breakdown.Causes[i].Cause < breakdown.Causes[j].Cause
+	})
+
+	breakdown.Overbuy = topOverboughtCategory(resolver, categories)
+	return breakdown, nil
+}
+
+// wasteCategoryBucket counts the waste of one category, split by the over-bought
+// part of it.
+type wasteCategoryBucket struct {
+	waste      int
+	overbought int
+}
+
+// topOverboughtCategory picks the category with the most over-bought waste.
+// The ties break by the category's total waste and then by its key, so the
+// answer does not depend on the map's iteration order.
+func topOverboughtCategory(resolver *CategoryResolver, categories map[string]*wasteCategoryBucket) apiModel.WasteOverbuyStat {
+	bestKey := ""
+	bestWaste := 0
+	bestOverbought := 0
+	for key, bucket := range categories {
+		if bucket.overbought == 0 {
+			continue
+		}
+		if bestKey != "" && !beatsOverbuy(bucket, bestOverbought, bestWaste, key, bestKey) {
+			continue
+		}
+		bestKey = key
+		bestWaste = bucket.waste
+		bestOverbought = bucket.overbought
+	}
+	if bestKey == "" {
+		return apiModel.WasteOverbuyStat{}
+	}
+
+	display := bestKey
+	if canonical, found := resolver.Canonical(bestKey); found {
+		display = canonical.DisplayName
+	}
+	share := 0.0
+	if bestWaste > 0 {
+		share = float64(bestOverbought) / float64(bestWaste) * 100
+	}
+	return apiModel.WasteOverbuyStat{
+		CategoryKey:   bestKey,
+		DisplayName:   display,
+		Count:         bestOverbought,
+		CategoryWaste: bestWaste,
+		Share:         share,
+	}
+}
+
+// beatsOverbuy reports whether a category takes the over-buying crown from the
+// current best: more over-bought waste wins, then more waste in the category,
+// then the alphabetically smaller key.
+func beatsOverbuy(bucket *wasteCategoryBucket, bestOverbought, bestWaste int, key, bestKey string) bool {
+	if bucket.overbought != bestOverbought {
+		return bucket.overbought > bestOverbought
+	}
+	if bucket.waste != bestWaste {
+		return bucket.waste > bestWaste
+	}
+	return key < bestKey
 }
 
 // GetTrendMonths returns wasted-count-per-month for the last `months` months (ascending).

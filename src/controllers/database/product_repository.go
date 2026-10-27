@@ -150,11 +150,11 @@ type ProductRepositoryInterface interface {
 	GetSubThresholdProducts(userID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
 	ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
-	WasteProduct(productID, userID uint) error
-	WasteProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
+	WasteProduct(productID, userID uint, cause string) error
+	WasteProductPartial(product *database.Product, quantity int, mutationID *string, cause string) (int, bool, bool, error)
 	MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
-	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
+	BulkWasteProducts(productIDs []uint, userID uint, cause string) []BulkOperationError
 	GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
 	GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
 }
@@ -1174,6 +1174,7 @@ func (r *ProductRepository) RestoreProduct(productID, userID uint) error {
 
 	product.DeletedAt = gorm.DeletedAt{}
 	product.RemovalReason = ""
+	product.WasteCause = ""
 
 	saveResult := r.DB.Save(&product)
 	return saveResult.Error
@@ -1193,6 +1194,7 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 		}
 		product.DeletedAt = gorm.DeletedAt{}
 		product.RemovalReason = ""
+		product.WasteCause = ""
 		saveResult := r.DB.Save(&product)
 		if saveResult.Error != nil {
 			bulkErrors = append(bulkErrors, BulkOperationError{productID, saveResult.Error})
@@ -1559,7 +1561,7 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 
 	now := time.Now()
 	monthCounts := make(map[string]int, 12)
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
 	}
 	for i := range products {
@@ -1574,7 +1576,7 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 	}
 
 	result := make([]apiModel.StatsMonthlyCount, 0, 12)
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
 		result = append(result, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
 	}
@@ -2250,20 +2252,22 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 // the request covers its current stock. A zero or negative quantity consumes
 // the whole stock, preserving the recipe-cook contract.
 func (r *ProductRepository) ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error) {
-	return r.removeProductPartial(product, quantity, database.RemovalReasonConsumed, mutationID)
+	return r.removeProductPartial(product, quantity, database.RemovalReasonConsumed, mutationID, "")
 }
 
 // WasteProductPartial is the waste counterpart of ConsumeProductPartial.
-func (r *ProductRepository) WasteProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error) {
-	return r.removeProductPartial(product, quantity, database.RemovalReasonWasted, mutationID)
+func (r *ProductRepository) WasteProductPartial(product *database.Product, quantity int, mutationID *string, cause string) (int, bool, bool, error) {
+	return r.removeProductPartial(product, quantity, database.RemovalReasonWasted, mutationID, cause)
 }
 
 // removeProductPartial compares data values only (quantity, removal_reason and
 // deleted_at), never updated_at, whose driver representation is not stable on
 // legacy rows. removal_reason also prevents a second request from claiming an
 // archived row. A mutation claim shares the transaction with the stock change,
-// so an offline replay cannot apply it twice.
-func (r *ProductRepository) removeProductPartial(product *database.Product, quantity int, reason string, mutationID *string) (removed int, fullyRemoved bool, applied bool, err error) {
+// so an offline replay cannot apply it twice. The cause is why the packs were
+// wasted; it is written beside the removal reason when the waste archives the
+// row.
+func (r *ProductRepository) removeProductPartial(product *database.Product, quantity int, reason string, mutationID *string, cause string) (removed int, fullyRemoved bool, applied bool, err error) {
 	if mutationID != nil && strings.TrimSpace(*mutationID) == "" {
 		mutationID = nil
 	}
@@ -2285,7 +2289,7 @@ func (r *ProductRepository) removeProductPartial(product *database.Product, quan
 	}
 
 	var txErr error
-	for attempt := 0; attempt < 2; attempt++ {
+	for range 2 {
 		removed, fullyRemoved, applied = 0, false, false
 		txErr = r.DB.Transaction(func(tx *gorm.DB) error {
 			if mutationID != nil {
@@ -2334,7 +2338,10 @@ func (r *ProductRepository) removeProductPartial(product *database.Product, quan
 				Where(util.WhereDeletedIsNull).
 				Where(util.WhereRemovalReasonUnclaimed).
 				Where("quantity = ?", current.Quantity).
-				Update("removal_reason", reason)
+				Updates(map[string]any{
+					"removal_reason": reason,
+					"waste_cause":    cause,
+				})
 			if result.Error != nil {
 				return result.Error
 			}
@@ -2360,7 +2367,7 @@ func (r *ProductRepository) removeProductPartial(product *database.Product, quan
 	return removed, fullyRemoved, applied, nil
 }
 
-func (r *ProductRepository) WasteProduct(productID, userID uint) error {
+func (r *ProductRepository) WasteProduct(productID, userID uint, cause string) error {
 	product, err := r.GetProductByID(productID, userID)
 	if err != nil {
 		return err
@@ -2375,7 +2382,10 @@ func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 			Where("household_id = ?", product.HouseholdID).
 			Where(util.WhereDeletedIsNull).
 			Where(util.WhereRemovalReasonUnclaimed).
-			Update("removal_reason", database.RemovalReasonWasted)
+			Updates(map[string]any{
+				"removal_reason": database.RemovalReasonWasted,
+				"waste_cause":    cause,
+			})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -2396,10 +2406,10 @@ func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) 
 	return bulkErrors
 }
 
-func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError {
+func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint, cause string) []BulkOperationError {
 	bulkErrors := []BulkOperationError{}
 	for _, productID := range productIDs {
-		if err := r.WasteProduct(productID, userID); err != nil {
+		if err := r.WasteProduct(productID, userID, cause); err != nil {
 			bulkErrors = append(bulkErrors, BulkOperationError{productID, err})
 		}
 	}

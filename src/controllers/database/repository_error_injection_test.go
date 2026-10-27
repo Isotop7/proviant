@@ -199,10 +199,10 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if err := repo.ConsumeProduct(product.ID, user.ID); err == nil {
 			t.Error("ConsumeProduct() save error = nil")
 		}
-		if err := repo.WasteProduct(product.ID, user.ID); err == nil {
+		if err := repo.WasteProduct(product.ID, user.ID, ""); err == nil {
 			t.Error("WasteProduct() error = nil")
 		}
-		if errs := repo.BulkWasteProducts([]uint{product.ID}, user.ID); len(errs) != 1 {
+		if errs := repo.BulkWasteProducts([]uint{product.ID}, user.ID, ""); len(errs) != 1 {
 			t.Errorf("BulkWasteProducts() returned %d errors, want 1", len(errs))
 		}
 	})

@@ -311,7 +311,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 		deletedCount := 0
 		vanishedCount := 0
 		start := make(chan struct{})
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -483,7 +483,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		appliedCount := 0
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -520,7 +520,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 	t.Run("concurrent deltas on one product all land", func(t *testing.T) {
 		product := setup(t, 0)
 		var wg sync.WaitGroup
-		for i := 0; i < 8; i++ {
+		for range 8 {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -652,7 +652,7 @@ func TestProductRepository_GetProductCategoryBreakdownEdges(t *testing.T) {
 
 	t.Run("more than eight categories folds the rest into Other", func(t *testing.T) {
 		categories := make([]string, 0, 10)
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			categories = append(categories, fmt.Sprintf("cat-%d", i))
 		}
 		_, repo, user := seed(t, categories...)
@@ -853,7 +853,7 @@ func TestProductRepository_CreateProductsBulkEdges(t *testing.T) {
 	// The rejection is whole: no products and no locations were written.
 	t.Run("too many distinct new locations is rejected whole", func(t *testing.T) {
 		rows := make([]ImportedProduct, 0, util.CsvImportMaxNewLocations+1)
-		for i := 0; i < util.CsvImportMaxNewLocations+1; i++ {
+		for i := range util.CsvImportMaxNewLocations + 1 {
 			rows = append(rows, ImportedProduct{
 				Product:         dbModel.Product{ProductName: fmt.Sprintf("P%d", i), Barcode: fmt.Sprintf("77%011d", i)},
 				NewLocationName: fmt.Sprintf("Location %d", i),
@@ -1087,7 +1087,7 @@ func TestProductRepository_ConsumeAndWasteNotFound(t *testing.T) {
 	if err := repo.ConsumeProduct(9999, user.ID); err == nil {
 		t.Error("ConsumeProduct(9999) error = nil, want error")
 	}
-	if err := repo.WasteProduct(9999, user.ID); err == nil {
+	if err := repo.WasteProduct(9999, user.ID, ""); err == nil {
 		t.Error("WasteProduct(9999) error = nil, want error")
 	}
 }
@@ -1164,7 +1164,7 @@ func TestProductRepository_GetUserProductsBulkByBarcodesChunking(t *testing.T) {
 	// More than one chunk (bulkQueryChunkSize = 500): the matching barcode
 	// sits in the second chunk.
 	barcodes := make([]string, 0, bulkQueryChunkSize+1)
-	for i := 0; i < bulkQueryChunkSize; i++ {
+	for i := range bulkQueryChunkSize {
 		barcodes = append(barcodes, fmt.Sprintf("5%012d", i))
 	}
 	barcodes = append(barcodes, product.Barcode)

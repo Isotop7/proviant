@@ -48,6 +48,7 @@
   "notify.monthly.totalWaste": "Abfall gesamt in diesem Monat",
   "notify.monthly.vsLastMonth": "im Vergleich zum Vormonat",
   "notify.monthly.wasteRate": "Abfallquote",
+  "notify.monthly.whyWasted": "Warum es weggeworfen wurde",
   "notify.ntfy.streakMilestoneBody": "%d-tägige Serie ohne Lebensmittelverschwendung — Ihr Haushalt hat %d Tage in Folge keine Lebensmittel verschwendet.",
   "notify.ntfy.streakResetBody": "Ihre %d-tägige Serie ohne Lebensmittelverschwendung wurde zurückgesetzt. Zeit für eine neue!",
   "notify.ntfy.title.productExpired": "proviant - Produkt '%s' ist abgelaufen",

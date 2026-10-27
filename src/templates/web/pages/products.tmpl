@@ -746,6 +746,14 @@
                 <input type="number" class="form-control" id="partialActionQuantity" min="1" step="1" required inputmode="numeric" aria-describedby="partialActionStock partialActionQuantityError">
                 <div class="invalid-feedback" id="partialActionQuantityError"></div>
                 <small class="form-text" id="partialActionStock"></small>
+                <label for="partialActionCause" class="form-label mt-4">{{ t "products.wasteCauseLabel" }}</label>
+                <select class="form-control" id="partialActionCause" aria-describedby="partialActionCauseHint">
+                    <option value="">{{ t "waste.cause.none" }}</option>
+                    {{ range $cause := $.WasteCauses }}
+                    <option value="{{ $cause }}">{{ t (printf "waste.cause.%s" $cause) }}</option>
+                    {{ end }}
+                </select>
+                <div class="form-text" id="partialActionCauseHint">{{ t "products.wasteCauseHint" }}</div>
             </div>
             <div class="dialog-footer">
                 <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
@@ -756,6 +764,36 @@
                 <button type="button" class="btn btn-solid theme-primary" id="btnPartialConsumeConfirm">
                     <span class="btn-label"><i class="bi bi-check-circle me-1"></i>{{ t "products.consume" }}</span>
                     <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.consuming" }}</span>
+                </button>
+            </div>
+        </dialog>
+
+<!-- Bulk waste dialog: one reason for the whole selection -->
+<dialog class="dialog" id="bulkWasteModal" aria-labelledby="bulkWasteModalLabel">
+            <div class="dialog-header">
+                <div class="dialog-icon dialog-icon-danger">
+                    <i class="bi bi-trash3-fill"></i>
+                </div><h5 class="dialog-title mb-0" id="bulkWasteModalLabel">{{ t "products.bulkWasteCauseTitle" }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <p class="fg-secondary small mb-3" id="bulkWasteCount"></p>
+                <label for="bulkWasteCause" class="form-label">{{ t "products.wasteCauseLabel" }}</label>
+                <select class="form-control" id="bulkWasteCause" aria-describedby="bulkWasteCauseHint">
+                    <option value="">{{ t "waste.cause.none" }}</option>
+                    {{ range $cause := $.WasteCauses }}
+                    <option value="{{ $cause }}">{{ t (printf "waste.cause.%s" $cause) }}</option>
+                    {{ end }}
+                </select>
+                <div class="form-text" id="bulkWasteCauseHint">{{ t "products.wasteCauseHint" }}</div>
+            </div>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+                <button class="btn btn-solid theme-danger" id="btnBulkWasteConfirm" type="button">
+                    <span class="btn-label"><i class="bi bi-trash3 me-1"></i>{{ t "products.waste" }}</span>
+                    <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "products.wasting" }}</span>
                 </button>
             </div>
         </dialog>
