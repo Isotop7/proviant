@@ -41,7 +41,7 @@ func MockJWTClaimsWithKey(ctx *gin.Context, userID uint, key string) {
 
 var TokenIdentityKey = static.TokenIdentityKey
 
-func CreateTestRequest(ctx *gin.Context, body interface{}) {
+func CreateTestRequest(ctx *gin.Context, body any) {
 	bodyBytes, _ := json.Marshal(body)
 	ctx.Request = &http.Request{
 		Body:          io.NopCloser(bytes.NewBuffer(bodyBytes)),
@@ -51,7 +51,7 @@ func CreateTestRequest(ctx *gin.Context, body interface{}) {
 	ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 }
 
-func CreateJSONRequest(method string, path string, body interface{}) *http.Request {
+func CreateJSONRequest(method string, path string, body any) *http.Request {
 	var bodyBytes []byte
 	if body != nil {
 		bodyBytes, _ = json.Marshal(body)

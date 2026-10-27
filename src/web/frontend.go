@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"html/template"
+	"maps"
 	"net/http"
 	"net/url"
 	"sort"
@@ -406,9 +407,7 @@ func renderProductsFetchError(ctx *gin.Context, frontend *Frontend, logger *zero
 // and Set replaces that entry rather than touching any other key's slice.
 func pageURL(params url.Values, page int) string {
 	paged := make(url.Values, len(params)+1)
-	for key, value := range params {
-		paged[key] = value
-	}
+	maps.Copy(paged, params)
 	paged.Set("page", strconv.Itoa(page))
 	return "?" + paged.Encode()
 }
@@ -456,10 +455,7 @@ func hydrateProductsPage(repos *database.RepositoryContainer, userID uint, ids [
 // since it was written lands on a valid page instead of rendering an empty one
 // that reads like data loss.
 func sliceProductPage(candidates []dbModel.Product, rawPage string) (ids []uint, page, totalPages int) {
-	totalPages = (len(candidates) + productsPageSize - 1) / productsPageSize
-	if totalPages < 1 {
-		totalPages = 1
-	}
+	totalPages = max((len(candidates)+productsPageSize-1)/productsPageSize, 1)
 
 	page = 1
 	if requested, err := strconv.Atoi(rawPage); err == nil && requested > 1 {
@@ -470,10 +466,7 @@ func sliceProductPage(candidates []dbModel.Product, rawPage string) (ids []uint,
 	}
 
 	start := (page - 1) * productsPageSize
-	end := start + productsPageSize
-	if end > len(candidates) {
-		end = len(candidates)
-	}
+	end := min(start+productsPageSize, len(candidates))
 	ids = make([]uint, 0, end-start)
 	for i := start; i < end; i++ {
 		ids = append(ids, candidates[i].ID)
@@ -655,9 +648,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	params := url.Values{}
-	for k, v := range ctx.Request.URL.Query() {
-		params[k] = v
-	}
+	maps.Copy(params, ctx.Request.URL.Query())
 	// Filter and view links start over at page 1: carrying ?page= along would
 	// mean a page number that no longer refers to anything under the new filter.
 	delete(params, "page")

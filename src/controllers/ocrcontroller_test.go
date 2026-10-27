@@ -208,8 +208,8 @@ func TestPreprocessImage(t *testing.T) {
 	ctrl := newTestOCRController()
 
 	img := image.NewRGBA(image.Rect(0, 0, 10, 10))
-	for y := 0; y < 10; y++ {
-		for x := 0; x < 10; x++ {
+	for y := range 10 {
+		for x := range 10 {
 			img.SetRGBA(x, y, color.RGBA{R: 200, G: 200, B: 200, A: 255})
 		}
 	}

@@ -126,7 +126,7 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 
 	wantTrend := []apiModel.StatsMonthlyCount{}
 	monthCounts := map[string]int{}
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
 	}
 	for i := range fullRows {
@@ -139,7 +139,7 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 			monthCounts[month]++
 		}
 	}
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
 		wantTrend = append(wantTrend, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
 	}

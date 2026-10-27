@@ -140,7 +140,7 @@ func TestProductsHandlerPagesTheList(t *testing.T) {
 	user := testutil.CreateTestUser(db, household.ID)
 
 	total := productsPageSize + 10
-	for i := 0; i < total; i++ {
+	for i := range total {
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		product.ProductName = productNameFor(i)
 		if err := db.Save(product).Error; err != nil {
@@ -233,7 +233,7 @@ func TestProductsHandlerOmitsPagerOnASinglePage(t *testing.T) {
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
-	for i := 0; i < productsPageSize-10; i++ {
+	for i := range productsPageSize - 10 {
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		product.ProductName = productNameFor(i)
 		if err := db.Save(product).Error; err != nil {

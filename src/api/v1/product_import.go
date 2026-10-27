@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -506,10 +507,8 @@ func (i *importNewlineIndex) lineAt(end int64, counted int) int {
 func hasLegacyCsvHeader(header []string) bool {
 	for _, cell := range header {
 		name := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(cell, "\ufeff")))
-		for _, legacy := range util.CsvLegacyColumnHeaders {
-			if name == legacy {
-				return true
-			}
+		if slices.Contains(util.CsvLegacyColumnHeaders, name) {
+			return true
 		}
 	}
 	return false

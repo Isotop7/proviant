@@ -210,7 +210,7 @@ func (r *HouseholdRepository) ApproveApplication(applicationID, adminUserID uint
 	if err != nil {
 		return err
 	}
-	if err := tx.Model(&authentication.User{}).Where(util.QueryId, application.ApplicantID).Updates(map[string]interface{}{
+	if err := tx.Model(&authentication.User{}).Where(util.QueryId, application.ApplicantID).Updates(map[string]any{
 		"household_id": application.HouseholdID,
 		"role":         authentication.RoleMember,
 	}).Error; err != nil {
@@ -287,7 +287,7 @@ func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID u
 	if household.AdminID != adminUserID {
 		return errors.ErrNotHouseholdAdmin
 	}
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"monthly_waste_goal_type":    goalType,
 		"monthly_waste_goal_count":   goalCount,
 		"monthly_waste_goal_percent": goalPercent,

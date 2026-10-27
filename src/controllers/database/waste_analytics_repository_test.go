@@ -52,12 +52,12 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 	// Household A: 1 consumed dairy, 2 wasted dairy, 1 wasted bakery
 	dairyProd := dbModel.Product{
 		ProductName: "Yogurt", Categories: "en:dairy", HouseholdID: hhA.ID, UserID: adminA.ID, ExpireAt: now,
-		Quantity: 2, PriceOverride: float64Ptr(1.99), CO2KgPerKg: float64Ptr(1.2),
+		Quantity: 2, PriceOverride: new(1.99), CO2KgPerKg: new(1.2),
 	}
 	db.Create(&dairyProd)
 	bakeryProd := dbModel.Product{
 		ProductName: "Bread", Categories: "en:bakery", HouseholdID: hhA.ID, UserID: adminA.ID, ExpireAt: now,
-		Quantity: 1, PriceOverride: float64Ptr(0.99), CO2KgPerKg: float64Ptr(0.8),
+		Quantity: 1, PriceOverride: new(0.99), CO2KgPerKg: new(0.8),
 	}
 	db.Create(&bakeryProd)
 
@@ -200,7 +200,7 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 		// Add 2 more distinct product names in dairy, then cap at 2 → 2 returned.
 		extraProd := dbModel.Product{
 			ProductName: "Cheese", Categories: "en:dairy", HouseholdID: hhA.ID, UserID: adminA.ID, ExpireAt: now,
-			Quantity: 1, PriceOverride: float64Ptr(3.0), CO2KgPerKg: float64Ptr(2.0),
+			Quantity: 1, PriceOverride: new(3.0), CO2KgPerKg: new(2.0),
 		}
 		db.Create(&extraProd)
 		insertSavings(extraProd.ID, hhA.ID, "Cheese", "wasted", 3.0, 2.0, now.Add(-5*time.Hour))
@@ -235,8 +235,6 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 		}
 	})
 }
-
-func float64Ptr(v float64) *float64 { return &v }
 
 func keysOfProducts(m map[string][]apiModel.WasteProductStat) []string {
 	out := make([]string, 0, len(m))

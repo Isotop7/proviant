@@ -34,7 +34,7 @@ func TestBulkConsumeProductsReadsTheCanonicalCategoriesOnce(t *testing.T) {
 	}
 
 	productIDs := make([]uint, 0, 10)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		if err := db.Model(product).Update("categories", "dairy products, milk").Error; err != nil {
 			t.Fatalf("set product categories: %v", err)

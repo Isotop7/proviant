@@ -256,7 +256,7 @@ func countFullExportCategory(counts map[string]int, raw string) {
 		counts["Uncategorized"]++
 		return
 	}
-	first := strings.SplitN(trimmed, ",", 2)[0]
+	first, _, _ := strings.Cut(trimmed, ",")
 	first = strings.TrimSpace(first)
 	if idx := strings.Index(first, ":"); idx != -1 {
 		first = strings.TrimSpace(first[idx+1:])
@@ -521,15 +521,9 @@ func insertRestoreProducts(tx *gorm.DB, rows []map[string]any) error {
 		return err
 	}
 	tableName := statement.Schema.Table
-	batchRows := restoreProductMaxParameters / len(restoreProductColumns)
-	if batchRows < 1 {
-		batchRows = 1
-	}
+	batchRows := max(restoreProductMaxParameters/len(restoreProductColumns), 1)
 	for start := 0; start < len(rows); start += batchRows {
-		end := start + batchRows
-		if end > len(rows) {
-			end = len(rows)
-		}
+		end := min(start+batchRows, len(rows))
 
 		var insert strings.Builder
 		insert.WriteString("INSERT INTO ")

@@ -56,7 +56,7 @@ func TestGetHealthResponseFormat(t *testing.T) {
 		t.Errorf("Content-Type = %v, want 'application/json; charset=utf-8'", w.Header().Get(util.RequestHeaderContentType))
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Errorf("unmarshal error: %v", err)
 	}
@@ -274,7 +274,7 @@ func TestGetReadinessServesConcurrentFlood(t *testing.T) {
 	statuses := make([]int, flood)
 
 	var waitGroup sync.WaitGroup
-	for i := 0; i < flood; i++ {
+	for i := range flood {
 		waitGroup.Add(1)
 		go func(index int) {
 			defer waitGroup.Done()

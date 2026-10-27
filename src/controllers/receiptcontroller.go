@@ -81,8 +81,8 @@ type receiptChatRequest struct {
 }
 
 type receiptChatMessage struct {
-	Role    string        `json:"role"`
-	Content []interface{} `json:"content"`
+	Role    string `json:"role"`
+	Content []any  `json:"content"`
 }
 
 type receiptImageURLPart struct {
@@ -244,7 +244,7 @@ func (c *ReceiptScanControllerImpl) ScanReceipt(parent context.Context, image []
 		Model: c.Config.Model,
 		Messages: []receiptChatMessage{{
 			Role: "user",
-			Content: []interface{}{
+			Content: []any{
 				receiptImageURLPart{
 					Type:     "image_url",
 					ImageURL: receiptImageURL{URL: "data:" + imageMIME + ";base64," + base64.StdEncoding.EncodeToString(image)},
@@ -590,11 +590,11 @@ func receiptItemQuantityAndPackSize(item tolerantReceiptItem) (int, string) {
 // is closed, repaired and parsed on its own, and broken chunks are skipped.
 func salvageReceiptItems(payload string) []apiModel.ReceiptItem {
 	const itemStart = `{"name"`
-	idx := strings.Index(payload, itemStart)
-	if idx < 0 {
+	_, after, ok := strings.Cut(payload, itemStart)
+	if !ok {
 		return nil
 	}
-	parts := strings.Split(payload[idx+len(itemStart):], itemStart)
+	parts := strings.Split(after, itemStart)
 	items := make([]apiModel.ReceiptItem, 0, len(parts))
 	for _, part := range parts {
 		// Drop everything after the array's closing bracket: a trailing

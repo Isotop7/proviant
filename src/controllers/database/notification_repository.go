@@ -325,7 +325,7 @@ func (r *NotificationRepository) FindUserByTelegramLinkToken(token string) (auth
 func (r *NotificationRepository) SetTelegramChatID(userID uint, chatID string) error {
 	return r.DB.Model(&authentication.User{}).
 		Where(util.QueryId, userID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"telegram_chat_id":    chatID,
 			"telegram_link_token": "",
 			"telegram_enabled":    true,

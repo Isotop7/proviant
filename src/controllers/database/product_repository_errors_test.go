@@ -312,9 +312,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 		vanishedCount := 0
 		start := make(chan struct{})
 		for range 2 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				<-start
 				deleted, _, err := repo.UpdateProductQuantity(product.ID, user.ID, -2, nil)
 				if stderrors.Is(err, gorm.ErrRecordNotFound) {
@@ -333,7 +331,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 				mu.Lock()
 				deletedCount++
 				mu.Unlock()
-			}()
+			})
 		}
 		close(start)
 		wg.Wait()
@@ -484,9 +482,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 		var mu sync.Mutex
 		appliedCount := 0
 		for range 2 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				<-start
 				_, applied, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &mutationID)
 				if err != nil {
@@ -497,7 +493,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 					appliedCount++
 					mu.Unlock()
 				}
-			}()
+			})
 		}
 		close(start)
 		wg.Wait()
@@ -521,13 +517,11 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 		product := setup(t, 0)
 		var wg sync.WaitGroup
 		for range 8 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err != nil {
 					t.Errorf("UpdateProductQuantity() error = %v", err)
 				}
-			}()
+			})
 		}
 		wg.Wait()
 

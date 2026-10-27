@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"maps"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -116,9 +117,7 @@ func expiryStatusLabel(lang string, t time.Time) string {
 
 func queryWith(params url.Values, key, val string) template.URL {
 	p := url.Values{}
-	for k, v := range params {
-		p[k] = v
-	}
+	maps.Copy(p, params)
 	if val == "" {
 		p.Del(key)
 	} else {
@@ -191,8 +190,8 @@ func badgifyCategories(categories string, limit int) template.HTML {
 
 func splitString(source string) template.HTML {
 	var output strings.Builder
-	elements := strings.Split(source, ",")
-	for _, elem := range elements {
+	elements := strings.SplitSeq(source, ",")
+	for elem := range elements {
 		output.WriteString(elem)
 		output.WriteString("<br>")
 	}
@@ -307,9 +306,7 @@ func templateFunctions(lang string) template.FuncMap {
 			return QuantityLabel(lang, quantity)
 		},
 	}
-	for name, fn := range i18n.FuncMap(lang) {
-		functions[name] = fn
-	}
+	maps.Copy(functions, i18n.FuncMap(lang))
 	return functions
 }
 

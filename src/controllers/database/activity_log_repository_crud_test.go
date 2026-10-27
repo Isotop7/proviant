@@ -65,7 +65,7 @@ func TestActivityLogRepository_GetByHousehold(t *testing.T) {
 	ctx := context.Background()
 
 	base := time.Now().Add(-time.Hour)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		log := dbModel.ActivityLog{
 			HouseholdID: household.ID,
 			UserName:    "testuser",
@@ -124,7 +124,7 @@ func TestActivityLogRepository_GetByHouseholdCount(t *testing.T) {
 	household := testutil.CreateTestHousehold(db, 0)
 	ctx := context.Background()
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		log := dbModel.ActivityLog{
 			HouseholdID: household.ID,
 			UserName:    "testuser",

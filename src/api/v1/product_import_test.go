@@ -518,7 +518,7 @@ func TestImportProducts(t *testing.T) {
 		var builder strings.Builder
 		builder.WriteString(importHeader)
 		overshoot := util.CsvImportOpenFoodFactsLookups + 5
-		for i := 0; i < overshoot; i++ {
+		for i := range overshoot {
 			fmt.Fprintf(&builder, ",4006381333%03d,1,pcs,,Fridge,,\n", i)
 		}
 

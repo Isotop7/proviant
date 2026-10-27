@@ -285,7 +285,7 @@ func (r *UserRepository) UpdateUserDashboardLayout(userID uint, layout string) e
 func (r *UserRepository) UpdateAdminUserFields(userID uint, username, mailAddress string) error {
 	return r.DB.Model(&authentication.User{}).
 		Where(util.QueryId, userID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"username":     username,
 			"mail_address": mailAddress,
 		}).Error
@@ -349,7 +349,7 @@ func (r *UserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts 
 	user.FailedLoginAttempts++
 	if maxLoginAttempts > 0 && user.FailedLoginAttempts >= uint(maxLoginAttempts) {
 		lockoutUntil := time.Now().Add(time.Duration(lockoutDurationMins) * time.Minute)
-		return r.DB.Model(&user).Updates(map[string]interface{}{
+		return r.DB.Model(&user).Updates(map[string]any{
 			"failed_login_attempts": user.FailedLoginAttempts,
 			"locked_until":          lockoutUntil,
 		}).Error
@@ -358,7 +358,7 @@ func (r *UserRepository) RecordFailedLoginAttempt(userID uint, maxLoginAttempts 
 }
 
 func (r *UserRepository) ResetFailedLoginAttempts(userID uint) error {
-	return r.DB.Model(&authentication.User{}).Where(util.QueryId, userID).Updates(map[string]interface{}{
+	return r.DB.Model(&authentication.User{}).Where(util.QueryId, userID).Updates(map[string]any{
 		"failed_login_attempts": 0,
 		"locked_until":          nil,
 	}).Error
@@ -486,7 +486,7 @@ func (r *UserRepository) GetPasswordResetByToken(token string) (database.Passwor
 func (r *UserRepository) MarkPasswordResetUsed(resetID uint, usedAt time.Time) error {
 	return r.DB.Model(&database.PasswordReset{}).
 		Where(util.QueryId, resetID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"used_at": usedAt,
 		}).Error
 }

@@ -81,7 +81,7 @@ func (e *EmailNotificationProvider) IsConfigured() bool {
 	return e.Configuration.Host != "" && e.Configuration.Port > 0
 }
 
-func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo interface{}, lang string) error {
+func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any, lang string) error {
 	recipient, ok := recipientInfo.(string)
 	if !ok {
 		return fmt.Errorf("invalid recipient type for email provider")

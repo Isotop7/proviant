@@ -421,10 +421,7 @@ const bulkQueryChunkSize = 500
 func chunkStrings(values []string, size int) [][]string {
 	chunks := make([][]string, 0, (len(values)+size-1)/size)
 	for start := 0; start < len(values); start += size {
-		end := start + size
-		if end > len(values) {
-			end = len(values)
-		}
+		end := min(start+size, len(values))
 		chunks = append(chunks, values[start:end])
 	}
 	return chunks
@@ -1496,7 +1493,7 @@ func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string
 			counts["Uncategorized"]++
 			continue
 		}
-		first := strings.SplitN(raw, ",", 2)[0]
+		first, _, _ := strings.Cut(raw, ",")
 		first = strings.TrimSpace(first)
 		if idx := strings.Index(first, ":"); idx != -1 {
 			first = strings.TrimSpace(first[idx+1:])

@@ -53,8 +53,8 @@ var mealDBCategoryAliases = map[string][]string{
 
 const (
 	maxSearchRequestsPerRun = 40
-	maxIngredientTerms = 2
-	maxIngredientTermWords = 3
+	maxIngredientTerms      = 2
+	maxIngredientTermWords  = 3
 	minIngredientTermLength = 3
 	maxIngredientTermLength = 24
 )
@@ -100,7 +100,7 @@ type mealStub struct {
 	Title    string
 	ImageURL string
 	Source   string
-	Term string
+	Term     string
 }
 
 // searchBudget bounds the outbound searches of one fetch run. The searches of

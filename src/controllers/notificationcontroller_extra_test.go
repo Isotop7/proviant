@@ -178,11 +178,11 @@ func waitForLog(buf *syncLogBuffer, substr string) bool {
 func scheduledRunTime(t *testing.T, logOut string) time.Time {
 	t.Helper()
 	const marker = "next run at "
-	idx := strings.Index(logOut, marker)
-	if idx < 0 {
+	_, after, ok := strings.Cut(logOut, marker)
+	if !ok {
 		t.Fatalf("log contains no %q entry: %s", marker, logOut)
 	}
-	rest := logOut[idx+len(marker):]
+	rest := after
 	end := strings.IndexAny(rest, "\"\r\n")
 	if end < 0 {
 		t.Fatalf("unterminated next-run entry in log: %s", logOut)

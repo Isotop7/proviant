@@ -86,7 +86,7 @@ func TestCategoryResolverBreaksTiesDeterministically(t *testing.T) {
 	}
 	resolver := NewCategoryResolver(rows)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		got, ok := resolver.ResolveKey("alpha")
 		if !ok {
 			t.Fatalf("ResolveKey(%q) found no category", "alpha")

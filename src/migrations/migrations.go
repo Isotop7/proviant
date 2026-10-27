@@ -258,10 +258,7 @@ func legacyMinStockPacks(amount, minStock int, unit string) int {
 	if amount < 1 {
 		return 1
 	}
-	packs := int(math.Round(float64(minStock) / float64(amount)))
-	if packs < 1 {
-		packs = 1
-	}
+	packs := max(int(math.Round(float64(minStock)/float64(amount))), 1)
 	return min(packs, util.MaxProductQuantity)
 }
 

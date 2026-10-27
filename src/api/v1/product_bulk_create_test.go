@@ -53,7 +53,7 @@ func TestBulkCreateProducts(t *testing.T) {
 		ctx, w, appCtx, locationID := newBulkTestSetup(t)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "Milk", Quantity: 2, PackSize: "1 l", ExpireAt: "2030-01-02", Price: pricePtr(2.49)},
+				{ProductName: "Milk", Quantity: 2, PackSize: "1 l", ExpireAt: "2030-01-02", Price: new(2.49)},
 				{ProductName: "Bread", Quantity: 1, StorageLocationID: &locationID},
 			},
 		})
@@ -118,7 +118,7 @@ func TestBulkCreateProducts(t *testing.T) {
 		ctx, w, appCtx, _ := newBulkTestSetup(t)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "Milk", Quantity: 2, Price: pricePtr(2.49)},
+				{ProductName: "Milk", Quantity: 2, Price: new(2.49)},
 			},
 		})
 
@@ -140,7 +140,7 @@ func TestBulkCreateProducts(t *testing.T) {
 		ctx, w, appCtx, _ := newBulkTestSetup(t)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "Milk", Quantity: 3, PriceOverride: pricePtr(1.50)},
+				{ProductName: "Milk", Quantity: 3, PriceOverride: new(1.50)},
 			},
 		})
 
@@ -372,8 +372,6 @@ func TestBulkCreateProducts(t *testing.T) {
 		}
 	})
 }
-
-func pricePtr(v float64) *float64 { return &v }
 
 // seedBulkCategoryPrices writes the canonical categories a resolver resolves
 // the free text of a draft against.

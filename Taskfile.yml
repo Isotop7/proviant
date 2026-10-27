@@ -40,12 +40,29 @@ tasks:
       - go fmt ./...
       - go mod tidy -v
 
+  modernize:
+    desc: Report the Go modernizations the code is missing (read-only, fails when any are pending)
+    cmds:
+      - bash scripts/check-modernize.sh
+
+  modernize-fix:
+    desc: Apply the Go modernizations (go fix)
+    cmds:
+      - bash scripts/check-modernize.sh --fix
+
   test:
     desc: Run code tests
     dir: src
+    deps: [test-perf]
     cmds:
       - go test -race -vet=off ./...
       - go mod verify
+
+  test-perf:
+    desc: Run the wall-clock budget test on a clean build (the race detector inflates it beyond usefulness)
+    dir: src
+    cmds:
+      - go test -vet=off -count=1 -run TestProductListPerformance10k ./controllers/database/
 
   test-js:
     desc: Run frontend (vitest) tests
