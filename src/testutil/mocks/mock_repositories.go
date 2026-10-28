@@ -384,6 +384,8 @@ type MockUserRepository struct {
 	MailAddressExistsResult bool
 	LockDuration            time.Duration
 	IsLocked                bool
+	PasswordValid           bool
+	RecoveryCodeConsumable  bool
 	Err                     error
 }
 
@@ -427,6 +429,73 @@ func (m *MockUserRepository) UpdateAdminUserFields(userID uint, username, mailAd
 func (m *MockUserRepository) UpdateDisplayName(userID uint, displayName string) error { return m.Err }
 func (m *MockUserRepository) UpdateUserPassword(userID uint, login *authentication.Login) error {
 	return m.Err
+}
+func (m *MockUserRepository) VerifyPassword(userID uint, password string) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	return m.PasswordValid, nil
+}
+func (m *MockUserRepository) EnableTwoFactor(userID uint, encryptedSecret string) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	if m.User.TwoFactorEnabled {
+		return false, nil
+	}
+	m.User.TwoFactorEnabled = true
+	m.User.TwoFactorSecret = encryptedSecret
+	return true, nil
+}
+func (m *MockUserRepository) DisableTwoFactor(userID uint) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.User.TwoFactorEnabled = false
+	m.User.TwoFactorSecret = ""
+	m.User.TwoFactorLastUsedStep = 0
+	m.User.TwoFactorPendingSecret = ""
+	m.User.TwoFactorPendingExpiry = nil
+	return nil
+}
+func (m *MockUserRepository) SetTwoFactorPendingSecret(userID uint, encryptedSecret string, expiry time.Time) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.User.TwoFactorPendingSecret = encryptedSecret
+	m.User.TwoFactorPendingExpiry = &expiry
+	return nil
+}
+func (m *MockUserRepository) ClearTwoFactorPendingSecret(userID uint) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.User.TwoFactorPendingSecret = ""
+	m.User.TwoFactorPendingExpiry = nil
+	return nil
+}
+func (m *MockUserRepository) AdvanceTwoFactorStep(userID uint, step int64) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	if m.User.TwoFactorLastUsedStep >= step {
+		return false, nil
+	}
+	m.User.TwoFactorLastUsedStep = step
+	return true, nil
+}
+func (m *MockUserRepository) ConsumeRecoveryCodeAndDisable(userID uint, codeHash string, usedAt time.Time) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	if !m.RecoveryCodeConsumable {
+		return false, nil
+	}
+	m.RecoveryCodeConsumable = false
+	m.User.TwoFactorEnabled = false
+	m.User.TwoFactorSecret = ""
+	m.User.TwoFactorLastUsedStep = 0
+	return true, nil
 }
 func (m *MockUserRepository) IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration) {
 	return m.IsLocked, m.LockDuration
@@ -540,7 +609,10 @@ func (m *MockHouseholdRepository) CancelApplication(applicationID, applicantUser
 func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error {
 	return m.Err
 }
-func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language *string) error {
+func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, settings database.HouseholdSettings) error {
+	return m.Err
+}
+func (m *MockHouseholdRepository) UpdateHouseholdTwoFactorPolicy(householdID, adminUserID uint, requireTwoFactor bool) error {
 	return m.Err
 }
 func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {
@@ -670,6 +742,47 @@ func (m *MockPATRepository) DeletePAT(patID, userID uint) error { return m.Err }
 func (m *MockPATRepository) UpdateLastUsed(patID uint) error    { return m.Err }
 
 var _ database.PATRepositoryInterface = (*MockPATRepository)(nil)
+
+// MockTOTPRepository is a configurable in-memory stub for TOTPRepositoryInterface.
+type MockTOTPRepository struct {
+	Codes       []dbModel.TwoFactorRecoveryCode
+	UnusedCount int64
+	Consumed    bool
+	Err         error
+}
+
+func (m *MockTOTPRepository) CreateRecoveryCodes(userID uint, codeHashes []string) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	for _, codeHash := range codeHashes {
+		m.Codes = append(m.Codes, dbModel.TwoFactorRecoveryCode{UserID: userID, CodeHash: codeHash})
+	}
+	m.UnusedCount += int64(len(codeHashes))
+	return nil
+}
+func (m *MockTOTPRepository) ReplaceRecoveryCodes(userID uint, codeHashes []string) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.Codes = nil
+	m.UnusedCount = 0
+	return m.CreateRecoveryCodes(userID, codeHashes)
+}
+func (m *MockTOTPRepository) GetRecoveryCodesByUserID(userID uint) ([]dbModel.TwoFactorRecoveryCode, error) {
+	return m.Codes, m.Err
+}
+func (m *MockTOTPRepository) CountUnusedRecoveryCodes(userID uint) (int64, error) {
+	return m.UnusedCount, m.Err
+}
+func (m *MockTOTPRepository) ConsumeRecoveryCode(userID uint, codeHash string, usedAt time.Time) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	return m.Consumed, nil
+}
+
+var _ database.TOTPRepositoryInterface = (*MockTOTPRepository)(nil)
 
 // MockSavingsRepository is a configurable in-memory stub for SavingsRepositoryInterface.
 type MockSavingsRepository struct {
@@ -1105,6 +1218,7 @@ type MockRepositoryContainer struct {
 	HouseholdCategories   *MockHouseholdCategoryRepository
 	Webhooks              *MockWebhookRepository
 	PATs                  *MockPATRepository
+	TOTPs                 *MockTOTPRepository
 	Savings               *MockSavingsRepository
 	RecipeCaches          *MockRecipeCacheRepository
 	Recipes               *MockRecipeRepository
@@ -1128,6 +1242,7 @@ func NewMockRepositoryContainer() *MockRepositoryContainer {
 		HouseholdCategories:   &MockHouseholdCategoryRepository{},
 		Webhooks:              &MockWebhookRepository{},
 		PATs:                  &MockPATRepository{},
+		TOTPs:                 &MockTOTPRepository{},
 		Savings:               &MockSavingsRepository{},
 		RecipeCaches:          &MockRecipeCacheRepository{},
 		Recipes:               &MockRecipeRepository{},
@@ -1153,6 +1268,7 @@ func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryCo
 		HouseholdCategories:   m.HouseholdCategories,
 		Webhooks:              m.Webhooks,
 		PATs:                  m.PATs,
+		TOTPs:                 m.TOTPs,
 		RecipeCaches:          m.RecipeCaches,
 		Recipes:               m.Recipes,
 		MealPlans:             m.MealPlans,

@@ -43,10 +43,11 @@ func mustInitJWT(
 	logger *zerolog.Logger,
 	config *configuration.ProviantConfiguration,
 	db *gorm.DB,
+	repos *dbcontroller.RepositoryContainer,
 	authorizatorFunc func(data any, ctx *gin.Context) bool,
 	unauthorizedFunc func(ctx *gin.Context, code int, message string),
 ) *jwt.GinJWTMiddleware {
-	middleware, err := JWTMiddleware(config, db, authorizatorFunc, unauthorizedFunc)
+	middleware, err := JWTMiddleware(config, db, repos, authorizatorFunc, unauthorizedFunc)
 	if err != nil {
 		logger.Error().Msg(err.Error())
 		panic(err.Error())
@@ -176,16 +177,16 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 		ctx.Next()
 	})
 
-	jwtAPIMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
-	jwtAPIUserAwareMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedAPIFunc)
-	jwtFrontendMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
-	jwtFrontendUserAwareMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorUserAware, UnauthorizedFrontendFunc)
+	jwtAPIMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, repos, AuthorizatorNotUserAware, UnauthorizedAPIFunc)
+	jwtAPIUserAwareMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, repos, AuthorizatorUserAware, UnauthorizedAPIFunc)
+	jwtFrontendMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, repos, AuthorizatorNotUserAware, UnauthorizedFrontendFunc)
+	jwtFrontendUserAwareMiddleware := mustInitJWT(logger, proviantConfiguration, dbHandle, repos, AuthorizatorUserAware, UnauthorizedFrontendFunc)
 
 	// Wrap JWT middlewares with PAT support
 	jwtAPIMiddlewareWithPAT := PATMiddleware(jwtAPIMiddleware)
 	jwtAPIUserAwareMiddlewareWithPAT := PATMiddleware(jwtAPIUserAwareMiddleware)
 	jwtAPIShoppingListAwareMiddlewareWithPAT := PATMiddleware(
-		mustInitJWT(logger, proviantConfiguration, dbHandle, AuthorizatorShoppingListItem, UnauthorizedAPIFunc),
+		mustInitJWT(logger, proviantConfiguration, dbHandle, repos, AuthorizatorShoppingListItem, UnauthorizedAPIFunc),
 	)
 
 	// Map routes to handlers
@@ -207,6 +208,12 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	// Authentication routes
 	engine.POST("/auth/login", loginRateLimitMiddleware, jwtAPIMiddleware.LoginHandler)
+
+	// Two-factor setup for a member of a household that requires a second
+	// factor. The member has no session yet, so the password confirms the
+	// request. It shares the login rate limiter, so the setup cannot be
+	// brute-forced either.
+	engine.POST(util.RouteAuthTOTPSetup, loginRateLimitMiddleware, auth.ConfirmTwoFactorSetup)
 
 	// Signup routes
 	engine.POST("/auth/signup", signupRateLimitMiddleware, auth.Signup)
@@ -285,6 +292,13 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	protectedUserAPI.GET("/tokens", v1.WrapHandler(v1.ListUserTokens))
 	protectedUserAPI.DELETE("/tokens/:id", v1.WrapHandler(v1.DeleteUserToken))
 
+	// Two-factor authentication. The limiter keys on the user id, so a wrong
+	// enrolment code cannot be sprayed across accounts from one address.
+	protectedUserAPI.GET(util.RouteUserTOTP, v1.WrapHandler(v1.GetTOTPStatus))
+	protectedUserAPI.POST(util.RouteUserTOTP, passwordRateLimitMiddleware, v1.WrapHandler(v1.StartTOTPEnrolment))
+	protectedUserAPI.POST(util.RouteUserTOTPConfirm, passwordRateLimitMiddleware, v1.WrapHandler(v1.ConfirmTOTPEnrolment))
+	protectedUserAPI.POST(util.RouteUserTOTPDisable, passwordRateLimitMiddleware, v1.WrapHandler(v1.DisableTOTP))
+
 	// Onboarding routes (require authentication)
 	onboardingAPI := engine.Group("/api/v1/onboarding")
 	onboardingAPI.Use(jwtAPIMiddlewareWithPAT, UserContextLoggerMiddleware())
@@ -358,6 +372,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	householdAdminAPI.DELETE("/applications/:id", v1.WrapHandler(v1.CancelHouseholdApplication))
 	householdAdminAPI.PATCH("/name", v1.WrapHandler(v1.UpdateHouseholdName))
 	householdAdminAPI.PATCH("/settings", v1.WrapHandler(v1.UpdateHouseholdSettings))
+	householdAdminAPI.PATCH("/two-factor", v1.WrapHandler(v1.UpdateHouseholdTwoFactorPolicy))
 	householdAdminAPI.DELETE("/members/:userId", v1.WrapHandler(v1.RemoveHouseholdMember))
 	householdAdminAPI.PATCH("/members/:userId/role", v1.WrapHandler(v1.UpdateHouseholdMemberRole))
 	householdAdminAPI.POST("/invitations", v1.WrapHandler(v1.CreateInvitation))
@@ -392,6 +407,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	adminAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateHouseholdUser))
 	adminAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteHouseholdUser))
 	adminAPI.POST("/:id/reset-password", v1.WrapHandler(v1.AdminResetUserPassword))
+	adminAPI.POST("/:id/reset-two-factor", v1.WrapHandler(v1.AdminResetUserTwoFactor))
 
 	// Admin audit log route. RequireHouseholdAdmin gates the route and stamps
 	// ContextKeyHouseholdID, which the handler passes to the repository so the

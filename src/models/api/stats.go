@@ -52,10 +52,15 @@ type HouseholdSettingsResponse struct {
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
 	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
 	Language                string   `json:"language"`
+	RequireTwoFactor        bool     `json:"requireTwoFactor"`
 }
 
 // UpdateHouseholdSettingsRequest is the request body for PATCH /api/v1/household/settings.
 // Language is nil when omitted (unchanged), "" resets to automatic detection.
+//
+// The two-factor policy is not part of this request: the endpoint replaces
+// the waste goal wholesale, so it has its own route
+// (PATCH /api/v1/household/two-factor).
 type UpdateHouseholdSettingsRequest struct {
 	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`

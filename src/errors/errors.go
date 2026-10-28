@@ -49,6 +49,10 @@ var (
 	// ErrInvalidUserData is thrown when supplied user data is invalid
 	ErrInvalidUserData = errors.New("invalid user data")
 
+	// ErrInvalidCredentials is thrown when the supplied credentials do not
+	// match. It never says which part was wrong.
+	ErrInvalidCredentials = errors.New("invalid credentials")
+
 	// ErrInvalidUserID is thrown when supplied user data is invalid
 	ErrInvalidUserID = errors.New("invalid user ID")
 
@@ -452,6 +456,74 @@ var (
 
 	// ErrRateLimitInvalidValue is thrown if any rate limit value is zero or negative
 	ErrRateLimitInvalidValue = errors.New("rate limit values must be greater than 0")
+
+	/*
+	 * Two-factor authentication related errors
+	 */
+	// ErrTwoFactorRequired is thrown when an account has a second factor and
+	// the sign-in request did not carry a code
+	ErrTwoFactorRequired = errors.New("two-factor authentication required")
+
+	// ErrTwoFactorSetupRequired is thrown when the household demands a second
+	// factor but the account has none enrolled yet
+	ErrTwoFactorSetupRequired = errors.New("two-factor authentication setup required")
+
+	// ErrTwoFactorNotRequired is thrown when the household does not demand a
+	// second factor, so there is nothing to set up
+	ErrTwoFactorNotRequired = errors.New("the household does not require two-factor authentication")
+
+	// ErrTwoFactorSetupExpired is thrown when the pending enrolment is gone
+	// or has timed out, so a fresh QR code is needed
+	ErrTwoFactorSetupExpired = errors.New("the two-factor setup is no longer valid")
+
+	// ErrTwoFactorInvalidCode is thrown for a code that is wrong, expired or
+	// replayed. The three cases share one error so the response never tells
+	// an attacker which one it was.
+	ErrTwoFactorInvalidCode = errors.New("the two-factor code is invalid")
+
+	// ErrTwoFactorAlreadyEnabled is thrown when an account that already has a
+	// second factor tries to enrol another one
+	ErrTwoFactorAlreadyEnabled = errors.New("two-factor authentication is already enabled")
+
+	// ErrTwoFactorNotEnabled is thrown when an account without a second factor
+	// tries to act on it
+	ErrTwoFactorNotEnabled = errors.New("two-factor authentication is not enabled")
+
+	// ErrTwoFactorPendingExpired is thrown when a setup was started but never
+	// confirmed in time
+	ErrTwoFactorPendingExpired = errors.New("the two-factor setup has expired")
+
+	// ErrServerEmptyTwoFactorKey is thrown if two-factor authentication is
+	// enabled without an encryption key
+	ErrServerEmptyTwoFactorKey = errors.New(
+		"two-factor encryption key cannot be empty: set server.twoFactor.encryptionKey " +
+			"(generate one with 'openssl rand -base64 32') or the " +
+			"PROVIANT_SERVER_TWOFACTOR_ENCRYPTIONKEY environment variable")
+
+	// ErrServerDefaultTwoFactorKey is thrown if the two-factor encryption key
+	// is the publicly known default shipped in the config templates
+	ErrServerDefaultTwoFactorKey = errors.New(
+		"two-factor encryption key is a publicly known default shipped in the config template: " +
+			"set server.twoFactor.encryptionKey (generate one with 'openssl rand -base64 32') or the " +
+			"PROVIANT_SERVER_TWOFACTOR_ENCRYPTIONKEY environment variable")
+
+	// ErrServerInvalidTwoFactorKey is thrown if the two-factor encryption key
+	// is not 32 bytes encoded as base64
+	ErrServerInvalidTwoFactorKey = errors.New(
+		"two-factor encryption key must be 32 bytes encoded as base64: " +
+			"generate one with 'openssl rand -base64 32'")
+
+	// ErrServerTwoFactorKeyEqualsTokenPassword is thrown if the two-factor
+	// encryption key is the JWT token password. Rotating the token password
+	// would then invalidate every enrolment.
+	ErrServerTwoFactorKeyEqualsTokenPassword = errors.New(
+		"two-factor encryption key must differ from server.authentication.tokenPassword: " +
+			"rotating the token password would invalidate every enrolment")
+
+	// ErrServerInvalidTwoFactorRecoveryCodeCount is thrown if the configured
+	// number of recovery codes is outside the supported range
+	ErrServerInvalidTwoFactorRecoveryCodeCount = errors.New(
+		"two-factor recovery code count must be between 1 and 50")
 
 	/*
 	 * CSRF related errors

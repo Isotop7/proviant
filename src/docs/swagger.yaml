@@ -6,6 +6,13 @@ definitions:
         type: string
       message:
         type: string
+      reason:
+        description: |-
+          Reason is a stable machine-readable identifier of the cause. The message
+          is prose and may be reworded; a client that has to branch on the cause
+          reads this. It is not called "code" because the sign-in route answers
+          with a numeric code on success and the two would collide.
+        type: string
     type: object
   api.ActivityEntry:
     properties:
@@ -70,6 +77,13 @@ definitions:
           type: integer
         type: array
       message:
+        type: string
+      reason:
+        description: |-
+          Reason is a stable machine-readable identifier of the cause. The message
+          is prose and may be reworded; a client that has to branch on the cause
+          reads this. It is not called "code" because the sign-in route answers
+          with a numeric code on success and the two would collide.
         type: string
     type: object
   api.BulkCreateRequest:
@@ -566,6 +580,8 @@ definitions:
         type: number
       monthlyWasteGoalType:
         type: string
+      requireTwoFactor:
+        type: boolean
     type: object
   api.HouseholdUserResponse:
     properties:
@@ -580,6 +596,8 @@ definitions:
       telegramConfigured:
         type: boolean
       telegramLinked:
+        type: boolean
+      twoFactorEnabled:
         type: boolean
       username:
         type: string
@@ -822,6 +840,13 @@ definitions:
         type: string
       message:
         type: string
+      reason:
+        description: |-
+          Reason is a stable machine-readable identifier of the cause. The message
+          is prose and may be reworded; a client that has to branch on the cause
+          reads this. It is not called "code" because the sign-in route answers
+          with a numeric code on success and the two would collide.
+        type: string
       removed:
         type: integer
     type: object
@@ -832,6 +857,13 @@ definitions:
       duplicate:
         $ref: '#/definitions/api.ProductResponse'
       message:
+        type: string
+      reason:
+        description: |-
+          Reason is a stable machine-readable identifier of the cause. The message
+          is prose and may be reworded; a client that has to branch on the cause
+          reads this. It is not called "code" because the sign-in route answers
+          with a numeric code on success and the two would collide.
         type: string
     type: object
   api.ProductQuantityDTO:
@@ -1197,6 +1229,31 @@ definitions:
       longestStreak:
         type: integer
     type: object
+  api.TOTPConfirmResponse:
+    properties:
+      recoveryCodes:
+        items:
+          type: string
+        type: array
+      twoFactorEnabled:
+        type: boolean
+    type: object
+  api.TOTPEnrolResponse:
+    properties:
+      expiresAt:
+        type: string
+      qr:
+        type: string
+    type: object
+  api.TOTPStatusResponse:
+    properties:
+      enabled:
+        type: boolean
+      pending:
+        type: boolean
+      recoveryCodesRemaining:
+        type: integer
+    type: object
   api.TokenResponse:
     properties:
       createdAt:
@@ -1514,6 +1571,11 @@ definitions:
     type: object
   authentication.Login:
     properties:
+      code:
+        description: |-
+          Code carries the second factor of an account that has one. It stays
+          empty for every account without a second factor.
+        type: string
       password:
         type: string
       username:
@@ -2077,6 +2139,42 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Reset user password
+      tags:
+      - household
+  /api/v1/admin/users/{id}/reset-two-factor:
+    post:
+      description: Removes the second factor and the recovery codes of a member of
+        the household and sends them a password reset mail. Caller must be admin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Clear the two-factor authentication of a household member
       tags:
       - household
   /api/v1/calendar/export.ics:
@@ -2993,8 +3091,8 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Updates the monthly waste goal and language of the caller's household
-        (admin only)
+      description: Updates the monthly waste goal, the language and the two-factor
+        policy of the caller's household (admin only)
       parameters:
       - description: Settings
         in: body
@@ -3142,6 +3240,49 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Update a storage location
+      tags:
+      - household
+  /api/v1/household/two-factor:
+    patch:
+      consumes:
+      - application/json
+      description: Stores whether every member of the household has to use a second
+        factor at sign-in (admin only)
+      parameters:
+      - description: Policy
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: boolean
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdSettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates the two-factor policy of the household
       tags:
       - household
   /api/v1/mealplans:
@@ -5815,6 +5956,140 @@ paths:
       summary: Deletes a personal access token
       tags:
       - user
+  /api/v1/user/totp:
+    get:
+      description: Reports whether the user has enrolled a second factor and how many
+        recovery codes are left
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TOTPStatusResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Reports the two-factor state of the user
+      tags:
+      - user
+    post:
+      description: Generates a TOTP secret and returns it as a QR code image. The
+        secret is stored encrypted and is never part of the response
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TOTPEnrolResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Starts a two-factor enrolment
+      tags:
+      - user
+  /api/v1/user/totp/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the code of the pending enrolment and activates the second
+        factor. The returned recovery codes are shown once and only their hashes are
+        stored
+      parameters:
+      - description: Code
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TOTPConfirmResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Confirms a two-factor enrolment
+      tags:
+      - user
+  /api/v1/user/totp/disable:
+    post:
+      consumes:
+      - application/json
+      description: Removes the TOTP secret and the recovery codes after the current
+        password was confirmed
+      parameters:
+      - description: Password
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Disables the two-factor authentication
+      tags:
+      - user
   /api/v1/webhooks:
     get:
       description: Lists all webhooks of the authenticated user
@@ -6193,6 +6468,44 @@ paths:
       summary: Creates a new user
       tags:
       - user
+  /auth/totp/setup/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Activates the TOTP second factor for an account whose household
+        requires one. The account is confirmed with its password and the code of the
+        pending enrolment
+      parameters:
+      - description: Username, password and code
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TOTPConfirmResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Confirms a two-factor setup
+      tags:
+      - auth
   /auth/verify-email:
     post:
       consumes:

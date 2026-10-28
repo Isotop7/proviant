@@ -158,6 +158,30 @@ const (
 	// with it: anyone who knows it can forge a session token for any user.
 	RetiredTokenPassword = "secret key" //nolint:gosec // G101: published placeholder being rejected, not a credential
 
+	// TwoFactorEncryptionKeyBytes is the required length of the decoded
+	// server.twoFactor.encryptionKey. It matches the AES-256 key size.
+	TwoFactorEncryptionKeyBytes = 32
+
+	// RetiredTwoFactorEncryptionKey is the server.twoFactor.encryptionKey value
+	// the config templates ship. It is public, so validation refuses to start
+	// with it: anyone who knows it could decrypt a TOTP secret from a database
+	// dump and mint codes for every enrolled account.
+	RetiredTwoFactorEncryptionKey = "cHJvdmlhbnQtZGVmYXVsdC10b3RwLWtleS0wMDAwMDA=" //nolint:gosec // G101: published placeholder being rejected, not a credential
+
+	// DefaultTwoFactorIssuer is the account name prefix shown in the
+	// authenticator app when server.twoFactor.issuer is left empty.
+	DefaultTwoFactorIssuer = "Proviant"
+
+	// DefaultTwoFactorRecoveryCodeCount is the number of recovery codes issued
+	// when server.twoFactor.recoveryCodeCount is left unset.
+	DefaultTwoFactorRecoveryCodeCount = 10
+
+	// Route labels for the two-factor authentication endpoints
+	RouteUserTOTP        = "/totp"
+	RouteUserTOTPConfirm = "/totp/confirm"
+	RouteUserTOTPDisable = "/totp/disable"
+	RouteAuthTOTPSetup   = "/auth/totp/setup/confirm"
+
 	// Receipt scan (issue #61)
 	ReceiptOCRProviderOpenAI  = "openai"
 	ContextKeyReceiptCtrl     = "receiptController"

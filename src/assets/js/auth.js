@@ -68,6 +68,12 @@ function togglePassword() {
 }
 
 // ── Field error helpers ───────────────────────────────────────────────────────
+
+// twoFactorSetupRequired records that the household demands a second factor
+// and the account has none yet. It is declared before every function that
+// touches it: a `let` in the temporal dead zone throws on assignment.
+let twoFactorSetupRequired = false;
+
 function showFieldError(fieldId, message) {
     const input = document.getElementById(fieldId);
     const errEl = document.getElementById(fieldId + '-error');
@@ -92,6 +98,11 @@ function clearAllErrors() {
 function switchMode(mode) {
     const modeInput = document.getElementById('auth-mode');
     if (modeInput) modeInput.value = mode;
+
+    // A pending second-factor setup belongs to the sign-in mode only.
+    twoFactorSetupRequired = false;
+    hideTwoFactorField();
+    hideTwoFactorSetup();
 
     // Tabs
     document.getElementById('tab-signin')?.classList.toggle('active', mode === 'signin');
@@ -165,12 +176,104 @@ function showEmailVerificationModal(email) {
     new bootstrap.Dialog(modal).show();
 }
 
+// ── Two-factor ────────────────────────────────────────────────────────────────
+
+function showTwoFactorField() {
+    const field = document.getElementById('field-code');
+    if (field) field.style.display = 'block';
+    const input = document.getElementById('auth-code');
+    if (input) input.focus();
+}
+
+// twoFactorStepActive reports whether the sign-in already asks for a second
+// factor. A rejected code must then not clear the password: the user only
+// corrects the code and submits again.
+function twoFactorStepActive() {
+    const field = document.getElementById('field-code');
+    return !!field && field.style.display !== 'none';
+}
+
+function hideTwoFactorField() {
+    const field = document.getElementById('field-code');
+    if (field) field.style.display = 'none';
+    const input = document.getElementById('auth-code');
+    if (input) input.value = '';
+}
+
+function hideTwoFactorSetup() {
+    const field = document.getElementById('field-totp-setup');
+    if (field) field.style.display = 'none';
+    const image = document.getElementById('auth-totp-qr');
+    if (image) image.removeAttribute('src');
+}
+
+function showTwoFactorSetup(qr) {
+    const image = document.getElementById('auth-totp-qr');
+    if (image && qr) image.src = qr;
+    const field = document.getElementById('field-totp-setup');
+    if (field) field.style.display = 'block';
+    showTwoFactorField();
+}
+
+function showRecoveryCodes(codes) {
+    const list = document.getElementById('auth-recovery-codes');
+    if (list) {
+        list.innerHTML = '';
+        codes.forEach((code) => {
+            const item = document.createElement('li');
+            item.textContent = code;
+            list.appendChild(item);
+        });
+    }
+    const modal = document.getElementById('twoFactorRecoveryModal');
+    if (modal) bootstrap.Dialog.getOrCreateInstance(modal).show();
+}
+
+// ConfirmTwoFactorSetup activates the second factor of an account whose
+// household demands one. The recovery codes are shown once, so the sign-in
+// only continues after the user dismissed them.
+function ConfirmTwoFactorSetup(username, password, code) {
+    if (!code) {
+        showFieldError('auth-code', proviant.t('js.auth.totpCodeRequired'));
+        return;
+    }
+
+    setSubmitLoading(true);
+    proviant.confirmTwoFactorSetup(username, password, code).then((response) => {
+        setSubmitLoading(false);
+        if (response.code !== 200) {
+            if (response.code === 400) {
+                // The setup is over: the household no longer demands a second
+                // factor, or the QR code timed out. The next submit has to be
+                // a plain sign-in, which hands out a fresh QR code.
+                twoFactorSetupRequired = false;
+                hideTwoFactorSetup();
+                hideTwoFactorField();
+                proviant.showFeedback('error', proviant.t('js.auth.loginFailed'), proviant.t('js.auth.totpSetupInvalid'));
+                return;
+            }
+            // The server answers a wrong code exactly like a wrong password, so
+            // the message cannot name the cause. The setup flow only starts
+            // after the password was accepted, so the code is the likely
+            // culprit.
+            proviant.showFeedback('error', proviant.t('js.auth.loginFailed'), proviant.t('js.auth.totpInvalidCode'));
+            return;
+        }
+        twoFactorSetupRequired = false;
+        showRecoveryCodes(response.body.recoveryCodes || []);
+    }).catch(() => {
+        setSubmitLoading(false);
+        proviant.showFeedback('error', proviant.t('js.auth.loginFailed'), proviant.t('js.auth.networkError'));
+    });
+}
+
 // ── Login ─────────────────────────────────────────────────────────────────────
 function Login() {
     clearAllErrors();
 
     const username = document.getElementById('auth-username')?.value?.trim() || '';
     const password = pwdInput?.value || '';
+    const code = document.getElementById('auth-code')?.value?.trim() || '';
 
     let valid = true;
 
@@ -184,9 +287,14 @@ function Login() {
     }
     if (!valid) return;
 
+    if (twoFactorSetupRequired) {
+        ConfirmTwoFactorSetup(username, password, code);
+        return;
+    }
+
     setSubmitLoading(true);
 
-    proviant.loginUser(username, password).then((response) => {
+    proviant.loginUser(username, password, code).then((response) => {
         setSubmitLoading(false);
         switch (response.code) {
             case 200:
@@ -201,10 +309,23 @@ function Login() {
                 });
                 break;
             case 401:
+                if (response.errorReason === 'TWO_FACTOR_REQUIRED') {
+                    showTwoFactorField();
+                    proviant.showFeedback('info', proviant.t('js.auth.totpRequiredTitle'), proviant.t('js.auth.totpRequired'));
+                    break;
+                }
                 proviant.showFeedback('error', proviant.t('js.auth.loginFailed'), response.body || proviant.t('js.auth.invalidCredentials'));
-                if (pwdInput) pwdInput.value = '';
+                // A rejected code is a wrong second factor: the password was
+                // already accepted, so it stays in the form.
+                if (pwdInput && !twoFactorStepActive()) pwdInput.value = '';
                 break;
             case 403:
+                if (response.errorReason === 'TWO_FACTOR_SETUP_REQUIRED') {
+                    twoFactorSetupRequired = true;
+                    showTwoFactorSetup(response.qr);
+                    proviant.showFeedback('info', proviant.t('js.auth.totpSetupTitle'), proviant.t('js.auth.totpSetupRequired'));
+                    break;
+                }
                 if (response.body?.toLowerCase().includes('verify')) {
                     showEmailVerificationModal(username);
                 } else {
@@ -326,6 +447,18 @@ if (pwdInput) {
     document.getElementById(id)?.addEventListener('input', function () {
         if (this.value) clearFieldError(id);
     });
+});
+
+document.getElementById('auth-code')?.addEventListener('input', function () {
+    if (this.value) clearFieldError('auth-code');
+});
+
+// The recovery codes are shown once, so the sign-in only continues after the
+// user dismissed them.
+document.getElementById('btn-auth-recovery-continue')?.addEventListener('click', () => {
+    const modal = document.getElementById('twoFactorRecoveryModal');
+    if (modal) bootstrap.Dialog.getOrCreateInstance(modal).hide();
+    Login();
 });
 
 // Form submit

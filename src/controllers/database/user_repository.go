@@ -13,6 +13,19 @@ import (
 	"gorm.io/gorm"
 )
 
+// twoFactorColumns are the columns that hold the state of the second factor.
+// They are owned by the enrolment and verification paths alone, so every
+// generic full-record save has to omit them: a save that replays a stale
+// snapshot would wipe a secret the user just generated and reset the replay
+// guard of the last accepted code.
+var twoFactorColumns = []string{
+	"two_factor_secret",
+	"two_factor_enabled",
+	"two_factor_last_used_step",
+	"two_factor_pending_secret",
+	"two_factor_pending_expiry",
+}
+
 type UserRepositoryInterface interface {
 	GetUserByUsername(username string) (authentication.User, error)
 	GetUserByID(userID uint) (authentication.User, error)
@@ -29,6 +42,17 @@ type UserRepositoryInterface interface {
 	UpdateAdminUserFields(userID uint, username, mailAddress string) error
 	UpdateDisplayName(userID uint, displayName string) error
 	UpdateUserPassword(userID uint, login *authentication.Login) error
+	VerifyPassword(userID uint, password string) (bool, error)
+	EnableTwoFactor(userID uint, encryptedSecret string) (bool, error)
+	DisableTwoFactor(userID uint) error
+	SetTwoFactorPendingSecret(userID uint, encryptedSecret string, expiry time.Time) error
+	// AdvanceTwoFactorStep stores the time step of the last accepted code.
+	// The update only lands when the stored step is older, so a code that was
+	// already accepted cannot be replayed.
+	AdvanceTwoFactorStep(userID uint, step int64) (bool, error)
+	// ConsumeRecoveryCodeAndDisable spends a recovery code and turns the
+	// second factor off in one transaction.
+	ConsumeRecoveryCodeAndDisable(userID uint, codeHash string, usedAt time.Time) (bool, error)
 	IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration)
 	RecordFailedLoginAttempt(userID uint, maxLoginAttempts int, lockoutDurationMins int) error
 	ResetFailedLoginAttempts(userID uint) error
@@ -219,14 +243,20 @@ func (r *UserRepository) UpdateUser(userID uint, user *authentication.User) erro
 	// UpdateUserReceiptScanSettings. Omitting them from this full-record save
 	// keeps a generic update from replaying a stale snapshot and reverting a
 	// concurrently saved preference or resurrecting a cleared API key.
-	saveResult := r.DB.Omit(
+	//
+	// The two-factor columns are owned by the enrolment endpoints. The same
+	// reasoning applies: a save that replays a stale snapshot would wipe a
+	// secret the user just generated and reset the replay guard.
+	omitColumns := append([]string{
 		"receipt_scan_override_enabled",
 		"receipt_scan_endpoint",
 		"receipt_scan_model",
 		"receipt_scan_timeout",
 		"receipt_scan_api_key",
 		"dashboard_layout",
-	).Save(&dbUser)
+	}, twoFactorColumns...)
+
+	saveResult := r.DB.Omit(omitColumns...).Save(&dbUser)
 	if saveResult.Error != nil {
 		return saveResult.Error
 	}
@@ -322,7 +352,10 @@ func (r *UserRepository) UpdateUserPassword(userID uint, login *authentication.L
 	}
 	dbUser.Password = string(hashedPassword)
 
-	saveResult := r.DB.Save(&dbUser)
+	// The two-factor columns are owned by the enrolment paths. Writing them
+	// back from this snapshot would wipe a secret the user generated while the
+	// password was being changed.
+	saveResult := r.DB.Omit(twoFactorColumns...).Save(&dbUser)
 	if saveResult.Error != nil {
 		return saveResult.Error
 	}
@@ -573,6 +606,138 @@ func (r *UserRepository) SetUserPasswordHash(userID uint, hashedPassword string)
 	return r.DB.Model(&authentication.User{}).
 		Where(util.QueryId, userID).
 		Update("password", hashedPassword).Error
+}
+
+// VerifyPassword checks a password against the stored bcrypt hash.
+func (r *UserRepository) VerifyPassword(userID uint, password string) (bool, error) {
+	var user authentication.User
+	if err := r.DB.First(&user, userID).Error; err != nil {
+		return false, err
+	}
+	if user.Password == "" {
+		return false, nil
+	}
+	return bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) == nil, nil
+}
+
+// EnableTwoFactor stores the encrypted TOTP secret and activates the second
+// factor for the account.
+//
+// The update only lands while the account has no second factor yet. Two
+// concurrent confirmations of the same enrolment would otherwise both activate
+// and both hand out recovery codes, and the second one would delete the codes
+// the first one already showed to the user.
+func (r *UserRepository) EnableTwoFactor(userID uint, encryptedSecret string) (bool, error) {
+	result := r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Where("two_factor_enabled = ?", false).
+		Updates(map[string]any{
+			"two_factor_secret":         encryptedSecret,
+			"two_factor_enabled":        true,
+			"two_factor_last_used_step": 0,
+			"two_factor_pending_secret": "",
+			"two_factor_pending_expiry": nil,
+		})
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected == 1, nil
+}
+
+// DisableTwoFactor removes the TOTP secret, deactivates the second factor and
+// deletes its recovery codes in one transaction. The codes of a disabled
+// second factor must not survive it: they would keep a way back in alive for
+// an account that no longer has a second factor.
+func (r *UserRepository) DisableTwoFactor(userID uint) error {
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&authentication.User{}).
+			Where(util.QueryId, userID).
+			Updates(map[string]any{
+				"two_factor_secret":         "",
+				"two_factor_enabled":        false,
+				"two_factor_last_used_step": 0,
+				"two_factor_pending_secret": "",
+				"two_factor_pending_expiry": nil,
+			}).Error; err != nil {
+			return err
+		}
+		// A recovery code is a single-use credential, not a record: it is
+		// removed for good, so no hash of an issued code outlives it.
+		return tx.Unscoped().
+			Where(util.QueryUserId, userID).
+			Delete(&database.TwoFactorRecoveryCode{}).Error
+	})
+}
+
+// SetTwoFactorPendingSecret stores a secret for an enrolment that has not
+// been confirmed yet.
+func (r *UserRepository) SetTwoFactorPendingSecret(userID uint, encryptedSecret string, expiry time.Time) error {
+	return r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Updates(map[string]any{
+			"two_factor_pending_secret": encryptedSecret,
+			"two_factor_pending_expiry": expiry,
+		}).Error
+}
+
+// ConsumeRecoveryCodeAndDisable spends a recovery code and turns the second
+// factor off in one transaction. A recovery that consumed the code but failed
+// to disable the factor would cost the user a code for nothing.
+func (r *UserRepository) ConsumeRecoveryCodeAndDisable(userID uint, codeHash string, usedAt time.Time) (bool, error) {
+	var consumed bool
+
+	txErr := r.DB.Transaction(func(tx *gorm.DB) error {
+		// The update is the guard, not a leftover write: only one
+		// transaction can match a code that is still unused, so a recovery
+		// code cannot be spent twice by two concurrent sign-ins. The codes are
+		// deleted further down, which is why the marker looks redundant.
+		result := tx.Model(&database.TwoFactorRecoveryCode{}).
+			Where(util.QueryUserId, userID).
+			Where("code_hash = ?", codeHash).
+			Where("used_at IS NULL").
+			Update("used_at", usedAt)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return nil
+		}
+		consumed = true
+
+		if err := tx.Model(&authentication.User{}).
+			Where(util.QueryId, userID).
+			Updates(map[string]any{
+				"two_factor_secret":         "",
+				"two_factor_enabled":        false,
+				"two_factor_last_used_step": 0,
+				"two_factor_pending_secret": "",
+				"two_factor_pending_expiry": nil,
+			}).Error; err != nil {
+			return err
+		}
+
+		return tx.Unscoped().
+			Where(util.QueryUserId, userID).
+			Delete(&database.TwoFactorRecoveryCode{}).Error
+	})
+	if txErr != nil {
+		return false, txErr
+	}
+	return consumed, nil
+}
+
+// AdvanceTwoFactorStep stores the time step of the last accepted code. The
+// update only lands when the stored step is older, so a replayed code is
+// rejected even when two requests race.
+func (r *UserRepository) AdvanceTwoFactorStep(userID uint, step int64) (bool, error) {
+	result := r.DB.Model(&authentication.User{}).
+		Where(util.QueryId, userID).
+		Where("two_factor_last_used_step < ?", step).
+		Update("two_factor_last_used_step", step)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected == 1, nil
 }
 
 var _ = (*UserRepository)(nil)

@@ -47,6 +47,7 @@ var testModels = []any{
 	&dbModel.Recipe{},
 	&dbModel.RecipeIngredient{},
 	&dbModel.MealPlanEntry{},
+	&dbModel.TwoFactorRecoveryCode{},
 }
 
 func SetupTestDB(t *testing.T) *gorm.DB {

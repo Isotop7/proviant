@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Isotop7/proviant/api"
 	"github.com/Isotop7/proviant/audit"
+	"github.com/Isotop7/proviant/controllers"
 	"github.com/Isotop7/proviant/controllers/database"
 	apperrors "github.com/Isotop7/proviant/errors"
 	"github.com/Isotop7/proviant/i18n"
@@ -27,7 +29,9 @@ import (
 	"gorm.io/gorm"
 )
 
-const MsgInvalidCredentials = "Invalid credentials"
+// contextKeyTwoFactorSetupQR carries the enrolment QR code from the sign-in
+// stage to the unauthorized handler, which puts it into the response.
+const contextKeyTwoFactorSetupQR = "twoFactorSetupQR"
 
 var errEmailNotVerified = errors.New("email not verified")
 
@@ -179,26 +183,46 @@ func UnauthorizedAPIFunc(ctx *gin.Context, code int, message string) {
 		return
 	}
 
+	if message == apperrors.ErrTwoFactorRequired.Error() {
+		ctx.JSON(http.StatusUnauthorized, api.TwoFactorRequiredResponse{
+			APIResponse: api.APIResponse{Message: apperrors.ErrTwoFactorRequired.Error()},
+			Reason:      api.ReasonTwoFactorRequired,
+		})
+		return
+	}
+
+	if message == apperrors.ErrTwoFactorSetupRequired.Error() {
+		response := api.TwoFactorSetupRequiredResponse{
+			APIResponse: api.APIResponse{Message: apperrors.ErrTwoFactorSetupRequired.Error()},
+			Reason:      api.ReasonTwoFactorSetupRequired,
+		}
+		if qr, ok := ctx.Get(contextKeyTwoFactorSetupQR); ok {
+			response.QR, _ = qr.(string)
+		}
+		ctx.JSON(http.StatusForbidden, response)
+		return
+	}
+
 	failedUserID, failedUserIDExists := ctx.Get("failedUserID")
 	if !failedUserIDExists {
-		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid credentials"))
+		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidCredentials)
 		return
 	}
 
 	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
 	if !ok {
-		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid credentials"))
+		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidCredentials)
 		return
 	}
 
 	userRepo := database.NewUserRepository(dbHandle)
 
 	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
-	maxLoginAttempts, lockoutDurationMins := lockoutConfig(proviantConfig)
+	maxLoginAttempts, lockoutDurationMins := proviantConfig.LockoutConfig()
 
 	locked, remaining := userRepo.IsAccountLocked(failedUserID.(uint), maxLoginAttempts, lockoutDurationMins)
 	if !locked {
-		api.RespondError(ctx, http.StatusUnauthorized, errors.New("invalid credentials"))
+		api.RespondError(ctx, http.StatusUnauthorized, apperrors.ErrInvalidCredentials)
 		return
 	}
 
@@ -336,25 +360,11 @@ func AuthorizatorNotUserAware(data any, ctx *gin.Context) bool {
 	return true
 }
 
-func lockoutConfig(cfg *configuration.ProviantConfiguration) (maxAttempts, lockoutMins int) {
-	maxAttempts = database.DefaultMaxLoginAttempts
-	lockoutMins = database.DefaultLockoutDurationMins
-	if cfg == nil {
-		return
-	}
-	if cfg.Server.Authentication.MaxLoginAttempts > 0 {
-		maxAttempts = cfg.Server.Authentication.MaxLoginAttempts
-	}
-	if cfg.Server.Authentication.LockoutDurationMins > 0 {
-		lockoutMins = cfg.Server.Authentication.LockoutDurationMins
-	}
-	return
-}
-
 // JWTMiddleware implements a jwt.GinJWTMiddleware for authentication and authorization (optional)
 func JWTMiddleware(
 	proviantConfiguration *configuration.ProviantConfiguration,
 	dbHandle *gorm.DB,
+	repos *database.RepositoryContainer,
 	authorizatorFunc func(data any, ctx *gin.Context) bool,
 	unauthorizedFunc func(ctx *gin.Context, code int, message string)) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
@@ -374,11 +384,18 @@ func JWTMiddleware(
 		// Generate claims and return it to payload
 		PayloadFunc: func(data any) jwt.MapClaims {
 			if userData, ok := data.(authentication.User); ok {
-				return jwt.MapClaims{
+				claims := jwt.MapClaims{
 					static.TokenIdentityKey: userData.ID,
 					static.TokenUsernameKey: userData.Username,
 					static.TokenJTIKey:      uuid.New().String(),
 				}
+				if userData.TwoFactorVerified {
+					claims[static.TokenTwoFactorKey] = true
+				}
+				if userData.TwoFactorRecovered {
+					claims[static.TokenTwoFactorRecoveredKey] = true
+				}
+				return claims
 			}
 			return jwt.MapClaims{}
 		},
@@ -400,7 +417,7 @@ func JWTMiddleware(
 
 			userRepo := database.NewUserRepository(dbHandle)
 
-			maxLoginAttempts, lockoutDurationMins := lockoutConfig(proviantConfiguration)
+			maxLoginAttempts, lockoutDurationMins := proviantConfiguration.LockoutConfig()
 
 			user, err := userRepo.GetUserByUsername(loginVals.Username)
 			if err != nil {
@@ -425,6 +442,21 @@ func JWTMiddleware(
 				return nil, errEmailNotVerified
 			}
 
+			// Second factor
+			twoFactor := controllers.NewTwoFactorService(repos, &proviantConfiguration.Server.TwoFactor)
+			outcome, twoFactorErr := evaluateSecondFactor(ctx, twoFactor, &user, loginVals.Code)
+			if twoFactorErr != nil {
+				logTwoFactorFailure(ctx, twoFactorErr)
+				return nil, twoFactorErr
+			}
+			switch outcome {
+			case secondFactorCodeRequired:
+				return nil, apperrors.ErrTwoFactorRequired
+			case secondFactorSetupRequired:
+				return nil, apperrors.ErrTwoFactorSetupRequired
+			case secondFactorAccepted:
+			}
+
 			_ = userRepo.ResetFailedLoginAttempts(user.ID)
 			go recordLoginSuccess(audit.FromGin(ctx), user.ID, loginVals.Username)
 			return user, nil
@@ -434,6 +466,133 @@ func JWTMiddleware(
 		// Unauthorized implements the return function if user is not authorized
 		Unauthorized: unauthorizedFunc,
 	})
+}
+
+// secondFactorOutcome is the result of the second factor stage of a sign-in.
+type secondFactorOutcome int
+
+const (
+	// secondFactorAccepted means the sign-in may continue.
+	secondFactorAccepted secondFactorOutcome = iota
+	// secondFactorCodeRequired means the account has a second factor and the
+	// request did not carry a code.
+	secondFactorCodeRequired
+	// secondFactorSetupRequired means the household demands a second factor
+	// and the account has none enrolled yet.
+	secondFactorSetupRequired
+)
+
+// evaluateSecondFactor runs the second factor stage of a sign-in. It returns
+// the outcome and, when the code was wrong, records the failed attempt so the
+// account lockout covers the second factor as well.
+func evaluateSecondFactor(
+	ctx *gin.Context,
+	twoFactor *controllers.TwoFactorService,
+	user *authentication.User,
+	code string,
+) (secondFactorOutcome, error) {
+	if twoFactor == nil {
+		return secondFactorAccepted, nil
+	}
+
+	if user.TwoFactorEnabled {
+		if strings.TrimSpace(code) == "" {
+			return secondFactorCodeRequired, nil
+		}
+
+		valid, err := twoFactor.VerifyCode(user, code)
+		if err != nil {
+			return secondFactorAccepted, err
+		}
+		if valid {
+			user.TwoFactorVerified = true
+			return secondFactorAccepted, nil
+		}
+
+		// A recovery code is the fallback for a lost authenticator. Using one
+		// turns the second factor off, so the account falls back to the
+		// password alone until the user enrols again.
+		recovered, err := twoFactor.ConsumeRecoveryCode(user, code)
+		if err != nil {
+			return secondFactorAccepted, err
+		}
+		if recovered {
+			user.TwoFactorVerified = true
+			user.TwoFactorRecovered = true
+			go recordTwoFactorRecovery(audit.FromGin(ctx), user.ID)
+			return secondFactorAccepted, nil
+		}
+
+		recordFailedTwoFactor(ctx, user.ID)
+		return secondFactorAccepted, jwt.ErrFailedAuthentication
+	}
+
+	// The deployment no longer offers a second factor, so no new enrolment can
+	// start. An account that already has one keeps it: switching the feature
+	// off must never quietly drop the second factor of an enrolled account.
+	if !twoFactor.Enabled() {
+		return secondFactorAccepted, nil
+	}
+
+	required, err := twoFactor.HouseholdRequiresTwoFactor(user.HouseholdID)
+	if err != nil {
+		return secondFactorAccepted, err
+	}
+	if !required {
+		return secondFactorAccepted, nil
+	}
+
+	qr, _, err := twoFactor.StartEnrolment(user)
+	if err != nil {
+		return secondFactorAccepted, err
+	}
+	ctx.Set(contextKeyTwoFactorSetupQR, qr)
+	return secondFactorSetupRequired, nil
+}
+
+// logTwoFactorFailure writes the reason why the second factor stage of a
+// sign-in failed. The reason never reaches the client, so the operator needs
+// it in the log.
+func logTwoFactorFailure(ctx *gin.Context, err error) {
+	loggerValue, ok := ctx.Get(util.ContextKeyLogger)
+	if !ok {
+		return
+	}
+	logger, ok := loggerValue.(*zerolog.Logger)
+	if !ok {
+		return
+	}
+	logger.Error().Msgf("The two-factor stage of the sign-in failed: %s", err.Error())
+}
+
+// recordFailedTwoFactor counts a wrong second factor code against the
+// account lockout and writes the audit entry.
+func recordFailedTwoFactor(ctx *gin.Context, userID uint) {
+	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
+	if !ok {
+		return
+	}
+
+	proviantConfig, _ := ctx.MustGet(util.ContextKeyProviantConfig).(*configuration.ProviantConfiguration)
+	maxLoginAttempts, lockoutDurationMins := proviantConfig.LockoutConfig()
+
+	userRepo := database.NewUserRepository(dbHandle)
+	_ = userRepo.RecordFailedLoginAttempt(userID, maxLoginAttempts, lockoutDurationMins)
+	ctx.Set("failedUserID", userID)
+	// Only the second-factor entry is written: a wrong code is not a failed
+	// sign-in, and writing both would count every rejected code twice.
+	go recordTwoFactorFailure(audit.FromGin(ctx), userID)
+}
+
+// recordTwoFactorFailure writes the audit entry of a rejected second factor.
+func recordTwoFactorFailure(values audit.Values, userID uint) {
+	values.Log(userID, dbModel.AuditActionTwoFactorFailed, map[string]string{"reason": "invalid_code"})
+}
+
+// recordTwoFactorRecovery writes the audit entry of a sign-in that used a
+// recovery code, which turned the second factor off.
+func recordTwoFactorRecovery(values audit.Values, userID uint) {
+	values.Log(userID, dbModel.AuditActionTwoFactorRecovered, map[string]string{})
 }
 
 func recordLoginSuccess(values audit.Values, userID uint, username string) {

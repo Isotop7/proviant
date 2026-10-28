@@ -206,6 +206,30 @@
         </div>
         {{ end }}
 
+        {{/* Two-factor policy — admin only. The switch stays visible while the policy is set, so it can be withdrawn even when the deployment no longer offers a second factor. */}}
+        {{ if and .IsAdmin (or .TwoFactorEnabled .Household.RequireTwoFactor) }}
+        <div class="mb-7">
+            <h3 class="h6 fw-semibold mb-3"><i class="bi bi-shield-lock me-1"></i>{{ t "household.requireTwoFactorTitle" }}</h3>
+            <p class="fg-secondary small mb-3">{{ t "household.requireTwoFactorHelp" }}</p>
+            {{ if not .TwoFactorEnabled }}
+            <p class="fg-secondary small mb-3"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ t "household.requireTwoFactorInactive" }}</p>
+            {{ end }}
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="form-field mb-0">
+                    <div class="switch">
+                        <input type="checkbox" role="switch" id="inputRequireTwoFactor"
+                               data-require-two-factor="{{ .Household.RequireTwoFactor }}"
+                               {{ if .Household.RequireTwoFactor }}checked{{ end }}>
+                    </div>
+                    <label for="inputRequireTwoFactor">{{ t "household.requireTwoFactorLabel" }}</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-solid theme-primary" id="btnSaveRequireTwoFactor">
+                    <i class="bi bi-save me-1"></i>{{ t "common.save" }}
+                </button>
+            </div>
+        </div>
+        {{ end }}
+
         {{/* ── Join & Invite ───────────────────────────────── */}}
         <div class="mt-7 pt-7 border-top">
             <h3 class="h6 fw-semibold fg-secondary mb-5"><i class="bi bi-person-plus me-1"></i>{{ t "household.joinInvite" }}</h3>

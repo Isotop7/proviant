@@ -42,6 +42,11 @@ const ActionTryAgain = "Please try again later"
 type APIResponse struct {
 	Message string `json:"message"`
 	Action  string `json:"action,omitempty"`
+	// Reason is a stable machine-readable identifier of the cause. The message
+	// is prose and may be reworded; a client that has to branch on the cause
+	// reads this. It is not called "code" because the sign-in route answers
+	// with a numeric code on success and the two would collide.
+	Reason string `json:"reason,omitempty"`
 }
 
 // BulkActionResponse is the response of a bulk action (restore, consume,
@@ -128,4 +133,45 @@ func RestoreFailedError() APIResponse {
 
 func RespondError(ctx *gin.Context, status int, err error) {
 	ctx.JSON(status, APIResponse{Message: err.Error()})
+}
+
+// The reasons a client can branch on. They name the cause, not the wording of
+// the message, so a reworded message does not break the client.
+const (
+	// ReasonInvalidCredentials marks a rejected password.
+	ReasonInvalidCredentials = "INVALID_CREDENTIALS" //nolint:gosec // G101: an error reason, not a credential
+	// ReasonTwoFactorDisabled marks a request the deployment cannot serve
+	// because it offers no second factor.
+	ReasonTwoFactorDisabled = "TWO_FACTOR_DISABLED"
+	// ReasonTwoFactorNotEnabled marks a request for a second factor that the
+	// account does not have.
+	ReasonTwoFactorNotEnabled = "TWO_FACTOR_NOT_ENABLED"
+	// ReasonTwoFactorRequired marks a sign-in that needs a second factor.
+	ReasonTwoFactorRequired = "TWO_FACTOR_REQUIRED"
+	// ReasonTwoFactorSetupRequired marks a household that demands a second
+	// factor the account has not enrolled yet.
+	ReasonTwoFactorSetupRequired = "TWO_FACTOR_SETUP_REQUIRED"
+)
+
+// RespondErrorWithReason answers an error with a stable machine-readable reason
+// beside the message, so a client can branch on the cause without parsing the
+// prose.
+func RespondErrorWithReason(ctx *gin.Context, status int, err error, reason string) {
+	ctx.JSON(status, APIResponse{Message: err.Error(), Reason: reason})
+}
+
+// TwoFactorRequiredResponse tells the client that a second factor is needed
+// before the sign-in can succeed.
+type TwoFactorRequiredResponse struct {
+	APIResponse
+	Reason string `json:"reason"`
+}
+
+// TwoFactorSetupRequiredResponse tells the client that the household demands a
+// second factor and that the account has none enrolled yet. The QR code lets
+// the member set one up without holding a session.
+type TwoFactorSetupRequiredResponse struct {
+	APIResponse
+	Reason string `json:"reason"`
+	QR     string `json:"qr"`
 }

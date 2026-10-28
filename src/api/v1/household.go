@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
+	dbcontroller "github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/i18n"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/models/authentication"
@@ -267,13 +269,14 @@ func GetHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 		MonthlyWasteGoalCount:   household.MonthlyWasteGoalCount,
 		MonthlyWasteGoalPercent: household.MonthlyWasteGoalPercent,
 		Language:                household.Language,
+		RequireTwoFactor:        household.RequireTwoFactor,
 	})
 }
 
-// UpdateHouseholdSettings updates the monthly waste goal and language of the
-// caller's household (admin only).
+// UpdateHouseholdSettings updates the monthly waste goal, the language and the
+// two-factor policy of the caller's household (admin only).
 // @Summary      Updates household settings
-// @Description  Updates the monthly waste goal and language of the caller's household (admin only)
+// @Description  Updates the monthly waste goal, the language and the two-factor policy of the caller's household (admin only)
 // @Tags         household
 // @Accept       json
 // @Produce      json
@@ -319,8 +322,12 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 	}
 	updateErr := appCtx.Repos.Households.UpdateHouseholdSettings(
 		user.HouseholdID, appCtx.UserID,
-		req.MonthlyWasteGoalType, req.MonthlyWasteGoalCount, req.MonthlyWasteGoalPercent,
-		req.Language,
+		dbcontroller.HouseholdSettings{
+			MonthlyWasteGoalType:    req.MonthlyWasteGoalType,
+			MonthlyWasteGoalCount:   req.MonthlyWasteGoalCount,
+			MonthlyWasteGoalPercent: req.MonthlyWasteGoalPercent,
+			Language:                req.Language,
+		},
 	)
 	switch updateErr {
 	case nil:
@@ -335,6 +342,7 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 			MonthlyWasteGoalCount:   updated.MonthlyWasteGoalCount,
 			MonthlyWasteGoalPercent: updated.MonthlyWasteGoalPercent,
 			Language:                updated.Language,
+			RequireTwoFactor:        updated.RequireTwoFactor,
 		})
 	case apperrors.ErrHouseholdNotFound:
 		api.RespondError(ctx, http.StatusNotFound, updateErr)
@@ -342,6 +350,83 @@ func UpdateHouseholdSettings(ctx *gin.Context, appCtx *AppContext) {
 		api.RespondError(ctx, http.StatusForbidden, updateErr)
 	default:
 		appCtx.Logger.Error().Msgf("Error updating household settings: %s", updateErr)
+		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
+	}
+}
+
+// UpdateHouseholdTwoFactorPolicy stores whether the household demands a
+// second factor from its members (admin only).
+// @Summary      Updates the two-factor policy of the household
+// @Description  Stores whether every member of the household has to use a second factor at sign-in (admin only)
+// @Tags         household
+// @Accept       json
+// @Produce      json
+// @Param        request body map[string]bool true "Policy"
+// @Success      200 {object} apiModel.HouseholdSettingsResponse
+// @Failure      400 {object} api.APIResponse
+// @Failure      403 {object} api.APIResponse
+// @Failure      404 {object} api.APIResponse
+// @Failure      500 {object} api.APIResponse
+// @Router       /api/v1/household/two-factor [patch]
+// @Security     BearerAuth
+func UpdateHouseholdTwoFactorPolicy(ctx *gin.Context, appCtx *AppContext) {
+	var req struct {
+		RequireTwoFactor bool `json:"requireTwoFactor"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		appCtx.Logger.Warn().Msgf(apperrors.FormatGenericError, apperrors.ErrParseBody.Error(), err.Error())
+		api.RespondError(ctx, http.StatusBadRequest, err)
+		return
+	}
+
+	// A policy the server does not enforce would be a promise the household
+	// cannot keep, so the deployment has to offer a second factor at all.
+	//
+	// Withdrawing a policy always works: it is the safe direction, and it must
+	// not depend on a feature that is already off — otherwise a household that
+	// set the policy before the deployment turned the feature off could never
+	// take it back.
+	if req.RequireTwoFactor {
+		enabled, configErr := twoFactorFeatureEnabled(ctx)
+		if configErr != nil {
+			appCtx.Logger.Error().Msgf("Error reading the two-factor configuration: %s", configErr.Error())
+			api.RespondError(ctx, http.StatusInternalServerError, configErr)
+			return
+		}
+		if !enabled {
+			api.RespondErrorWithReason(ctx, http.StatusConflict, controllers.ErrTwoFactorDisabled, api.ReasonTwoFactorDisabled)
+			return
+		}
+	}
+
+	user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID)
+	if userErr != nil {
+		api.RespondError(ctx, http.StatusBadRequest, apperrors.ErrInvalidUserData)
+		return
+	}
+
+	updateErr := appCtx.Repos.Households.UpdateHouseholdTwoFactorPolicy(user.HouseholdID, appCtx.UserID, req.RequireTwoFactor)
+	switch updateErr {
+	case nil:
+		updated, getErr := appCtx.Repos.Households.GetHouseholdByID(user.HouseholdID)
+		if getErr != nil {
+			appCtx.Logger.Error().Msgf("UpdateHouseholdTwoFactorPolicy: %s", getErr)
+			api.RespondError(ctx, http.StatusInternalServerError, getErr)
+			return
+		}
+		ctx.JSON(http.StatusOK, apiModel.HouseholdSettingsResponse{
+			MonthlyWasteGoalType:    updated.MonthlyWasteGoalType,
+			MonthlyWasteGoalCount:   updated.MonthlyWasteGoalCount,
+			MonthlyWasteGoalPercent: updated.MonthlyWasteGoalPercent,
+			Language:                updated.Language,
+			RequireTwoFactor:        updated.RequireTwoFactor,
+		})
+	case apperrors.ErrHouseholdNotFound:
+		api.RespondError(ctx, http.StatusNotFound, updateErr)
+	case apperrors.ErrNotHouseholdAdmin:
+		api.RespondError(ctx, http.StatusForbidden, updateErr)
+	default:
+		appCtx.Logger.Error().Msgf("Error updating the two-factor policy: %s", updateErr)
 		api.RespondError(ctx, http.StatusInternalServerError, updateErr)
 	}
 }

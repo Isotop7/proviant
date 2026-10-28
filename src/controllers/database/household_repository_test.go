@@ -323,7 +323,12 @@ func TestHouseholdRepository_NameSettingsAndMembers(t *testing.T) {
 		goalCount := 5
 		goalPercent := 12.5
 		language := "de"
-		if err := repo.UpdateHouseholdSettings(household.ID, admin.ID, "count", &goalCount, &goalPercent, &language); err != nil {
+		if err := repo.UpdateHouseholdSettings(household.ID, admin.ID, HouseholdSettings{
+			MonthlyWasteGoalType:    "count",
+			MonthlyWasteGoalCount:   &goalCount,
+			MonthlyWasteGoalPercent: &goalPercent,
+			Language:                &language,
+		}); err != nil {
 			t.Fatalf("UpdateHouseholdSettings() error = %v", err)
 		}
 		var updated dbModel.Household
@@ -344,8 +349,27 @@ func TestHouseholdRepository_NameSettingsAndMembers(t *testing.T) {
 		}
 	})
 
+	t.Run("UpdateHouseholdTwoFactorPolicy as admin", func(t *testing.T) {
+		if err := repo.UpdateHouseholdTwoFactorPolicy(household.ID, admin.ID, true); err != nil {
+			t.Fatalf("UpdateHouseholdTwoFactorPolicy() error = %v", err)
+		}
+		var updated dbModel.Household
+		if err := db.First(&updated, household.ID).Error; err != nil {
+			t.Fatalf("failed to reload household: %v", err)
+		}
+		if !updated.RequireTwoFactor {
+			t.Error("require two factor = false, want true")
+		}
+	})
+
+	t.Run("UpdateHouseholdTwoFactorPolicy by non-admin errors", func(t *testing.T) {
+		if err := repo.UpdateHouseholdTwoFactorPolicy(household.ID, member.ID, false); err != errors.ErrNotHouseholdAdmin {
+			t.Errorf("error = %v, want %v", err, errors.ErrNotHouseholdAdmin)
+		}
+	})
+
 	t.Run("UpdateHouseholdSettings by non-admin errors", func(t *testing.T) {
-		if err := repo.UpdateHouseholdSettings(household.ID, member.ID, "count", nil, nil, nil); err != errors.ErrNotHouseholdAdmin {
+		if err := repo.UpdateHouseholdSettings(household.ID, member.ID, HouseholdSettings{MonthlyWasteGoalType: "count"}); err != errors.ErrNotHouseholdAdmin {
 			t.Errorf("error = %v, want %v", err, errors.ErrNotHouseholdAdmin)
 		}
 	})

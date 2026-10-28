@@ -488,6 +488,24 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 	return nil
 }
 
+// SendTwoFactorEnabled tells the account owner that a second factor was
+// enrolled on their account.
+func (nc *NotificationController) SendTwoFactorEnabled(email, username, lang string) error {
+	emailProvider := nc.newEmailProvider()
+
+	if !emailProvider.IsConfigured() {
+		return errors.New(MsgEmailProviderNotConfigured)
+	}
+
+	if err := emailProvider.SendTwoFactorEnabledEmail(email, username, lang); err != nil {
+		nc.Logger.Error().Msgf("Failed to send the two-factor notification to %s: %s", email, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Two-factor notification sent successfully to %s", email)
+	return nil
+}
+
 // SendPasswordReset sends a password reset email directly to the user.
 func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time, lang string) error {
 	emailProvider := nc.newEmailProvider()
@@ -502,6 +520,24 @@ func (nc *NotificationController) SendPasswordReset(email, username, token, base
 	}
 
 	nc.Logger.Info().Msgf("Password reset email sent successfully to %s", email)
+	return nil
+}
+
+// SendTwoFactorRemoved tells the recipient that a second factor was removed
+// from their account.
+func (nc *NotificationController) SendTwoFactorRemoved(email, username, lang string) error {
+	emailProvider := nc.newEmailProvider()
+
+	if !emailProvider.IsConfigured() {
+		return errors.New(MsgEmailProviderNotConfigured)
+	}
+
+	if err := emailProvider.SendTwoFactorRemovedEmail(email, username, lang); err != nil {
+		nc.Logger.Error().Msgf("Failed to send the two-factor notification to %s: %s", email, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Two-factor notification sent successfully to %s", email)
 	return nil
 }
 

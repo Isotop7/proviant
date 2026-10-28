@@ -54,6 +54,7 @@
 - ⏰ **Notifications** - expiration reminders, monthly waste reports and streak updates via email (SMTP), web push, [Ntfy](https://ntfy.sh/) or a [Telegram](https://telegram.org/) bot, with per-user preferences and an in-app notification centre.
 - 📆 **Calendar feed** - subscribe to household expiry dates from any calendar app via an iCal (`.ics`) feed.
 - 👥 **Combined Household** - multi-user households with invitations, roles and household-scoped data.
+- 🔐 **Two-factor authentication** - enrol an authenticator app (TOTP) per account, with single-use recovery codes for a lost device. A household can require a second factor from every member; the deployment switch keeps the feature off until an admin sets an encryption key.
 - 📥 **Export & import** - download products and archive data as CSV or JSON, import products from a CSV template, and restore a full household backup from JSON.
 - 🌙 **Theming** - light and dark mode.
 
@@ -197,6 +198,11 @@ Configuration is set via environment variables. The complete list of available o
 | `PROVIANT_SERVER_AUTHENTICATION_PASSWORDREQUIRESPECIAL` | `false` | Require at least one special character |
 | `PROVIANT_SERVER_AUTHENTICATION_PASSWORDCHECKBREACHED` | `true` | Check passwords against HaveIBeenPwned API |
 | `PROVIANT_SERVER_AUTHENTICATION_SKIPEMAILVERIFICATION` | `false` | Skip the email-verification requirement for new accounts |
+| **Two-factor authentication (TOTP)** |||
+| `PROVIANT_SERVER_TWOFACTOR_ENABLED` | `false` | Master switch for TOTP two-factor authentication. While it is off the server exposes no enrolment endpoints and stores no secrets |
+| `PROVIANT_SERVER_TWOFACTOR_ENCRYPTIONKEY` | *(required when enabled)* | 32 random bytes, base64 encoded, encrypting the TOTP secret at rest. Generate one with `openssl rand -base64 32`. Startup fails if empty, if it is the public placeholder from the config template, if it is not 32 bytes, or if it equals `PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD`. Keep the key while accounts have an enrolled second factor — turning `PROVIANT_SERVER_TWOFACTOR_ENABLED` off stops new enrolments but does not drop an existing one |
+| `PROVIANT_SERVER_TWOFACTOR_ISSUER` | `Proviant` | Account name shown in the authenticator app |
+| `PROVIANT_SERVER_TWOFACTOR_RECOVERYCODECOUNT` | `10` | Number of single-use recovery codes issued per enrolment (1–50) |
 | **CORS** |||
 | `PROVIANT_SERVER_CORS_ALLOWALLORIGINS` | `false` | Allow all origins (`true`) or use `allowedOrigins` list (`false`) |
 | `PROVIANT_SERVER_CORS_ALLOWEDORIGINS` | `http://localhost,http://myproviant.instance` | Comma-separated list of allowed origins when `allowAllOrigins` is `false` |

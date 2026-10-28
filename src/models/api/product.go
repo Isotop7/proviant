@@ -17,6 +17,7 @@ type HouseholdUserResponse struct {
 	Role               string `json:"role"`
 	TelegramConfigured bool   `json:"telegramConfigured"`
 	TelegramLinked     bool   `json:"telegramLinked"`
+	TwoFactorEnabled   bool   `json:"twoFactorEnabled"`
 }
 
 // NewHouseholdUserResponse projects a user onto the admin-facing view.
@@ -32,6 +33,7 @@ func NewHouseholdUserResponse(user *authentication.User) HouseholdUserResponse {
 		Role:               user.Role,
 		TelegramConfigured: user.NotificationPreferences.TelegramBotToken != "",
 		TelegramLinked:     user.NotificationPreferences.TelegramChatID != "",
+		TwoFactorEnabled:   user.TwoFactorEnabled,
 	}
 }
 

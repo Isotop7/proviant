@@ -149,6 +149,29 @@
           </div>
         </div>
 
+        <!-- Two-factor code — shown when the account has a second factor -->
+        <div class="field" id="field-code" style="display:none;">
+          <label class="form-label" for="auth-code">{{ t "auth.totpCodeLabel" }}</label>
+          <div class="field-input-wrap">
+            <input class="form-control font-mono" type="text" id="auth-code"
+              placeholder="000000" autocomplete="one-time-code" inputmode="numeric" maxlength="10"
+              aria-describedby="auth-code-error">
+            <i class="bi bi-shield-lock field-icon" aria-hidden="true"></i>
+          </div>
+          <div class="invalid-feedback" id="auth-code-error" role="alert" style="display:none;">
+            <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
+            <span id="auth-code-error-text"></span>
+          </div>
+        </div>
+
+        <!-- Two-factor setup — shown when the household demands a second factor -->
+        <div class="field" id="field-totp-setup" style="display:none;">
+          <p class="fg-secondary small mb-3">{{ t "auth.totpSetupHelp" }}</p>
+          <div class="text-center mb-3">
+            <img class="totp-qr" id="auth-totp-qr" alt="{{ t "auth.totpQrAlt" }}">
+          </div>
+        </div>
+
         <!-- Forgot password — signin only -->
         <div class="forgot-link" id="auth-forgot-link">
           <a href="{{ .RouteForgotPassword }}">{{ t "auth.forgotPasswordLink" }}</a>
@@ -188,6 +211,22 @@
       </div>
       <div class="dialog-footer justify-content-center">
         <button type="button" class="btn btn-solid theme-primary" data-bs-dismiss="dialog">{{ t "auth.gotIt" }}</button>
+      </div>
+    </dialog>
+
+<!-- Two-factor recovery codes -->
+<dialog class="dialog" id="twoFactorRecoveryModal" aria-labelledby="twoFactorRecoveryModalLabel">
+      <div class="dialog-header">
+        <h5 class="dialog-title" id="twoFactorRecoveryModalLabel">
+          <i class="bi bi-shield-check me-2" aria-hidden="true"></i>{{ t "auth.totpRecoveryTitle" }}
+        </h5>
+      </div>
+      <div class="dialog-body">
+        <p class="fg-secondary small mb-3">{{ t "auth.totpRecoveryHelp" }}</p>
+        <ul class="list-unstyled font-mono mb-0" id="auth-recovery-codes"></ul>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-solid theme-primary" id="btn-auth-recovery-continue">{{ t "auth.totpRecoveryContinue" }}</button>
       </div>
     </dialog>
 

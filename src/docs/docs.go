@@ -282,6 +282,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/users/{id}/reset-two-factor": {
+            "post": {
+                "description": "Removes the second factor and the recovery codes of a member of the household and sends them a password reset mail. Caller must be admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Clear the two-factor authentication of a household member",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/calendar/export.ics": {
             "get": {
                 "description": "Returns an iCalendar (RFC 5545) feed with VEVENTs for products expiring in the next 30 days. Use the token query parameter for authentication.",
@@ -1604,7 +1657,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates the monthly waste goal and language of the caller's household (admin only)",
+                "description": "Updates the monthly waste goal, the language and the two-factor policy of the caller's household (admin only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1812,6 +1865,72 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/two-factor": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stores whether every member of the household has to use a second factor at sign-in (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Updates the two-factor policy of the household",
+                "parameters": [
+                    {
+                        "description": "Policy",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdSettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -5768,6 +5887,210 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/user/totp": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reports whether the user has enrolled a second factor and how many recovery codes are left",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Reports the two-factor state of the user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.TOTPStatusResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generates a TOTP secret and returns it as a QR code image. The secret is stored encrypted and is never part of the response",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Starts a two-factor enrolment",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.TOTPEnrolResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/totp/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Verifies the code of the pending enrolment and activates the second factor. The returned recovery codes are shown once and only their hashes are stored",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Confirms a two-factor enrolment",
+                "parameters": [
+                    {
+                        "description": "Code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.TOTPConfirmResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/totp/disable": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the TOTP secret and the recovery codes after the current password was confirmed",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Disables the two-factor authentication",
+                "parameters": [
+                    {
+                        "description": "Password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/webhooks": {
             "get": {
                 "security": [
@@ -6335,6 +6658,61 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/totp/setup/confirm": {
+            "post": {
+                "description": "Activates the TOTP second factor for an account whose household requires one. The account is confirmed with its password and the code of the pending enrolment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Confirms a two-factor setup",
+                "parameters": [
+                    {
+                        "description": "Username, password and code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.TOTPConfirmResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -7084,6 +7462,10 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
+                    "type": "string"
                 }
             }
         },
@@ -7179,6 +7561,10 @@ const docTemplate = `{
                     }
                 },
                 "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
                     "type": "string"
                 }
             }
@@ -7887,6 +8273,9 @@ const docTemplate = `{
                 },
                 "monthlyWasteGoalType": {
                     "type": "string"
+                },
+                "requireTwoFactor": {
+                    "type": "boolean"
                 }
             }
         },
@@ -7909,6 +8298,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "telegramLinked": {
+                    "type": "boolean"
+                },
+                "twoFactorEnabled": {
                     "type": "boolean"
                 },
                 "username": {
@@ -8246,6 +8638,10 @@ const docTemplate = `{
                 "message": {
                     "type": "string"
                 },
+                "reason": {
+                    "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
+                    "type": "string"
+                },
                 "removed": {
                     "type": "integer"
                 }
@@ -8261,6 +8657,10 @@ const docTemplate = `{
                     "$ref": "#/definitions/api.ProductResponse"
                 },
                 "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
                     "type": "string"
                 }
             }
@@ -8801,6 +9201,45 @@ const docTemplate = `{
                 }
             }
         },
+        "api.TOTPConfirmResponse": {
+            "type": "object",
+            "properties": {
+                "recoveryCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "twoFactorEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.TOTPEnrolResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "qr": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.TOTPStatusResponse": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "pending": {
+                    "type": "boolean"
+                },
+                "recoveryCodesRemaining": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.TokenResponse": {
             "type": "object",
             "properties": {
@@ -9275,6 +9714,10 @@ const docTemplate = `{
                 "username"
             ],
             "properties": {
+                "code": {
+                    "description": "Code carries the second factor of an account that has one. It stays\nempty for every account without a second factor.",
+                    "type": "string"
+                },
                 "password": {
                     "type": "string"
                 },

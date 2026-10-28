@@ -2,6 +2,7 @@
 package configuration
 
 import (
+	"encoding/base64"
 	"html/template"
 	"net/url"
 	"strings"
@@ -10,6 +11,11 @@ import (
 	"github.com/Isotop7/proviant/errors"
 	"github.com/Isotop7/proviant/util"
 )
+
+// maxTwoFactorRecoveryCodes bounds how many recovery codes one enrolment can
+// issue. The codes are stored one row per code, so an unbounded count would
+// let a misconfigured server write an arbitrary number of rows per user.
+const maxTwoFactorRecoveryCodes = 50
 
 type DatabaseMariaDBConfiguration struct {
 	Host     string
@@ -46,6 +52,18 @@ type AuthenticationConfiguration struct {
 	SkipEmailVerification    bool   `mapstructure:"skip_email_verification"`
 }
 
+// TwoFactorConfiguration contains the settings for TOTP two-factor authentication.
+//
+// EncryptionKey is a base64 encoded 32 byte key. It encrypts the TOTP secret
+// at rest and must never be the JWT token password: rotating the token
+// password would invalidate every enrolment.
+type TwoFactorConfiguration struct {
+	Enabled           bool   `mapstructure:"enabled"`
+	EncryptionKey     string `mapstructure:"encryptionKey"`
+	Issuer            string `mapstructure:"issuer"`
+	RecoveryCodeCount int    `mapstructure:"recoveryCodeCount"`
+}
+
 // CorsConfiguration contains all properties for the CORS configuration of the proviant server
 type CorsConfiguration struct {
 	AllowAllOrigins bool
@@ -76,6 +94,7 @@ type ServerConfiguration struct {
 	// 127.0.0.1 for a loopback-only listener.
 	Host            string
 	Authentication  AuthenticationConfiguration
+	TwoFactor       TwoFactorConfiguration `mapstructure:"twoFactor"`
 	CORS            CorsConfiguration
 	BaseURL         string
 	SecurityHeaders SecurityHeadersConfiguration
@@ -448,6 +467,58 @@ func (ec *ProviantConfiguration) ValidateServerConfiguration() error {
 		return errors.ErrRateLimitInvalidValue
 	}
 	return nil
+}
+
+// ValidateTwoFactorConfiguration validates the two-factor authentication
+// settings. A disabled feature is always valid: no secret is written and no
+// endpoint is exposed. An enabled one must carry an encryption key that is
+// strong enough to protect a TOTP secret at rest and that is not shared with
+// the JWT token password.
+func (ec *ProviantConfiguration) ValidateTwoFactorConfiguration() error {
+	twoFactor := ec.Server.TwoFactor
+	if !twoFactor.Enabled {
+		return nil
+	}
+
+	if twoFactor.EncryptionKey == "" {
+		return errors.ErrServerEmptyTwoFactorKey
+	}
+	if twoFactor.EncryptionKey == util.RetiredTwoFactorEncryptionKey {
+		return errors.ErrServerDefaultTwoFactorKey
+	}
+	if twoFactor.EncryptionKey == ec.Server.Authentication.TokenPassword {
+		return errors.ErrServerTwoFactorKeyEqualsTokenPassword
+	}
+
+	decoded, decodeErr := base64.StdEncoding.DecodeString(twoFactor.EncryptionKey)
+	if decodeErr != nil || len(decoded) != util.TwoFactorEncryptionKeyBytes {
+		return errors.ErrServerInvalidTwoFactorKey
+	}
+
+	if twoFactor.RecoveryCodeCount < 1 || twoFactor.RecoveryCodeCount > maxTwoFactorRecoveryCodes {
+		return errors.ErrServerInvalidTwoFactorRecoveryCodeCount
+	}
+
+	return nil
+}
+
+// LockoutConfig returns the failed-login policy of the server: how many
+// wrong attempts lock an account and for how long. It lives here so every
+// package that checks a password reads the same policy — the router and the
+// public two-factor setup endpoint both count a wrong password against it.
+func (ec *ProviantConfiguration) LockoutConfig() (maxAttempts, lockoutMins int) {
+	maxAttempts = database.DefaultMaxLoginAttempts
+	lockoutMins = database.DefaultLockoutDurationMins
+	if ec == nil {
+		return
+	}
+	if ec.Server.Authentication.MaxLoginAttempts > 0 {
+		maxAttempts = ec.Server.Authentication.MaxLoginAttempts
+	}
+	if ec.Server.Authentication.LockoutDurationMins > 0 {
+		lockoutMins = ec.Server.Authentication.LockoutDurationMins
+	}
+	return
 }
 
 // ValidateBackupConfiguration validates the scheduled backup target. A disabled

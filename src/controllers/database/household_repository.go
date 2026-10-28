@@ -24,7 +24,8 @@ type HouseholdRepositoryInterface interface {
 	GetPendingApplicationsForApplicant(applicantUserID uint) ([]database.HouseholdApplication, error)
 	CancelApplication(applicationID, applicantUserID uint) error
 	UpdateHouseholdName(householdID, adminUserID uint, name string) error
-	UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language *string) error
+	UpdateHouseholdSettings(householdID, adminUserID uint, settings HouseholdSettings) error
+	UpdateHouseholdTwoFactorPolicy(householdID, adminUserID uint, requireTwoFactor bool) error
 	RemoveMemberFromHousehold(memberUserID, adminUserID uint) error
 	SetHouseholdMemberRole(memberUserID, adminUserID uint, role string) error
 	GetPublicHouseholds(excludeHouseholdID uint) ([]database.HouseholdWithMemberCount, error)
@@ -276,7 +277,19 @@ func (r *HouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint,
 	return r.DB.Model(&household).Update("name", name).Error
 }
 
-func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language *string) error {
+// HouseholdSettings carries the household settings the settings endpoint can
+// change. A nil pointer leaves the setting untouched.
+//
+// The two-factor policy is not among them: the settings endpoint replaces the
+// waste goal wholesale, so the policy has its own method.
+type HouseholdSettings struct {
+	MonthlyWasteGoalType    string
+	MonthlyWasteGoalCount   *int
+	MonthlyWasteGoalPercent *float64
+	Language                *string
+}
+
+func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, settings HouseholdSettings) error {
 	var household database.Household
 	if err := r.DB.First(&household, householdID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -288,14 +301,32 @@ func (r *HouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID u
 		return errors.ErrNotHouseholdAdmin
 	}
 	updates := map[string]any{
-		"monthly_waste_goal_type":    goalType,
-		"monthly_waste_goal_count":   goalCount,
-		"monthly_waste_goal_percent": goalPercent,
+		"monthly_waste_goal_type":    settings.MonthlyWasteGoalType,
+		"monthly_waste_goal_count":   settings.MonthlyWasteGoalCount,
+		"monthly_waste_goal_percent": settings.MonthlyWasteGoalPercent,
 	}
-	if language != nil {
-		updates["language"] = *language
+	if settings.Language != nil {
+		updates["language"] = *settings.Language
 	}
 	return r.DB.Model(&household).Updates(updates).Error
+}
+
+// UpdateHouseholdTwoFactorPolicy stores whether the household demands a
+// second factor from its members. It is a dedicated method because the
+// settings endpoint replaces the waste goal wholesale and would otherwise
+// clear it.
+func (r *HouseholdRepository) UpdateHouseholdTwoFactorPolicy(householdID, adminUserID uint, requireTwoFactor bool) error {
+	var household database.Household
+	if err := r.DB.First(&household, householdID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.ErrHouseholdNotFound
+		}
+		return err
+	}
+	if household.AdminID != adminUserID {
+		return errors.ErrNotHouseholdAdmin
+	}
+	return r.DB.Model(&household).Update("require_two_factor", requireTwoFactor).Error
 }
 
 func (r *HouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {

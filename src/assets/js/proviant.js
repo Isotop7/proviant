@@ -654,10 +654,12 @@ proviant.bulkAction = async function (type, ids, options = {}) {
 };
 
 /* ── Auth / user API ─────────────────────────────────────────────────────────── */
-proviant.loginUser = async function (username, password) {
-  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+proviant.loginUser = async function (username, password, code) {
+  const payload = { username, password };
+  if (code) payload.code = code;
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
-  return { code: res.status, body: body.message || body.code || "", retryAfter: res.headers.get("Retry-After") };
+  return { code: res.status, body: body.message || body.code || "", errorReason: body.reason || "", qr: body.qr || "", retryAfter: res.headers.get("Retry-After") };
 };
 
 proviant.signupUser = async function (username, mailAddress, password, inviteToken) {
@@ -681,6 +683,44 @@ proviant.updateUserPassword = async function (username, password) {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
   const body = await res.json();
   return { code: res.status, message: body.message };
+};
+
+/* ── Two-factor authentication API ─────────────────────────────────────────── */
+
+proviant.getTOTPStatus = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/totp`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body, errorReason: body.reason || "" };
+};
+
+proviant.startTOTPEnrolment = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/totp`, { method: "POST", headers: { "Content-Type": "application/json" } });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body, errorReason: body.reason || "" };
+};
+
+proviant.confirmTOTPEnrolment = async function (code) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/totp/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body, errorReason: body.reason || "" };
+};
+
+proviant.disableTOTP = async function (password) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/totp/disable`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body.message, errorReason: body.reason || "" };
+};
+
+proviant.confirmTwoFactorSetup = async function (username, password, code) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/totp/setup/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password, code }) });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body.message || "", body: body };
+};
+
+proviant.resetUserTwoFactor = async function (userID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}/reset-two-factor`, { method: "POST", headers: { "Content-Type": "application/json" } });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body.message, errorReason: body.reason || "" };
 };
 
 proviant.updateNotificationSettings = async function (preferences) {
@@ -897,6 +937,16 @@ proviant.updateHouseholdSettings = async function (settings) {
   });
   const body = await res.json();
   return { code: res.status, message: body };
+};
+
+proviant.updateHouseholdTwoFactorPolicy = async function (requireTwoFactor) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/two-factor`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requireTwoFactor }),
+  });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body, errorReason: body.reason || "" };
 };
 
 proviant.getSavingsStats = async function () {

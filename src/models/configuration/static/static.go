@@ -19,6 +19,14 @@ const (
 	// TokenJTIKey is the name of JTI key in tokens
 	TokenJTIKey = "jti"
 
+	// TokenTwoFactorKey marks a session that was completed with a second
+	// factor
+	TokenTwoFactorKey = "two_factor"
+
+	// TokenTwoFactorRecoveredKey marks a session that was completed with a
+	// recovery code, which turned the second factor off
+	TokenTwoFactorRecoveredKey = "two_factor_recovered" //nolint:gosec // G101: claim name, not a credential
+
 	// TokenHeadName is the name of authentication header in token
 	TokenHeadName = "Bearer"
 

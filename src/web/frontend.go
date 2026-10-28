@@ -234,6 +234,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	shoppingListSyncEnabled := false
 	bringSyncEnabled := false
 	todoistSyncEnabled := false
+	twoFactorEnabled := false
 
 	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
 		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
@@ -252,6 +253,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 			shoppingListSyncEnabled = cfg.ShoppingListSync.Enabled
 			bringSyncEnabled = cfg.ShoppingListSync.IsProviderEnabled(util.ShoppingListProviderBring)
 			todoistSyncEnabled = cfg.ShoppingListSync.IsProviderEnabled(util.ShoppingListProviderTodoist)
+			twoFactorEnabled = cfg.Server.TwoFactor.Enabled
 		}
 	}
 
@@ -277,6 +279,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"ShoppingListSyncEnabled":   shoppingListSyncEnabled,
 		"BringSyncEnabled":          bringSyncEnabled,
 		"TodoistSyncEnabled":        todoistSyncEnabled,
+		"TwoFactorEnabled":          twoFactorEnabled,
 		"AvailableLanguages":        i18n.LanguageOptions(),
 	}
 
