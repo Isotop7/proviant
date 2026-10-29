@@ -448,6 +448,25 @@ definitions:
       wasteCause:
         type: string
     type: object
+  api.FrequentProduct:
+    properties:
+      barcode:
+        type: string
+      categoryKey:
+        type: string
+      imageUrl:
+        type: string
+      lastBoughtAt:
+        type: string
+      packSize:
+        type: string
+      productName:
+        type: string
+      purchaseCount:
+        type: integer
+      storageLocationId:
+        type: integer
+    type: object
   api.FullExportHousehold:
     properties:
       createdAt:
@@ -4732,6 +4751,31 @@ paths:
       summary: Export products as JSON
       tags:
       - export
+  /api/v1/products/frequently-bought:
+    get:
+      description: Returns the archived products the household bought at least twice,
+        most frequent first and most recent second. Every entry carries the name,
+        the pack size, the category and the storage location the household itself
+        used, so a suggestion fills the add-product form with what this household
+        actually buys. Another member's private product is never part of the list
+        and never counts towards a barcode the household shares. The list is empty
+        when the household has no such product.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.FrequentProduct'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return frequently bought products
+      tags:
+      - product
   /api/v1/products/import:
     post:
       consumes:

@@ -121,7 +121,7 @@ type ProductRepositoryInterface interface {
 	GetExpiredProductsCount(userID uint) (int, error)
 	GetArchivedProductsCount(userID uint) (int, error)
 	GetUniqueArchivedProductsCount(userID uint) (int, error)
-	GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
+	GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error)
 	GetActiveProductsCount(userID uint) (int, error)
 	GetProductCategoryBreakdown(userID uint) (map[string]int, error)
 	GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
@@ -892,6 +892,10 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 	// normalised in one place: every path stores the same collapsed, capped
 	// label.
 	product.PackSize = util.PackSizeLabel(product.PackSize)
+	// The name is free text too, and its column is a bounded varchar: a name
+	// that exceeds it is refused by the database rather than stored. Every
+	// path stores the same collapsed, capped label.
+	product.ProductName = util.ProductNameLabel(product.ProductName)
 	product.Quantity = util.ClampProductQuantity(product.Quantity)
 	createErr := r.DB.Create(&product)
 	return createErr.Error
@@ -961,6 +965,7 @@ func (r *ProductRepository) CreateProductsBulk(userID uint, rows []ImportedProdu
 			rows[i].Product.HouseholdID = user.HouseholdID
 			rows[i].Product.UserID = userID
 			rows[i].Product.PackSize = util.PackSizeLabel(rows[i].Product.PackSize)
+			rows[i].Product.ProductName = util.ProductNameLabel(rows[i].Product.ProductName)
 			rows[i].Product.Quantity = util.ClampProductQuantity(rows[i].Product.Quantity)
 			products[i] = rows[i].Product
 			if locationID, ok := createdIDs[strings.ToLower(rows[i].NewLocationName)]; ok {
@@ -1478,52 +1483,92 @@ func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
 	return count, nil
 }
 
-func (r *ProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error) {
-	archivedProducts, err := r.GetUserArchivedProductsBulk(userID, -1)
+// frequentlyBoughtQuery ranks the household's archived products by how often
+// it bought them and how recently, and carries the most recent row of every
+// barcode so a suggestion names the product the way the household does.
+//
+// The archive is grouped in SQL: the query returns one row per barcode, so
+// its cost does not grow with the size of the pantry.
+//
+// The privacy filter sits inside the grouping on purpose. A private product
+// of another member must neither appear nor inflate the count of a barcode
+// the household shares.
+//
+// The recency key is the id, not the creation date: the id is the order the
+// household bought the product in, and it compares as a number on every
+// database. The creation date of that purchase rides along as the date of the
+// row the query joins to.
+const frequentlyBoughtQuery = `
+SELECT p.barcode, p.product_name, p.pack_size, p.category_key,
+       p.storage_location_id, p.image_url, p.created_at,
+       b.purchase_count
+FROM (
+    SELECT barcode,
+           COUNT(*) AS purchase_count,
+           MAX(id)   AS last_id
+    FROM products
+    WHERE household_id = ? AND deleted_at IS NOT NULL
+      AND (is_private = 0 OR user_id = ?) AND barcode <> ''
+    GROUP BY barcode
+    HAVING COUNT(*) >= ?
+) b
+JOIN products p ON p.id = b.last_id
+ORDER BY b.purchase_count DESC, b.last_id DESC
+LIMIT ?`
+
+// frequentProductRow is one row of the frequently-bought query. It is a
+// private shape, so the soft-delete scope of GORM never touches the raw SQL.
+type frequentProductRow struct {
+	Barcode           string    `gorm:"column:barcode"`
+	ProductName       string    `gorm:"column:product_name"`
+	PackSize          string    `gorm:"column:pack_size"`
+	CategoryKey       *string   `gorm:"column:category_key"`
+	StorageLocationID *uint     `gorm:"column:storage_location_id"`
+	ImageURL          string    `gorm:"column:image_url"`
+	LastBoughtAt      time.Time `gorm:"column:created_at"`
+	PurchaseCount     int       `gorm:"column:purchase_count"`
+}
+
+// GetFrequentlyBoughtProducts returns the staples the household buys
+// repeatedly, most frequent first and most recent second. A product the
+// household bought fewer than util.FrequentProductMinPurchases times is not a
+// staple and never appears.
+func (r *ProductRepository) GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error) {
+	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(archivedProducts) == 0 {
-		return []database.Product{}, nil
+	if limit <= 0 {
+		return []apiModel.FrequentProduct{}, nil
 	}
 
-	barcodeCounts := make(map[string]int)
-	barcodeToProduct := make(map[string]database.Product)
-
-	for i := range archivedProducts {
-		product := &archivedProducts[i]
-		barcodeCounts[product.Barcode]++
-		if _, exists := barcodeToProduct[product.Barcode]; !exists {
-			barcodeToProduct[product.Barcode] = *product
-		}
+	var rows []frequentProductRow
+	queryErr := r.DB.Raw(
+		frequentlyBoughtQuery,
+		householdID,
+		userID,
+		util.FrequentProductMinPurchases,
+		limit,
+	).Scan(&rows).Error
+	if queryErr != nil {
+		return nil, queryErr
 	}
 
-	type barcodeCount struct {
-		barcode string
-		count   int
-		product database.Product
-	}
-
-	var counts []barcodeCount
-	for barcode, count := range barcodeCounts {
-		counts = append(counts, barcodeCount{
-			barcode: barcode,
-			count:   count,
-			product: barcodeToProduct[barcode],
+	products := make([]apiModel.FrequentProduct, 0, len(rows))
+	for i := range rows {
+		products = append(products, apiModel.FrequentProduct{
+			Barcode:           rows[i].Barcode,
+			ProductName:       rows[i].ProductName,
+			PackSize:          rows[i].PackSize,
+			CategoryKey:       rows[i].CategoryKey,
+			StorageLocationID: rows[i].StorageLocationID,
+			ImageURL:          rows[i].ImageURL,
+			PurchaseCount:     rows[i].PurchaseCount,
+			LastBoughtAt:      rows[i].LastBoughtAt,
 		})
 	}
-
-	sort.Slice(counts, func(i, j int) bool {
-		return counts[i].count > counts[j].count
-	})
-
-	var result []database.Product
-	for i := 0; i < len(counts) && i < limit; i++ {
-		result = append(result, counts[i].product)
-	}
-
-	return result, nil
+	return products, nil
 }
 
 // GetActiveProductsCount counts the user's active products in SQL. It used to

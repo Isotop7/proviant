@@ -42,6 +42,7 @@
   "js.products.duplicateNoLocation": "Ohne Lagerort gelagert",
   "js.products.duplicateUnavailable": "Dieses Produkt ist bereits im Vorrat.",
   "js.products.expirySuggested": "%s · %d Tage ab Kauf",
+  "js.products.expiryShelfLife": "%s · %d Tage ab Kauf — Ablaufdatum setzen",
   "js.products.failedToAdd": "Hinzufügen fehlgeschlagen",
   "js.products.failedToAddToList": "Hinzufügen zur Liste fehlgeschlagen",
   "js.products.importComplete": "Import abgeschlossen",

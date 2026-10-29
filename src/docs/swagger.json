@@ -3368,6 +3368,35 @@
                 }
             }
         },
+        "/api/v1/products/frequently-bought": {
+            "get": {
+                "description": "Returns the archived products the household bought at least twice, most frequent first and most recent second. Every entry carries the name, the pack size, the category and the storage location the household itself used, so a suggestion fills the add-product form with what this household actually buys. Another member's private product is never part of the list and never counts towards a barcode the household shares. The list is empty when the household has no such product.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Return frequently bought products",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.FrequentProduct"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/import": {
             "post": {
                 "description": "Creates products from an uploaded CSV file. Insert-only: a barcode that already exists among the household's active products is reported as a row error and never modified. Unknown storage locations are created. Rows without a name are completed from the Open Food Facts cache, and at most a bounded number of them may additionally trigger a live Open Food Facts lookup. The quantity column counts the packs of a product and the pack_size column states the size of one pack; a file written before products were counted in packs is rejected.",
@@ -8063,6 +8092,35 @@
                 },
                 "wasteCause": {
                     "type": "string"
+                }
+            }
+        },
+        "api.FrequentProduct": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "categoryKey": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "lastBoughtAt": {
+                    "type": "string"
+                },
+                "packSize": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "purchaseCount": {
+                    "type": "integer"
+                },
+                "storageLocationId": {
+                    "type": "integer"
                 }
             }
         },

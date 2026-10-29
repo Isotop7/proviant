@@ -58,6 +58,7 @@
   "products.exportProductsJson": "Products JSON",
   "products.filterProducts": "Filter products",
   "products.filters": "Filters",
+  "products.frequentlyBought": "Frequently bought",
   "products.gridView": "Grid view",
   "products.header.expiredCount": "%d expired",
   "products.header.expiringSoonCount": "%d expiring soon",

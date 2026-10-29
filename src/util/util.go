@@ -73,6 +73,16 @@ const (
 	// so it shows the head of the order, not every row.
 	UseFirstProductsLimit = 10
 
+	// FrequentProductMinPurchases is how often a household must have bought a
+	// product before it counts as a staple. A product bought once is not a
+	// staple, it is a one-off.
+	FrequentProductMinPurchases = 2
+
+	// FrequentProductLimit is how many staples the "frequently bought" strip
+	// carries. The strip is a row of chips, not a list, so it shows the head
+	// of the order.
+	FrequentProductLimit = 8
+
 	// Waste analytics period identifiers
 	PeriodValueMonth    = "month"
 	PeriodValue3Months  = "3months"

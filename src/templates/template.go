@@ -400,6 +400,7 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 	// receipt review clamps to the same values the server enforces.
 	data["MaxProductQuantity"] = util.MaxProductQuantity
 	data["MaxPackSizeLength"] = util.MaxPackSizeLength
+	data["MaxProductNameLength"] = util.MaxProductNameLength
 	// The window in which the server still deduplicates a replayed stock
 	// mutation. The outbox learns it so it can refuse to replay a queued
 	// change the server would no longer recognize.

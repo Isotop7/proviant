@@ -696,3 +696,50 @@ func TestHydrateProductsPage(t *testing.T) {
 		}
 	})
 }
+
+// The add-product dialog carries the strip of staples and the two fields the
+// household names the product by. The bounds the fields declare are the ones
+// the server enforces, so the page has to render them.
+func TestProductsPageRendersTheAddProductDialog(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+	frontend := &Frontend{TemplateCache: cache}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	frontend.Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+
+	if !strings.Contains(body, `id="frequentProducts"`) {
+		t.Error("the page does not carry the frequently bought strip")
+	}
+	if !strings.Contains(body, `id="frequentProductsList"`) {
+		t.Error("the page does not carry the list the strip is rendered into")
+	}
+	if !strings.Contains(body, `id="productName"`) {
+		t.Error("the add-product form does not carry a name field")
+	}
+	if !strings.Contains(body, `id="packSize"`) {
+		t.Error("the add-product form does not carry a pack size field")
+	}
+	if !strings.Contains(body, fmt.Sprintf(`maxlength="%d"`, util.MaxProductNameLength)) {
+		t.Errorf("the name field does not declare the server's bound of %d", util.MaxProductNameLength)
+	}
+	if !strings.Contains(body, fmt.Sprintf(`maxlength="%d"`, util.MaxPackSizeLength)) {
+		t.Errorf("the pack size field does not declare the server's bound of %d", util.MaxPackSizeLength)
+	}
+}

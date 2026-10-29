@@ -486,16 +486,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function setActiveTab(mode) {
         const isCamera = mode === 'camera';
-        if (tabManualInput) {
-            tabManualInput.style.background  = isCamera ? 'transparent' : 'white';
-            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)';
-            tabManualInput.style.color       = isCamera ? 'var(--meta)' : 'var(--fg)';
-        }
-        if (tabCamera) {
-            tabCamera.style.background  = isCamera ? 'white' : 'transparent';
-            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)' : 'none';
-            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--meta)';
-        }
+        if (tabManualInput) tabManualInput.classList.toggle('active', !isCamera);
+        if (tabCamera) tabCamera.classList.toggle('active', isCamera);
         if (manualSection) manualSection.style.display = isCamera ? 'none' : 'block';
         if (cameraSection) cameraSection.style.display = isCamera ? 'block' : 'none';
 

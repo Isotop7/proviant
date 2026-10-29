@@ -172,7 +172,7 @@
   &.active {
     color: var(--fg);
     background: var(--surface);
-    box-shadow: 0 1px 3px color-mix(in oklab, #000 10%, transparent);
+    box-shadow: var(--elev-raised), inset 0 0 0 1px var(--border);
   }
 }
 

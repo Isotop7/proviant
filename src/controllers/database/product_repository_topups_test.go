@@ -196,14 +196,6 @@ func TestProductRepository_TopUps(t *testing.T) {
 		if len(archived) != 1 {
 			t.Errorf("archived = %d, want 1", len(archived))
 		}
-
-		top, err := repo.GetTopArchivedProducts(user.ID, 10)
-		if err != nil {
-			t.Fatalf("GetTopArchivedProducts() error = %v", err)
-		}
-		if len(top) != 1 {
-			t.Errorf("top = %d, want 1", len(top))
-		}
 	})
 }
 

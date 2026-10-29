@@ -24,6 +24,7 @@ type MockProductRepository struct {
 	StatsMonthly  []apiModel.StatsMonthlyCount
 	ExpiringProds []apiModel.StatsExpiringProduct
 	UseFirstProds []apiModel.StatsUseFirstProduct
+	FrequentProds []apiModel.FrequentProduct
 	BoolResult    bool
 	IntResult     int
 	MapResult     map[string]int
@@ -194,8 +195,8 @@ func (m *MockProductRepository) GetArchivedProductsCount(userID uint) (int, erro
 func (m *MockProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, error) {
 	return m.IntResult, m.Err
 }
-func (m *MockProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]dbModel.Product, error) {
-	return m.Products, m.Err
+func (m *MockProductRepository) GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error) {
+	return m.FrequentProds, m.Err
 }
 func (m *MockProductRepository) GetActiveProductsCount(userID uint) (int, error) {
 	return m.IntResult, m.Err

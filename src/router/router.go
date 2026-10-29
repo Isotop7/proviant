@@ -262,6 +262,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	publicProductAPI.GET("/search", v1.WrapHandler(v1.SearchProducts))
 	publicProductAPI.GET("/stats", v1.WrapHandler(v1.GetProductStats))
 	publicProductAPI.GET("/summary", v1.WrapHandler(v1.GetProductSummary))
+	publicProductAPI.GET("/frequently-bought", v1.WrapHandler(v1.GetFrequentlyBoughtProducts))
 	publicProductAPI.GET("/export/products.csv", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportProductsCSV))
 	publicProductAPI.GET("/export/products.json", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportProductsJSON))
 	publicProductAPI.GET("/export/archive.csv", exportRateLimitMiddleware, v1.WrapHandler(v1.ExportArchiveCSV))

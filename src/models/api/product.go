@@ -229,6 +229,25 @@ func NewProductResponses[T dbModel.Product | *dbModel.Product](products []T) []P
 	return out
 }
 
+// FrequentProduct is one of the products a household buys repeatedly: the
+// barcode the household's purchases are grouped by, the naming and the pack
+// size the household itself used, and how often and how recently it bought
+// the product.
+//
+// The category and the storage location are the household's own as well, so a
+// suggestion reflects what this household actually buys rather than what the
+// product is called somewhere else.
+type FrequentProduct struct {
+	Barcode           string    `json:"barcode"`
+	ProductName       string    `json:"productName"`
+	PackSize          string    `json:"packSize,omitempty"`
+	CategoryKey       *string   `json:"categoryKey,omitempty"`
+	StorageLocationID *uint     `json:"storageLocationId,omitempty"`
+	ImageURL          string    `json:"imageUrl,omitempty"`
+	PurchaseCount     int       `json:"purchaseCount"`
+	LastBoughtAt      time.Time `json:"lastBoughtAt"`
+}
+
 // NewLabelledProductResponse projects a product and renders its dropdown label.
 func NewLabelledProductResponse(product *dbModel.Product) ProductResponse {
 	if product == nil {

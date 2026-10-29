@@ -1095,59 +1095,6 @@ func TestProductRepository_GetConsumedSamplesEmptyInput(t *testing.T) {
 	}
 }
 
-func TestProductRepository_GetTopArchivedProductsEdges(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-	household := testutil.CreateTestHousehold(db, 0)
-	user := testutil.CreateTestUser(db, household.ID)
-
-	t.Run("no archived products returns empty", func(t *testing.T) {
-		top, err := repo.GetTopArchivedProducts(user.ID, 10)
-		if err != nil {
-			t.Fatalf("GetTopArchivedProducts() error = %v", err)
-		}
-		if len(top) != 0 {
-			t.Errorf("GetTopArchivedProducts() returned %d, want 0", len(top))
-		}
-	})
-
-	t.Run("groups by barcode and respects the limit", func(t *testing.T) {
-		seedArchived := func(t *testing.T, barcode string) {
-			t.Helper()
-			product := testutil.CreateTestProduct(db, household.ID, user.ID)
-			product.Barcode = barcode
-			if err := db.Save(product).Error; err != nil {
-				t.Fatalf("save product: %v", err)
-			}
-			if err := db.Delete(product).Error; err != nil {
-				t.Fatalf("delete product: %v", err)
-			}
-		}
-		seedArchived(t, "4000000000001")
-		seedArchived(t, "4000000000001")
-		seedArchived(t, "4000000000002")
-
-		top, err := repo.GetTopArchivedProducts(user.ID, 10)
-		if err != nil {
-			t.Fatalf("GetTopArchivedProducts() error = %v", err)
-		}
-		if len(top) != 2 {
-			t.Fatalf("GetTopArchivedProducts() returned %d, want 2 distinct barcodes", len(top))
-		}
-		if top[0].Barcode != "4000000000001" {
-			t.Errorf("top[0].Barcode = %q, want the twice-archived barcode", top[0].Barcode)
-		}
-
-		top, err = repo.GetTopArchivedProducts(user.ID, 1)
-		if err != nil {
-			t.Fatalf("GetTopArchivedProducts() error = %v", err)
-		}
-		if len(top) != 1 {
-			t.Errorf("GetTopArchivedProducts(limit=1) returned %d, want 1", len(top))
-		}
-	})
-}
-
 func TestProductRepository_GetUserProductsBulkByBarcodesChunking(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewProductRepository(db)

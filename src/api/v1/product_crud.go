@@ -227,9 +227,15 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		if product.PackSize != "" {
 			packSize = product.PackSize
 		}
+		// The name follows the same rule: a household that calls its staple
+		// "Milk" knows better than the label Open Food Facts prints.
+		productName := apiProduct.ProductName
+		if clientName := util.ProductNameLabel(product.ProductName); clientName != "" {
+			productName = clientName
+		}
 		product = dbModel.Product{
 			Barcode:              product.Barcode,
-			ProductName:          apiProduct.ProductName,
+			ProductName:          productName,
 			Categories:           apiProduct.Categories,
 			Countries:            apiProduct.Countries,
 			ImageURL:             apiProduct.ImageURL,
@@ -249,6 +255,11 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 			CategoryKey:          product.CategoryKey,
 			AllowDuplicate:       product.AllowDuplicate,
 		}
+	} else {
+		// Without a lookup the client's own name is the only name the product
+		// has. It is free text, so it is collapsed and capped like the pack
+		// size, which the repository normalises the same way.
+		product.ProductName = util.ProductNameLabel(product.ProductName)
 	}
 
 	if !applyHouseholdCategory(ctx, appCtx, &product) {

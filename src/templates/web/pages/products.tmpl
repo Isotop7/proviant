@@ -516,6 +516,13 @@
         <span class="spinner-border spinner-sm" role="status" aria-hidden="true"></span>
         <span class="ms-1">{{ t "products.searching" }}</span>
     </div>
+
+    <!-- The staples the household buys repeatedly. The list is filled from the
+         server; offline it stays empty and the form is untouched. -->
+    <div id="frequentProducts" class="frequent-products d-none">
+        <div class="frequent-products__title">{{ t "products.frequentlyBought" }}</div>
+        <div id="frequentProductsList" class="frequent-products__list" role="group" aria-label="{{ t "products.frequentlyBought" }}"></div>
+    </div>
 </div>
 
                  <!-- Camera section -->
@@ -571,7 +578,7 @@
                 <div id="productData" class="d-none">
                     <div class="d-flex align-items-center gap-5 mb-5">
                         <div class="flex-shrink-0">
-                            <img id="productInfoImage" src="" alt=""
+                            <img id="productInfoImage" alt=""
                                  class="rounded product-thumb-sm">
                         </div>
                         <div class="flex-grow-1">
@@ -583,6 +590,10 @@
                     <select class="form-control mb-5 d-none" id="instanceDropdown" aria-label="{{ t "products.selectInstance" }}"></select>
 
                     <form id="formExpireAt" data-bs-validate novalidate>
+                        <label for="productName" class="form-label">{{ t "products.productName" }}</label>
+                        <input type="text" class="form-control mb-5" id="productName" maxlength="{{ .MaxProductNameLength }}" autocomplete="off">
+                        <label for="packSize" class="form-label">{{ t "products.packSize" }}</label>
+                        <input type="text" class="form-control mb-5" id="packSize" maxlength="{{ .MaxPackSizeLength }}" autocomplete="off">
                         <label class="form-label">{{ t "products.quantity" }}</label>
                         <div class="d-flex align-items-center gap-3 mb-5">
                             <button type="button" class="btn btn-outline theme-secondary btn-sm" id="btnQuantityDec" aria-label="{{ t "products.quantityDecrease" }}">−</button>

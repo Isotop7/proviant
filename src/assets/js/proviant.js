@@ -356,11 +356,17 @@ proviant.applyExpirySuggestion = function (input, categories, categoryKey) {
 };
 
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId, allowDuplicate = false, categoryKey = null) {
+// The details carry what the household itself knows about the product: the
+// name it calls it and the size of one pack. Both are free text, so both are
+// optional — a client that names neither leaves the barcode's own answers in
+// place.
+proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId, allowDuplicate = false, categoryKey = null, details = null) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
   const payload = { barcode, expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null };
   if (allowDuplicate) payload.allowDuplicate = true;
   if (categoryKey) payload.categoryKey = categoryKey;
+  if (details && details.productName) payload.productName = details.productName;
+  if (details && details.packSize) payload.packSize = details.packSize;
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const body = await res.json();
   // A refusal that names a duplicate carries the matched product, so the
@@ -420,6 +426,21 @@ proviant.getProductsByBarcode = async function (barcode) {
   const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();
   return { code: res.status, message: body };
+};
+
+// The staples the household buys repeatedly. The answer is a server response,
+// so it is gone when the server is: the caller gets an empty list instead of
+// a failure, and the form it fills keeps working.
+proviant.getFrequentlyBoughtProducts = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/frequently-bought`;
+  try {
+    const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
+    const body = await res.json();
+    if (res.status !== 200 || !Array.isArray(body)) return { code: res.status, message: [] };
+    return { code: res.status, message: body };
+  } catch (_) {
+    return { code: 0, message: [] };
+  }
 };
 
 proviant.editProduct = async function (product) {

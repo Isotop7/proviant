@@ -760,7 +760,7 @@
 
   if (typeof proviant.createProduct === 'function') {
     var originalCreateProduct = proviant.createProduct;
-    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId, allowDuplicate, categoryKey) {
+    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId, allowDuplicate, categoryKey, details) {
       // The sync id goes out on the online path too. Without it the server-side
       // idempotency check cannot fire, so a response lost after the server
       // committed — which is exactly what the catch below detects — would enqueue
@@ -775,11 +775,15 @@
       // carries no date at all.
       var draft = { barcode: barcode, expireAt: expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: syncId };
       if (categoryKey) draft.categoryKey = categoryKey;
+      // The household's own naming rides along, so a queued create stores the
+      // name the user knows the product by, not the one the barcode carries.
+      if (details && details.productName) draft.productName = details.productName;
+      if (details && details.packSize) draft.packSize = details.packSize;
       if (!navigator.onLine) {
         return enqueueOrReport({ id: syncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: syncId });
       }
       try {
-        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, syncId, allowDuplicate, categoryKey);
+        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, syncId, allowDuplicate, categoryKey, details);
       } catch (_) {
         return enqueueOrReport({ id: syncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: syncId });
       }

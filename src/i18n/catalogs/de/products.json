@@ -58,6 +58,7 @@
   "products.exportProductsJson": "Produkte (JSON)",
   "products.filterProducts": "Produkte filtern",
   "products.filters": "Filter",
+  "products.frequentlyBought": "Häufig gekauft",
   "products.gridView": "Rasteransicht",
   "products.header.expiredCount": "%d abgelaufen",
   "products.header.expiringSoonCount": "%d bald fällig",
