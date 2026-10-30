@@ -795,7 +795,7 @@ func ScrubIntegrationError(err error, integration *dbModel.HouseholdIntegration)
 ScrubIntegrationError redacts any stored integration credentials from an error message.
 
 <a name="SyncAllHouseholdsIntegrations"></a>
-## func [SyncAllHouseholdsIntegrations](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L274-L281>)
+## func [SyncAllHouseholdsIntegrations](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L276-L283>)
 
 ```go
 func SyncAllHouseholdsIntegrations(ctx context.Context, repos *dbController.RepositoryContainer, logger *zerolog.Logger, config *configuration.ShoppingListSyncConfiguration, factory ShoppingListSyncProviderFactory, httpClient *http.Client) error
@@ -804,7 +804,7 @@ func SyncAllHouseholdsIntegrations(ctx context.Context, repos *dbController.Repo
 SyncAllHouseholdsIntegrations synchronizes all households that have at least one enabled integration.
 
 <a name="SyncHouseholdIntegrations"></a>
-## func [SyncHouseholdIntegrations](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L204-L212>)
+## func [SyncHouseholdIntegrations](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L206-L214>)
 
 ```go
 func SyncHouseholdIntegrations(ctx context.Context, repos *dbController.RepositoryContainer, logger *zerolog.Logger, config *configuration.ShoppingListSyncConfiguration, factory ShoppingListSyncProviderFactory, httpClient *http.Client, householdID uint) error
@@ -813,7 +813,7 @@ func SyncHouseholdIntegrations(ctx context.Context, repos *dbController.Reposito
 SyncHouseholdIntegrations synchronizes all enabled integrations for a single household.
 
 <a name="SyncSingleHouseholdIntegration"></a>
-## func [SyncSingleHouseholdIntegration](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L245-L254>)
+## func [SyncSingleHouseholdIntegration](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L247-L256>)
 
 ```go
 func SyncSingleHouseholdIntegration(ctx context.Context, repos *dbController.RepositoryContainer, logger *zerolog.Logger, config *configuration.ShoppingListSyncConfiguration, factory ShoppingListSyncProviderFactory, httpClient *http.Client, householdID uint, provider string) error
@@ -1846,7 +1846,7 @@ type ShoppingListPushResult struct {
 ```
 
 <a name="ShoppingListSyncController"></a>
-## type [ShoppingListSyncController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L306-L312>)
+## type [ShoppingListSyncController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L308-L314>)
 
 ShoppingListSyncController manages the periodic background synchronization of household shopping lists.
 
@@ -1861,7 +1861,7 @@ type ShoppingListSyncController struct {
 ```
 
 <a name="NewShoppingListSyncController"></a>
-### func [NewShoppingListSyncController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L315-L319>)
+### func [NewShoppingListSyncController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L317-L321>)
 
 ```go
 func NewShoppingListSyncController(logger *zerolog.Logger, config *configuration.ShoppingListSyncConfiguration, db *gorm.DB) *ShoppingListSyncController
@@ -1870,7 +1870,7 @@ func NewShoppingListSyncController(logger *zerolog.Logger, config *configuration
 NewShoppingListSyncController constructs a ShoppingListSyncController.
 
 <a name="ShoppingListSyncController.Dispatch"></a>
-### func \(\*ShoppingListSyncController\) [Dispatch](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L341>)
+### func \(\*ShoppingListSyncController\) [Dispatch](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L343>)
 
 ```go
 func (c *ShoppingListSyncController) Dispatch()
@@ -1879,7 +1879,7 @@ func (c *ShoppingListSyncController) Dispatch()
 Dispatch starts the periodic shopping list sync goroutine when enabled in configuration.
 
 <a name="ShoppingListSyncController.RunOnce"></a>
-### func \(\*ShoppingListSyncController\) [RunOnce](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L329>)
+### func \(\*ShoppingListSyncController\) [RunOnce](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_controller.go#L331>)
 
 ```go
 func (c *ShoppingListSyncController) RunOnce(ctx context.Context) error
@@ -2510,6 +2510,10 @@ var (
     // ErrBarcodeMissing is thrown if a product request carries no barcode.
     ErrBarcodeMissing = errors.New("barcode missing")
 
+    // ErrInvalidExpiryDate is thrown if a request carries an expiry date that
+    // is neither a plain date nor an RFC 3339 timestamp.
+    ErrInvalidExpiryDate = errors.New("invalid expiry date")
+
     // ErrClientSyncIDTooLong is thrown if a product request carries a clientSyncId
     // longer than util.OfflineSyncIDMaxLength. The column is indexed, so an
     // unbounded value would fail at insert time as a 500.
@@ -2542,6 +2546,10 @@ var (
     // ErrShoppingListItemNotFound is thrown if the requested shopping list item
     // does not exist in the caller's household.
     ErrShoppingListItemNotFound = errors.New("shopping list item not found")
+
+    // ErrShoppingListItemProductGone is thrown if the product a shopping list
+    // item points at is gone: the packs of the purchase have nowhere to go.
+    ErrShoppingListItemProductGone = errors.New("the product of the shopping list item no longer exists")
 
     // ErrIntegrationInvalidProvider is thrown if the requested shopping list sync provider is unknown.
     ErrIntegrationInvalidProvider = errors.New("invalid shopping list sync provider")
@@ -3119,7 +3127,7 @@ var (
 ```
 
 <a name="ReceiptEndpointError"></a>
-## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L756-L758>)
+## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L764-L766>)
 
 ReceiptEndpointError marks an OCR scan failure as originating from the upstream vision endpoint rather than from Proviant itself. The API layer maps it to 502 Bad Gateway instead of 500 via errors.As.
 
@@ -3130,7 +3138,7 @@ type ReceiptEndpointError struct {
 ```
 
 <a name="ReceiptEndpointError.Error"></a>
-### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L760>)
+### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L768>)
 
 ```go
 func (e *ReceiptEndpointError) Error() string
@@ -3139,7 +3147,7 @@ func (e *ReceiptEndpointError) Error() string
 
 
 <a name="ReceiptEndpointError.Unwrap"></a>
-### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L762>)
+### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L770>)
 
 ```go
 func (e *ReceiptEndpointError) Unwrap() error
@@ -5130,7 +5138,7 @@ const (
 ```
 
 <a name="BrandFeature"></a>
-## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1352-L1355>)
+## type [BrandFeature](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1361-L1364>)
 
 BrandFeature is a single icon\+text row in the brand panel of the split\-panel auth pages. Consumed by the partials/loginBrand.tmpl template.
 
@@ -5171,7 +5179,7 @@ func (frontend *Frontend) Auth(ctx *gin.Context)
 Auth renders the authentication page @Summary Auth page @Description Renders the authentication page for login/signup @Tags web @Produce html @Success 200 \{string\} html @Router /web/auth \[get\]
 
 <a name="Frontend.ForgotPassword"></a>
-### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1294>)
+### func \(\*Frontend\) [ForgotPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1303>)
 
 ```go
 func (frontend *Frontend) ForgotPassword(ctx *gin.Context)
@@ -5198,7 +5206,7 @@ func (frontend *Frontend) MealPlan(ctx *gin.Context)
 MealPlan renders the weekly meal plan page @Summary Meal Plan page @Description Renders the weekly meal plan with planned meals and shopping list generation @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/mealplan \[get\]
 
 <a name="Frontend.Offline"></a>
-### func \(\*Frontend\) [Offline](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1346>)
+### func \(\*Frontend\) [Offline](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1355>)
 
 ```go
 func (frontend *Frontend) Offline(ctx *gin.Context)
@@ -5263,7 +5271,7 @@ func (frontend *Frontend) Recipes(ctx *gin.Context)
 Recipes renders the recipe suggestions page @Summary Recipes page @Description Shows recipe suggestions for expiring products @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/recipes \[get\]
 
 <a name="Frontend.ResetPassword"></a>
-### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1314>)
+### func \(\*Frontend\) [ResetPassword](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1323>)
 
 ```go
 func (frontend *Frontend) ResetPassword(ctx *gin.Context)
@@ -5290,7 +5298,7 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context)
 ShoppingList renders the shopping list page @Summary Shopping List page @Description Renders the shared household shopping list with custom items and import banner @Tags web @Produce html @Success 200 \{string\} html @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /web/shopping\-list \[get\]
 
 <a name="Frontend.Unsubscribe"></a>
-### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1234>)
+### func \(\*Frontend\) [Unsubscribe](<https://github.com/Isotop7/proviant/blob/develop/src/web/frontend.go#L1243>)
 
 ```go
 func (frontend *Frontend) Unsubscribe(ctx *gin.Context)
@@ -5607,6 +5615,8 @@ v1 implements version 1 of the proviant API
 
 v1 implements version 1 of the proviant API
 
+v1 implements version 1 of the proviant API
+
 ## Index
 
 - [Constants](<#constants>)
@@ -5700,6 +5710,7 @@ v1 implements version 1 of the proviant API
 - [func ListWebhooks\(ctx \*gin.Context, appCtx \*AppContext\)](<#ListWebhooks>)
 - [func OpenProduct\(ctx \*gin.Context, appCtx \*AppContext\)](<#OpenProduct>)
 - [func ParseArchiveOnly\(ctx \*gin.Context\) \(bool, bool\)](<#ParseArchiveOnly>)
+- [func PurchaseShoppingListItem\(ctx \*gin.Context, appCtx \*AppContext\)](<#PurchaseShoppingListItem>)
 - [func ReceiptScanEffectiveTimeout\(timeout int\) int](<#ReceiptScanEffectiveTimeout>)
 - [func RejectHouseholdApplication\(ctx \*gin.Context, appCtx \*AppContext\)](<#RejectHouseholdApplication>)
 - [func RemoveHouseholdMember\(ctx \*gin.Context, appCtx \*AppContext\)](<#RemoveHouseholdMember>)
@@ -6034,7 +6045,7 @@ func CreateRecipe(ctx *gin.Context, appCtx *AppContext)
 CreateRecipe creates a saved recipe for the caller's household @Summary Creates a saved recipe @Description Creates a saved recipe with its ingredients; a nil productId marks a free\-text ingredient @Tags recipes @Accept json @Produce json @Param request body apiModel.CreateRecipeRequest true "Recipe with ingredients" @Success 201 \{object\} apiModel.RecipeResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes \[post\] @Security BearerAuth
 
 <a name="CreateShoppingListItem"></a>
-## func [CreateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L46>)
+## func [CreateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L51>)
 
 ```go
 func CreateShoppingListItem(ctx *gin.Context, appCtx *AppContext)
@@ -6106,7 +6117,7 @@ func DeleteMealPlanEntry(ctx *gin.Context, appCtx *AppContext)
 DeleteMealPlanEntry removes a planned meal @Summary Deletes a planned meal @Description Deletes the meal plan entry with the given ID @Tags mealplans @Produce json @Param id path int true "Meal plan entry ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/mealplans/\{id\} \[delete\] @Security BearerAuth
 
 <a name="DeleteProduct"></a>
-## func [DeleteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L699>)
+## func [DeleteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L664>)
 
 ```go
 func DeleteProduct(ctx *gin.Context, appCtx *AppContext)
@@ -6124,7 +6135,7 @@ func DeleteRecipe(ctx *gin.Context, appCtx *AppContext)
 DeleteRecipe deletes a saved recipe and its ingredients @Summary Deletes a saved recipe @Description Deletes the saved recipe with the given ID including its ingredients @Tags recipes @Produce json @Param id path int true "Recipe ID" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/\{id\} \[delete\] @Security BearerAuth
 
 <a name="DeleteShoppingListItem"></a>
-## func [DeleteShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L200>)
+## func [DeleteShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L246>)
 
 ```go
 func DeleteShoppingListItem(ctx *gin.Context, appCtx *AppContext)
@@ -6250,7 +6261,7 @@ func GetAuditLogs(ctx *gin.Context, appCtx *AppContext)
 GetAuditLogs returns the audit log entries. @Summary Get audit logs @Description Returns paginated audit log entries for the caller's household. Household admins only; entries are scoped to the caller's household. @Tags admin @Produce json @Param limit query int false "Maximum number of logs to return \(default 100, max 1000\)" @Param date query string false "Filter by date \(YYYY\-MM\-DD format\)" @Success 200 \{array\} apiModel.AuditLogResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/admin/audit\-log \[get\]
 
 <a name="GetAutoShoppingList"></a>
-## func [GetAutoShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L23>)
+## func [GetAutoShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L28>)
 
 ```go
 func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext)
@@ -6522,7 +6533,7 @@ func GetWebhookDeliveries(ctx *gin.Context, appCtx *AppContext)
 GetWebhookDeliveries lists the recent delivery attempts of a webhook @Summary Lists webhook deliveries @Description Returns the last 50 delivery attempts of the webhook with the given ID @Tags webhook @Produce json @Param id path int true "Webhook ID" @Success 200 \{object\} apiModel.DeliveryLogListResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/webhooks/\{id\}/deliveries \[get\] @Security BearerAuth
 
 <a name="ImportAutoListToShoppingList"></a>
-## func [ImportAutoListToShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L270>)
+## func [ImportAutoListToShoppingList](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L316>)
 
 ```go
 func ImportAutoListToShoppingList(ctx *gin.Context, appCtx *AppContext)
@@ -6594,7 +6605,7 @@ func ListRecipes(ctx *gin.Context, appCtx *AppContext)
 ListRecipes lists the saved recipes of the caller's household @Summary Lists saved recipes @Description Returns all saved recipes of the caller's household @Tags recipes @Produce json @Success 200 \{array\} apiModel.RecipeResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes \[get\] @Security BearerAuth
 
 <a name="ListShoppingListItems"></a>
-## func [ListShoppingListItems](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L106>)
+## func [ListShoppingListItems](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L147>)
 
 ```go
 func ListShoppingListItems(ctx *gin.Context, appCtx *AppContext)
@@ -6653,6 +6664,15 @@ func ParseArchiveOnly(ctx *gin.Context) (bool, bool)
 ```
 
 
+
+<a name="PurchaseShoppingListItem"></a>
+## func [PurchaseShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L389>)
+
+```go
+func PurchaseShoppingListItem(ctx *gin.Context, appCtx *AppContext)
+```
+
+PurchaseShoppingListItem turns a shopping list item into a bought product @Summary Buys a shopping list item @Description Turns a shopping list item into a product of the household and checks the item. The pack count of the product is the number of packs bought, which is not the number the item asked for. The expiry is the one the request carries; without one the household's shelf life of the category fills it. An item that already points at a product gets the bought packs added to that product instead of a second row — that product keeps its own expiry, category, pack size and storage location, so the fields of the request that describe a product do not apply to it. The product and the check land together or not at all. A bought product that matches one the household already has is refused with 409 and the matched product in the body: the caller decides whether the packs belong to that row \(addToProductId\) or make a product of their own \(allowDuplicate\). @Tags shopping\-list @Accept json @Produce json @Param id path int true "Shopping list item ID" @Param request body apiModel.PurchaseShoppingListItemRequest true "The purchase: packs bought, expiry, category, storage location" @Success 201 \{object\} apiModel.PurchaseShoppingListItemResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 409 \{object\} api.ProductConflictResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/shopping\-list/\{id\}/purchase \[post\] @Security BearerAuth
 
 <a name="ReceiptScanEffectiveTimeout"></a>
 ## func [ReceiptScanEffectiveTimeout](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/user_receipt_scan.go#L26>)
@@ -6763,7 +6783,7 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext)
 SearchProducts returns a list of products based on a query @Summary Search products @Description Returns a list of products based on a query @Tags product @Produce json @Param queryParam query string true "Search field \(product\_name, barcode\)" @Param queryValue query string true "Search value" @Param sort query string false "Sort field \(product\_name, expire\_at, created\_at, scanned\_at, notified\_at, barcode, effective\_expire\_at\)" default\(product\_name\) @Param order query string false "Sort order \(asc, desc\)" default\(asc\) @Success 200 \{object\} \[\]apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/search \[GET\]
 
 <a name="SetExpireAt"></a>
-## func [SetExpireAt](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L754>)
+## func [SetExpireAt](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L719>)
 
 ```go
 func SetExpireAt(ctx *gin.Context, appCtx *AppContext)
@@ -6817,7 +6837,7 @@ func TestHouseholdIntegration(ctx *gin.Context, appCtx *AppContext)
 TestHouseholdIntegration tests the connection for a configured household shopping list integration. @Summary Tests a household shopping list integration @Description Verifies credentials and connectivity for the specified household shopping list integration \(admin only\). @Tags household @Produce json @Param provider path string true "Provider identifier \(bring or todoist\)" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 403 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 502 \{object\} api.APIResponse @Router /api/v1/household/integrations/\{provider\}/test \[post\] @Security BearerAuth
 
 <a name="ToggleShoppingListItem"></a>
-## func [ToggleShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L233>)
+## func [ToggleShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L279>)
 
 ```go
 func ToggleShoppingListItem(ctx *gin.Context, appCtx *AppContext)
@@ -6907,7 +6927,7 @@ func UpdateMealPlanEntry(ctx *gin.Context, appCtx *AppContext)
 UpdateMealPlanEntry updates a planned meal @Summary Updates a planned meal @Description Updates date, recipe, servings and notes of a meal plan entry @Tags mealplans @Accept json @Produce json @Param id path int true "Meal plan entry ID" @Param request body apiModel.UpdateMealPlanEntryRequest true "Fields to update" @Success 200 \{object\} apiModel.MealPlanEntryResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/mealplans/\{id\} \[patch\] @Security BearerAuth
 
 <a name="UpdateProduct"></a>
-## func [UpdateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L393>)
+## func [UpdateProduct](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L358>)
 
 ```go
 func UpdateProduct(ctx *gin.Context, appCtx *AppContext)
@@ -6916,7 +6936,7 @@ func UpdateProduct(ctx *gin.Context, appCtx *AppContext)
 UpdateProduct updates a product of a user @Summary Updates a product @Description Updates a product with new values. A field the request does not carry keeps its stored value; a pointer field sent as null is cleared. The pack count must be at least 1. The pack size is free text and may be set to an empty string to clear it. The price is the price of one pack, so the savings of the product are that price times the number of packs. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param product body database.ProductDTOPatch true "Product" @Success 200 \{object\} database.ProductDTOPatch @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\} \[patch\]
 
 <a name="UpdateProductAmount"></a>
-## func [UpdateProductAmount](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L557>)
+## func [UpdateProductAmount](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L522>)
 
 ```go
 func UpdateProductAmount(ctx *gin.Context, appCtx *AppContext)
@@ -6929,7 +6949,7 @@ Deprecated: the endpoint moved to /quantity. The old path stays as an alias so a
 @Summary Update product quantity \(deprecated alias of /quantity\) @Description Deprecated alias of PATCH /api/v1/products/\{id\}/quantity. Applies a delta to a product's pack count. Hard\-deletes the product when the count reaches 0. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductQuantityDTO true "Quantity delta" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/amount \[patch\]
 
 <a name="UpdateProductQuantity"></a>
-## func [UpdateProductQuantity](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L575>)
+## func [UpdateProductQuantity](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L540>)
 
 ```go
 func UpdateProductQuantity(ctx *gin.Context, appCtx *AppContext)
@@ -6938,7 +6958,7 @@ func UpdateProductQuantity(ctx *gin.Context, appCtx *AppContext)
 UpdateProductQuantity updates the pack count of a product by a given delta. If the resulting count is \<= 0, the product is hard\-deleted. @Summary Update product quantity @Description Applies a delta to a product's pack count. Hard\-deletes the product when the count reaches 0. A delta outside the range a pack count may span is refused, and the count never leaves that range. @Tags product @Accept json @Produce json @Param id path int true "Product ID" @Param delta body api.ProductQuantityDTO true "Quantity delta" @Success 200 \{object\} api.APIResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/quantity \[patch\]
 
 <a name="UpdateProductReplace"></a>
-## func [UpdateProductReplace](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L410>)
+## func [UpdateProductReplace](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_crud.go#L375>)
 
 ```go
 func UpdateProductReplace(ctx *gin.Context, appCtx *AppContext)
@@ -6956,7 +6976,7 @@ func UpdateRecipe(ctx *gin.Context, appCtx *AppContext)
 UpdateRecipe updates a saved recipe and replaces its ingredients @Summary Updates a saved recipe @Description Updates the given fields of a saved recipe; supplying ingredients replaces them atomically @Tags recipes @Accept json @Produce json @Param id path int true "Recipe ID" @Param request body apiModel.UpdateRecipeRequest true "Fields to update" @Success 200 \{object\} apiModel.RecipeResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/recipes/\{id\} \[patch\] @Security BearerAuth
 
 <a name="UpdateShoppingListItem"></a>
-## func [UpdateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L138>)
+## func [UpdateShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/shopping_list.go#L179>)
 
 ```go
 func UpdateShoppingListItem(ctx *gin.Context, appCtx *AppContext)
@@ -7541,6 +7561,9 @@ import "github.com/Isotop7/proviant/controllers/database"
   - [func \(r \*ShoppingListItemRepositoryImpl\) Delete\(id, householdID uint\) error](<#ShoppingListItemRepositoryImpl.Delete>)
   - [func \(r \*ShoppingListItemRepositoryImpl\) GetByID\(id, householdID uint\) \(\*database.ShoppingListItem, error\)](<#ShoppingListItemRepositoryImpl.GetByID>)
   - [func \(r \*ShoppingListItemRepositoryImpl\) ListByHousehold\(householdID uint\) \(\[\]database.ShoppingListItem, error\)](<#ShoppingListItemRepositoryImpl.ListByHousehold>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) PurchaseIntoProduct\(item \*database.ShoppingListItem, productID uint, packs int\) error](<#ShoppingListItemRepositoryImpl.PurchaseIntoProduct>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) PurchaseWithProduct\(item \*database.ShoppingListItem, product \*database.Product\) error](<#ShoppingListItemRepositoryImpl.PurchaseWithProduct>)
+  - [func \(r \*ShoppingListItemRepositoryImpl\) SetChecked\(id, householdID uint, checked bool\) error](<#ShoppingListItemRepositoryImpl.SetChecked>)
   - [func \(r \*ShoppingListItemRepositoryImpl\) ToggleChecked\(id, householdID uint\) error](<#ShoppingListItemRepositoryImpl.ToggleChecked>)
   - [func \(r \*ShoppingListItemRepositoryImpl\) Update\(item \*database.ShoppingListItem\) error](<#ShoppingListItemRepositoryImpl.Update>)
 - [type ShoppingListItemSyncRefRepository](<#ShoppingListItemSyncRefRepository>)
@@ -10440,7 +10463,7 @@ func SearchParameterEnumFromString(str string) SearchParameterEnum
 
 
 <a name="ShoppingListItemRepository"></a>
-## type [ShoppingListItemRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L8-L15>)
+## type [ShoppingListItemRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L10-L20>)
 
 
 
@@ -10452,11 +10475,14 @@ type ShoppingListItemRepository interface {
     Update(item *database.ShoppingListItem) error
     Delete(id, householdID uint) error
     ToggleChecked(id, householdID uint) error
+    SetChecked(id, householdID uint, checked bool) error
+    PurchaseWithProduct(item *database.ShoppingListItem, product *database.Product) error
+    PurchaseIntoProduct(item *database.ShoppingListItem, productID uint, packs int) error
 }
 ```
 
 <a name="ShoppingListItemRepositoryImpl"></a>
-## type [ShoppingListItemRepositoryImpl](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L19-L21>)
+## type [ShoppingListItemRepositoryImpl](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L24-L26>)
 
 
 
@@ -10467,7 +10493,7 @@ type ShoppingListItemRepositoryImpl struct {
 ```
 
 <a name="NewShoppingListItemRepository"></a>
-### func [NewShoppingListItemRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L23>)
+### func [NewShoppingListItemRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L28>)
 
 ```go
 func NewShoppingListItemRepository(db *gorm.DB) *ShoppingListItemRepositoryImpl
@@ -10476,7 +10502,7 @@ func NewShoppingListItemRepository(db *gorm.DB) *ShoppingListItemRepositoryImpl
 
 
 <a name="ShoppingListItemRepositoryImpl.Create"></a>
-### func \(\*ShoppingListItemRepositoryImpl\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L27>)
+### func \(\*ShoppingListItemRepositoryImpl\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L32>)
 
 ```go
 func (r *ShoppingListItemRepositoryImpl) Create(item *database.ShoppingListItem) error
@@ -10485,7 +10511,7 @@ func (r *ShoppingListItemRepositoryImpl) Create(item *database.ShoppingListItem)
 
 
 <a name="ShoppingListItemRepositoryImpl.Delete"></a>
-### func \(\*ShoppingListItemRepositoryImpl\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L94>)
+### func \(\*ShoppingListItemRepositoryImpl\) [Delete](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L99>)
 
 ```go
 func (r *ShoppingListItemRepositoryImpl) Delete(id, householdID uint) error
@@ -10494,7 +10520,7 @@ func (r *ShoppingListItemRepositoryImpl) Delete(id, householdID uint) error
 
 
 <a name="ShoppingListItemRepositoryImpl.GetByID"></a>
-### func \(\*ShoppingListItemRepositoryImpl\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L31>)
+### func \(\*ShoppingListItemRepositoryImpl\) [GetByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L36>)
 
 ```go
 func (r *ShoppingListItemRepositoryImpl) GetByID(id, householdID uint) (*database.ShoppingListItem, error)
@@ -10503,7 +10529,7 @@ func (r *ShoppingListItemRepositoryImpl) GetByID(id, householdID uint) (*databas
 
 
 <a name="ShoppingListItemRepositoryImpl.ListByHousehold"></a>
-### func \(\*ShoppingListItemRepositoryImpl\) [ListByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L41>)
+### func \(\*ShoppingListItemRepositoryImpl\) [ListByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L46>)
 
 ```go
 func (r *ShoppingListItemRepositoryImpl) ListByHousehold(householdID uint) ([]database.ShoppingListItem, error)
@@ -10511,8 +10537,35 @@ func (r *ShoppingListItemRepositoryImpl) ListByHousehold(householdID uint) ([]da
 
 
 
+<a name="ShoppingListItemRepositoryImpl.PurchaseIntoProduct"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) [PurchaseIntoProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L150>)
+
+```go
+func (r *ShoppingListItemRepositoryImpl) PurchaseIntoProduct(item *database.ShoppingListItem, productID uint, packs int) error
+```
+
+PurchaseIntoProduct adds the bought packs to the product the item already points at and checks the item in one transaction. No second row is written: the household already tracks this product, so the packs belong to it.
+
+<a name="ShoppingListItemRepositoryImpl.PurchaseWithProduct"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) [PurchaseWithProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L122>)
+
+```go
+func (r *ShoppingListItemRepositoryImpl) PurchaseWithProduct(item *database.ShoppingListItem, product *database.Product) error
+```
+
+PurchaseWithProduct creates the bought product and checks the item in one transaction: either both land, or the item stays unchecked and no product exists. The product belongs to the household of the item, so the link can never point at a product another household can see.
+
+<a name="ShoppingListItemRepositoryImpl.SetChecked"></a>
+### func \(\*ShoppingListItemRepositoryImpl\) [SetChecked](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L112>)
+
+```go
+func (r *ShoppingListItemRepositoryImpl) SetChecked(id, householdID uint, checked bool) error
+```
+
+SetChecked writes the checked state of an item without touching the rest of the row. A write that only needs the checked state must not carry the rest of the row with it: a stale copy would undo a purchase's product link.
+
 <a name="ShoppingListItemRepositoryImpl.ToggleChecked"></a>
-### func \(\*ShoppingListItemRepositoryImpl\) [ToggleChecked](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L98>)
+### func \(\*ShoppingListItemRepositoryImpl\) [ToggleChecked](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L103>)
 
 ```go
 func (r *ShoppingListItemRepositoryImpl) ToggleChecked(id, householdID uint) error
@@ -10521,7 +10574,7 @@ func (r *ShoppingListItemRepositoryImpl) ToggleChecked(id, householdID uint) err
 
 
 <a name="ShoppingListItemRepositoryImpl.Update"></a>
-### func \(\*ShoppingListItemRepositoryImpl\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L90>)
+### func \(\*ShoppingListItemRepositoryImpl\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/shopping_list_item_repository.go#L95>)
 
 ```go
 func (r *ShoppingListItemRepositoryImpl) Update(item *database.ShoppingListItem) error
@@ -11716,6 +11769,8 @@ import "github.com/Isotop7/proviant/models/api"
   - [func NewProductResponses\[T dbModel.Product | \*dbModel.Product\]\(products \[\]T\) \[\]ProductResponse](<#NewProductResponses>)
 - [type ProductStatsResponse](<#ProductStatsResponse>)
 - [type ProductSummaryResponse](<#ProductSummaryResponse>)
+- [type PurchaseShoppingListItemRequest](<#PurchaseShoppingListItemRequest>)
+- [type PurchaseShoppingListItemResponse](<#PurchaseShoppingListItemResponse>)
 - [type ReceiptItem](<#ReceiptItem>)
 - [type ReceiptScanResponse](<#ReceiptScanResponse>)
 - [type RecipeIngredientInput](<#RecipeIngredientInput>)
@@ -12365,7 +12420,7 @@ type GenerateShoppingListRequest struct {
 ```
 
 <a name="HouseholdApplicationResponse"></a>
-## type [HouseholdApplicationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L375-L381>)
+## type [HouseholdApplicationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L379-L385>)
 
 HouseholdApplicationResponse is the client\-facing view of a household application.
 
@@ -12380,7 +12435,7 @@ type HouseholdApplicationResponse struct {
 ```
 
 <a name="NewHouseholdApplicationResponses"></a>
-### func [NewHouseholdApplicationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L384>)
+### func [NewHouseholdApplicationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L388>)
 
 ```go
 func NewHouseholdApplicationResponses[T dbModel.HouseholdApplication | *dbModel.HouseholdApplication](applications []T) []HouseholdApplicationResponse
@@ -12461,7 +12516,7 @@ func NewHouseholdIntegrationResponses(integrations []dbModel.HouseholdIntegratio
 NewHouseholdIntegrationResponses converts a slice of HouseholdIntegration models into response DTOs.
 
 <a name="HouseholdInvitationResponse"></a>
-## type [HouseholdInvitationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L334-L341>)
+## type [HouseholdInvitationResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L338-L345>)
 
 HouseholdInvitationResponse is the client\-facing view of a pending invitation.
 
@@ -12477,7 +12532,7 @@ type HouseholdInvitationResponse struct {
 ```
 
 <a name="NewHouseholdInvitationResponses"></a>
-### func [NewHouseholdInvitationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L344>)
+### func [NewHouseholdInvitationResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L348>)
 
 ```go
 func NewHouseholdInvitationResponses[T dbModel.HouseholdInvitation | *dbModel.HouseholdInvitation](invitations []T) []HouseholdInvitationResponse
@@ -12753,7 +12808,7 @@ type OnboardingStateResponse struct {
 ```
 
 <a name="OpenFoodFactsCacheResponse"></a>
-## type [OpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L415-L424>)
+## type [OpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L419-L428>)
 
 OpenFoodFactsCacheResponse is the client\-facing view of a cached OpenFoodFacts lookup.
 
@@ -12771,7 +12826,7 @@ type OpenFoodFactsCacheResponse struct {
 ```
 
 <a name="NewOpenFoodFactsCacheResponse"></a>
-### func [NewOpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L427>)
+### func [NewOpenFoodFactsCacheResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L431>)
 
 ```go
 func NewOpenFoodFactsCacheResponse(entry *dbModel.OpenFoodFactsCache) OpenFoodFactsCacheResponse
@@ -12910,6 +12965,58 @@ type ProductSummaryResponse struct {
     ExpiredCount      int `json:"expiredCount"`
     TotalActive       int `json:"totalActive"`
     WasteThisMonth    int `json:"wasteThisMonth"`
+}
+```
+
+<a name="PurchaseShoppingListItemRequest"></a>
+## type [PurchaseShoppingListItemRequest](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/shopping_list.go#L23-L51>)
+
+PurchaseShoppingListItemRequest is the request body for POST /api/v1/shopping\-list/\{id\}/purchase.
+
+```go
+type PurchaseShoppingListItemRequest struct {
+    // Quantity is the number of packs bought. It defaults to the number of
+    // packs the item asked for; the two are not the same number.
+    Quantity *int `json:"quantity"`
+    // ExpireAt is the expiry date the user confirmed, as "2006-01-02" or an
+    // RFC 3339 timestamp. An empty value leaves the date to the household's
+    // category default.
+    ExpireAt *string `json:"expireAt"`
+    // CategoryKey is the canonical category the bought product belongs to.
+    // It defaults to the category of the item.
+    CategoryKey *string `json:"categoryKey"`
+    // StorageLocationID is where the bought packs go.
+    StorageLocationID *uint `json:"storageLocationId"`
+    // PackSize is the size of one pack. It defaults to the size of the
+    // product the item points at.
+    PackSize *string `json:"packSize"`
+    // Barcode identifies the bought product. An empty barcode leaves the
+    // product without one.
+    Barcode *string `json:"barcode"`
+    // Scanned says the barcode was scanned rather than typed.
+    Scanned bool `json:"scanned"`
+    // AddToProductID is the product the bought packs go into when it is not
+    // the product the item points at: the caller resolved a same-item
+    // conflict by hand.
+    AddToProductID *uint `json:"addToProductId"`
+    // AllowDuplicate writes a second product instead of refusing when the
+    // bought product matches one the household already has.
+    AllowDuplicate bool `json:"allowDuplicate"`
+}
+```
+
+<a name="PurchaseShoppingListItemResponse"></a>
+## type [PurchaseShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/shopping_list.go#L55-L61>)
+
+PurchaseShoppingListItemResponse is the answer to a purchase: the item as it now stands and the product the purchase landed in.
+
+```go
+type PurchaseShoppingListItemResponse struct {
+    Item    ShoppingListItemResponse `json:"item"`
+    Product *ProductResponse         `json:"product,omitempty"`
+    // Created says the purchase created a product. It is false when the
+    // bought packs went into the product the item already pointed at.
+    Created bool `json:"created"`
 }
 ```
 
@@ -13083,7 +13190,7 @@ type SavingsStatsResponse struct {
 ```
 
 <a name="ShoppingListItemResponse"></a>
-## type [ShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L283-L295>)
+## type [ShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L283-L298>)
 
 ShoppingListItemResponse is the client\-facing view of a shopping list entry.
 
@@ -13093,7 +13200,10 @@ type ShoppingListItemResponse struct {
     ProductID *uint  `json:"productId"`
     Name      string `json:"name"`
     Category  string `json:"category"`
-    Quantity  int    `json:"quantity"`
+    // CategoryKey is the canonical category the entry belongs to. It is what
+    // the household's shelf-life defaults are looked up by.
+    CategoryKey *string `json:"categoryKey,omitempty"`
+    Quantity    int     `json:"quantity"`
     // PackSize is the size of one pack of the linked product, empty when the
     // entry is not linked to a product or the product has no known size.
     PackSize  string `json:"packSize,omitempty"`
@@ -13104,7 +13214,7 @@ type ShoppingListItemResponse struct {
 ```
 
 <a name="NewShoppingListItemResponse"></a>
-### func [NewShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L298>)
+### func [NewShoppingListItemResponse](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L301>)
 
 ```go
 func NewShoppingListItemResponse[T dbModel.ShoppingListItem | *dbModel.ShoppingListItem](item T) ShoppingListItemResponse
@@ -13113,7 +13223,7 @@ func NewShoppingListItemResponse[T dbModel.ShoppingListItem | *dbModel.ShoppingL
 NewShoppingListItemResponse projects a shopping list entry onto the wire shape.
 
 <a name="NewShoppingListItemResponses"></a>
-### func [NewShoppingListItemResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L322>)
+### func [NewShoppingListItemResponses](<https://github.com/Isotop7/proviant/blob/develop/src/models/api/product.go#L326>)
 
 ```go
 func NewShoppingListItemResponses[T dbModel.ShoppingListItem | *dbModel.ShoppingListItem](items []T) []ShoppingListItemResponse
@@ -15468,7 +15578,7 @@ type SavingsRecord struct {
 ```
 
 <a name="ShoppingListItem"></a>
-## type [ShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/shopping_list_item.go#L6-L20>)
+## type [ShoppingListItem](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/shopping_list_item.go#L6-L24>)
 
 ShoppingListItem represents a user\-created shopping list entry.
 
@@ -15479,10 +15589,14 @@ type ShoppingListItem struct {
     ProductID   *uint  `gorm:"index"`
     Name        string `json:"name"`
     Category    string `json:"category"`
-    Quantity    int    `json:"quantity"`
-    Checked     bool   `gorm:"default:false" json:"checked"`
-    Notes       string `json:"notes"`
-    CreatedBy   uint   `gorm:"not null;default:0" json:"createdBy"`
+    // CategoryKey is the canonical category the item belongs to. It is what
+    // the household's shelf-life defaults are looked up by; Category keeps
+    // the free text.
+    CategoryKey *string `gorm:"index" json:"categoryKey,omitempty"`
+    Quantity    int     `json:"quantity"`
+    Checked     bool    `gorm:"default:false" json:"checked"`
+    Notes       string  `json:"notes"`
+    CreatedBy   uint    `gorm:"not null;default:0" json:"createdBy"`
 
     // PackSize is the size of one pack of the linked product. It is display
     // metadata copied from the product, not a column of its own.

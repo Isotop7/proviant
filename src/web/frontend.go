@@ -1198,6 +1198,12 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
 
 	unchecked = append(unchecked, checked...)
 
+	// The purchase dialog needs the household's categories to fill the expiry
+	// from the category's shelf life, and the storage locations to say where
+	// the bought packs go.
+	categories, _ := repos.HouseholdCategories.ListByUser(userID)
+	locations, _ := repos.StorageLocations.GetByHousehold(userID)
+
 	pageData := map[string]any{
 		"InviteToken":   ctx.Query("invite_token"),
 		"Title":         "Shopping List",
@@ -1209,6 +1215,9 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
 		"AutoItemCount": len(filteredAutoProducts),
 		"HasAutoItems":  len(filteredAutoProducts) > 0,
 		"ItemsJSON":     toJSON(unchecked),
+		"CategoriesJSON": toJSON(apiModel.NewHouseholdCategoryResponses(
+			categories)),
+		"Locations": locations,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "shoppingList.tmpl", pageData)
 }

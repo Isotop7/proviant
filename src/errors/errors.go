@@ -143,6 +143,10 @@ var (
 	// ErrBarcodeMissing is thrown if a product request carries no barcode.
 	ErrBarcodeMissing = errors.New("barcode missing")
 
+	// ErrInvalidExpiryDate is thrown if a request carries an expiry date that
+	// is neither a plain date nor an RFC 3339 timestamp.
+	ErrInvalidExpiryDate = errors.New("invalid expiry date")
+
 	// ErrClientSyncIDTooLong is thrown if a product request carries a clientSyncId
 	// longer than util.OfflineSyncIDMaxLength. The column is indexed, so an
 	// unbounded value would fail at insert time as a 500.
@@ -175,6 +179,10 @@ var (
 	// ErrShoppingListItemNotFound is thrown if the requested shopping list item
 	// does not exist in the caller's household.
 	ErrShoppingListItemNotFound = errors.New("shopping list item not found")
+
+	// ErrShoppingListItemProductGone is thrown if the product a shopping list
+	// item points at is gone: the packs of the purchase have nowhere to go.
+	ErrShoppingListItemProductGone = errors.New("the product of the shopping list item no longer exists")
 
 	// ErrIntegrationInvalidProvider is thrown if the requested shopping list sync provider is unknown.
 	ErrIntegrationInvalidProvider = errors.New("invalid shopping list sync provider")

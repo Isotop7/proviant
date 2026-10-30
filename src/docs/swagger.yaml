@@ -993,6 +993,64 @@ definitions:
       wasteThisMonth:
         type: integer
     type: object
+  api.PurchaseShoppingListItemRequest:
+    properties:
+      addToProductId:
+        description: |-
+          AddToProductID is the product the bought packs go into when it is not
+          the product the item points at: the caller resolved a same-item
+          conflict by hand.
+        type: integer
+      allowDuplicate:
+        description: |-
+          AllowDuplicate writes a second product instead of refusing when the
+          bought product matches one the household already has.
+        type: boolean
+      barcode:
+        description: |-
+          Barcode identifies the bought product. An empty barcode leaves the
+          product without one.
+        type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the bought product belongs to.
+          It defaults to the category of the item.
+        type: string
+      expireAt:
+        description: |-
+          ExpireAt is the expiry date the user confirmed, as "2006-01-02" or an
+          RFC 3339 timestamp. An empty value leaves the date to the household's
+          category default.
+        type: string
+      packSize:
+        description: |-
+          PackSize is the size of one pack. It defaults to the size of the
+          product the item points at.
+        type: string
+      quantity:
+        description: |-
+          Quantity is the number of packs bought. It defaults to the number of
+          packs the item asked for; the two are not the same number.
+        type: integer
+      scanned:
+        description: Scanned says the barcode was scanned rather than typed.
+        type: boolean
+      storageLocationId:
+        description: StorageLocationID is where the bought packs go.
+        type: integer
+    type: object
+  api.PurchaseShoppingListItemResponse:
+    properties:
+      created:
+        description: |-
+          Created says the purchase created a product. It is false when the
+          bought packs went into the product the item already pointed at.
+        type: boolean
+      item:
+        $ref: '#/definitions/api.ShoppingListItemResponse'
+      product:
+        $ref: '#/definitions/api.ProductResponse'
+    type: object
   api.ReceiptItem:
     properties:
       name:
@@ -1160,6 +1218,11 @@ definitions:
   api.ShoppingListItemResponse:
     properties:
       category:
+        type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the entry belongs to. It is what
+          the household's shelf-life defaults are looked up by.
         type: string
       checked:
         type: boolean
@@ -5488,6 +5551,61 @@ paths:
       security:
       - BearerAuth: []
       summary: Updates a shopping list item
+      tags:
+      - shopping-list
+  /api/v1/shopping-list/{id}/purchase:
+    post:
+      consumes:
+      - application/json
+      description: 'Turns a shopping list item into a product of the household and
+        checks the item. The pack count of the product is the number of packs bought,
+        which is not the number the item asked for. The expiry is the one the request
+        carries; without one the household''s shelf life of the category fills it.
+        An item that already points at a product gets the bought packs added to that
+        product instead of a second row — that product keeps its own expiry, category,
+        pack size and storage location, so the fields of the request that describe
+        a product do not apply to it. The product and the check land together or not
+        at all. A bought product that matches one the household already has is refused
+        with 409 and the matched product in the body: the caller decides whether the
+        packs belong to that row (addToProductId) or make a product of their own (allowDuplicate).'
+      parameters:
+      - description: Shopping list item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'The purchase: packs bought, expiry, category, storage location'
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.PurchaseShoppingListItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.PurchaseShoppingListItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.ProductConflictResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buys a shopping list item
       tags:
       - shopping-list
   /api/v1/shopping-list/{id}/toggle:

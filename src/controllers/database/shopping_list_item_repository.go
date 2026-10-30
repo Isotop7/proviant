@@ -1,7 +1,9 @@
 package database
 
 import (
+	"github.com/Isotop7/proviant/errors"
 	"github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 	"gorm.io/gorm"
 )
 
@@ -12,6 +14,9 @@ type ShoppingListItemRepository interface {
 	Update(item *database.ShoppingListItem) error
 	Delete(id, householdID uint) error
 	ToggleChecked(id, householdID uint) error
+	SetChecked(id, householdID uint, checked bool) error
+	PurchaseWithProduct(item *database.ShoppingListItem, product *database.Product) error
+	PurchaseIntoProduct(item *database.ShoppingListItem, productID uint, packs int) error
 }
 
 var _ ShoppingListItemRepository = (*ShoppingListItemRepositoryImpl)(nil)
@@ -99,4 +104,78 @@ func (r *ShoppingListItemRepositoryImpl) ToggleChecked(id, householdID uint) err
 	return r.DB.Model(&database.ShoppingListItem{}).
 		Where("id = ? AND household_id = ?", id, householdID).
 		Update("checked", gorm.Expr("NOT checked")).Error
+}
+
+// SetChecked writes the checked state of an item without touching the rest of
+// the row. A write that only needs the checked state must not carry the rest
+// of the row with it: a stale copy would undo a purchase's product link.
+func (r *ShoppingListItemRepositoryImpl) SetChecked(id, householdID uint, checked bool) error {
+	return r.DB.Model(&database.ShoppingListItem{}).
+		Where("id = ? AND household_id = ?", id, householdID).
+		Update("checked", checked).Error
+}
+
+// PurchaseWithProduct creates the bought product and checks the item in one
+// transaction: either both land, or the item stays unchecked and no product
+// exists. The product belongs to the household of the item, so the link can
+// never point at a product another household can see.
+func (r *ShoppingListItemRepositoryImpl) PurchaseWithProduct(item *database.ShoppingListItem, product *database.Product) error {
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		product.HouseholdID = item.HouseholdID
+		product.Barcode = database.NormalizeBarcode(product.Barcode)
+		product.PackSize = util.PackSizeLabel(product.PackSize)
+		product.ProductName = util.ProductNameLabel(product.ProductName)
+		product.Quantity = util.ClampProductQuantity(product.Quantity)
+		if err := tx.Create(product).Error; err != nil {
+			return err
+		}
+		itemResult := tx.Model(&database.ShoppingListItem{}).
+			Where("id = ? AND household_id = ?", item.ID, item.HouseholdID).
+			Updates(map[string]any{"checked": true, "product_id": product.ID})
+		if itemResult.Error != nil {
+			return itemResult.Error
+		}
+		// An item that was deleted since the caller read it takes the product
+		// nowhere: the purchase must not leave a row no item points at.
+		if itemResult.RowsAffected == 0 {
+			return errors.ErrShoppingListItemNotFound
+		}
+		return nil
+	})
+}
+
+// PurchaseIntoProduct adds the bought packs to the product the item already
+// points at and checks the item in one transaction. No second row is written:
+// the household already tracks this product, so the packs belong to it.
+func (r *ShoppingListItemRepositoryImpl) PurchaseIntoProduct(item *database.ShoppingListItem, productID uint, packs int) error {
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		// The count stays inside the range a product may hold. The bounds are
+		// spelled as a CASE and not as MIN or LEAST because no scalar minimum
+		// is portable across SQLite, MySQL and PostgreSQL.
+		countResult := tx.Model(&database.Product{}).
+			Where("id = ? AND household_id = ?", productID, item.HouseholdID).
+			Update("quantity", gorm.Expr(
+				"CASE WHEN quantity + ? < 0 THEN 0 WHEN quantity + ? > ? THEN ? ELSE quantity + ? END",
+				packs, packs, util.MaxProductQuantity, util.MaxProductQuantity, packs))
+		if countResult.Error != nil {
+			return countResult.Error
+		}
+		// A product that was deleted or archived since the caller read it
+		// takes the packs nowhere: the purchase must not check the item.
+		if countResult.RowsAffected == 0 {
+			return errors.ErrShoppingListItemProductGone
+		}
+		itemResult := tx.Model(&database.ShoppingListItem{}).
+			Where("id = ? AND household_id = ?", item.ID, item.HouseholdID).
+			Updates(map[string]any{"checked": true, "product_id": productID})
+		if itemResult.Error != nil {
+			return itemResult.Error
+		}
+		// An item that was deleted since the caller read it takes the packs
+		// nowhere: the count must not move either.
+		if itemResult.RowsAffected == 0 {
+			return errors.ErrShoppingListItemNotFound
+		}
+		return nil
+	})
 }

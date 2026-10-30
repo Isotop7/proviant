@@ -57,9 +57,12 @@ proviant.showDuplicatePrompt = function (options) {
             : proviant.t("js.products.duplicateNoLocation");
     }
 
-    // The live region carries the whole question, so a screen reader hears the
-    // three choices and not only the title. It is filled after the dialog is
-    // in the DOM, because a live region announces changes.
+    bootstrap.Dialog.getOrCreateInstance(dialog).show();
+
+    // The live region carries the whole question, so a screen reader hears
+    // the three choices and not only the title. It is filled after the dialog
+    // is open: a closed dialog is hidden, and a change to a live region that
+    // is not rendered announces nothing.
     const announcementEl = duplicatePromptElement('duplicateProductAnnouncement');
     if (announcementEl) {
         announcementEl.textContent = [
@@ -70,8 +73,6 @@ proviant.showDuplicatePrompt = function (options) {
             proviant.t("products.duplicateOptionCancel"),
         ].join(' ');
     }
-
-    bootstrap.Dialog.getOrCreateInstance(dialog).show();
 };
 
 document.addEventListener('click', function (event) {

@@ -285,7 +285,10 @@ type ShoppingListItemResponse struct {
 	ProductID *uint  `json:"productId"`
 	Name      string `json:"name"`
 	Category  string `json:"category"`
-	Quantity  int    `json:"quantity"`
+	// CategoryKey is the canonical category the entry belongs to. It is what
+	// the household's shelf-life defaults are looked up by.
+	CategoryKey *string `json:"categoryKey,omitempty"`
+	Quantity    int     `json:"quantity"`
 	// PackSize is the size of one pack of the linked product, empty when the
 	// entry is not linked to a product or the product has no known size.
 	PackSize  string `json:"packSize,omitempty"`
@@ -304,15 +307,16 @@ func NewShoppingListItemResponse[T dbModel.ShoppingListItem | *dbModel.ShoppingL
 			return ShoppingListItemResponse{}
 		}
 		return ShoppingListItemResponse{
-			ID:        typed.ID,
-			ProductID: typed.ProductID,
-			Name:      typed.Name,
-			Category:  typed.Category,
-			Quantity:  typed.Quantity,
-			PackSize:  typed.PackSize,
-			Checked:   typed.Checked,
-			Notes:     typed.Notes,
-			CreatedBy: typed.CreatedBy,
+			ID:          typed.ID,
+			ProductID:   typed.ProductID,
+			Name:        typed.Name,
+			Category:    typed.Category,
+			CategoryKey: typed.CategoryKey,
+			Quantity:    typed.Quantity,
+			PackSize:    typed.PackSize,
+			Checked:     typed.Checked,
+			Notes:       typed.Notes,
+			CreatedBy:   typed.CreatedBy,
 		}
 	}
 	return ShoppingListItemResponse{}

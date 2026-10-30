@@ -502,6 +502,36 @@ proviant.addToShoppingList = async function (productId, quantity) {
   return { code: res.status, message: body };
 };
 
+// Buys a shopping list item: the server creates the product, checks the item
+// and links the two. The answer carries the item as it now stands and the
+// product the purchase landed in.
+proviant.purchaseShoppingListItem = async function (itemID, payload) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/shopping-list/${itemID}/purchase`;
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
+    });
+  } catch (cause) {
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.transport = true;
+    throw err;
+  }
+  let body = {};
+  try { body = await res.json(); } catch (_) { /* a non-JSON body stays {} */ }
+  return {
+    code: res.status,
+    message: body.message || "",
+    action: body.action || "",
+    duplicate: body.duplicate || null,
+    item: body.item || null,
+    product: body.product || null,
+    created: body.created === true,
+  };
+};
+
 /* runWithButtonBusyState runs `work` while showing a spinner on `btn`,
    then briefly shows a success check, and finally restores the original
    button HTML. If `work` throws/rejects with a `cancelled` sentinel

@@ -475,6 +475,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 	shoppingListMemberItemAPI.PATCH("/:id", v1.WrapHandler(v1.UpdateShoppingListItem))
 	shoppingListMemberItemAPI.DELETE("/:id", v1.WrapHandler(v1.DeleteShoppingListItem))
 	shoppingListMemberItemAPI.POST("/:id/toggle", v1.WrapHandler(v1.ToggleShoppingListItem))
+	shoppingListMemberItemAPI.POST("/:id/purchase", v1.WrapHandler(v1.PurchaseShoppingListItem))
 
 	// PWA — serve manifest and service worker at root scope (no auth required)
 	engine.GET("/manifest.json", func(ctx *gin.Context) {
