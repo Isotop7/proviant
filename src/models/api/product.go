@@ -229,6 +229,35 @@ func NewProductResponses[T dbModel.Product | *dbModel.Product](products []T) []P
 	return out
 }
 
+// ProductListResponse is the paged view of a product list: the rows of the
+// page, the number of rows the filter matched in total, and the window that
+// produced the page.
+//
+// Total counts the whole filtered set — the household's products the caller may
+// see, minus the archived ones — not the rows of the page. A client that walks
+// the set compares the rows it collected against it.
+type ProductListResponse struct {
+	Products []ProductResponse `json:"products"`
+	Total    int               `json:"total"`
+	Limit    int               `json:"limit"`
+	Offset   int               `json:"offset"`
+}
+
+// NewProductListResponse builds the envelope of a product page. A page without
+// rows answers with an empty array and never with null: a client walks the page
+// by iterating it, and a null would break the iteration.
+func NewProductListResponse(products []ProductResponse, total, limit, offset int) ProductListResponse {
+	if products == nil {
+		products = []ProductResponse{}
+	}
+	return ProductListResponse{
+		Products: products,
+		Total:    total,
+		Limit:    limit,
+		Offset:   offset,
+	}
+}
+
 // FrequentProduct is one of the products a household buys repeatedly: the
 // barcode the household's purchases are grouped by, the naming and the pack
 // size the household itself used, and how often and how recently it bought

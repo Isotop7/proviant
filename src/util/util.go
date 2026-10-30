@@ -83,6 +83,12 @@ const (
 	// of the order.
 	FrequentProductLimit = 8
 
+	// MaxProductListOffset bounds the offset a product list may be read at. An
+	// offset skips rows the database has to walk past, so a household that
+	// holds far more products than any of them is not a thing; the bound keeps
+	// a request from asking for a window nobody can reach.
+	MaxProductListOffset = 1000000
+
 	// Waste analytics period identifiers
 	PeriodValueMonth    = "month"
 	PeriodValue3Months  = "3months"

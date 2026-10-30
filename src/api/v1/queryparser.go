@@ -6,13 +6,18 @@ import (
 	"github.com/Isotop7/proviant/api"
 	"github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
 
+// ProductListQuery is the window a product list is read in: how many products
+// at most, how many to skip before the first one, and — for a client that
+// already knows the ids — the products to read instead.
 type ProductListQuery struct {
-	Limit int    `form:"limit" binding:"omitempty,min=1,max=1000"`
-	IDs   []uint `form:"ids" collection_format:"csv" binding:"omitempty,max=1000,dive,min=1"`
+	Limit  int    `form:"limit" binding:"omitempty,min=1,max=1000"`
+	Offset int    `form:"offset" binding:"omitempty,min=0"`
+	IDs    []uint `form:"ids" collection_format:"csv" binding:"omitempty,max=1000,dive,min=1"`
 }
 
 type ProductSortQuery struct {
@@ -24,11 +29,23 @@ type ArchiveOnlyQuery struct {
 	ArchiveOnly bool `form:"archiveOnly"`
 }
 
+// ProductSearchQuery is a search: the field and the value to match, the order
+// of the matches and the window they are read in. A limit of zero means every
+// match, which is what a search returned before it could be paged.
 type ProductSearchQuery struct {
 	QueryParam string `form:"queryParam" binding:"required"`
 	QueryValue string `form:"queryValue" binding:"required"`
 	Sort       string `form:"sort" binding:"omitempty,oneof=product_name expire_at created_at scanned_at notified_at barcode effective_expire_at"`
 	Order      string `form:"order" binding:"omitempty,oneof=asc desc"`
+	Limit      int    `form:"limit" binding:"omitempty,min=0,max=1000"`
+	Offset     int    `form:"offset" binding:"omitempty,min=0"`
+}
+
+// offsetWithinBound reports whether an offset is one a product list can be
+// read at. The bound is a constant rather than a tag, because a binding tag
+// cannot carry one.
+func offsetWithinBound(offset int) bool {
+	return offset >= 0 && offset <= util.MaxProductListOffset
 }
 
 func ParseProductListQuery(ctx *gin.Context) (ProductListQuery, bool) {
@@ -38,6 +55,10 @@ func ParseProductListQuery(ctx *gin.Context) (ProductListQuery, bool) {
 		return q, true
 	}
 	if err := ctx.ShouldBindQuery(&q); err != nil {
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrInvalidQueryParameter)
+		return ProductListQuery{}, false
+	}
+	if !offsetWithinBound(q.Offset) {
 		api.RespondError(ctx, http.StatusBadRequest, errors.ErrInvalidQueryParameter)
 		return ProductListQuery{}, false
 	}
@@ -87,6 +108,10 @@ func ParseProductSearchQuery(ctx *gin.Context) (ProductSearchQuery, bool) {
 	}
 	var q ProductSearchQuery
 	if err := ctx.ShouldBindQuery(&q); err != nil {
+		api.RespondError(ctx, http.StatusBadRequest, errors.ErrInvalidQueryParameter)
+		return ProductSearchQuery{}, false
+	}
+	if !offsetWithinBound(q.Offset) {
 		api.RespondError(ctx, http.StatusBadRequest, errors.ErrInvalidQueryParameter)
 		return ProductSearchQuery{}, false
 	}

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	stderrors "errors"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -91,9 +92,9 @@ type ImportedProduct struct {
 
 type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
-	GetUserProductsBulkSorted(userID uint, limit int, sortValue, orderValue string) ([]database.Product, error)
+	GetUserProductsBulkSorted(userID uint, limit, offset int, sortValue, orderValue string) ([]database.Product, error)
 	GetUserProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
-	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
+	GetUserArchivedProductsBulk(userID uint, limit, offset int) ([]database.Product, error)
 	GetActiveProductProjections(userID, locationID uint) ([]database.Product, error)
 	GetArchivedProductProjections(userID uint) ([]database.Product, error)
 	GetUserArchivedProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
@@ -103,7 +104,8 @@ type ProductRepositoryInterface interface {
 	GetProductByID(productID, userID uint) (database.Product, error)
 	GetProductIdentity(productID, userID uint) (database.Product, error)
 	GetArchivedProductByID(productID, userID uint) (database.Product, error)
-	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
+	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint, limit, offset int) ([]database.Product, error)
+	CountSearchProducts(queryParam SearchParameterEnum, queryValue string, userID uint) (int, error)
 	SearchProductProjections(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]database.Product, error)
 	CreateProduct(userID uint, product *database.Product) error
 	GetProductBySyncID(userID uint, clientSyncID string) (database.Product, error)
@@ -236,6 +238,94 @@ func (r *ProductRepository) privacyScope(userID uint) func(db *gorm.DB) *gorm.DB
 	}
 }
 
+// activeProductsQuery returns the query every read of the household's active
+// products shares: the household's rows, the ones the caller may see, the rows
+// that are not archived.
+//
+// The list and the count that describes it are both built from it, so the count
+// cannot report a different set than the list — a count that leaked another
+// household's rows or another member's private ones would be a leak of its own.
+//
+// The query it returns is single-use: it carries one statement, so every
+// terminal call (a Find, a Count) needs a query of its own.
+func (r *ProductRepository) activeProductsQuery(userID uint) (*gorm.DB, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.DB.
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull), nil
+}
+
+// archivedProductsQuery is the archived counterpart of activeProductsQuery: the
+// same household and the same privacy rules, but the rows that are archived.
+func (r *ProductRepository) archivedProductsQuery(userID uint) (*gorm.DB, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.DB.Unscoped().
+		Scopes(r.privacyScope(userID)).
+		Where(util.WhereDeletedIsNotNull).
+		Where(util.QueryHouseholdId, householdID), nil
+}
+
+// pageWindow returns the rows a page covers: the rows after the offset, at
+// most limit of them. A limit of zero means every remaining row, an offset
+// beyond the last row means an empty page.
+func pageWindow(rows []database.Product, limit, offset int) []database.Product {
+	if offset > 0 {
+		if offset >= len(rows) {
+			return []database.Product{}
+		}
+		rows = rows[offset:]
+	}
+	if limit > 0 && len(rows) > limit {
+		rows = rows[:limit]
+	}
+	return rows
+}
+
+// applyPage limits a query to the window a page covers.
+//
+// An offset always carries a limit: MySQL has no OFFSET without a LIMIT and
+// rejects the statement, while the SQLite driver rewrites a bare OFFSET into
+// "LIMIT -1 OFFSET n" on its own. A limit of zero means "every row", so the
+// offset alone becomes the largest limit the database can express.
+func applyPage(query *gorm.DB, limit, offset int) *gorm.DB {
+	if limit <= 0 && offset > 0 {
+		limit = math.MaxInt
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	return query
+}
+
+// orderProductsByID returns the rows in the order of the given ids and drops the
+// rows that are not among them. The hydration reads the rows by id, so the
+// order the projections were sorted in has to be restored here.
+func orderProductsByID(rows []database.Product, ids []uint) []database.Product {
+	byID := make(map[uint]database.Product, len(rows))
+	for i := range rows {
+		byID[rows[i].ID] = rows[i]
+	}
+	ordered := make([]database.Product, 0, len(ids))
+	for _, id := range ids {
+		if row, ok := byID[id]; ok {
+			ordered = append(ordered, row)
+		}
+	}
+	return ordered
+}
+
 // SortByEffectiveExpiry orders products by the earlier of the printed expiry
 // and the opened-shelf-life date, with undated rows last. It is the products
 // list's ordering: the repository sorts full rows with it, and the products page
@@ -278,45 +368,45 @@ func sortByEffectiveExpiry(products []database.Product, descending bool) {
 // GetUserProductsBulk returns the household's active products in the order the
 // products list uses: by effective expiry, soonest first.
 func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error) {
-	return r.GetUserProductsBulkSorted(userID, limit, SortEffectiveExpiry, "asc")
+	return r.GetUserProductsBulkSorted(userID, limit, 0, SortEffectiveExpiry, "asc")
 }
 
-// GetUserProductsBulkSorted returns the household's active products in the
-// order the caller asked for: one of the columns the database can sort by, or
-// the effective expiry, which only Go can compute.
+// GetUserProductsBulkSorted returns one page of the household's active products
+// in the order the caller asked for: one of the columns the database can sort
+// by, or the effective expiry, which only Go can compute.
 //
 // A column sort is ordered and limited by the database in one query. The
 // effective expiry has no portable SQL form, so those rows are ordered in Go
-// and the limit is applied there too — otherwise the database would hand back
+// and the page is cut out there too — otherwise the database would hand back
 // an arbitrary subset of the pantry and the "soonest first" order would only
 // hold inside that subset.
-func (r *ProductRepository) GetUserProductsBulkSorted(userID uint, limit int, sortValue, orderValue string) ([]database.Product, error) {
+//
+// The offset is a window into the ordered set, so the order has to be the same
+// on every request: resolveSortClause breaks the ties of a column sort by id,
+// and the effective expiry keeps the id order the projections came in.
+func (r *ProductRepository) GetUserProductsBulkSorted(userID uint, limit, offset int, sortValue, orderValue string) ([]database.Product, error) {
 	sort, sortErr := resolveSortClause(sortValue, orderValue)
 	if sortErr != nil {
 		return []database.Product{}, sortErr
 	}
 
 	if sort.byEffectiveExpiry {
-		products, err := r.getProductsByEffectiveExpiry(userID, limit, sort.descending)
+		products, err := r.getProductsByEffectiveExpiry(userID, limit, offset, sort.descending)
 		if err != nil {
 			return []database.Product{}, err
 		}
 		return products, nil
 	}
 
-	householdID, err := r.getUserHouseholdID(userID)
+	query, err := r.activeProductsQuery(userID)
 	if err != nil {
 		return []database.Product{}, err
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID)).Order(sort.clause)
+	listQuery := applyPage(query.Preload("StorageLocation").Order(sort.clause), limit, offset)
 
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-
-	if findErr := query.Find(&products).Error; findErr != nil {
+	if findErr := listQuery.Find(&products).Error; findErr != nil {
 		return []database.Product{}, findErr
 	}
 
@@ -324,12 +414,12 @@ func (r *ProductRepository) GetUserProductsBulkSorted(userID uint, limit int, so
 }
 
 // getProductsByEffectiveExpiry returns the household's active products ordered
-// by the effective expiry, limited to the first `limit` of them.
+// by the effective expiry, limited to the page that starts at the offset.
 //
 // The narrow projection is sorted in Go and only the rows that make up the
-// list are hydrated, so the database never materialises the whole pantry as
+// page are hydrated, so the database never materialises the whole pantry as
 // full rows with their storage location.
-func (r *ProductRepository) getProductsByEffectiveExpiry(userID uint, limit int, descending bool) ([]database.Product, error) {
+func (r *ProductRepository) getProductsByEffectiveExpiry(userID uint, limit, offset int, descending bool) ([]database.Product, error) {
 	projections, err := r.GetActiveProductProjections(userID, 0)
 	if err != nil {
 		return nil, err
@@ -341,13 +431,10 @@ func (r *ProductRepository) getProductsByEffectiveExpiry(userID uint, limit int,
 		SortByEffectiveExpiry(projections)
 	}
 
-	if limit > 0 && len(projections) > limit {
-		projections = projections[:limit]
-	}
-
-	ids := make([]uint, 0, len(projections))
-	for i := range projections {
-		ids = append(ids, projections[i].ID)
+	page := pageWindow(projections, limit, offset)
+	ids := make([]uint, 0, len(page))
+	for i := range page {
+		ids = append(ids, page[i].ID)
 	}
 
 	rows, err := r.hydrateProductsByIDs(userID, ids)
@@ -355,17 +442,7 @@ func (r *ProductRepository) getProductsByEffectiveExpiry(userID uint, limit int,
 		return nil, err
 	}
 
-	byID := make(map[uint]database.Product, len(rows))
-	for i := range rows {
-		byID[rows[i].ID] = rows[i]
-	}
-	ordered := make([]database.Product, 0, len(ids))
-	for _, id := range ids {
-		if row, ok := byID[id]; ok {
-			ordered = append(ordered, row)
-		}
-	}
-	return ordered, nil
+	return orderProductsByID(rows, ids), nil
 }
 
 // GetUserProductsByIDs returns the active products with the given IDs that belong to the user's household.
@@ -384,20 +461,23 @@ func (r *ProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dat
 	return products, nil
 }
 
-func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error) {
-	householdID, err := r.getUserHouseholdID(userID)
+// GetUserArchivedProductsBulk returns one page of the household's archived
+// products, oldest id first.
+//
+// The archived rows are ordered by id because they have no expiry to order
+// them by: without an order the database hands the rows back in whatever order
+// it finds them, and a client that walks the pages by offset would skip and
+// repeat rows.
+func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit, offset int) ([]database.Product, error) {
+	query, err := r.archivedProductsQuery(userID)
 	if err != nil {
 		return []database.Product{}, err
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID))
+	listQuery := applyPage(query.Preload("StorageLocation").Order("id"), limit, offset)
 
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-
-	queryErr := query.Find(&products).Error
+	queryErr := listQuery.Find(&products).Error
 	if queryErr != nil {
 		return []database.Product{}, queryErr
 	}
@@ -749,6 +829,13 @@ type productSort struct {
 // stays visible instead of masquerading as a working sort. It lives here, at
 // the single Order() call site, so both the web and the API entry points are
 // covered by one guard.
+//
+// A column sort breaks its ties by id. Two products that share the sort key
+// would otherwise come back in whatever order the database finds them, and a
+// client that walks the pages by offset would then skip and repeat rows
+// instead of reading every one of them exactly once. The effective expiry
+// breaks its ties the same way: the id order is the order the projections
+// arrive in, and the Go sort keeps it.
 func resolveSortClause(sortValue, orderValue string) (productSort, error) {
 	if sortValue == "" {
 		sortValue = "product_name"
@@ -770,7 +857,7 @@ func resolveSortClause(sortValue, orderValue string) (productSort, error) {
 	if !ok {
 		return productSort{}, errors.ErrDatabaseInvalidSortParameter
 	}
-	return productSort{clause: column + " " + direction, descending: descending}, nil
+	return productSort{clause: column + " " + direction + ", id " + direction, descending: descending}, nil
 }
 
 // applyEffectiveExpirySort orders the rows the way the resolved sort asks for.
@@ -785,17 +872,18 @@ func applyEffectiveExpirySort(products []database.Product, sort productSort) {
 // searchProductsQuery builds the shared predicate for both search entry points:
 // the API's full-row search and the products page's projection search. Keeping
 // it in one place means a new search field cannot be added to one and forgotten
-// in the other.
+// in the other. The count of the matches is built from it as well, so it
+// cannot report more matches than the search returns.
+//
+// The household comes from the same resolution every other read uses, so a user
+// without a household is an account in error: the API answers 400 and the
+// products page reports the failed fetch. The search used to answer an empty
+// list for such a user, which hid the broken account behind a blank page.
 func (r *ProductRepository) searchProductsQuery(queryParam SearchParameterEnum, queryValue string, userID uint) (*gorm.DB, error) {
-	var user authentication.User
-	if err := r.DB.First(&user, userID).Error; err != nil {
+	query, err := r.activeProductsQuery(userID)
+	if err != nil {
 		return nil, err
 	}
-
-	query := r.DB.
-		Scopes(r.privacyScope(userID)).
-		Where(util.QueryHouseholdId, user.HouseholdID).
-		Where(util.WhereDeletedIsNull)
 
 	likeValue := fmt.Sprintf("%%%s%%", queryValue)
 	switch queryParam {
@@ -809,26 +897,88 @@ func (r *ProductRepository) searchProductsQuery(queryParam SearchParameterEnum, 
 	return query, nil
 }
 
-func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error) {
-	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
-	if queryErr != nil {
-		return []database.Product{}, queryErr
-	}
-
+// SearchProducts returns one page of the products that match the search.
+//
+// A column sort is paged by the database. The effective expiry has no sortable
+// column, so those matches are resolved as narrow projections, ordered in Go
+// and only the rows of the page are hydrated.
+func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint, limit, offset int) ([]database.Product, error) {
 	sort, sortErr := resolveSortClause(sortValue, orderValue)
 	if sortErr != nil {
 		return []database.Product{}, sortErr
 	}
 
+	if sort.byEffectiveExpiry {
+		products, searchErr := r.searchProductsByEffectiveExpiry(queryParam, queryValue, sort, userID, limit, offset)
+		if searchErr != nil {
+			return []database.Product{}, searchErr
+		}
+		return products, nil
+	}
+
+	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
+	if queryErr != nil {
+		return []database.Product{}, queryErr
+	}
+
 	var foundProducts []database.Product
-	findErr := query.Preload("StorageLocation").Order(sort.clause).Find(&foundProducts)
-	if findErr.Error != nil {
+	listQuery := applyPage(query.Preload("StorageLocation").Order(sort.clause), limit, offset)
+	if findErr := listQuery.Find(&foundProducts); findErr.Error != nil {
 		return []database.Product{}, findErr.Error
 	}
-	if sort.byEffectiveExpiry {
-		applyEffectiveExpirySort(foundProducts, sort)
-	}
 	return foundProducts, nil
+}
+
+// searchProductsByEffectiveExpiry returns the page of the matches that starts
+// at the offset, ordered by the effective expiry.
+//
+// The matches are resolved as narrow projections and ordered in Go, because the
+// effective expiry has no sortable column; only the rows of the page are
+// hydrated as full rows.
+func (r *ProductRepository) searchProductsByEffectiveExpiry(queryParam SearchParameterEnum, queryValue string, sort productSort, userID uint, limit, offset int) ([]database.Product, error) {
+	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
+	if queryErr != nil {
+		return nil, queryErr
+	}
+
+	projections, projectionErr := r.searchProductProjections(query, sort)
+	if projectionErr != nil {
+		return nil, projectionErr
+	}
+
+	page := pageWindow(projections, limit, offset)
+	ids := make([]uint, 0, len(page))
+	for i := range page {
+		ids = append(ids, page[i].ID)
+	}
+
+	rows, err := r.hydrateProductsByIDs(userID, ids)
+	if err != nil {
+		return nil, err
+	}
+	return orderProductsByID(rows, ids), nil
+}
+
+// CountSearchProducts counts the products the search matches. The count uses
+// the predicate of the search itself — the household's products the caller may
+// see, minus the archived ones, that match the searched value — so it cannot
+// describe a different set than the search returns. It counts in SQL and does
+// not load the matches into memory.
+//
+// The count runs on a query of its own: a statement that already carries a
+// LIMIT would cap the count at the page size, and one that carries an OFFSET
+// would skip the count's own row and answer zero.
+func (r *ProductRepository) CountSearchProducts(queryParam SearchParameterEnum, queryValue string, userID uint) (int, error) {
+	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
+	if queryErr != nil {
+		return 0, queryErr
+	}
+
+	var count int64
+	if err := query.Model(&database.Product{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 // SearchProductProjections is the products page's search: same predicate and the
@@ -854,6 +1004,12 @@ func (r *ProductRepository) SearchProductProjections(
 		return nil, sortErr
 	}
 
+	return r.searchProductProjections(query, sort)
+}
+
+// searchProductProjections resolves the matches as narrow projections and
+// orders them the way the resolved sort asks for.
+func (r *ProductRepository) searchProductProjections(query *gorm.DB, sort productSort) ([]database.Product, error) {
 	var foundProducts []database.Product
 	if err := query.Select(productProjectionColumns).Order(sort.clause).Find(&foundProducts).Error; err != nil {
 		return nil, err
@@ -1575,18 +1731,22 @@ func (r *ProductRepository) GetFrequentlyBoughtProducts(userID uint, limit int) 
 // load every active row plus a StorageLocation preload just to take len(), which
 // made the stats endpoint scale with the household's full stock rather than with
 // the handful of numbers it returns.
+//
+// It counts the same set the product list returns — the household's rows the
+// caller may see, minus the archived ones — so it can serve as the total of a
+// paged list.
+//
+// The count runs on a query of its own: a statement that already carries a
+// LIMIT would cap the count at the page size, and one that carries an OFFSET
+// would skip the count's own row and answer zero.
 func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error) {
-	householdID, err := r.getUserHouseholdID(userID)
+	query, err := r.activeProductsQuery(userID)
 	if err != nil {
 		return 0, err
 	}
 
 	var count int64
-	err = r.DB.Model(&database.Product{}).
-		Scopes(r.privacyScope(userID)).
-		Where(util.QueryHouseholdId, householdID).
-		Where(util.WhereDeletedIsNull).
-		Count(&count).Error
+	err = query.Model(&database.Product{}).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -1596,19 +1756,20 @@ func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error) {
 // GetArchivedProductsCount returns how many products the household has archived.
 // It is the count-only sibling of GetUserArchivedProductsBulk, which materialises
 // every archived row (and preloads StorageLocation) for callers that only need a
-// number.
+// number. It counts the same set the archived list returns, so it can serve as
+// the total of a paged list.
+//
+// The count runs on a query of its own: a statement that already carries a
+// LIMIT would cap the count at the page size, and one that carries an OFFSET
+// would skip the count's own row and answer zero.
 func (r *ProductRepository) GetArchivedProductsCount(userID uint) (int, error) {
-	householdID, err := r.getUserHouseholdID(userID)
+	query, err := r.archivedProductsQuery(userID)
 	if err != nil {
 		return 0, err
 	}
 
 	var count int64
-	err = r.DB.Unscoped().Model(&database.Product{}).
-		Scopes(r.privacyScope(userID)).
-		Where(util.WhereDeletedIsNotNull).
-		Where(util.QueryHouseholdId, householdID).
-		Count(&count).Error
+	err = query.Model(&database.Product{}).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -1831,7 +1992,7 @@ func ExpiringProductStats(product *database.Product, expirationTime time.Time) a
 // hydrated, so a product holds the same position in the tile and in the list.
 // A limit of zero returns the whole pantry.
 func (r *ProductRepository) GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error) {
-	rows, err := r.getProductsByEffectiveExpiry(userID, limit, false)
+	rows, err := r.getProductsByEffectiveExpiry(userID, limit, 0, false)
 	if err != nil {
 		return nil, err
 	}

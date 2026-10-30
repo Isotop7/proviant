@@ -225,7 +225,7 @@ func BenchmarkGetProductStatsFullTableLoads(b *testing.B) {
 			}
 		}
 		for range 2 {
-			if _, err := repo.GetUserArchivedProductsBulk(userID, -1); err != nil {
+			if _, err := repo.GetUserArchivedProductsBulk(userID, -1, 0); err != nil {
 				b.Fatalf("GetUserArchivedProductsBulk failed: %v", err)
 			}
 		}

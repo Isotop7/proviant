@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -43,4 +44,12 @@ func (c *QueryCounter) CountOf(table string) int {
 		}
 	}
 	return count
+}
+
+// Statements returns the recorded statements, so a test can assert what a
+// query looked like and not only how many there were.
+func (c *QueryCounter) Statements() []string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return slices.Clone(c.queries)
 }

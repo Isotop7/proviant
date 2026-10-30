@@ -209,7 +209,7 @@ func TestEffectiveExpiryOrderingsAgree(t *testing.T) {
 	}
 	SortByEffectiveExpiry(projections)
 
-	rows, err := repo.GetUserProductsBulkSorted(user.ID, 0, SortEffectiveExpiry, "asc")
+	rows, err := repo.GetUserProductsBulkSorted(user.ID, 0, 0, SortEffectiveExpiry, "asc")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

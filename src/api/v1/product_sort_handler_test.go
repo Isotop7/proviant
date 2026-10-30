@@ -30,13 +30,13 @@ func TestGetProductsSort(t *testing.T) {
 		return soon, later
 	}
 
-	decode := func(t *testing.T, env *handlerTestEnv) []apiModel.ProductResponse {
+	decode := func(t *testing.T, env *handlerTestEnv) apiModel.ProductListResponse {
 		t.Helper()
-		var products []apiModel.ProductResponse
-		if err := json.Unmarshal(env.W.Body.Bytes(), &products); err != nil {
+		var response apiModel.ProductListResponse
+		if err := json.Unmarshal(env.W.Body.Bytes(), &response); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		return products
+		return response
 	}
 
 	t.Run("the effective expiry orders the list by default", func(t *testing.T) {
@@ -49,12 +49,12 @@ func TestGetProductsSort(t *testing.T) {
 		if env.W.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 		}
-		products := decode(t, env)
-		if len(products) != 2 {
-			t.Fatalf("len(products) = %d, want 2", len(products))
+		response := decode(t, env)
+		if len(response.Products) != 2 {
+			t.Fatalf("len(products) = %d, want 2", len(response.Products))
 		}
-		if products[0].ID != soon.ID {
-			t.Errorf("products[0] = %d, want the product that expires first (%d)", products[0].ID, soon.ID)
+		if response.Products[0].ID != soon.ID {
+			t.Errorf("products[0] = %d, want the product that expires first (%d)", response.Products[0].ID, soon.ID)
 		}
 	})
 
@@ -68,9 +68,9 @@ func TestGetProductsSort(t *testing.T) {
 		if env.W.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 		}
-		products := decode(t, env)
-		if len(products) != 2 || products[0].ID != soon.ID {
-			t.Errorf("products = %+v, want the soonest product first", products)
+		response := decode(t, env)
+		if len(response.Products) != 2 || response.Products[0].ID != soon.ID {
+			t.Errorf("products = %+v, want the soonest product first", response.Products)
 		}
 	})
 
@@ -84,9 +84,9 @@ func TestGetProductsSort(t *testing.T) {
 		if env.W.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 		}
-		products := decode(t, env)
-		if len(products) != 2 || products[0].ID != later.ID {
-			t.Errorf("products = %+v, want the product named 'Later' first", products)
+		response := decode(t, env)
+		if len(response.Products) != 2 || response.Products[0].ID != later.ID {
+			t.Errorf("products = %+v, want the product named 'Later' first", response.Products)
 		}
 	})
 
@@ -112,12 +112,12 @@ func TestGetProductsSort(t *testing.T) {
 		if env.W.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 		}
-		products := decode(t, env)
-		if len(products) != 1 {
-			t.Fatalf("len(products) = %d, want 1", len(products))
+		response := decode(t, env)
+		if len(response.Products) != 1 {
+			t.Fatalf("len(products) = %d, want 1", len(response.Products))
 		}
-		if products[0].ID != soon.ID {
-			t.Errorf("products[0] = %d, want the soonest product (%d)", products[0].ID, soon.ID)
+		if response.Products[0].ID != soon.ID {
+			t.Errorf("products[0] = %d, want the soonest product (%d)", response.Products[0].ID, soon.ID)
 		}
 	})
 }
@@ -147,14 +147,14 @@ func TestSearchProductsSortsByEffectiveExpiry(t *testing.T) {
 	if env.W.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 	}
-	var products []apiModel.ProductResponse
-	if err := json.Unmarshal(env.W.Body.Bytes(), &products); err != nil {
+	var response apiModel.ProductListResponse
+	if err := json.Unmarshal(env.W.Body.Bytes(), &response); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if len(products) != 2 {
-		t.Fatalf("len(products) = %d, want the two matches", len(products))
+	if len(response.Products) != 2 {
+		t.Fatalf("len(products) = %d, want the two matches", len(response.Products))
 	}
-	if products[0].ID != soon.ID {
-		t.Errorf("products[0] = %d, want the match that expires first (%d)", products[0].ID, soon.ID)
+	if response.Products[0].ID != soon.ID {
+		t.Errorf("products[0] = %d, want the match that expires first (%d)", response.Products[0].ID, soon.ID)
 	}
 }

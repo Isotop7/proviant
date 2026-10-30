@@ -73,3 +73,132 @@ func TestParseProductSortQueryDefaultsToTheEffectiveExpiry(t *testing.T) {
 		}
 	})
 }
+
+// TestParseProductListQueryWindow pins the window a product list is read in:
+// the page size, the offset and the default of each.
+func TestParseProductListQueryWindow(t *testing.T) {
+	t.Run("a request without a window", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products", nil)
+
+		q, ok := ParseProductListQuery(ctx)
+
+		if !ok {
+			t.Fatal("ParseProductListQuery() = false, want true")
+		}
+		if q.Limit != 100 {
+			t.Errorf("limit = %d, want 100", q.Limit)
+		}
+		if q.Offset != 0 {
+			t.Errorf("offset = %d, want 0", q.Offset)
+		}
+	})
+
+	t.Run("a named window survives", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products?limit=25&offset=50", nil)
+
+		q, ok := ParseProductListQuery(ctx)
+
+		if !ok {
+			t.Fatal("ParseProductListQuery() = false, want true")
+		}
+		if q.Limit != 25 || q.Offset != 50 {
+			t.Errorf("limit/offset = %d/%d, want 25/50", q.Limit, q.Offset)
+		}
+	})
+
+	t.Run("a negative offset is refused", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products?offset=-1", nil)
+
+		if _, ok := ParseProductListQuery(ctx); ok {
+			t.Error("ParseProductListQuery() = true, want false for a negative offset")
+		}
+	})
+
+	t.Run("an offset beyond the pantry is refused", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products?offset=1000001", nil)
+
+		if _, ok := ParseProductListQuery(ctx); ok {
+			t.Error("ParseProductListQuery() = true, want false for an offset beyond the bound")
+		}
+	})
+}
+
+// TestParseProductSearchQueryWindow pins the window of a search: without a
+// limit it answers with every match, and the offset skips matches.
+func TestParseProductSearchQueryWindow(t *testing.T) {
+	t.Run("a search without a limit", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/search?queryParam=product_name&queryValue=Milk", nil)
+
+		q, ok := ParseProductSearchQuery(ctx)
+
+		if !ok {
+			t.Fatal("ParseProductSearchQuery() = false, want true")
+		}
+		if q.Limit != 0 {
+			t.Errorf("limit = %d, want 0 — a search without a limit returns every match", q.Limit)
+		}
+		if q.Offset != 0 {
+			t.Errorf("offset = %d, want 0", q.Offset)
+		}
+	})
+
+	t.Run("a named window survives", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/search?queryParam=product_name&queryValue=Milk&limit=10&offset=20", nil)
+
+		q, ok := ParseProductSearchQuery(ctx)
+
+		if !ok {
+			t.Fatal("ParseProductSearchQuery() = false, want true")
+		}
+		if q.Limit != 10 || q.Offset != 20 {
+			t.Errorf("limit/offset = %d/%d, want 10/20", q.Limit, q.Offset)
+		}
+	})
+
+	t.Run("a limit beyond the bound is refused", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/search?queryParam=product_name&queryValue=Milk&limit=1001", nil)
+
+		if _, ok := ParseProductSearchQuery(ctx); ok {
+			t.Error("ParseProductSearchQuery() = true, want false for a limit beyond the bound")
+		}
+	})
+
+	t.Run("a limit of zero means every match", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/search?queryParam=product_name&queryValue=Milk&limit=0", nil)
+
+		q, ok := ParseProductSearchQuery(ctx)
+
+		if !ok {
+			t.Fatal("ParseProductSearchQuery() = false, want true")
+		}
+		if q.Limit != 0 {
+			t.Errorf("limit = %d, want 0 — a search without a limit returns every match", q.Limit)
+		}
+	})
+
+	t.Run("a negative limit is refused", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/search?queryParam=product_name&queryValue=Milk&limit=-1", nil)
+
+		if _, ok := ParseProductSearchQuery(ctx); ok {
+			t.Error("ParseProductSearchQuery() = true, want false for a negative limit")
+		}
+	})
+
+	t.Run("an offset beyond the pantry is refused", func(t *testing.T) {
+		ctx, _ := testutil.SetupGinContext(nil)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/search?queryParam=product_name&queryValue=Milk&offset=1000001", nil)
+
+		if _, ok := ParseProductSearchQuery(ctx); ok {
+			t.Error("ParseProductSearchQuery() = true, want false for an offset beyond the bound")
+		}
+	})
+}

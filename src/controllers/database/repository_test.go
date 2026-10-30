@@ -355,7 +355,7 @@ func TestProductRepository_SearchProducts(t *testing.T) {
 		db.Create(&products[i])
 	}
 
-	results, err := repo.SearchProducts(ProductName, "Apple", "", "", user.ID)
+	results, err := repo.SearchProducts(ProductName, "Apple", "", "", user.ID, 0, 0)
 	if err != nil {
 		t.Fatalf("SearchProducts() error = %v", err)
 	}
@@ -387,7 +387,7 @@ func TestProductRepository_SearchProducts_ByBarcode(t *testing.T) {
 	}
 	db.Create(&product)
 
-	results, err := repo.SearchProducts(Barcode, "1234567890123", "", "", user.ID)
+	results, err := repo.SearchProducts(Barcode, "1234567890123", "", "", user.ID, 0, 0)
 	if err != nil {
 		t.Fatalf("SearchProducts() error = %v", err)
 	}
@@ -420,7 +420,7 @@ func TestProductRepository_GetUserArchivedProductsBulk(t *testing.T) {
 	db.Create(&product)
 	db.Delete(&product)
 
-	archived, err := repo.GetUserArchivedProductsBulk(user.ID, 10)
+	archived, err := repo.GetUserArchivedProductsBulk(user.ID, 10, 0)
 	if err != nil {
 		t.Fatalf("GetUserArchivedProductsBulk() error = %v", err)
 	}

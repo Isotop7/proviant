@@ -21,21 +21,21 @@ func TestResolveSortClause(t *testing.T) {
 			"empty falls back to defaults",
 			"",
 			"",
-			productSort{clause: "product_name ASC"},
+			productSort{clause: "product_name ASC, id ASC"},
 			nil,
 		},
 		{
 			"allowlisted column, lowercase direction",
 			"expire_at",
 			"asc",
-			productSort{clause: "expire_at ASC"},
+			productSort{clause: "expire_at ASC, id ASC"},
 			nil,
 		},
 		{
 			"allowlisted column, uppercase direction",
 			"created_at",
 			"DESC",
-			productSort{clause: "created_at DESC", descending: true},
+			productSort{clause: "created_at DESC, id DESC", descending: true},
 			nil,
 		},
 		{
@@ -112,7 +112,7 @@ func TestSearchProductsSortAllowlist(t *testing.T) {
 	}
 
 	t.Run("malicious sort is rejected before SQL", func(t *testing.T) {
-		_, err := repo.SearchProducts(ProductName, "Milk", "product_name; DROP TABLE products;--", "asc", user.ID)
+		_, err := repo.SearchProducts(ProductName, "Milk", "product_name; DROP TABLE products;--", "asc", user.ID, 0, 0)
 		if err != errors.ErrDatabaseInvalidSortParameter {
 			t.Fatalf("err = %v, want ErrDatabaseInvalidSortParameter", err)
 		}
@@ -127,7 +127,7 @@ func TestSearchProductsSortAllowlist(t *testing.T) {
 	})
 
 	t.Run("allowlisted sort returns ordered rows", func(t *testing.T) {
-		products, err := repo.SearchProducts(ProductName, "Milk", "created_at", "desc", user.ID)
+		products, err := repo.SearchProducts(ProductName, "Milk", "created_at", "desc", user.ID, 0, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -168,7 +168,7 @@ func TestGetUserProductsBulkSortedByEffectiveExpiry(t *testing.T) {
 	create("Latest", now.AddDate(0, 0, 10))
 
 	t.Run("the effective expiry orders the list", func(t *testing.T) {
-		products, err := repo.GetUserProductsBulkSorted(user.ID, 0, SortEffectiveExpiry, "asc")
+		products, err := repo.GetUserProductsBulkSorted(user.ID, 0, 0, SortEffectiveExpiry, "asc")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -181,7 +181,7 @@ func TestGetUserProductsBulkSortedByEffectiveExpiry(t *testing.T) {
 	})
 
 	t.Run("the limit cuts the head of the order", func(t *testing.T) {
-		products, err := repo.GetUserProductsBulkSorted(user.ID, 1, SortEffectiveExpiry, "asc")
+		products, err := repo.GetUserProductsBulkSorted(user.ID, 1, 0, SortEffectiveExpiry, "asc")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -194,7 +194,7 @@ func TestGetUserProductsBulkSortedByEffectiveExpiry(t *testing.T) {
 	})
 
 	t.Run("the direction is honoured", func(t *testing.T) {
-		products, err := repo.GetUserProductsBulkSorted(user.ID, 1, SortEffectiveExpiry, "desc")
+		products, err := repo.GetUserProductsBulkSorted(user.ID, 1, 0, SortEffectiveExpiry, "desc")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -207,7 +207,7 @@ func TestGetUserProductsBulkSortedByEffectiveExpiry(t *testing.T) {
 	})
 
 	t.Run("a column sort is left to the database", func(t *testing.T) {
-		products, err := repo.GetUserProductsBulkSorted(user.ID, 0, "product_name", "asc")
+		products, err := repo.GetUserProductsBulkSorted(user.ID, 0, 0, "product_name", "asc")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -220,7 +220,7 @@ func TestGetUserProductsBulkSortedByEffectiveExpiry(t *testing.T) {
 	})
 
 	t.Run("an unknown sort is rejected", func(t *testing.T) {
-		if _, err := repo.GetUserProductsBulkSorted(user.ID, 0, "category", "asc"); err != errors.ErrDatabaseInvalidSortParameter {
+		if _, err := repo.GetUserProductsBulkSorted(user.ID, 0, 0, "category", "asc"); err != errors.ErrDatabaseInvalidSortParameter {
 			t.Errorf("err = %v, want ErrDatabaseInvalidSortParameter", err)
 		}
 	})

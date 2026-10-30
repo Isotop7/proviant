@@ -98,7 +98,7 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if _, err := repo.GetUserProductsByIDs(user.ID, []uint{product.ID}); err == nil {
 			t.Error("GetUserProductsByIDs() error = nil")
 		}
-		if _, err := repo.GetUserArchivedProductsBulk(user.ID, 0); err == nil {
+		if _, err := repo.GetUserArchivedProductsBulk(user.ID, 0, 0); err == nil {
 			t.Error("GetUserArchivedProductsBulk() error = nil")
 		}
 		if _, err := repo.GetActiveProductProjections(user.ID, 0); err == nil {
@@ -116,7 +116,7 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if _, err := repo.GetUserProductsBulkByBarcodes(user.ID, []string{"1234567890123"}); err == nil {
 			t.Error("GetUserProductsBulkByBarcodes() error = nil")
 		}
-		if _, err := repo.SearchProducts(ProductName, "x", "", "", user.ID); err == nil {
+		if _, err := repo.SearchProducts(ProductName, "x", "", "", user.ID, 0, 0); err == nil {
 			t.Error("SearchProducts() error = nil")
 		}
 		if _, err := repo.SearchProductProjections(ProductName, "x", "", "", user.ID, 0); err == nil {

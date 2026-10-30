@@ -2719,7 +2719,7 @@
         },
         "/api/v1/products": {
             "get": {
-                "description": "Return a list of products of user. The list is ordered by the effective expiry by default — the earlier of the printed expiry and the opened-shelf-life date — with the products without a date last. A product that carries a shelf life is ordered by the date it goes off, not by the date printed on it.",
+                "description": "Return a list of products of user. The list is ordered by the effective expiry by default — the earlier of the printed expiry and the opened-shelf-life date — with the products without a date last. A product that carries a shelf life is ordered by the date it goes off, not by the date printed on it. The order is the same on every request: products that share the sort key keep the order of their ids, so a client that walks the pages by offset reads every product exactly once. The response carries the products of the page, the total number of products the filter matched, and the window that produced the page. The total counts the whole set, not the page. An offset walk is stable as long as the household's products do not change in between: a product that is added or removed shifts the rows behind it. A page ordered by the effective expiry is resolved before it is cut out, because the effective expiry has no sortable column — every page costs the same as reading the whole list.",
                 "produces": [
                     "application/json"
                 ],
@@ -2741,16 +2741,33 @@
                         "description": "Sort order (asc, desc)",
                         "name": "order",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Number of products to return (1-1000)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of products to skip before the first one returned",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ids of the products to return (comma separated, max 1000). ids wins over limit, offset and sort: the named products are returned in id order, unpaged, and the total is the number of them the caller may see.",
+                        "name": "ids",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/api.ProductResponse"
-                            }
+                            "$ref": "#/definitions/api.ProductListResponse"
                         }
                     },
                     "400": {
@@ -2826,7 +2843,7 @@
         },
         "/api/v1/products/archived": {
             "get": {
-                "description": "Return a list of archived products of user",
+                "description": "Return a list of archived products of user. The response carries the products of the page, the total number of archived products the caller may see, and the window that produced the page. The total counts the whole archived set, not the page. The archived products are ordered by their id, so a client that walks the pages by offset reads every one of them exactly once. The endpoint pages by its own window: an ids parameter is not read here, the archived list is never narrowed to named products.",
                 "produces": [
                     "application/json"
                 ],
@@ -2834,14 +2851,27 @@
                     "product"
                 ],
                 "summary": "Return a list of archived products",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Number of archived products to return (1-1000)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of archived products to skip before the first one returned",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/api.ProductResponse"
-                            }
+                            "$ref": "#/definitions/api.ProductListResponse"
                         }
                     },
                     "400": {
@@ -3695,7 +3725,7 @@
         },
         "/api/v1/products/search": {
             "get": {
-                "description": "Returns a list of products based on a query",
+                "description": "Returns a list of products based on a query. The response carries the products of the page, the total number of products the search matched, and the window that produced the page. The total counts every match, not the page. The matches that share the sort key keep the order of their ids, so a client that walks the pages by offset reads every match exactly once. A limit that is not set returns every match. A page ordered by the effective expiry is resolved before it is cut out, because the effective expiry has no sortable column — every page costs the same as reading every match.",
                 "produces": [
                     "application/json"
                 ],
@@ -3731,16 +3761,26 @@
                         "description": "Sort order (asc, desc)",
                         "name": "order",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of matches to return (max 1000). Without a limit every match is returned.",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of matches to skip before the first one returned",
+                        "name": "offset",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/api.ProductResponse"
-                            }
+                            "$ref": "#/definitions/api.ProductListResponse"
                         }
                     },
                     "400": {
@@ -8784,6 +8824,26 @@
                 "reason": {
                     "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
                     "type": "string"
+                }
+            }
+        },
+        "api.ProductListResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ProductResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },

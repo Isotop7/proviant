@@ -1234,5 +1234,10 @@ proviant.generateShoppingListFromMealPlan = async function (from, to) {
 proviant.getProducts = async function () {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();
-  return { code: res.status, products: Array.isArray(body) ? body : [], message: body.message };
+  // The products list answers with an envelope: the products of the page, the
+  // total number of products the filter matched and the window that produced
+  // the page. A body that is a bare array is read as the products themselves,
+  // so a server that still answers the old shape keeps working.
+  const products = Array.isArray(body) ? body : (body && Array.isArray(body.products) ? body.products : []);
+  return { code: res.status, products: products, message: body.message };
 };

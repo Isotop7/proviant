@@ -174,7 +174,7 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 		return wantExpiringSoon[i].ExpireAt < wantExpiringSoon[j].ExpireAt
 	})
 
-	archivedRows, err := repo.GetUserArchivedProductsBulk(user.ID, 0)
+	archivedRows, err := repo.GetUserArchivedProductsBulk(user.ID, 0, 0)
 	if err != nil {
 		t.Fatalf("GetUserArchivedProductsBulk() error = %v", err)
 	}

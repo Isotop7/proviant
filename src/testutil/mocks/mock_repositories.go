@@ -75,13 +75,13 @@ type MockProductRepository struct {
 func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) GetUserProductsBulkSorted(userID uint, limit int, sortValue, orderValue string) ([]dbModel.Product, error) {
+func (m *MockProductRepository) GetUserProductsBulkSorted(userID uint, limit, offset int, sortValue, orderValue string) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
+func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit, offset int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) GetActiveProductProjections(userID, locationID uint) ([]dbModel.Product, error) {
@@ -117,8 +117,11 @@ func (m *MockProductRepository) GetProductIdentity(productID, userID uint) (dbMo
 func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
-func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error) {
+func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint, limit, offset int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
+}
+func (m *MockProductRepository) CountSearchProducts(queryParam database.SearchParameterEnum, queryValue string, userID uint) (int, error) {
+	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) SearchProductProjections(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err

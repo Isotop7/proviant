@@ -329,15 +329,15 @@ func TestGetProductsByIDs(t *testing.T) {
 	if env.W.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 	}
-	var products []dbModel.Product
-	if err := json.Unmarshal(env.W.Body.Bytes(), &products); err != nil {
+	var response apiModel.ProductListResponse
+	if err := json.Unmarshal(env.W.Body.Bytes(), &response); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if len(products) != 2 {
-		t.Fatalf("products = %d, want exactly the 2 requested (ids %d,%d, unrequested %d)", len(products), p1.ID, p2.ID, p3.ID)
+	if len(response.Products) != 2 {
+		t.Fatalf("products = %d, want exactly the 2 requested (ids %d,%d, unrequested %d)", len(response.Products), p1.ID, p2.ID, p3.ID)
 	}
 	want := map[uint]string{p1.ID: "Test Product", p2.ID: "Second Product"}
-	for _, product := range products {
+	for _, product := range response.Products {
 		name, ok := want[product.ID]
 		if !ok {
 			t.Errorf("product id %d not requested (must be %d or %d, not %d)", product.ID, p1.ID, p2.ID, p3.ID)

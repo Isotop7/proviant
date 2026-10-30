@@ -28,12 +28,15 @@ const (
 
 // GetProducts returns the products of a user
 // @Summary      Return a list of products
-// @Description  Return a list of products of user. The list is ordered by the effective expiry by default — the earlier of the printed expiry and the opened-shelf-life date — with the products without a date last. A product that carries a shelf life is ordered by the date it goes off, not by the date printed on it.
+// @Description  Return a list of products of user. The list is ordered by the effective expiry by default — the earlier of the printed expiry and the opened-shelf-life date — with the products without a date last. A product that carries a shelf life is ordered by the date it goes off, not by the date printed on it. The order is the same on every request: products that share the sort key keep the order of their ids, so a client that walks the pages by offset reads every product exactly once. The response carries the products of the page, the total number of products the filter matched, and the window that produced the page. The total counts the whole set, not the page. An offset walk is stable as long as the household's products do not change in between: a product that is added or removed shifts the rows behind it. A page ordered by the effective expiry is resolved before it is cut out, because the effective expiry has no sortable column — every page costs the same as reading the whole list.
 // @Tags         product
 // @Produce      json
 // @Param        sort   query     string  false  "Sort field (product_name, expire_at, created_at, effective_expire_at)"  default(effective_expire_at)
 // @Param        order  query     string  false  "Sort order (asc, desc)"  default(asc)
-// @Success      200  {object}  []apiModel.ProductResponse
+// @Param        limit  query     int     false  "Number of products to return (1-1000)"  default(100)
+// @Param        offset query     int     false  "Number of products to skip before the first one returned"  default(0)
+// @Param        ids    query     string  false  "Ids of the products to return (comma separated, max 1000). ids wins over limit, offset and sort: the named products are returned in id order, unpaged, and the total is the number of them the caller may see."
+// @Success      200  {object}  apiModel.ProductListResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products [get]
@@ -42,7 +45,6 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 	if !ok {
 		return
 	}
-	limit := q.Limit
 
 	if len(q.IDs) > 0 {
 		products, idsErr := appCtx.Repos.Products.GetUserProductsByIDs(appCtx.UserID, q.IDs)
@@ -51,7 +53,7 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return
 		}
-		ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
+		ctx.JSON(http.StatusOK, apiModel.NewProductListResponse(apiModel.NewProductResponses(products), len(products), 0, 0))
 		return
 	}
 
@@ -60,7 +62,7 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulkSorted(appCtx.UserID, limit, sort.Sort, sort.Order)
+	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulkSorted(appCtx.UserID, q.Limit, q.Offset, sort.Sort, sort.Order)
 	if productBulkErr != nil {
 		appCtx.Logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
@@ -73,7 +75,15 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 		}
 		return
 	}
-	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
+
+	total, countErr := appCtx.Repos.Products.GetActiveProductsCount(appCtx.UserID)
+	if countErr != nil {
+		appCtx.Logger.Error().Msgf("Error counting products of user: %s", countErr)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		return
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.NewProductListResponse(apiModel.NewProductResponses(products), total, q.Limit, q.Offset))
 }
 
 // GetProduct return a single product of a user

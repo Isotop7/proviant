@@ -32,7 +32,7 @@ func TestProductRepository_UnknownUserErrors(t *testing.T) {
 		if _, err := repo.GetUserProductsByIDs(9999, []uint{1}); err == nil {
 			t.Error("GetUserProductsByIDs(9999) error = nil")
 		}
-		if _, err := repo.GetUserArchivedProductsBulk(9999, 10); err == nil {
+		if _, err := repo.GetUserArchivedProductsBulk(9999, 10, 0); err == nil {
 			t.Error("GetUserArchivedProductsBulk(9999) error = nil")
 		}
 		if _, err := repo.GetActiveProductProjections(9999, 0); err == nil {
@@ -83,7 +83,7 @@ func TestProductRepository_UnknownUserErrors(t *testing.T) {
 		if _, err := repo.GetUserArchivedProductsFiltered(9999, &from, &to); err == nil {
 			t.Error("GetUserArchivedProductsFiltered(9999) error = nil")
 		}
-		if _, err := repo.SearchProducts(ProductName, "x", "", "", 9999); err == nil {
+		if _, err := repo.SearchProducts(ProductName, "x", "", "", 9999, 0, 0); err == nil {
 			t.Error("SearchProducts(9999) error = nil")
 		}
 		if _, err := repo.SearchProductProjections(ProductName, "x", "", "", 9999, 0); err == nil {
@@ -789,19 +789,19 @@ func TestProductRepository_SearchErrors(t *testing.T) {
 	}
 
 	t.Run("invalid search parameter", func(t *testing.T) {
-		if _, err := repo.SearchProducts(InvalidParameter, "x", "", "", user.ID); err != errors.ErrDatabaseInvalidSearchParameter {
+		if _, err := repo.SearchProducts(InvalidParameter, "x", "", "", user.ID, 0, 0); err != errors.ErrDatabaseInvalidSearchParameter {
 			t.Errorf("SearchProducts() error = %v, want %v", err, errors.ErrDatabaseInvalidSearchParameter)
 		}
 	})
 
 	t.Run("invalid sort parameter", func(t *testing.T) {
-		if _, err := repo.SearchProducts(ProductName, "x", "not-a-column", "", user.ID); err != errors.ErrDatabaseInvalidSortParameter {
+		if _, err := repo.SearchProducts(ProductName, "x", "not-a-column", "", user.ID, 0, 0); err != errors.ErrDatabaseInvalidSortParameter {
 			t.Errorf("SearchProducts() error = %v, want %v", err, errors.ErrDatabaseInvalidSortParameter)
 		}
 	})
 
 	t.Run("invalid sort direction", func(t *testing.T) {
-		if _, err := repo.SearchProducts(ProductName, "x", "product_name", "sideways", user.ID); err != errors.ErrDatabaseInvalidSortParameter {
+		if _, err := repo.SearchProducts(ProductName, "x", "product_name", "sideways", user.ID, 0, 0); err != errors.ErrDatabaseInvalidSortParameter {
 			t.Errorf("SearchProducts() error = %v, want %v", err, errors.ErrDatabaseInvalidSortParameter)
 		}
 	})

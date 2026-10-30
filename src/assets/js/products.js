@@ -687,9 +687,13 @@ function fetchFreshProducts(ids) {
     return fetch('/api/v1/products?ids=' + encodeURIComponent(ids.join(',')))
         .then(function (res) {
             if (!res.ok) return null;
-            return res.json().then(function (products) {
+            return res.json().then(function (body) {
                 var map = new Map();
-                (Array.isArray(products) ? products : []).forEach(function (p) {
+                // The products list answers with an envelope; the products are
+                // in its "products" field. A bare array is read as the
+                // products themselves.
+                var products = Array.isArray(body) ? body : (body && Array.isArray(body.products) ? body.products : []);
+                products.forEach(function (p) {
                     if (p && p.id) map.set(+p.id, p);
                 });
                 return map;

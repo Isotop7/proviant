@@ -885,6 +885,19 @@ definitions:
           with a numeric code on success and the two would collide.
         type: string
     type: object
+  api.ProductListResponse:
+    properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
+      products:
+        items:
+          $ref: '#/definitions/api.ProductResponse'
+        type: array
+      total:
+        type: integer
+    type: object
   api.ProductQuantityDTO:
     properties:
       clientMutationId:
@@ -3839,10 +3852,19 @@ paths:
       - onboarding
   /api/v1/products:
     get:
-      description: Return a list of products of user. The list is ordered by the effective
-        expiry by default — the earlier of the printed expiry and the opened-shelf-life
+      description: 'Return a list of products of user. The list is ordered by the
+        effective expiry by default — the earlier of the printed expiry and the opened-shelf-life
         date — with the products without a date last. A product that carries a shelf
-        life is ordered by the date it goes off, not by the date printed on it.
+        life is ordered by the date it goes off, not by the date printed on it. The
+        order is the same on every request: products that share the sort key keep
+        the order of their ids, so a client that walks the pages by offset reads every
+        product exactly once. The response carries the products of the page, the total
+        number of products the filter matched, and the window that produced the page.
+        The total counts the whole set, not the page. An offset walk is stable as
+        long as the household''s products do not change in between: a product that
+        is added or removed shifts the rows behind it. A page ordered by the effective
+        expiry is resolved before it is cut out, because the effective expiry has
+        no sortable column — every page costs the same as reading the whole list.'
       parameters:
       - default: effective_expire_at
         description: Sort field (product_name, expire_at, created_at, effective_expire_at)
@@ -3854,15 +3876,29 @@ paths:
         in: query
         name: order
         type: string
+      - default: 100
+        description: Number of products to return (1-1000)
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of products to skip before the first one returned
+        in: query
+        name: offset
+        type: integer
+      - description: 'Ids of the products to return (comma separated, max 1000). ids
+          wins over limit, offset and sort: the named products are returned in id
+          order, unpaged, and the total is the number of them the caller may see.'
+        in: query
+        name: ids
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/api.ProductResponse'
-            type: array
+            $ref: '#/definitions/api.ProductListResponse'
         "400":
           description: Bad Request
           schema:
@@ -4437,16 +4473,31 @@ paths:
       - product
   /api/v1/products/archived:
     get:
-      description: Return a list of archived products of user
+      description: 'Return a list of archived products of user. The response carries
+        the products of the page, the total number of archived products the caller
+        may see, and the window that produced the page. The total counts the whole
+        archived set, not the page. The archived products are ordered by their id,
+        so a client that walks the pages by offset reads every one of them exactly
+        once. The endpoint pages by its own window: an ids parameter is not read here,
+        the archived list is never narrowed to named products.'
+      parameters:
+      - default: 100
+        description: Number of archived products to return (1-1000)
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of archived products to skip before the first one returned
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/api.ProductResponse'
-            type: array
+            $ref: '#/definitions/api.ProductListResponse'
         "400":
           description: Bad Request
           schema:
@@ -5053,7 +5104,14 @@ paths:
       - product
   /api/v1/products/search:
     get:
-      description: Returns a list of products based on a query
+      description: Returns a list of products based on a query. The response carries
+        the products of the page, the total number of products the search matched,
+        and the window that produced the page. The total counts every match, not the
+        page. The matches that share the sort key keep the order of their ids, so
+        a client that walks the pages by offset reads every match exactly once. A
+        limit that is not set returns every match. A page ordered by the effective
+        expiry is resolved before it is cut out, because the effective expiry has
+        no sortable column — every page costs the same as reading every match.
       parameters:
       - description: Search field (product_name, barcode)
         in: query
@@ -5076,15 +5134,23 @@ paths:
         in: query
         name: order
         type: string
+      - description: Number of matches to return (max 1000). Without a limit every
+          match is returned.
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of matches to skip before the first one returned
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/api.ProductResponse'
-            type: array
+            $ref: '#/definitions/api.ProductListResponse'
         "400":
           description: Bad Request
           schema:
