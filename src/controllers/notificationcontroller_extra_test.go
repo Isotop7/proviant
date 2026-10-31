@@ -465,7 +465,7 @@ func TestDispatchMonthlyWasteReportsStarts(t *testing.T) {
 }
 
 func TestDispatchStreakUpdatesStarts(t *testing.T) {
-	t.Run("schedules the next midnight UTC run", func(t *testing.T) {
+	t.Run("schedules the next midnight run", func(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		buf := &syncLogBuffer{}
 		logger := zerolog.New(buf)
@@ -477,7 +477,8 @@ func TestDispatchStreakUpdatesStarts(t *testing.T) {
 			StreakRepo:       mockRepos.Streaks,
 		}
 
-		// The goroutine sleeps until the next midnight UTC, so its only
+		// The goroutine sleeps until the next midnight in the container's
+		// zone, so its only
 		// observable effect is the next-run time it logs before sleeping.
 		nc.DispatchStreakUpdates()
 		if !waitForLog(buf, "Streak updater: next run at") {
@@ -518,7 +519,7 @@ func TestProcessStreakUpdates(t *testing.T) {
 	t.Run("fetch error returns", func(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		mockRepos.Streaks.Streaks = []dbModel.WasteStreak{{
-			HouseholdID: 1, CurrentStreak: 5, LongestStreak: 5, LastCheckedDate: time.Now().UTC().AddDate(0, 0, -1),
+			HouseholdID: 1, CurrentStreak: 5, LongestStreak: 5, LastCheckedDate: time.Now().AddDate(0, 0, -1),
 		}}
 		mockRepos.Streaks.Err = gorm.ErrInvalidData
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
@@ -531,8 +532,8 @@ func TestProcessStreakUpdates(t *testing.T) {
 
 	t.Run("increment, milestone and reset", func(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
-		yesterday := time.Now().UTC().AddDate(0, 0, -1)
-		now := time.Now().UTC()
+		yesterday := time.Now().AddDate(0, 0, -1)
+		now := time.Now()
 		wasted := now
 		mockRepos.Streaks.Streaks = []dbModel.WasteStreak{
 			{Model: gorm.Model{ID: 1}, HouseholdID: 1, CurrentStreak: 6, LongestStreak: 6, LastCheckedDate: yesterday},
@@ -566,7 +567,7 @@ func TestProcessStreakUpdates(t *testing.T) {
 
 	t.Run("update error is logged not fatal", func(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
-		yesterday := time.Now().UTC().AddDate(0, 0, -1)
+		yesterday := time.Now().AddDate(0, 0, -1)
 		mockRepos.Streaks.Streaks = []dbModel.WasteStreak{
 			{HouseholdID: 1, LastCheckedDate: yesterday},
 			{HouseholdID: 2, LastCheckedDate: yesterday},
@@ -583,7 +584,7 @@ func TestProcessStreakUpdates(t *testing.T) {
 }
 
 func TestProcessHouseholdStreak(t *testing.T) {
-	now := time.Now().UTC()
+	now := time.Now()
 	yesterday := now.AddDate(0, 0, -1)
 
 	newNC := func(mockRepos *repomocks.MockRepositoryContainer) (*NotificationController, *stubActivityLogRepo) {

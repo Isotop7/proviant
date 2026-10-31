@@ -271,7 +271,7 @@ The app never creates schemas. SQLite needs none: the dump store is a plain file
 | `PROVIANT_NOTIFICATION_TELEGRAM_TIMEOUT` | `10` | Telegram API request timeout in seconds (15 when unset) |
 | `PROVIANT_NOTIFICATION_TELEGRAM_POLLERWORKERS` | `10` | Worker goroutines used to poll Telegram for all users |
 | `PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_DAY` | `1` | Day of month to send monthly waste report (1–28) |
-| `PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_HOUR` | `8` | UTC hour to send monthly waste report (0–23) |
+| `PROVIANT_NOTIFICATION_MONTHLYWASTEREPORT_HOUR` | `8` | Hour of day to send monthly waste report, in the container's time zone (0–23) |
 | `PROVIANT_NOTIFICATION_MAILDIGEST_ENABLED` | `false` | Enable the per-household expiry digest email |
 | `PROVIANT_NOTIFICATION_MAILDIGEST_DEFAULTTIME` | `08:00` | Default local send time for households that have not set their own |
 

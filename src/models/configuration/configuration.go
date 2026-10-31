@@ -138,7 +138,7 @@ type NtfyConfiguration struct {
 // MonthlyWasteReportConfiguration controls when the monthly waste report email is sent.
 type MonthlyWasteReportConfiguration struct {
 	Day  int `mapstructure:"day"`  // day-of-month (1–28)
-	Hour int `mapstructure:"hour"` // hour of day, UTC (0–23)
+	Hour int `mapstructure:"hour"` // hour of day in the container's zone (0–23)
 }
 
 // TelegramConfiguration holds per-instance Telegram settings (no global bot token).

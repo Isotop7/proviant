@@ -19,6 +19,7 @@ import (
 	"github.com/Isotop7/proviant/models/authentication"
 	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -542,15 +543,17 @@ func (nc *NotificationController) SendTwoFactorRemoved(email, username, lang str
 }
 
 // DispatchMonthlyWasteReports starts a goroutine that sends household waste reports
-// on the configured day/hour (UTC) of each month to opted-in members via all enabled providers.
+// on the configured day/hour of each month to opted-in members via all enabled providers.
+// The day and the hour are the container's, so the report covers the month the
+// household just finished.
 func (nc *NotificationController) DispatchMonthlyWasteReports() {
 	emailProvider := nc.newEmailProvider()
 
 	notificationConfig := nc.Configuration.MonthlyWasteReport
 	go func() {
 		for {
-			now := time.Now().UTC()
-			next := time.Date(now.Year(), now.Month()+1, notificationConfig.Day, notificationConfig.Hour, 0, 0, 0, time.UTC)
+			now := time.Now()
+			next := time.Date(now.Year(), now.Month()+1, notificationConfig.Day, notificationConfig.Hour, 0, 0, 0, time.Local)
 			nc.Logger.Info().Msgf("Monthly waste report: next run at %s", next.Format(time.RFC3339))
 			time.Sleep(time.Until(next))
 			nc.processMonthlyWasteReports(emailProvider)
@@ -559,7 +562,7 @@ func (nc *NotificationController) DispatchMonthlyWasteReports() {
 }
 
 func (nc *NotificationController) processMonthlyWasteReports(emailProvider *EmailNotificationProvider) {
-	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
+	lastMonth := util.MonthShift(time.Now(), -1)
 	targets, err := nc.NotificationRepo.GetHouseholdsWithMonthlyWasteReportEnabled()
 	if err != nil {
 		nc.Logger.Error().Msgf("Monthly waste report: failed to fetch households: %s", err)
@@ -619,8 +622,9 @@ func (nc *NotificationController) sendMonthlyWasteReportToTelegramRecipients(
 	}
 }
 
-// DispatchStreakUpdates starts a goroutine that runs daily at midnight UTC to increment
-// or reset each household's waste-free streak and send milestone notifications.
+// DispatchStreakUpdates starts a goroutine that runs daily at midnight in the
+// container's zone to increment or reset each household's waste-free streak and
+// send milestone notifications.
 func (nc *NotificationController) DispatchStreakUpdates() {
 	if nc.StreakRepo == nil {
 		nc.Logger.Warn().Msg("StreakRepo not set, skipping streak updates")
@@ -628,8 +632,8 @@ func (nc *NotificationController) DispatchStreakUpdates() {
 	}
 	go func() {
 		for {
-			now := time.Now().UTC()
-			nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
+			now := time.Now()
+			nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.Local)
 			nc.Logger.Info().Msgf("Streak updater: next run at %s", nextMidnight.Format(time.RFC3339))
 			time.Sleep(time.Until(nextMidnight))
 			nc.processStreakUpdates()
@@ -650,7 +654,7 @@ func (nc *NotificationController) processStreakUpdates() {
 	nc.Logger.Info().Msgf("Streak updater: processing %d household(s)", len(streaks))
 
 	milestones := []int{7, 30, 100}
-	now := time.Now().UTC()
+	now := time.Now()
 
 	for i := range streaks {
 		streak := &streaks[i]
@@ -694,7 +698,7 @@ func (nc *NotificationController) handleStreakReset(householdID uint, previousSt
 			Action:      dbModel.ActivityActionStreakReset,
 			ProductName: fmt.Sprintf("Streak of %d day%s lost", previousStreak, pluralS(previousStreak)),
 			Quantity:    previousStreak,
-			Timestamp:   time.Now().UTC(),
+			Timestamp:   time.Now(),
 		})
 	}
 	nc.sendStreakResetNotifications(householdID, previousStreak)
