@@ -8,6 +8,7 @@ import (
 	"github.com/Isotop7/proviant/models/authentication"
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 
 	"gorm.io/gorm"
 )
@@ -188,11 +189,11 @@ func TestProductRepository_GetWasteThisMonth(t *testing.T) {
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
-	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	// Wall-clock month the seeds below land in; the repository computes its
-	// window from its own time.Now() at call time.
-	seedMonth := now.Format("2006-01")
+	// The 31st is the day the month arithmetic breaks on, so the anchor is
+	// pinned to one: the window the count covers is the anchor's month on
+	// every day of the year.
+	now := time.Date(2026, time.October, 31, 12, 0, 0, 0, time.Local)
+	monthStart := util.MonthStart(now)
 
 	// Wasted and deleted this month: counts.
 	wasted := testutil.CreateTestProduct(db, household.ID, user.ID)
@@ -202,6 +203,10 @@ func TestProductRepository_GetWasteThisMonth(t *testing.T) {
 	}
 	if err := db.Delete(wasted).Error; err != nil {
 		t.Fatalf("delete product: %v", err)
+	}
+	if err := db.Unscoped().Model(&dbModel.Product{}).Where("id = ?", wasted.ID).
+		Update("deleted_at", now).Error; err != nil {
+		t.Fatalf("pin the deletion to the anchor: %v", err)
 	}
 
 	// Consumed this month: not waste.
@@ -218,21 +223,25 @@ func TestProductRepository_GetWasteThisMonth(t *testing.T) {
 		t.Fatalf("mark old product wasted: %v", err)
 	}
 
-	count, err := repo.GetWasteThisMonth(user.ID)
+	count, err := repo.GetWasteThisMonth(user.ID, now)
 	if err != nil {
 		t.Fatalf("GetWasteThisMonth() error = %v", err)
-	}
-	// Guard: the repository derives its window from wall-clock time at call
-	// time. If the month flipped between seeding and the call, the seeded
-	// deletion falls outside the window and count is 0 instead of 1.
-	if time.Now().Format("2006-01") != seedMonth {
-		t.Skip("month boundary crossed")
 	}
 	if count != 1 {
 		t.Errorf("GetWasteThisMonth() = %d, want 1", count)
 	}
 
-	if _, err := repo.GetWasteThisMonth(9999); err == nil {
+	// The anchor picks the month, not the wall clock: the same rows are
+	// outside the window of a later month.
+	otherMonth, err := repo.GetWasteThisMonth(user.ID, monthStart.AddDate(0, 2, 0))
+	if err != nil {
+		t.Fatalf("GetWasteThisMonth() error = %v", err)
+	}
+	if otherMonth != 0 {
+		t.Errorf("GetWasteThisMonth() for a later month = %d, want 0", otherMonth)
+	}
+
+	if _, err := repo.GetWasteThisMonth(9999, now); err == nil {
 		t.Error("GetWasteThisMonth(9999) error = nil, want error")
 	}
 }
@@ -294,7 +303,7 @@ func TestProductRepository_GetWasteThisMonthCountsEveryWaste(t *testing.T) {
 	}
 	writeLedger(private, dbModel.SavingsEventTypeWasted)
 
-	count, err := repo.GetWasteThisMonth(user.ID)
+	count, err := repo.GetWasteThisMonth(user.ID, time.Now())
 	if err != nil {
 		t.Fatalf("GetWasteThisMonth() error = %v", err)
 	}
@@ -302,7 +311,7 @@ func TestProductRepository_GetWasteThisMonthCountsEveryWaste(t *testing.T) {
 		t.Errorf("GetWasteThisMonth() = %d, want 2", count)
 	}
 
-	otherCount, err := repo.GetWasteThisMonth(other.ID)
+	otherCount, err := repo.GetWasteThisMonth(other.ID, time.Now())
 	if err != nil {
 		t.Fatalf("GetWasteThisMonth(other) error = %v", err)
 	}

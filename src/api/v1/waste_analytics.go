@@ -80,7 +80,7 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	now := time.Now()
-	since := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).AddDate(0, -months+1, 0)
+	since := util.MonthWindowStart(now, months)
 
 	row, err := appCtx.Repos.WasteAnalytics.GetConsumedVsWasted(householdID, since)
 	if err != nil {
@@ -89,7 +89,7 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	monthly, err := appCtx.Repos.WasteAnalytics.GetMonthlyBreakdown(householdID, since, months)
+	monthly, err := appCtx.Repos.WasteAnalytics.GetMonthlyBreakdown(householdID, months, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetMonthlyBreakdown: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -115,7 +115,7 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
-	trend, err := appCtx.Repos.WasteAnalytics.GetTrendMonths(householdID, 6)
+	trend, err := appCtx.Repos.WasteAnalytics.GetTrendMonths(householdID, 6, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetTrendMonths: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

@@ -127,23 +127,31 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 	}
 
 	wantTrend := []apiModel.StatsMonthlyCount{}
-	monthCounts := map[string]int{}
+	// The month window is spelled out here instead of reusing the helper the
+	// production code calls: a bug in the helper would otherwise cancel out on
+	// both sides of this comparison. The trend buckets the calendar months of
+	// the container's zone.
+	local := now.In(time.Local)
+	monthKeys := make([]string, 12)
 	for i := range 12 {
-		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
+		monthKeys[i] = time.Date(local.Year(), local.Month()+time.Month(i), 1, 0, 0, 0, 0, time.Local).Format(util.DefaultDateFormatMonthStr)
+	}
+	monthCounts := map[string]int{}
+	for _, key := range monthKeys {
+		monthCounts[key] = 0
 	}
 	for i := range fullRows {
 		expiry := fullRows[i].EffectiveExpireAt()
 		if expiry.IsZero() {
 			continue
 		}
-		month := expiry.Format(util.DefaultDateFormatMonthStr)
+		month := expiry.In(time.Local).Format(util.DefaultDateFormatMonthStr)
 		if _, ok := monthCounts[month]; ok {
 			monthCounts[month]++
 		}
 	}
-	for i := range 12 {
-		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
-		wantTrend = append(wantTrend, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
+	for _, key := range monthKeys {
+		wantTrend = append(wantTrend, apiModel.StatsMonthlyCount{Month: key, Count: monthCounts[key]})
 	}
 
 	soonStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -189,7 +197,7 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 	if got, err := repo.GetActiveProductsCount(user.ID); err != nil || got != wantActive {
 		t.Errorf("GetActiveProductsCount() = %d, %v; want %d", got, err, wantActive)
 	}
-	if got, err := repo.GetExpiredProductsCount(user.ID); err != nil || got != wantExpired {
+	if got, err := repo.GetExpiredProductsCount(user.ID, now); err != nil || got != wantExpired {
 		t.Errorf("GetExpiredProductsCount() = %d, %v; want %d", got, err, wantExpired)
 	}
 	if got, err := repo.GetArchivedProductsCount(user.ID); err != nil || got != wantArchived {
@@ -201,15 +209,15 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 	if got, err := repo.GetProductCategoryBreakdown(user.ID); err != nil || !categoryMapsEqual(got, wantCategories) {
 		t.Errorf("GetProductCategoryBreakdown() = %v, %v; want %v", got, err, wantCategories)
 	}
-	if got, err := repo.GetExpiryTrend(user.ID); err != nil || !trendEqual(got, wantTrend) {
+	if got, err := repo.GetExpiryTrend(user.ID, now); err != nil || !trendEqual(got, wantTrend) {
 		t.Errorf("GetExpiryTrend() = %+v, %v; want %+v", got, err, wantTrend)
 	}
-	if got, err := repo.GetExpiringSoonProducts(user.ID, 7); err != nil || !expiringSoonEqual(got, wantExpiringSoon) {
+	if got, err := repo.GetExpiringSoonProducts(user.ID, 7, now); err != nil || !expiringSoonEqual(got, wantExpiringSoon) {
 		t.Errorf("GetExpiringSoonProducts() = %+v, %v; want %+v", got, err, wantExpiringSoon)
 	}
 	// The list carries the place and the pack count of every product, so a
 	// household can act on it without opening the product.
-	if got, err := repo.GetExpiringSoonProducts(user.ID, 7); err != nil {
+	if got, err := repo.GetExpiringSoonProducts(user.ID, 7, now); err != nil {
 		t.Fatalf("GetExpiringSoonProducts() error = %v", err)
 	} else if len(got) != 1 {
 		t.Fatalf("GetExpiringSoonProducts() = %+v, want the one product in the window", got)

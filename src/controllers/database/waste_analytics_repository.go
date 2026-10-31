@@ -61,15 +61,22 @@ func (r *WasteAnalyticsRepository) GetConsumedVsWasted(householdID uint, since t
 	return row, nil
 }
 
-// GetMonthlyBreakdown returns per-month consumed and wasted aggregates, padded with zero
-// buckets for months that have no data so the response is contiguous from `since`.
-func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since time.Time, months int) ([]apiModel.WasteMonthly, error) {
+// GetMonthlyBreakdown returns per-month consumed and wasted aggregates for the
+// `months` months that end with the month `now` falls in, padded with zero
+// buckets for months that have no data so the response is contiguous.
+func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, months int, now time.Time) ([]apiModel.WasteMonthly, error) {
 	type rawRow struct {
 		CreatedAt time.Time
 		EventType string
 		PriceEUR  float64
 		CO2Kg     float64
 	}
+
+	if months <= 0 {
+		return []apiModel.WasteMonthly{}, nil
+	}
+
+	since := util.MonthWindowStart(now, months)
 
 	var rows []rawRow
 	if err := r.DB.
@@ -89,7 +96,7 @@ func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since t
 	}
 	byMonth := make(map[string]*bucket, months)
 	for i := range rows {
-		key := rows[i].CreatedAt.Format(util.DefaultDateFormatMonthStr)
+		key := util.MonthKey(rows[i].CreatedAt)
 		b, ok := byMonth[key]
 		if !ok {
 			b = &bucket{}
@@ -106,10 +113,7 @@ func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since t
 	}
 
 	out := make([]apiModel.WasteMonthly, 0, months)
-	now := time.Now()
-	for i := months - 1; i >= 0; i-- {
-		m := now.AddDate(0, -i, 0)
-		key := m.Format(util.DefaultDateFormatMonthStr)
+	for _, key := range util.RecentMonthKeys(now, months) {
 		b := byMonth[key]
 		row := apiModel.WasteMonthly{Month: key}
 		if b != nil {
@@ -359,10 +363,14 @@ func beatsOverbuy(bucket *wasteCategoryBucket, bestOverbought, bestWaste int, ke
 	return key < bestKey
 }
 
-// GetTrendMonths returns wasted-count-per-month for the last `months` months (ascending).
-func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int) ([]apiModel.StatsMonthlyCount, error) {
-	since := time.Now().AddDate(0, -months+1, 0)
-	since = time.Date(since.Year(), since.Month(), 1, 0, 0, 0, 0, since.Location())
+// GetTrendMonths returns wasted-count-per-month for the `months` months that
+// end with the month `now` falls in (ascending).
+func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int, now time.Time) ([]apiModel.StatsMonthlyCount, error) {
+	if months <= 0 {
+		return []apiModel.StatsMonthlyCount{}, nil
+	}
+
+	since := util.MonthWindowStart(now, months)
 
 	var createdAts []time.Time
 	if err := r.DB.
@@ -376,14 +384,11 @@ func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int) 
 
 	byMonth := make(map[string]int, months)
 	for i := range createdAts {
-		byMonth[createdAts[i].Format(util.DefaultDateFormatMonthStr)]++
+		byMonth[util.MonthKey(createdAts[i])]++
 	}
 
 	out := make([]apiModel.StatsMonthlyCount, 0, months)
-	now := time.Now()
-	for i := months - 1; i >= 0; i-- {
-		m := now.AddDate(0, -i, 0)
-		key := m.Format(util.DefaultDateFormatMonthStr)
+	for _, key := range util.RecentMonthKeys(now, months) {
 		out = append(out, apiModel.StatsMonthlyCount{
 			Month: key,
 			Count: byMonth[key],

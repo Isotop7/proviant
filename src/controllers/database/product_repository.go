@@ -120,14 +120,14 @@ type ProductRepositoryInterface interface {
 	SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
 	SetProductNotifiedAt(productID uint) error
 	GetProductsExpired(userID uint) ([]*database.Product, error)
-	GetExpiredProductsCount(userID uint) (int, error)
+	GetExpiredProductsCount(userID uint, now time.Time) (int, error)
 	GetArchivedProductsCount(userID uint) (int, error)
 	GetUniqueArchivedProductsCount(userID uint) (int, error)
 	GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error)
 	GetActiveProductsCount(userID uint) (int, error)
 	GetProductCategoryBreakdown(userID uint) (map[string]int, error)
-	GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
-	GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+	GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error)
+	GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error)
 	GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error)
 	GetLastNotifiedProduct(householdID uint) (database.Product, error)
 	GetExpiringInDays(userID uint, days int) ([]database.Product, error)
@@ -146,9 +146,9 @@ type ProductRepositoryInterface interface {
 	GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
 	GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
 	GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
-	GetExpiringSoonCount(userID uint, days int) (int, error)
+	GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error)
 	GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (expired, critical int, err error)
-	GetWasteThisMonth(userID uint) (int, error)
+	GetWasteThisMonth(userID uint, now time.Time) (int, error)
 	GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
 	GetSubThresholdProducts(userID uint) ([]database.Product, error)
@@ -1605,13 +1605,11 @@ func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product
 //
 // The prune deliberately also matches rows with a zero expire_at, which the Go
 // loop below skips — a product with no expiry set is never expired.
-func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
+func (r *ProductRepository) GetExpiredProductsCount(userID uint, now time.Time) (int, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return 0, err
 	}
-
-	now := time.Now()
 
 	var rows []expiryCandidate
 	err = r.DB.Model(&database.Product{}).
@@ -1868,10 +1866,12 @@ func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string
 	return result, nil
 }
 
-// GetExpiryTrend buckets the next 12 months of expiries. Only the three columns
-// EffectiveExpireAt reads are projected, so the query cost tracks the row count
-// rather than the row width.
-func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error) {
+// GetExpiryTrend buckets the next 12 months of expiries, starting with the
+// calendar month `now` falls in. The buckets follow the container's zone, so
+// an expiry lands in the month the label next to it shows. Only the three
+// columns EffectiveExpireAt reads are projected, so the query cost tracks the
+// row count rather than the row width.
+func (r *ProductRepository) GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return nil, err
@@ -1888,37 +1888,35 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 		return nil, err
 	}
 
-	now := time.Now()
-	monthCounts := make(map[string]int, 12)
-	for i := range 12 {
-		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
+	monthKeys := util.UpcomingMonthKeys(now, 12)
+	monthCounts := make(map[string]int, len(monthKeys))
+	for _, key := range monthKeys {
+		monthCounts[key] = 0
 	}
 	for i := range products {
 		expiry := products[i].EffectiveExpireAt()
 		if expiry.IsZero() {
 			continue
 		}
-		month := expiry.Format(util.DefaultDateFormatMonthStr)
+		month := util.MonthKey(expiry)
 		if _, ok := monthCounts[month]; ok {
 			monthCounts[month]++
 		}
 	}
 
-	result := make([]apiModel.StatsMonthlyCount, 0, 12)
-	for i := range 12 {
-		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
-		result = append(result, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
+	result := make([]apiModel.StatsMonthlyCount, 0, len(monthKeys))
+	for _, key := range monthKeys {
+		result = append(result, apiModel.StatsMonthlyCount{Month: key, Count: monthCounts[key]})
 	}
 	return result, nil
 }
 
-func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error) {
+func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	now := time.Now()
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
 
@@ -2271,13 +2269,12 @@ func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentic
 	return users, err
 }
 
-func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error) {
+func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return 0, err
 	}
 
-	now := time.Now()
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
 
@@ -2365,14 +2362,13 @@ type expiryCandidate struct {
 // there, so the two sources would report different numbers for the same waste.
 // The archived rows without a ledger entry are the wastes from before the
 // ledger existed; they keep the count of a household that predates it.
-func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
+func (r *ProductRepository) GetWasteThisMonth(userID uint, now time.Time) (int, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return 0, err
 	}
 
-	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	monthStart := util.MonthStart(now)
 	monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
 
 	// The ledger is joined to the product it names, so the privacy scope still

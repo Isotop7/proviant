@@ -35,7 +35,7 @@ func TestBuildFullExportStatsCarriesTheUseFirstList(t *testing.T) {
 		{Model: gorm.Model{ID: 3}, ProductName: "Undated", Quantity: 1},
 	}
 
-	stats := buildFullExportStats(active, nil, 7)
+	stats := buildFullExportStats(active, nil, 7, now)
 
 	if len(stats.UseFirst) != 3 {
 		t.Fatalf("useFirst = %+v, want every active product", stats.UseFirst)
@@ -66,6 +66,57 @@ func TestBuildFullExportStatsCarriesTheUseFirstList(t *testing.T) {
 	}
 	if entry.Quantity != 3 || entry.PackSize != "250g" {
 		t.Errorf("quantity/packSize = %d/%q, want 3/250g", entry.Quantity, entry.PackSize)
+	}
+}
+
+// TestBuildFullExportStatsTrendMatchesTheDashboard pins the backup document's
+// expiry trend to the one the dashboard shows: both are computed from the same
+// rows, so they have to name the same months with the same counts.
+func TestBuildFullExportStatsTrendMatchesTheDashboard(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := database.NewProductRepository(db)
+
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	// The 31st is the day the month arithmetic breaks on, so the anchor is
+	// pinned to one: the assertion has to hold on every day of the year. The
+	// anchor sits in the container's zone, because the trend buckets the
+	// calendar months of that zone.
+	anchor := time.Date(2026, time.October, 31, 12, 0, 0, 0, time.Local)
+
+	active := make([]dbModel.Product, 0, 2)
+	for _, expiry := range []time.Time{
+		time.Date(2026, time.October, 15, 0, 0, 0, 0, time.Local),
+		time.Date(2026, time.November, 15, 0, 0, 0, 0, time.Local),
+	} {
+		product := testutil.CreateTestProduct(db, household.ID, user.ID)
+		product.ExpireAt = expiry
+		if err := db.Save(product).Error; err != nil {
+			t.Fatalf("save product: %v", err)
+		}
+		active = append(active, *product)
+	}
+
+	stats := buildFullExportStats(active, nil, 7, anchor)
+	trend, err := repo.GetExpiryTrend(user.ID, anchor)
+	if err != nil {
+		t.Fatalf("GetExpiryTrend: %v", err)
+	}
+
+	if len(stats.ExpiryTrend) != len(trend) {
+		t.Fatalf("backup trend has %d months, dashboard trend has %d", len(stats.ExpiryTrend), len(trend))
+	}
+	for i := range trend {
+		if stats.ExpiryTrend[i] != trend[i] {
+			t.Errorf("backup trend[%d] = %+v, dashboard trend[%d] = %+v", i, stats.ExpiryTrend[i], i, trend[i])
+		}
+	}
+	if len(trend) == 0 {
+		t.Fatal("dashboard trend is empty")
+	}
+	if trend[0].Count != 1 || trend[1].Count != 1 {
+		t.Errorf("dashboard trend counts = %d/%d, want 1/1", trend[0].Count, trend[1].Count)
 	}
 }
 

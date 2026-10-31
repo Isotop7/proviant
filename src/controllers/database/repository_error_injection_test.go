@@ -122,7 +122,7 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if _, err := repo.SearchProductProjections(ProductName, "x", "", "", user.ID, 0); err == nil {
 			t.Error("SearchProductProjections() error = nil")
 		}
-		if _, err := repo.GetExpiredProductsCount(user.ID); err == nil {
+		if _, err := repo.GetExpiredProductsCount(user.ID, time.Now()); err == nil {
 			t.Error("GetExpiredProductsCount() error = nil")
 		}
 		if _, err := repo.GetActiveProductsCount(user.ID); err == nil {
@@ -137,22 +137,22 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if _, err := repo.GetProductCategoryBreakdown(user.ID); err == nil {
 			t.Error("GetProductCategoryBreakdown() error = nil")
 		}
-		if _, err := repo.GetExpiryTrend(user.ID); err == nil {
+		if _, err := repo.GetExpiryTrend(user.ID, time.Now()); err == nil {
 			t.Error("GetExpiryTrend() error = nil")
 		}
-		if _, err := repo.GetExpiringSoonProducts(user.ID, 7); err == nil {
+		if _, err := repo.GetExpiringSoonProducts(user.ID, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonProducts() error = nil")
 		}
 		if _, err := repo.GetExpiringInDays(user.ID, 7); err == nil {
 			t.Error("GetExpiringInDays() error = nil")
 		}
-		if _, err := repo.GetExpiringSoonCount(user.ID, 7); err == nil {
+		if _, err := repo.GetExpiringSoonCount(user.ID, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonCount() error = nil")
 		}
 		if _, _, err := repo.GetActiveExpiryCounts(user.ID, time.Now(), 7); err == nil {
 			t.Error("GetActiveExpiryCounts() error = nil")
 		}
-		if _, err := repo.GetWasteThisMonth(user.ID); err == nil {
+		if _, err := repo.GetWasteThisMonth(user.ID, time.Now()); err == nil {
 			t.Error("GetWasteThisMonth() error = nil")
 		}
 		if _, err := repo.GetSubThresholdProducts(user.ID); err == nil {

@@ -98,7 +98,7 @@ func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbMode
 // reported so the gap can be explained.
 func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error) {
 	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	monthStart := util.MonthStart(now)
 	monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
 
 	var monthRecords []dbModel.SavingsRecord

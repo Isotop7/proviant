@@ -48,7 +48,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 
 	t.Run("GetExpiringSoonCount counts window entries", func(t *testing.T) {
-		count, err := repo.GetExpiringSoonCount(user.ID, 7)
+		count, err := repo.GetExpiringSoonCount(user.ID, 7, time.Now())
 		if err != nil {
 			t.Fatalf("GetExpiringSoonCount() error = %v", err)
 		}

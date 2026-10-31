@@ -101,6 +101,7 @@ func BuildFullExport(
 		}
 	}
 
+	now := time.Now()
 	response := apiModel.FullExportResponse{
 		Version: apiModel.BackupSchemaVersion,
 		Household: &apiModel.FullExportHousehold{
@@ -117,8 +118,8 @@ func BuildFullExport(
 			Active:   activeExport,
 			Archived: archivedExport,
 		},
-		Stats:      buildFullExportStats(activeProducts, archivedProducts, viewerThreshold),
-		ExportedAt: time.Now().Format(time.RFC3339),
+		Stats:      buildFullExportStats(activeProducts, archivedProducts, viewerThreshold, now),
+		ExportedAt: now.Format(time.RFC3339),
 	}
 	if logger != nil {
 		logger.Debug().Msgf("Built household backup document for household %d (%d active, %d archived)", householdID, len(activeProducts), len(archivedProducts))
@@ -130,8 +131,9 @@ func BuildFullExport(
 // themselves. The user-facing stats endpoints answer from SQL with a privacy
 // scope; a backup document has no single viewer once it is written to disk, so
 // deriving from the rows it already carries keeps the file self-consistent.
-func buildFullExportStats(active, archived []dbModel.Product, notificationThresholdDays int) apiModel.ProductStatsResponse {
-	now := time.Now()
+// The anchor is the instant the window is measured from, so the document and
+// the dashboard it mirrors name the same months.
+func buildFullExportStats(active, archived []dbModel.Product, notificationThresholdDays int, now time.Time) apiModel.ProductStatsResponse {
 	expiringSoonDays := 7
 	if notificationThresholdDays > 0 {
 		expiringSoonDays = notificationThresholdDays
@@ -139,9 +141,10 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 
 	wasteCount := 0
 	categories := make(map[string]int)
-	monthCounts := make(map[string]int, 12)
-	for i := range 12 {
-		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
+	monthKeys := util.UpcomingMonthKeys(now, 12)
+	monthCounts := make(map[string]int, len(monthKeys))
+	for _, key := range monthKeys {
+		monthCounts[key] = 0
 	}
 
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -158,7 +161,7 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 			if expiry.Before(now) {
 				wasteCount++
 			}
-			month := expiry.Format(util.DefaultDateFormatMonthStr)
+			month := util.MonthKey(expiry)
 			if _, tracked := monthCounts[month]; tracked {
 				monthCounts[month]++
 			}
@@ -186,10 +189,9 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 		return expiringSoon[i].ExpireAt < expiringSoon[j].ExpireAt
 	})
 
-	expiryTrend := make([]apiModel.StatsMonthlyCount, 0, 12)
-	for i := range 12 {
-		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
-		expiryTrend = append(expiryTrend, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
+	expiryTrend := make([]apiModel.StatsMonthlyCount, 0, len(monthKeys))
+	for _, key := range monthKeys {
+		expiryTrend = append(expiryTrend, apiModel.StatsMonthlyCount{Month: key, Count: monthCounts[key]})
 	}
 
 	return apiModel.ProductStatsResponse{

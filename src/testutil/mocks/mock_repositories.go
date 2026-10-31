@@ -189,7 +189,7 @@ func (m *MockProductRepository) GetProductsExpired(userID uint) ([]*dbModel.Prod
 	}
 	return ptrs, m.Err
 }
-func (m *MockProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
+func (m *MockProductRepository) GetExpiredProductsCount(userID uint, now time.Time) (int, error) {
 	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) GetArchivedProductsCount(userID uint) (int, error) {
@@ -207,10 +207,10 @@ func (m *MockProductRepository) GetActiveProductsCount(userID uint) (int, error)
 func (m *MockProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error) {
 	return m.MapResult, m.Err
 }
-func (m *MockProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error) {
+func (m *MockProductRepository) GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error) {
 	return m.StatsMonthly, m.Err
 }
-func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error) {
+func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error) {
 	return m.ExpiringProds, m.Err
 }
 func (m *MockProductRepository) GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error) {
@@ -267,7 +267,7 @@ func (m *MockProductRepository) GetUserArchivedProductsFiltered(userID uint, fro
 func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error) {
 	return m.Users, m.Err
 }
-func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error) {
+func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error) {
 	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (int, int, error) {
@@ -297,7 +297,7 @@ func (m *MockProductRepository) GetActiveExpiryCounts(userID uint, now time.Time
 	}
 	return expired, critical, nil
 }
-func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error) {
+func (m *MockProductRepository) GetWasteThisMonth(userID uint, now time.Time) (int, error) {
 	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]dbModel.Product, error) {

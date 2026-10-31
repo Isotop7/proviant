@@ -154,7 +154,7 @@ func BenchmarkGetExpiringSoonCount(b *testing.B) {
 	userID := userIDs[0]
 
 	for b.Loop() {
-		_, err := repo.GetExpiringSoonCount(userID, 7)
+		_, err := repo.GetExpiringSoonCount(userID, 7, time.Now())
 		if err != nil {
 			b.Fatalf("GetExpiringSoonCount failed: %v", err)
 		}
@@ -186,16 +186,16 @@ func BenchmarkGetProductStats(b *testing.B) {
 		if _, err := repo.GetActiveProductsCount(userID); err != nil {
 			b.Fatalf("GetActiveProductsCount failed: %v", err)
 		}
-		if _, err := repo.GetExpiredProductsCount(userID); err != nil {
+		if _, err := repo.GetExpiredProductsCount(userID, time.Now()); err != nil {
 			b.Fatalf("GetExpiredProductsCount failed: %v", err)
 		}
-		if _, err := repo.GetExpiringSoonProducts(userID, 7); err != nil {
+		if _, err := repo.GetExpiringSoonProducts(userID, 7, time.Now()); err != nil {
 			b.Fatalf("GetExpiringSoonProducts failed: %v", err)
 		}
 		if _, err := repo.GetProductCategoryBreakdown(userID); err != nil {
 			b.Fatalf("GetProductCategoryBreakdown failed: %v", err)
 		}
-		if _, err := repo.GetExpiryTrend(userID); err != nil {
+		if _, err := repo.GetExpiryTrend(userID, time.Now()); err != nil {
 			b.Fatalf("GetExpiryTrend failed: %v", err)
 		}
 		if _, err := repo.GetArchivedProductsCount(userID); err != nil {

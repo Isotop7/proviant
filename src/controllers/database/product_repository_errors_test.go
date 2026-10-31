@@ -47,7 +47,7 @@ func TestProductRepository_UnknownUserErrors(t *testing.T) {
 		if _, err := repo.GetUserProductsBulkByBarcodes(9999, []string{"1"}); err == nil {
 			t.Error("GetUserProductsBulkByBarcodes(9999) error = nil")
 		}
-		if _, err := repo.GetExpiredProductsCount(9999); err == nil {
+		if _, err := repo.GetExpiredProductsCount(9999, time.Now()); err == nil {
 			t.Error("GetExpiredProductsCount(9999) error = nil")
 		}
 		if _, err := repo.GetActiveProductsCount(9999); err == nil {
@@ -62,16 +62,16 @@ func TestProductRepository_UnknownUserErrors(t *testing.T) {
 		if _, err := repo.GetProductCategoryBreakdown(9999); err == nil {
 			t.Error("GetProductCategoryBreakdown(9999) error = nil")
 		}
-		if _, err := repo.GetExpiryTrend(9999); err == nil {
+		if _, err := repo.GetExpiryTrend(9999, time.Now()); err == nil {
 			t.Error("GetExpiryTrend(9999) error = nil")
 		}
-		if _, err := repo.GetExpiringSoonProducts(9999, 7); err == nil {
+		if _, err := repo.GetExpiringSoonProducts(9999, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonProducts(9999) error = nil")
 		}
 		if _, err := repo.GetExpiringInDays(9999, 7); err == nil {
 			t.Error("GetExpiringInDays(9999) error = nil")
 		}
-		if _, err := repo.GetExpiringSoonCount(9999, 7); err == nil {
+		if _, err := repo.GetExpiringSoonCount(9999, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonCount(9999) error = nil")
 		}
 		if _, _, err := repo.GetActiveExpiryCounts(9999, time.Now(), 7); err == nil {

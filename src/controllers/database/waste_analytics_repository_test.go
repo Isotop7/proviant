@@ -9,6 +9,7 @@ import (
 	"github.com/Isotop7/proviant/models/authentication"
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/testutil"
+	"github.com/Isotop7/proviant/util"
 )
 
 func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
@@ -46,8 +47,10 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 	db.Create(&hhA)
 	db.Create(&hhB)
 
-	now := time.Now()
-	since := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).AddDate(0, -1, 0)
+	// The 31st is the day the month arithmetic breaks on, so the anchor is
+	// pinned to one: the assertions have to hold on every day of the year.
+	now := time.Date(2026, time.October, 31, 12, 0, 0, 0, time.Local)
+	since := util.MonthShift(now, -1)
 
 	// Household A: 1 consumed dairy, 2 wasted dairy, 1 wasted bakery
 	dairyProd := dbModel.Product{
@@ -99,14 +102,18 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 	})
 
 	t.Run("monthly breakdown is padded and ordered", func(t *testing.T) {
-		out, err := repo.GetMonthlyBreakdown(hhA.ID, since, 2)
+		out, err := repo.GetMonthlyBreakdown(hhA.ID, 2, now)
 		if err != nil {
 			t.Fatalf("GetMonthlyBreakdown: %v", err)
 		}
 		if len(out) != 2 {
 			t.Fatalf("expected 2 months, got %d", len(out))
 		}
-		// Newest month should have all 4 events
+		assertConsecutiveMonths(t, []string{out[0].Month, out[1].Month})
+		// The older month holds no event, the newer one all 4.
+		if out[0].ConsumedCount+out[0].WastedCount != 0 {
+			t.Errorf("older month events = %d, want 0", out[0].ConsumedCount+out[0].WastedCount)
+		}
 		last := out[len(out)-1]
 		if last.ConsumedCount+last.WastedCount != 4 {
 			t.Errorf("last month events = %d, want 4", last.ConsumedCount+last.WastedCount)
@@ -180,13 +187,18 @@ func TestWasteAnalyticsRepository_Aggregations(t *testing.T) {
 	})
 
 	t.Run("trend months padded", func(t *testing.T) {
-		out, err := repo.GetTrendMonths(hhA.ID, 6)
+		out, err := repo.GetTrendMonths(hhA.ID, 6, now)
 		if err != nil {
 			t.Fatalf("GetTrendMonths: %v", err)
 		}
 		if len(out) != 6 {
 			t.Fatalf("expected 6 months, got %d", len(out))
 		}
+		keys := make([]string, len(out))
+		for i := range out {
+			keys[i] = out[i].Month
+		}
+		assertConsecutiveMonths(t, keys)
 		total := 0
 		for _, m := range out {
 			total += m.Count
@@ -267,7 +279,7 @@ func TestWasteAnalyticsRepository_CauseBreakdown(t *testing.T) {
 	db.Create(&household)
 
 	now := time.Now()
-	since := now.AddDate(0, -1, 0)
+	since := util.MonthShift(now, -1)
 
 	dairy := dbModel.Product{
 		ProductName: "Yogurt", Categories: "en:dairy", HouseholdID: household.ID, UserID: admin.ID,
@@ -362,7 +374,7 @@ func TestWasteAnalyticsRepository_CauseBreakdownWithoutOverbuying(t *testing.T) 
 	record.CreatedAt = now
 	db.Create(&record)
 
-	breakdown, err := repo.GetWasteCauseBreakdown(household.ID, now.AddDate(0, -1, 0))
+	breakdown, err := repo.GetWasteCauseBreakdown(household.ID, util.MonthShift(now, -1))
 	if err != nil {
 		t.Fatalf("GetWasteCauseBreakdown: %v", err)
 	}
