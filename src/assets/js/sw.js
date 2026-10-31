@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'proviant-v174';
+const CACHE_NAME = 'proviant-v175';
 
 // The offline screen is a server-rendered page: the worker precaches it and
 // serves the cached copy when a navigation cannot reach the network.
@@ -19,7 +19,6 @@ const PRECACHE_URLS = [
   '/assets/js/notifications.js',
   '/assets/icons/proviant_logo_192.png',
   '/assets/icons/proviant_logo_512.png',
-  '/assets/icons/hero.png',
   '/assets/icons/favicon.png',
   OFFLINE_URL,
 ];

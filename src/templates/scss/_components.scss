@@ -937,3 +937,36 @@
     box-shadow: var(--focus-ring);
   }
 }
+
+// ── Brand lockup ───────────────────────────────────────────────────────────
+
+// The mark and the wordmark. The design system's own logo component: the
+// accent-filled square with the P, the wordmark in the body ink. Every page
+// that shows the brand shows this one — the auth panel overrides the colours
+// for its accent surface, nothing else.
+.brand-logo {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.brand-logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  font-weight: var(--weight-bold);
+  color: var(--accent-on);
+  letter-spacing: -.5px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.brand-logo-name {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-bold);
+  color: var(--fg);
+  letter-spacing: -.02em;
+}
