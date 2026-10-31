@@ -775,7 +775,7 @@ func ReconcileShoppingListIntegration(ctx context.Context, repos *dbController.R
 ReconcileShoppingListIntegration runs one push\-and\-pull synchronization cycle for a single household integration.
 
 <a name="RestoreHouseholdBackup"></a>
-## func [RestoreHouseholdBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/household_backup.go#L276-L281>)
+## func [RestoreHouseholdBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/household_backup.go#L278-L283>)
 
 ```go
 func RestoreHouseholdBackup(db *gorm.DB, householdID uint, adminUserID uint, backup *apiModel.FullExportResponse) (apiModel.RestoreResult, error)
@@ -1187,7 +1187,7 @@ func (p *NoopShoppingListSyncProvider) TestConnection(_ context.Context, integra
 TestConnection increments TestCount and returns TestErr.
 
 <a name="NotificationController"></a>
-## type [NotificationController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L46-L58>)
+## type [NotificationController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L47-L59>)
 
 
 
@@ -1205,7 +1205,7 @@ type NotificationController struct {
 ```
 
 <a name="NewNotificationController"></a>
-### func [NewNotificationController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L81-L86>)
+### func [NewNotificationController](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L82-L87>)
 
 ```go
 func NewNotificationController(logger *zerolog.Logger, config *configuration.NotificationConfiguration, notificationRepo dbController.NotificationRepositoryInterface, productRepo dbController.ProductRepositoryInterface) *NotificationController
@@ -1214,7 +1214,7 @@ func NewNotificationController(logger *zerolog.Logger, config *configuration.Not
 
 
 <a name="NotificationController.Dispatch"></a>
-### func \(\*NotificationController\) [Dispatch](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L177>)
+### func \(\*NotificationController\) [Dispatch](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L178>)
 
 ```go
 func (nc *NotificationController) Dispatch()
@@ -1223,7 +1223,7 @@ func (nc *NotificationController) Dispatch()
 Dispatch creates an eternal go routine that periodically checks for pending notifications and sends them. The timeout can be configured with the Configuration struct of NotificationController
 
 <a name="NotificationController.DispatchInvitations"></a>
-### func \(\*NotificationController\) [DispatchInvitations](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L394>)
+### func \(\*NotificationController\) [DispatchInvitations](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L395>)
 
 ```go
 func (nc *NotificationController) DispatchInvitations(baseURL string)
@@ -1232,16 +1232,16 @@ func (nc *NotificationController) DispatchInvitations(baseURL string)
 DispatchInvitations starts a background goroutine that periodically retries sending pending invitation emails. It runs once immediately on startup, then every Interval hours \(reusing the same config as product notifications\).
 
 <a name="NotificationController.DispatchMonthlyWasteReports"></a>
-### func \(\*NotificationController\) [DispatchMonthlyWasteReports](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L546>)
+### func \(\*NotificationController\) [DispatchMonthlyWasteReports](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L549>)
 
 ```go
 func (nc *NotificationController) DispatchMonthlyWasteReports()
 ```
 
-DispatchMonthlyWasteReports starts a goroutine that sends household waste reports on the configured day/hour \(UTC\) of each month to opted\-in members via all enabled providers.
+DispatchMonthlyWasteReports starts a goroutine that sends household waste reports on the configured day/hour of each month to opted\-in members via all enabled providers. The day and the hour are the container's, so the report covers the month the household just finished.
 
 <a name="NotificationController.DispatchStreakUpdates"></a>
-### func \(\*NotificationController\) [DispatchStreakUpdates](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L624>)
+### func \(\*NotificationController\) [DispatchStreakUpdates](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L627>)
 
 ```go
 func (nc *NotificationController) DispatchStreakUpdates()
@@ -1250,7 +1250,7 @@ func (nc *NotificationController) DispatchStreakUpdates()
 DispatchStreakUpdates starts a goroutine that runs daily at midnight UTC to increment or reset each household's waste\-free streak and send milestone notifications.
 
 <a name="NotificationController.GetUserTelegramBotUsername"></a>
-### func \(\*NotificationController\) [GetUserTelegramBotUsername](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L148>)
+### func \(\*NotificationController\) [GetUserTelegramBotUsername](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L149>)
 
 ```go
 func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string
@@ -1259,7 +1259,7 @@ func (nc *NotificationController) GetUserTelegramBotUsername(userID uint) string
 GetUserTelegramBotUsername returns the bot username resolved at poller start for a user.
 
 <a name="NotificationController.SendEmailVerification"></a>
-### func \(\*NotificationController\) [SendEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L475>)
+### func \(\*NotificationController\) [SendEmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L476>)
 
 ```go
 func (nc *NotificationController) SendEmailVerification(email, username, token, baseURL string, expiresAt time.Time, lang string) error
@@ -1268,7 +1268,7 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 SendEmailVerification sends a verification email directly to the user with a verification token.
 
 <a name="NotificationController.SendInvitationEmail"></a>
-### func \(\*NotificationController\) [SendInvitationEmail](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L418>)
+### func \(\*NotificationController\) [SendInvitationEmail](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L419>)
 
 ```go
 func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.HouseholdInvitation, inviterName, householdName, baseURL string, tx *gorm.DB, lang string) error
@@ -1277,7 +1277,7 @@ func (nc *NotificationController) SendInvitationEmail(invitation *dbModel.Househ
 SendInvitationEmail sends a single invitation email and marks it as sent or failed in the database. If tx is provided \(non\-nil\), the "mark as sent" update will run within that transaction to avoid SQLite "database is locked" conflicts when the transaction holds a write lock.
 
 <a name="NotificationController.SendPasswordReset"></a>
-### func \(\*NotificationController\) [SendPasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L510>)
+### func \(\*NotificationController\) [SendPasswordReset](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L511>)
 
 ```go
 func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time, lang string) error
@@ -1286,7 +1286,7 @@ func (nc *NotificationController) SendPasswordReset(email, username, token, base
 SendPasswordReset sends a password reset email directly to the user.
 
 <a name="NotificationController.SendTwoFactorEnabled"></a>
-### func \(\*NotificationController\) [SendTwoFactorEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L493>)
+### func \(\*NotificationController\) [SendTwoFactorEnabled](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L494>)
 
 ```go
 func (nc *NotificationController) SendTwoFactorEnabled(email, username, lang string) error
@@ -1295,7 +1295,7 @@ func (nc *NotificationController) SendTwoFactorEnabled(email, username, lang str
 SendTwoFactorEnabled tells the account owner that a second factor was enrolled on their account.
 
 <a name="NotificationController.SendTwoFactorRemoved"></a>
-### func \(\*NotificationController\) [SendTwoFactorRemoved](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L528>)
+### func \(\*NotificationController\) [SendTwoFactorRemoved](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L529>)
 
 ```go
 func (nc *NotificationController) SendTwoFactorRemoved(email, username, lang string) error
@@ -1304,7 +1304,7 @@ func (nc *NotificationController) SendTwoFactorRemoved(email, username, lang str
 SendTwoFactorRemoved tells the recipient that a second factor was removed from their account.
 
 <a name="NotificationController.SendVerificationEmail"></a>
-### func \(\*NotificationController\) [SendVerificationEmail](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L450>)
+### func \(\*NotificationController\) [SendVerificationEmail](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L451>)
 
 ```go
 func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.HouseholdInvitation, username, baseURL string, lang string) error
@@ -1313,7 +1313,7 @@ func (nc *NotificationController) SendVerificationEmail(invitation *dbModel.Hous
 SendVerificationEmail sends an email verification link using the invitation email system.
 
 <a name="NotificationController.SetActivityLogRepo"></a>
-### func \(\*NotificationController\) [SetActivityLogRepo](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L102>)
+### func \(\*NotificationController\) [SetActivityLogRepo](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L103>)
 
 ```go
 func (nc *NotificationController) SetActivityLogRepo(repo dbController.ActivityLogRepositoryInterface)
@@ -1322,7 +1322,7 @@ func (nc *NotificationController) SetActivityLogRepo(repo dbController.ActivityL
 SetActivityLogRepo attaches the activity log repository used for streak\-reset entries.
 
 <a name="NotificationController.StartAllUserTelegramPollers"></a>
-### func \(\*NotificationController\) [StartAllUserTelegramPollers](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L936>)
+### func \(\*NotificationController\) [StartAllUserTelegramPollers](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L939>)
 
 ```go
 func (nc *NotificationController) StartAllUserTelegramPollers()
@@ -1331,7 +1331,7 @@ func (nc *NotificationController) StartAllUserTelegramPollers()
 StartAllUserTelegramPollers queries all users with a configured bot token and starts the worker pool for Telegram polling. Called once at startup.
 
 <a name="NotificationController.StartMailDigestScheduler"></a>
-### func \(\*NotificationController\) [StartMailDigestScheduler](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L826>)
+### func \(\*NotificationController\) [StartMailDigestScheduler](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L829>)
 
 ```go
 func (nc *NotificationController) StartMailDigestScheduler(baseURL string)
@@ -1340,7 +1340,7 @@ func (nc *NotificationController) StartMailDigestScheduler(baseURL string)
 StartDigestScheduler starts a goroutine that checks every minute whether any household's digest is due, and sends expiry digest emails.
 
 <a name="NotificationController.StartTelegramPollerPool"></a>
-### func \(\*NotificationController\) [StartTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L941>)
+### func \(\*NotificationController\) [StartTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L944>)
 
 ```go
 func (nc *NotificationController) StartTelegramPollerPool()
@@ -1349,7 +1349,7 @@ func (nc *NotificationController) StartTelegramPollerPool()
 StartTelegramPollerPool initializes the worker pool and registers all users with bot tokens.
 
 <a name="NotificationController.StartUserTelegramPoller"></a>
-### func \(\*NotificationController\) [StartUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L976>)
+### func \(\*NotificationController\) [StartUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L979>)
 
 ```go
 func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken string)
@@ -1358,7 +1358,7 @@ func (nc *NotificationController) StartUserTelegramPoller(userID uint, botToken 
 StartUserTelegramPoller registers or updates a user in the pool and resolves the bot username.
 
 <a name="NotificationController.StopTelegramPollerPool"></a>
-### func \(\*NotificationController\) [StopTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L1005>)
+### func \(\*NotificationController\) [StopTelegramPollerPool](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L1008>)
 
 ```go
 func (nc *NotificationController) StopTelegramPollerPool()
@@ -1367,7 +1367,7 @@ func (nc *NotificationController) StopTelegramPollerPool()
 StopTelegramPollerPool stops all workers and cleans up.
 
 <a name="NotificationController.StopUserTelegramPoller"></a>
-### func \(\*NotificationController\) [StopUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L994>)
+### func \(\*NotificationController\) [StopUserTelegramPoller](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/notificationcontroller.go#L997>)
 
 ```go
 func (nc *NotificationController) StopUserTelegramPoller(userID uint)
@@ -4606,11 +4606,17 @@ util contains helper functions and generic vars
 - [func ClampProductQuantity\(quantity int\) int](<#ClampProductQuantity>)
 - [func IsCountUnit\(raw string\) bool](<#IsCountUnit>)
 - [func IsHTTPSBaseURL\(baseURL string\) bool](<#IsHTTPSBaseURL>)
+- [func MonthKey\(t time.Time\) string](<#MonthKey>)
+- [func MonthShift\(t time.Time, months int\) time.Time](<#MonthShift>)
+- [func MonthStart\(t time.Time\) time.Time](<#MonthStart>)
+- [func MonthWindowStart\(t time.Time, months int\) time.Time](<#MonthWindowStart>)
 - [func OffDumpSQLiteFilename\(databaseName string\) string](<#OffDumpSQLiteFilename>)
 - [func OffDumpStagingFilename\(databaseName string\) string](<#OffDumpStagingFilename>)
 - [func PackSizeFromLegacyAmount\(amount int, unit string\) \(quantity int, packSize string\)](<#PackSizeFromLegacyAmount>)
 - [func PackSizeLabel\(raw string\) string](<#PackSizeLabel>)
 - [func ProductNameLabel\(raw string\) string](<#ProductNameLabel>)
+- [func RecentMonthKeys\(anchor time.Time, months int\) \[\]string](<#RecentMonthKeys>)
+- [func UpcomingMonthKeys\(anchor time.Time, count int\) \[\]string](<#UpcomingMonthKeys>)
 
 
 ## Constants
@@ -5064,6 +5070,44 @@ func IsHTTPSBaseURL(baseURL string) bool
 
 IsHTTPSBaseURL reports whether the deployment's public URL is reached over TLS. The server itself never terminates TLS — it always listens on plain HTTP and a reverse proxy in front of it does the encryption — so the scheme of the configured base URL is the only statement about the transport to the browser. It decides whether a cookie may carry the Secure attribute: a plain\-HTTP deployment must not set it, or the browser drops the cookie and every state\-changing request fails.
 
+<a name="MonthKey"></a>
+## func [MonthKey](<https://github.com/Isotop7/proviant/blob/develop/src/util/date.go#L50>)
+
+```go
+func MonthKey(t time.Time) string
+```
+
+MonthKey returns the key of the month t falls in \("2006\-01"\), in the container's zone.
+
+<a name="MonthShift"></a>
+## func [MonthShift](<https://github.com/Isotop7/proviant/blob/develop/src/util/date.go#L30>)
+
+```go
+func MonthShift(t time.Time, months int) time.Time
+```
+
+MonthShift returns the first instant of the month that lies \`months\` away from the month t falls in. It differs from time.AddDate on purpose: AddDate carries the day of the month over and normalizes the overflow into the neighbouring month, so Oct 31 shifted by \-4 months lands on Jul 1 instead of Jun 1. A month bucket carries no day, so dropping it keeps every shift inside the month it names.
+
+<a name="MonthStart"></a>
+## func [MonthStart](<https://github.com/Isotop7/proviant/blob/develop/src/util/date.go#L19>)
+
+```go
+func MonthStart(t time.Time) time.Time
+```
+
+MonthStart returns the first instant of the month t falls in, in the container's zone.
+
+<a name="MonthWindowStart"></a>
+## func [MonthWindowStart](<https://github.com/Isotop7/proviant/blob/develop/src/util/date.go#L41>)
+
+```go
+func MonthWindowStart(t time.Time, months int) time.Time
+```
+
+MonthWindowStart returns the first instant of the month that opens the window of the \`months\` months ending with the month t falls in. It is the one place that decides how long a month window reaches back, so a caller that filters on a window and a caller that buckets one cannot disagree.
+
+A window of no months has no start: the zero time leaves the window empty instead of covering the anchor's month behind the caller's back.
+
 <a name="OffDumpSQLiteFilename"></a>
 ## func [OffDumpSQLiteFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L422>)
 
@@ -5108,6 +5152,24 @@ func ProductNameLabel(raw string) string
 ```
 
 ProductNameLabel normalises a product name for storage: the whitespace is collapsed and the text is capped, because the source is a free\-text field that a client fills in.
+
+<a name="RecentMonthKeys"></a>
+## func [RecentMonthKeys](<https://github.com/Isotop7/proviant/blob/develop/src/util/date.go#L57>)
+
+```go
+func RecentMonthKeys(anchor time.Time, months int) []string
+```
+
+RecentMonthKeys returns the keys of the \`months\` months of the window that ends with the month \`anchor\` falls in, oldest first. A window of no months names no month.
+
+<a name="UpcomingMonthKeys"></a>
+## func [UpcomingMonthKeys](<https://github.com/Isotop7/proviant/blob/develop/src/util/date.go#L71>)
+
+```go
+func UpcomingMonthKeys(anchor time.Time, count int) []string
+```
+
+UpcomingMonthKeys returns the keys of the \`count\` months that start with the month \`anchor\` falls in, oldest first. A count of no months names no month.
 
 # web
 
@@ -6304,7 +6366,7 @@ func GetConsumptionRate(ctx *gin.Context, appCtx *AppContext)
 GetConsumptionRate returns the estimated weekly consumption rate for a product, based on the last 90 days of consumed \(archived\) products with the same barcode \(or product name as fallback\). Requires at least 2 samples spread over at least 7 days. @Summary Get consumption rate estimate @Description Returns the household's average weekly consumption for a product @Description based on archived consumed samples within the last 90 days. @Description Requires at least 2 samples spanning at least 7 days; otherwise @Description HasEstimate is false. @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} apiModel.ConsumptionRateResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\}/consumption\-rate \[get\]
 
 <a name="GetExpired"></a>
-## func [GetExpired](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_stats.go#L38>)
+## func [GetExpired](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_stats.go#L39>)
 
 ```go
 func GetExpired(ctx *gin.Context, appCtx *AppContext)
@@ -6396,7 +6458,7 @@ func GetProduct(ctx *gin.Context, appCtx *AppContext)
 GetProduct return a single product of a user @Summary Returns a single product @Description Returns a single product of user @Tags product @Produce json @Param id path int true "Product ID" @Success 200 \{object\} apiModel.ProductResponse @Failure 400 \{object\} api.APIResponse @Failure 404 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/\{id\} \[get\]
 
 <a name="GetProductStats"></a>
-## func [GetProductStats](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_stats.go#L104>)
+## func [GetProductStats](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_stats.go#L107>)
 
 ```go
 func GetProductStats(ctx *gin.Context, appCtx *AppContext)
@@ -6405,7 +6467,7 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext)
 GetProductStats returns aggregated product statistics for the authenticated user @Summary Return product statistics @Description Returns waste rate, top archived products, category breakdown and expiry trend. The useFirst list names the products of the whole household ordered by the effective expiry, soonest first, with the storage location and the pack count of each. @Tags product @Produce json @Success 200 \{object\} apiModel.ProductStatsResponse @Failure 400 \{object\} api.APIResponse @Failure 500 \{object\} api.APIResponse @Router /api/v1/products/stats \[get\]
 
 <a name="GetProductSummary"></a>
-## func [GetProductSummary](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_stats.go#L58>)
+## func [GetProductSummary](<https://github.com/Isotop7/proviant/blob/develop/src/api/v1/product_stats.go#L59>)
 
 ```go
 func GetProductSummary(ctx *gin.Context, appCtx *AppContext)
@@ -7491,13 +7553,13 @@ import "github.com/Isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetArchivedProductProjections\(userID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetArchivedProductProjections>)
   - [func \(r \*ProductRepository\) GetArchivedProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetArchivedProductsCount>)
   - [func \(r \*ProductRepository\) GetConsumedSamples\(householdID, userID uint, barcode, name string, since time.Time\) \(\[\]database.Product, error\)](<#ProductRepository.GetConsumedSamples>)
-  - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
+  - [func \(r \*ProductRepository\) GetExpiredProductsCount\(userID uint, now time.Time\) \(int, error\)](<#ProductRepository.GetExpiredProductsCount>)
   - [func \(r \*ProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringInDays>)
   - [func \(r \*ProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]database.Product, error\)](<#ProductRepository.GetExpiringProductsByHousehold>)
   - [func \(r \*ProductRepository\) GetExpiringProductsForMailDigest\(householdID uint\) \(MailDigestProductGroup, error\)](<#ProductRepository.GetExpiringProductsForMailDigest>)
-  - [func \(r \*ProductRepository\) GetExpiringSoonCount\(userID uint, days int\) \(int, error\)](<#ProductRepository.GetExpiringSoonCount>)
-  - [func \(r \*ProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#ProductRepository.GetExpiringSoonProducts>)
-  - [func \(r \*ProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#ProductRepository.GetExpiryTrend>)
+  - [func \(r \*ProductRepository\) GetExpiringSoonCount\(userID uint, days int, now time.Time\) \(int, error\)](<#ProductRepository.GetExpiringSoonCount>)
+  - [func \(r \*ProductRepository\) GetExpiringSoonProducts\(userID uint, days int, now time.Time\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#ProductRepository.GetExpiringSoonProducts>)
+  - [func \(r \*ProductRepository\) GetExpiryTrend\(userID uint, now time.Time\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#ProductRepository.GetExpiryTrend>)
   - [func \(r \*ProductRepository\) GetFrequentlyBoughtProducts\(userID uint, limit int\) \(\[\]apiModel.FrequentProduct, error\)](<#ProductRepository.GetFrequentlyBoughtProducts>)
   - [func \(r \*ProductRepository\) GetHouseholdArchivedProductsForBackup\(householdID uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetHouseholdArchivedProductsForBackup>)
   - [func \(r \*ProductRepository\) GetHouseholdByID\(householdID uint\) \(database.Household, error\)](<#ProductRepository.GetHouseholdByID>)
@@ -7531,7 +7593,7 @@ import "github.com/Isotop7/proviant/controllers/database"
   - [func \(r \*ProductRepository\) GetUserProductsBulkSorted\(userID uint, limit, offset int, sortValue, orderValue string\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsBulkSorted>)
   - [func \(r \*ProductRepository\) GetUserProductsByIDs\(userID uint, ids \[\]uint\) \(\[\]database.Product, error\)](<#ProductRepository.GetUserProductsByIDs>)
   - [func \(r \*ProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#ProductRepository.GetUsersByHouseholdID>)
-  - [func \(r \*ProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#ProductRepository.GetWasteThisMonth>)
+  - [func \(r \*ProductRepository\) GetWasteThisMonth\(userID uint, now time.Time\) \(int, error\)](<#ProductRepository.GetWasteThisMonth>)
   - [func \(r \*ProductRepository\) ListProductsWithoutPackSize\(afterID uint, limit int\) \(\[\]database.Product, error\)](<#ProductRepository.ListProductsWithoutPackSize>)
   - [func \(r \*ProductRepository\) MarkProductOpened\(productID, userID uint, openedAt time.Time, force bool\) \(database.Product, \*time.Time, bool, error\)](<#ProductRepository.MarkProductOpened>)
   - [func \(r \*ProductRepository\) RestoreProduct\(productID, userID uint\) error](<#ProductRepository.RestoreProduct>)
@@ -7674,10 +7736,10 @@ import "github.com/Isotop7/proviant/controllers/database"
 - [type WasteAnalyticsRepository](<#WasteAnalyticsRepository>)
   - [func NewWasteAnalyticsRepository\(db \*gorm.DB\) \*WasteAnalyticsRepository](<#NewWasteAnalyticsRepository>)
   - [func \(r \*WasteAnalyticsRepository\) GetConsumedVsWasted\(householdID uint, since time.Time\) \(ConsumedVsWastedRow, error\)](<#WasteAnalyticsRepository.GetConsumedVsWasted>)
-  - [func \(r \*WasteAnalyticsRepository\) GetMonthlyBreakdown\(householdID uint, since time.Time, months int\) \(\[\]apiModel.WasteMonthly, error\)](<#WasteAnalyticsRepository.GetMonthlyBreakdown>)
+  - [func \(r \*WasteAnalyticsRepository\) GetMonthlyBreakdown\(householdID uint, months int, now time.Time\) \(\[\]apiModel.WasteMonthly, error\)](<#WasteAnalyticsRepository.GetMonthlyBreakdown>)
   - [func \(r \*WasteAnalyticsRepository\) GetMostWastedCategories\(householdID uint, since time.Time, limit int, by string\) \(\[\]apiModel.WasteCategoryStat, error\)](<#WasteAnalyticsRepository.GetMostWastedCategories>)
   - [func \(r \*WasteAnalyticsRepository\) GetMostWastedProducts\(householdID uint, since time.Time, perCategoryLimit int\) \(map\[string\]\[\]apiModel.WasteProductStat, error\)](<#WasteAnalyticsRepository.GetMostWastedProducts>)
-  - [func \(r \*WasteAnalyticsRepository\) GetTrendMonths\(householdID uint, months int\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#WasteAnalyticsRepository.GetTrendMonths>)
+  - [func \(r \*WasteAnalyticsRepository\) GetTrendMonths\(householdID uint, months int, now time.Time\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#WasteAnalyticsRepository.GetTrendMonths>)
   - [func \(r \*WasteAnalyticsRepository\) GetWasteCauseBreakdown\(householdID uint, since time.Time\) \(WasteCauseBreakdown, error\)](<#WasteAnalyticsRepository.GetWasteCauseBreakdown>)
 - [type WasteCauseBreakdown](<#WasteCauseBreakdown>)
 - [type WebhookRepository](<#WebhookRepository>)
@@ -7724,7 +7786,7 @@ ApplyHouseholdShelfLife fills the expiry date and the days\-after\-opening of a 
 A category the household gave no shelf life for keeps the product without a date — a zero\-day shelf life would expire the product on the day it was bought.
 
 <a name="BuildUseFirstProducts"></a>
-## func [BuildUseFirstProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2029>)
+## func [BuildUseFirstProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2027>)
 
 ```go
 func BuildUseFirstProducts(products []database.Product, limit int) []apiModel.StatsUseFirstProduct
@@ -7742,7 +7804,7 @@ func CanonicalCategoryKey(resolver *CategoryResolver, key *string) (*string, err
 CanonicalCategoryKey validates a client\-supplied category key. A missing or empty key clears the category; a key that names no canonical category is refused. Without a resolver there is no canonical set to check against, so the key is stored as it came.
 
 <a name="ExpiringProductStats"></a>
-## func [ExpiringProductStats](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1969>)
+## func [ExpiringProductStats](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1967>)
 
 ```go
 func ExpiringProductStats(product *database.Product, expirationTime time.Time) apiModel.StatsExpiringProduct
@@ -7952,7 +8014,7 @@ func (b *BulkOperationError) ProductID() uint
 ProductID exposes which product a bulk operation error refers to, so callers can distinguish failed items from succeeded ones \(the error list is sparse — it only contains failures, not one entry per requested id\).
 
 <a name="CalendarTokenRepository"></a>
-## type [CalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2858-L2860>)
+## type [CalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2854-L2856>)
 
 
 
@@ -7963,7 +8025,7 @@ type CalendarTokenRepository struct {
 ```
 
 <a name="NewCalendarTokenRepository"></a>
-### func [NewCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2862>)
+### func [NewCalendarTokenRepository](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2858>)
 
 ```go
 func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository
@@ -7972,7 +8034,7 @@ func NewCalendarTokenRepository(db *gorm.DB) *CalendarTokenRepository
 
 
 <a name="CalendarTokenRepository.Create"></a>
-### func \(\*CalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2888>)
+### func \(\*CalendarTokenRepository\) [Create](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2884>)
 
 ```go
 func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error
@@ -7981,7 +8043,7 @@ func (r *CalendarTokenRepository) Create(ct *authentication.CalendarToken) error
 
 
 <a name="CalendarTokenRepository.DeleteByUserID"></a>
-### func \(\*CalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2878>)
+### func \(\*CalendarTokenRepository\) [DeleteByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2874>)
 
 ```go
 func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error
@@ -7990,7 +8052,7 @@ func (r *CalendarTokenRepository) DeleteByUserID(userID uint) error
 
 
 <a name="CalendarTokenRepository.GetByToken"></a>
-### func \(\*CalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2866>)
+### func \(\*CalendarTokenRepository\) [GetByToken](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2862>)
 
 ```go
 func (r *CalendarTokenRepository) GetByToken(token string) (authentication.CalendarToken, error)
@@ -7999,7 +8061,7 @@ func (r *CalendarTokenRepository) GetByToken(token string) (authentication.Calen
 
 
 <a name="CalendarTokenRepository.GetByUserID"></a>
-### func \(\*CalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2882>)
+### func \(\*CalendarTokenRepository\) [GetByUserID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2878>)
 
 ```go
 func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.CalendarToken, error)
@@ -8008,7 +8070,7 @@ func (r *CalendarTokenRepository) GetByUserID(userID uint) (authentication.Calen
 
 
 <a name="CalendarTokenRepository.Update"></a>
-### func \(\*CalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2892>)
+### func \(\*CalendarTokenRepository\) [Update](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2888>)
 
 ```go
 func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error
@@ -8017,7 +8079,7 @@ func (r *CalendarTokenRepository) Update(ct *authentication.CalendarToken) error
 
 
 <a name="CalendarTokenRepositoryInterface"></a>
-## type [CalendarTokenRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2848-L2854>)
+## type [CalendarTokenRepositoryInterface](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2844-L2850>)
 
 
 
@@ -8101,7 +8163,7 @@ func (r *CategoryResolver) ResolveKey(categories string) (string, bool)
 ResolveKey returns the canonical key the free text names, and whether one was found.
 
 <a name="ConsumedVsWastedRow"></a>
-## type [ConsumedVsWastedRow](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L396-L403>)
+## type [ConsumedVsWastedRow](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L401-L408>)
 
 ConsumedVsWastedRow is the aggregate over a time window.
 
@@ -8753,7 +8815,7 @@ type InvitationRepositoryInterface interface {
 ```
 
 <a name="MailDigestProductGroup"></a>
-## type [MailDigestProductGroup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2600-L2604>)
+## type [MailDigestProductGroup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2596-L2600>)
 
 
 
@@ -9429,7 +9491,7 @@ func NewProductRepository(db *gorm.DB) *ProductRepository
 
 
 <a name="ProductRepository.BulkConsumeProducts"></a>
-### func \(\*ProductRepository\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2828>)
+### func \(\*ProductRepository\) [BulkConsumeProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2824>)
 
 ```go
 func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
@@ -9447,7 +9509,7 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 
 
 <a name="ProductRepository.BulkWasteProducts"></a>
-### func \(\*ProductRepository\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2838>)
+### func \(\*ProductRepository\) [BulkWasteProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2834>)
 
 ```go
 func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint, cause string) []BulkOperationError
@@ -9456,7 +9518,7 @@ func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint, ca
 
 
 <a name="ProductRepository.ConsumeProduct"></a>
-### func \(\*ProductRepository\) [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2664>)
+### func \(\*ProductRepository\) [ConsumeProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2660>)
 
 ```go
 func (r *ProductRepository) ConsumeProduct(productID, userID uint) error
@@ -9465,7 +9527,7 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error
 
 
 <a name="ProductRepository.ConsumeProductPartial"></a>
-### func \(\*ProductRepository\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2683>)
+### func \(\*ProductRepository\) [ConsumeProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2679>)
 
 ```go
 func (r *ProductRepository) ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
@@ -9485,7 +9547,7 @@ CountSearchProducts counts the products the search matches. The count uses the p
 The count runs on a query of its own: a statement that already carries a LIMIT would cap the count at the page size, and one that carries an OFFSET would skip the count's own row and answer zero.
 
 <a name="ProductRepository.CreateOpenFoodFactsCache"></a>
-### func \(\*ProductRepository\) [CreateOpenFoodFactsCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2180>)
+### func \(\*ProductRepository\) [CreateOpenFoodFactsCache](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2178>)
 
 ```go
 func (r *ProductRepository) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error
@@ -9536,7 +9598,7 @@ The lookup is scoped to the household and to privacyScope, so another member's p
 The candidate set is the household's rows with that barcode, so the comparison runs in Go through Product.IsDuplicateOf and the rule cannot drift from the one the client is told about. The candidate query trims the stored barcode as well, because a row written with a padded barcode is the same barcode and must not slip past the rule.
 
 <a name="ProductRepository.GetActiveExpiryCounts"></a>
-### func \(\*ProductRepository\) [GetActiveExpiryCounts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2311>)
+### func \(\*ProductRepository\) [GetActiveExpiryCounts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2308>)
 
 ```go
 func (r *ProductRepository) GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (expired, critical int, err error)
@@ -9556,7 +9618,7 @@ func (r *ProductRepository) GetActiveProductProjections(userID, locationID uint)
 GetActiveProductProjections returns the household's active rows narrowed to productProjectionColumns, ordered by id. locationID narrows the result to one storage location; pass 0 for every location. Callers sort, filter by status and slice a single page out of the result before hydrating it.
 
 <a name="ProductRepository.GetActiveProductsCount"></a>
-### func \(\*ProductRepository\) [GetActiveProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1742>)
+### func \(\*ProductRepository\) [GetActiveProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1740>)
 
 ```go
 func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error)
@@ -9587,7 +9649,7 @@ func (r *ProductRepository) GetArchivedProductProjections(userID uint) ([]databa
 GetArchivedProductProjections is the archived\-view counterpart of GetActiveProductProjections. The archived view has no expiry ordering of its own, so id order is what keeps a row on exactly one page.
 
 <a name="ProductRepository.GetArchivedProductsCount"></a>
-### func \(\*ProductRepository\) [GetArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1765>)
+### func \(\*ProductRepository\) [GetArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1763>)
 
 ```go
 func (r *ProductRepository) GetArchivedProductsCount(userID uint) (int, error)
@@ -9598,7 +9660,7 @@ GetArchivedProductsCount returns how many products the household has archived. I
 The count runs on a query of its own: a statement that already carries a LIMIT would cap the count at the page size, and one that carries an OFFSET would skip the count's own row and answer zero.
 
 <a name="ProductRepository.GetConsumedSamples"></a>
-### func \(\*ProductRepository\) [GetConsumedSamples](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2896>)
+### func \(\*ProductRepository\) [GetConsumedSamples](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2892>)
 
 ```go
 func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
@@ -9610,7 +9672,7 @@ func (r *ProductRepository) GetConsumedSamples(householdID, userID uint, barcode
 ### func \(\*ProductRepository\) [GetExpiredProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1608>)
 
 ```go
-func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error)
+func (r *ProductRepository) GetExpiredProductsCount(userID uint, now time.Time) (int, error)
 ```
 
 GetExpiredProductsCount returns how many of the user's active products are already past their effective expiry. It follows the same shape as GetActiveExpiryCounts: a one\-sided SQL prune of the rows that cannot possibly be expired, then the effective\-date verdict in Go, because the date arithmetic \(opened\_at \+ days\_after\_opening\) has no portable SQL form.
@@ -9618,7 +9680,7 @@ GetExpiredProductsCount returns how many of the user's active products are alrea
 The prune deliberately also matches rows with a zero expire\_at, which the Go loop below skips — a product with no expiry set is never expired.
 
 <a name="ProductRepository.GetExpiringInDays"></a>
-### func \(\*ProductRepository\) [GetExpiringInDays](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2072>)
+### func \(\*ProductRepository\) [GetExpiringInDays](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2070>)
 
 ```go
 func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database.Product, error)
@@ -9627,7 +9689,7 @@ func (r *ProductRepository) GetExpiringInDays(userID uint, days int) ([]database
 
 
 <a name="ProductRepository.GetExpiringProductsByHousehold"></a>
-### func \(\*ProductRepository\) [GetExpiringProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2416>)
+### func \(\*ProductRepository\) [GetExpiringProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2412>)
 
 ```go
 func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
@@ -9636,7 +9698,7 @@ func (r *ProductRepository) GetExpiringProductsByHousehold(householdID uint, day
 GetExpiringProductsByHousehold returns non\-private products for a household whose effective expiry \(earlier of printed ExpireAt and OpenedAt\+DaysAfterOpening\) falls in the window \[startOfToday, endOfWindow\].
 
 <a name="ProductRepository.GetExpiringProductsForMailDigest"></a>
-### func \(\*ProductRepository\) [GetExpiringProductsForMailDigest](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2606>)
+### func \(\*ProductRepository\) [GetExpiringProductsForMailDigest](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2602>)
 
 ```go
 func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
@@ -9645,19 +9707,19 @@ func (r *ProductRepository) GetExpiringProductsForMailDigest(householdID uint) (
 
 
 <a name="ProductRepository.GetExpiringSoonCount"></a>
-### func \(\*ProductRepository\) [GetExpiringSoonCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2274>)
+### func \(\*ProductRepository\) [GetExpiringSoonCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2272>)
 
 ```go
-func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error)
+func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error)
 ```
 
 
 
 <a name="ProductRepository.GetExpiringSoonProducts"></a>
-### func \(\*ProductRepository\) [GetExpiringSoonProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1915>)
+### func \(\*ProductRepository\) [GetExpiringSoonProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1914>)
 
 ```go
-func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error)
 ```
 
 
@@ -9666,13 +9728,13 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 ### func \(\*ProductRepository\) [GetExpiryTrend](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1874>)
 
 ```go
-func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
+func (r *ProductRepository) GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error)
 ```
 
-GetExpiryTrend buckets the next 12 months of expiries. Only the three columns EffectiveExpireAt reads are projected, so the query cost tracks the row count rather than the row width.
+GetExpiryTrend buckets the next 12 months of expiries, starting with the calendar month \`now\` falls in. The buckets follow the container's zone, so an expiry lands in the month the label next to it shows. Only the three columns EffectiveExpireAt reads are projected, so the query cost tracks the row count rather than the row width.
 
 <a name="ProductRepository.GetFrequentlyBoughtProducts"></a>
-### func \(\*ProductRepository\) [GetFrequentlyBoughtProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1692>)
+### func \(\*ProductRepository\) [GetFrequentlyBoughtProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1690>)
 
 ```go
 func (r *ProductRepository) GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error)
@@ -9681,7 +9743,7 @@ func (r *ProductRepository) GetFrequentlyBoughtProducts(userID uint, limit int) 
 GetFrequentlyBoughtProducts returns the staples the household buys repeatedly, most frequent first and most recent second. A product the household bought fewer than util.FrequentProductMinPurchases times is not a staple and never appears.
 
 <a name="ProductRepository.GetHouseholdArchivedProductsForBackup"></a>
-### func \(\*ProductRepository\) [GetHouseholdArchivedProductsForBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2470>)
+### func \(\*ProductRepository\) [GetHouseholdArchivedProductsForBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2466>)
 
 ```go
 func (r *ProductRepository) GetHouseholdArchivedProductsForBackup(householdID uint) ([]database.Product, error)
@@ -9690,7 +9752,7 @@ func (r *ProductRepository) GetHouseholdArchivedProductsForBackup(householdID ui
 GetHouseholdArchivedProductsForBackup is the archived counterpart of GetHouseholdProductsForBackup: every soft\-deleted household row, private ones included.
 
 <a name="ProductRepository.GetHouseholdByID"></a>
-### func \(\*ProductRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2216>)
+### func \(\*ProductRepository\) [GetHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2214>)
 
 ```go
 func (r *ProductRepository) GetHouseholdByID(householdID uint) (database.Household, error)
@@ -9699,7 +9761,7 @@ func (r *ProductRepository) GetHouseholdByID(householdID uint) (database.Househo
 
 
 <a name="ProductRepository.GetHouseholdProductsForBackup"></a>
-### func \(\*ProductRepository\) [GetHouseholdProductsForBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2458>)
+### func \(\*ProductRepository\) [GetHouseholdProductsForBackup](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2454>)
 
 ```go
 func (r *ProductRepository) GetHouseholdProductsForBackup(householdID uint) ([]database.Product, error)
@@ -9708,7 +9770,7 @@ func (r *ProductRepository) GetHouseholdProductsForBackup(householdID uint) ([]d
 GetHouseholdProductsForBackup returns every active household product including private rows. A backup exists to reproduce the household, so the privacy scope every user\-facing query applies must not silently drop a member's private stock from the file.
 
 <a name="ProductRepository.GetLastInsertedProduct"></a>
-### func \(\*ProductRepository\) [GetLastInsertedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2115>)
+### func \(\*ProductRepository\) [GetLastInsertedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2113>)
 
 ```go
 func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.Product, error)
@@ -9717,7 +9779,7 @@ func (r *ProductRepository) GetLastInsertedProduct(householdID uint) (database.P
 
 
 <a name="ProductRepository.GetLastNotifiedProduct"></a>
-### func \(\*ProductRepository\) [GetLastNotifiedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2059>)
+### func \(\*ProductRepository\) [GetLastNotifiedProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2057>)
 
 ```go
 func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.Product, error)
@@ -9726,7 +9788,7 @@ func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.P
 
 
 <a name="ProductRepository.GetMatchableProductsByHousehold"></a>
-### func \(\*ProductRepository\) [GetMatchableProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2489>)
+### func \(\*ProductRepository\) [GetMatchableProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2485>)
 
 ```go
 func (r *ProductRepository) GetMatchableProductsByHousehold(householdID uint) ([]database.Product, error)
@@ -9737,7 +9799,7 @@ GetMatchableProductsByHousehold returns the household's matchable products with 
 The returned Products are a read projection, NOT fully populated rows: every field other than ID, ProductName and Categories is the zero value. Callers must not read anything else off them; use GetProductsByHousehold for that.
 
 <a name="ProductRepository.GetOpenFoodFactsCacheByBarcode"></a>
-### func \(\*ProductRepository\) [GetOpenFoodFactsCacheByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2154>)
+### func \(\*ProductRepository\) [GetOpenFoodFactsCacheByBarcode](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2152>)
 
 ```go
 func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error)
@@ -9746,7 +9808,7 @@ func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (data
 
 
 <a name="ProductRepository.GetOpenFoodFactsCacheWithRemoteImageURL"></a>
-### func \(\*ProductRepository\) [GetOpenFoodFactsCacheWithRemoteImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2198>)
+### func \(\*ProductRepository\) [GetOpenFoodFactsCacheWithRemoteImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2196>)
 
 ```go
 func (r *ProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]database.OpenFoodFactsCache, error)
@@ -9755,7 +9817,7 @@ func (r *ProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]databas
 
 
 <a name="ProductRepository.GetOpenFoodFactsCacheWithoutStorageHint"></a>
-### func \(\*ProductRepository\) [GetOpenFoodFactsCacheWithoutStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2188>)
+### func \(\*ProductRepository\) [GetOpenFoodFactsCacheWithoutStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2186>)
 
 ```go
 func (r *ProductRepository) GetOpenFoodFactsCacheWithoutStorageHint() ([]database.OpenFoodFactsCache, error)
@@ -9764,7 +9826,7 @@ func (r *ProductRepository) GetOpenFoodFactsCacheWithoutStorageHint() ([]databas
 
 
 <a name="ProductRepository.GetOpenFoodFactsCachesByBarcodes"></a>
-### func \(\*ProductRepository\) [GetOpenFoodFactsCachesByBarcodes](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2164>)
+### func \(\*ProductRepository\) [GetOpenFoodFactsCachesByBarcodes](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2162>)
 
 ```go
 func (r *ProductRepository) GetOpenFoodFactsCachesByBarcodes(barcodes []string) ([]database.OpenFoodFactsCache, error)
@@ -9791,7 +9853,7 @@ func (r *ProductRepository) GetProductBySyncID(userID uint, clientSyncID string)
 
 
 <a name="ProductRepository.GetProductCategoryBreakdown"></a>
-### func \(\*ProductRepository\) [GetProductCategoryBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1802>)
+### func \(\*ProductRepository\) [GetProductCategoryBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1800>)
 
 ```go
 func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error)
@@ -9809,7 +9871,7 @@ func (r *ProductRepository) GetProductIdentity(productID, userID uint) (database
 GetProductIdentity returns a product's identity \(household \+ barcode \+ name \+ pack count \+ min stock \+ private flag \+ owner\) without the StorageLocation preload. It exists for hot read paths that only need those fields and would otherwise pay for a useless JOIN.
 
 <a name="ProductRepository.GetProductSetFingerprint"></a>
-### func \(\*ProductRepository\) [GetProductSetFingerprint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2551>)
+### func \(\*ProductRepository\) [GetProductSetFingerprint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2547>)
 
 ```go
 func (r *ProductRepository) GetProductSetFingerprint(householdID uint) (string, error)
@@ -9824,7 +9886,7 @@ Expiry is included as the ranking day bucket — the whole 24\-hour spans betwee
 The bucket is what makes the key track the ranking exactly. A calendar date does not: two timestamps inside one UTC date can still straddle a 24\-hour bucket boundary, so encoding the date lets the order change while the key stays put, and an edit that does move the order can go unnoticed. Bucketing also keeps the key stable against edits that cannot move the order — a time\-of\-day change within one bucket — which is what stops quantity and scan writes from rekeying the cache. A product leaves its bucket at most once a day, the same cadence at which the expiring\-ID component of the key already moves.
 
 <a name="ProductRepository.GetProductsByHousehold"></a>
-### func \(\*ProductRepository\) [GetProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2448>)
+### func \(\*ProductRepository\) [GetProductsByHousehold](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2444>)
 
 ```go
 func (r *ProductRepository) GetProductsByHousehold(householdID uint) ([]database.Product, error)
@@ -9842,7 +9904,7 @@ func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product
 GetProductsExpired returns the user's products whose effective expiry lies in the past, matching GetExpiredProductsCount. A zero effective expiry means the product has no expiry set — it is never expired.
 
 <a name="ProductRepository.GetSubThresholdProducts"></a>
-### func \(\*ProductRepository\) [GetSubThresholdProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2583>)
+### func \(\*ProductRepository\) [GetSubThresholdProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2579>)
 
 ```go
 func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Product, error)
@@ -9851,7 +9913,7 @@ func (r *ProductRepository) GetSubThresholdProducts(userID uint) ([]database.Pro
 
 
 <a name="ProductRepository.GetUniqueArchivedProductsCount"></a>
-### func \(\*ProductRepository\) [GetUniqueArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1783>)
+### func \(\*ProductRepository\) [GetUniqueArchivedProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1781>)
 
 ```go
 func (r *ProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, error)
@@ -9860,7 +9922,7 @@ func (r *ProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, er
 GetUniqueArchivedProductsCount counts distinct barcodes among archived products. COUNT\(DISTINCT barcode\) returns the same number as grouping the rows in Go by barcode and counting the groups — an empty barcode is one group on both sides.
 
 <a name="ProductRepository.GetUseFirstProducts"></a>
-### func \(\*ProductRepository\) [GetUseFirstProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1994>)
+### func \(\*ProductRepository\) [GetUseFirstProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L1992>)
 
 ```go
 func (r *ProductRepository) GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error)
@@ -9871,7 +9933,7 @@ GetUseFirstProducts returns the household's active products ordered by the effec
 The order is the one the products page uses: the narrow projection is sorted with SortByEffectiveExpiry and only the rows that make up the list are hydrated, so a product holds the same position in the tile and in the list. A limit of zero returns the whole pantry.
 
 <a name="ProductRepository.GetUserActiveProductsFiltered"></a>
-### func \(\*ProductRepository\) [GetUserActiveProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2222>)
+### func \(\*ProductRepository\) [GetUserActiveProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2220>)
 
 ```go
 func (r *ProductRepository) GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
@@ -9900,7 +9962,7 @@ func (r *ProductRepository) GetUserArchivedProductsByIDs(userID uint, ids []uint
 GetUserArchivedProductsByIDs hydrates one page of the archived view: full rows with their StorageLocation, for the given IDs only.
 
 <a name="ProductRepository.GetUserArchivedProductsFiltered"></a>
-### func \(\*ProductRepository\) [GetUserArchivedProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2245>)
+### func \(\*ProductRepository\) [GetUserArchivedProductsFiltered](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2243>)
 
 ```go
 func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
@@ -9909,7 +9971,7 @@ func (r *ProductRepository) GetUserArchivedProductsFiltered(userID uint, from, t
 
 
 <a name="ProductRepository.GetUserByID"></a>
-### func \(\*ProductRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2204>)
+### func \(\*ProductRepository\) [GetUserByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2202>)
 
 ```go
 func (r *ProductRepository) GetUserByID(userID uint) (authentication.User, error)
@@ -9918,7 +9980,7 @@ func (r *ProductRepository) GetUserByID(userID uint) (authentication.User, error
 
 
 <a name="ProductRepository.GetUserHouseholdByID"></a>
-### func \(\*ProductRepository\) [GetUserHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2210>)
+### func \(\*ProductRepository\) [GetUserHouseholdByID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2208>)
 
 ```go
 func (r *ProductRepository) GetUserHouseholdByID(userID uint) (uint, error)
@@ -9978,7 +10040,7 @@ func (r *ProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dat
 GetUserProductsByIDs returns the active products with the given IDs that belong to the user's household. Used for lightweight lookups of a small, known set of products \(e.g. cook workflow\).
 
 <a name="ProductRepository.GetUsersByHouseholdID"></a>
-### func \(\*ProductRepository\) [GetUsersByHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2268>)
+### func \(\*ProductRepository\) [GetUsersByHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2266>)
 
 ```go
 func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
@@ -9987,10 +10049,10 @@ func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentic
 
 
 <a name="ProductRepository.GetWasteThisMonth"></a>
-### func \(\*ProductRepository\) [GetWasteThisMonth](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2368>)
+### func \(\*ProductRepository\) [GetWasteThisMonth](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2365>)
 
 ```go
-func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error)
+func (r *ProductRepository) GetWasteThisMonth(userID uint, now time.Time) (int, error)
 ```
 
 GetWasteThisMonth counts the waste events of the month. A waste event is one wasted product, full or partial. The savings ledger holds one record per waste, while the products table only knows the wastes that archived a product — a partial waste leaves the product active and would be invisible there, so the two sources would report different numbers for the same waste. The archived rows without a ledger entry are the wastes from before the ledger existed; they keep the count of a household that predates it.
@@ -10072,7 +10134,7 @@ func (r *ProductRepository) SetProductPackSize(productID uint, packSize string) 
 SetProductPackSize stores the size of one pack of a product.
 
 <a name="ProductRepository.UpdateOpenFoodFactsCacheImageURL"></a>
-### func \(\*ProductRepository\) [UpdateOpenFoodFactsCacheImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2184>)
+### func \(\*ProductRepository\) [UpdateOpenFoodFactsCacheImageURL](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2182>)
 
 ```go
 func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL string) error
@@ -10081,7 +10143,7 @@ func (r *ProductRepository) UpdateOpenFoodFactsCacheImageURL(barcode, imageURL s
 
 
 <a name="ProductRepository.UpdateOpenFoodFactsCacheStorageHint"></a>
-### func \(\*ProductRepository\) [UpdateOpenFoodFactsCacheStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2194>)
+### func \(\*ProductRepository\) [UpdateOpenFoodFactsCacheStorageHint](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2192>)
 
 ```go
 func (r *ProductRepository) UpdateOpenFoodFactsCacheStorageHint(barcode, storageHint string) error
@@ -10108,7 +10170,7 @@ func (r *ProductRepository) UpdateProductQuantity(productID uint, userID uint, d
 UpdateProductQuantity applies delta to the product and reports it as \(deleted, applied, err\). applied is false when the mutation id was already applied, so callers can skip side effects a replay must not repeat twice. Claims outlive this call and expire through the claim sweep in proviant.go, which is the only thing that bounds the table: pruning per product here would never run for a product whose last mutation was its only claim. The count stays inside the range a product may hold: the delta is clamped there, so no path can write a count the create and the patch would refuse.
 
 <a name="ProductRepository.UserHasProductAccess"></a>
-### func \(\*ProductRepository\) [UserHasProductAccess](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2128>)
+### func \(\*ProductRepository\) [UserHasProductAccess](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2126>)
 
 ```go
 func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) bool
@@ -10117,7 +10179,7 @@ func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) boo
 
 
 <a name="ProductRepository.WasteProduct"></a>
-### func \(\*ProductRepository\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2799>)
+### func \(\*ProductRepository\) [WasteProduct](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2795>)
 
 ```go
 func (r *ProductRepository) WasteProduct(productID, userID uint, cause string) error
@@ -10126,7 +10188,7 @@ func (r *ProductRepository) WasteProduct(productID, userID uint, cause string) e
 
 
 <a name="ProductRepository.WasteProductPartial"></a>
-### func \(\*ProductRepository\) [WasteProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2688>)
+### func \(\*ProductRepository\) [WasteProductPartial](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/product_repository.go#L2684>)
 
 ```go
 func (r *ProductRepository) WasteProductPartial(product *database.Product, quantity int, mutationID *string, cause string) (int, bool, bool, error)
@@ -10170,14 +10232,14 @@ type ProductRepositoryInterface interface {
     SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
     SetProductNotifiedAt(productID uint) error
     GetProductsExpired(userID uint) ([]*database.Product, error)
-    GetExpiredProductsCount(userID uint) (int, error)
+    GetExpiredProductsCount(userID uint, now time.Time) (int, error)
     GetArchivedProductsCount(userID uint) (int, error)
     GetUniqueArchivedProductsCount(userID uint) (int, error)
     GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error)
     GetActiveProductsCount(userID uint) (int, error)
     GetProductCategoryBreakdown(userID uint) (map[string]int, error)
-    GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
-    GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+    GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error)
+    GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error)
     GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error)
     GetLastNotifiedProduct(householdID uint) (database.Product, error)
     GetExpiringInDays(userID uint, days int) ([]database.Product, error)
@@ -10196,9 +10258,9 @@ type ProductRepositoryInterface interface {
     GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
     GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
     GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
-    GetExpiringSoonCount(userID uint, days int) (int, error)
+    GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error)
     GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (expired, critical int, err error)
-    GetWasteThisMonth(userID uint) (int, error)
+    GetWasteThisMonth(userID uint, now time.Time) (int, error)
     GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
     GetProductsByHousehold(householdID uint) ([]database.Product, error)
     GetSubThresholdProducts(userID uint) ([]database.Product, error)
@@ -11534,16 +11596,16 @@ func (r *WasteAnalyticsRepository) GetConsumedVsWasted(householdID uint, since t
 GetConsumedVsWasted returns the aggregate count/EUR/CO2 for consumed and wasted events in the window \[since, now\].
 
 <a name="WasteAnalyticsRepository.GetMonthlyBreakdown"></a>
-### func \(\*WasteAnalyticsRepository\) [GetMonthlyBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L66>)
+### func \(\*WasteAnalyticsRepository\) [GetMonthlyBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L67>)
 
 ```go
-func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, since time.Time, months int) ([]apiModel.WasteMonthly, error)
+func (r *WasteAnalyticsRepository) GetMonthlyBreakdown(householdID uint, months int, now time.Time) ([]apiModel.WasteMonthly, error)
 ```
 
-GetMonthlyBreakdown returns per\-month consumed and wasted aggregates, padded with zero buckets for months that have no data so the response is contiguous from \`since\`.
+GetMonthlyBreakdown returns per\-month consumed and wasted aggregates for the \`months\` months that end with the month \`now\` falls in, padded with zero buckets for months that have no data so the response is contiguous.
 
 <a name="WasteAnalyticsRepository.GetMostWastedCategories"></a>
-### func \(\*WasteAnalyticsRepository\) [GetMostWastedCategories](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L130>)
+### func \(\*WasteAnalyticsRepository\) [GetMostWastedCategories](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L134>)
 
 ```go
 func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, since time.Time, limit int, by string) ([]apiModel.WasteCategoryStat, error)
@@ -11552,7 +11614,7 @@ func (r *WasteAnalyticsRepository) GetMostWastedCategories(householdID uint, sin
 GetMostWastedCategories returns the top \`limit\` categories of wasted products for the household in the window \[since, now\]. Categories are resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket. Results are sorted by \`by\` — "count" \(default\) or "cost".
 
 <a name="WasteAnalyticsRepository.GetMostWastedProducts"></a>
-### func \(\*WasteAnalyticsRepository\) [GetMostWastedProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L462>)
+### func \(\*WasteAnalyticsRepository\) [GetMostWastedProducts](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L467>)
 
 ```go
 func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since time.Time, perCategoryLimit int) (map[string][]apiModel.WasteProductStat, error)
@@ -11561,16 +11623,16 @@ func (r *WasteAnalyticsRepository) GetMostWastedProducts(householdID uint, since
 GetMostWastedProducts returns the top wasted products grouped by category for the household in the window \[since, now\]. Each category's slice is capped at perCategoryLimit. The category key is resolved from the still\-existing Product row; if a wasted product has been hard\-deleted it falls into the "Other" bucket.
 
 <a name="WasteAnalyticsRepository.GetTrendMonths"></a>
-### func \(\*WasteAnalyticsRepository\) [GetTrendMonths](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L363>)
+### func \(\*WasteAnalyticsRepository\) [GetTrendMonths](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L368>)
 
 ```go
-func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int) ([]apiModel.StatsMonthlyCount, error)
+func (r *WasteAnalyticsRepository) GetTrendMonths(householdID uint, months int, now time.Time) ([]apiModel.StatsMonthlyCount, error)
 ```
 
-GetTrendMonths returns wasted\-count\-per\-month for the last \`months\` months \(ascending\).
+GetTrendMonths returns wasted\-count\-per\-month for the \`months\` months that end with the month \`now\` falls in \(ascending\).
 
 <a name="WasteAnalyticsRepository.GetWasteCauseBreakdown"></a>
-### func \(\*WasteAnalyticsRepository\) [GetWasteCauseBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L208>)
+### func \(\*WasteAnalyticsRepository\) [GetWasteCauseBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L212>)
 
 ```go
 func (r *WasteAnalyticsRepository) GetWasteCauseBreakdown(householdID uint, since time.Time) (WasteCauseBreakdown, error)
@@ -11579,7 +11641,7 @@ func (r *WasteAnalyticsRepository) GetWasteCauseBreakdown(householdID uint, sinc
 GetWasteCauseBreakdown returns the wasted events of the household since the given instant, grouped by the reason they were wasted, together with the category the household most over\-buys.
 
 <a name="WasteCauseBreakdown"></a>
-## type [WasteCauseBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L195-L203>)
+## type [WasteCauseBreakdown](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/database/waste_analytics_repository.go#L199-L207>)
 
 WasteCauseBreakdown holds the wasted events of a household grouped by the reason they were wasted, plus the category the household most over\-buys.
 
@@ -14255,7 +14317,7 @@ MonthlyWasteReportConfiguration controls when the monthly waste report email is 
 ```go
 type MonthlyWasteReportConfiguration struct {
     Day  int `mapstructure:"day"`  // day-of-month (1–28)
-    Hour int `mapstructure:"hour"` // hour of day, UTC (0–23)
+    Hour int `mapstructure:"hour"` // hour of day in the container's zone (0–23)
 }
 ```
 
@@ -15012,7 +15074,7 @@ type Date time.Time
 ```
 
 <a name="Date.Format"></a>
-### func \(Date\) [Format](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/timestamp.go#L36>)
+### func \(Date\) [Format](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/timestamp.go#L37>)
 
 ```go
 func (d Date) Format(s string) string
@@ -15021,7 +15083,7 @@ func (d Date) Format(s string) string
 Format returns a formatted string of Date
 
 <a name="Date.MarshalJSON"></a>
-### func \(Date\) [MarshalJSON](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/timestamp.go#L31>)
+### func \(Date\) [MarshalJSON](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/timestamp.go#L32>)
 
 ```go
 func (d Date) MarshalJSON() ([]byte, error)
@@ -15030,13 +15092,13 @@ func (d Date) MarshalJSON() ([]byte, error)
 MarshalJSON generates JSON from a Date
 
 <a name="Date.UnmarshalJSON"></a>
-### func \(\*Date\) [UnmarshalJSON](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/timestamp.go#L20>)
+### func \(\*Date\) [UnmarshalJSON](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/timestamp.go#L21>)
 
 ```go
 func (d *Date) UnmarshalJSON(b []byte) error
 ```
 
-UnmarshalJSON parses JSON into Date
+UnmarshalJSON parses JSON into Date. A date\-only string names a calendar day in the container's zone, the zone the app renders dates in.
 
 <a name="EmailVerification"></a>
 ## type [EmailVerification](<https://github.com/Isotop7/proviant/blob/develop/src/models/database/email_verification.go#L15-L21>)
@@ -16069,13 +16131,13 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetArchivedProductProjections\(userID uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetArchivedProductProjections>)
   - [func \(m \*MockProductRepository\) GetArchivedProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetArchivedProductsCount>)
   - [func \(m \*MockProductRepository\) GetConsumedSamples\(householdID, userID uint, barcode, name string, since time.Time\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetConsumedSamples>)
-  - [func \(m \*MockProductRepository\) GetExpiredProductsCount\(userID uint\) \(int, error\)](<#MockProductRepository.GetExpiredProductsCount>)
+  - [func \(m \*MockProductRepository\) GetExpiredProductsCount\(userID uint, now time.Time\) \(int, error\)](<#MockProductRepository.GetExpiredProductsCount>)
   - [func \(m \*MockProductRepository\) GetExpiringInDays\(userID uint, days int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringInDays>)
   - [func \(m \*MockProductRepository\) GetExpiringProductsByHousehold\(householdID uint, daysAhead int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetExpiringProductsByHousehold>)
   - [func \(m \*MockProductRepository\) GetExpiringProductsForMailDigest\(householdID uint\) \(database.MailDigestProductGroup, error\)](<#MockProductRepository.GetExpiringProductsForMailDigest>)
-  - [func \(m \*MockProductRepository\) GetExpiringSoonCount\(userID uint, days int\) \(int, error\)](<#MockProductRepository.GetExpiringSoonCount>)
-  - [func \(m \*MockProductRepository\) GetExpiringSoonProducts\(userID uint, days int\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#MockProductRepository.GetExpiringSoonProducts>)
-  - [func \(m \*MockProductRepository\) GetExpiryTrend\(userID uint\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#MockProductRepository.GetExpiryTrend>)
+  - [func \(m \*MockProductRepository\) GetExpiringSoonCount\(userID uint, days int, now time.Time\) \(int, error\)](<#MockProductRepository.GetExpiringSoonCount>)
+  - [func \(m \*MockProductRepository\) GetExpiringSoonProducts\(userID uint, days int, now time.Time\) \(\[\]apiModel.StatsExpiringProduct, error\)](<#MockProductRepository.GetExpiringSoonProducts>)
+  - [func \(m \*MockProductRepository\) GetExpiryTrend\(userID uint, now time.Time\) \(\[\]apiModel.StatsMonthlyCount, error\)](<#MockProductRepository.GetExpiryTrend>)
   - [func \(m \*MockProductRepository\) GetFrequentlyBoughtProducts\(userID uint, limit int\) \(\[\]apiModel.FrequentProduct, error\)](<#MockProductRepository.GetFrequentlyBoughtProducts>)
   - [func \(m \*MockProductRepository\) GetHouseholdByID\(householdID uint\) \(dbModel.Household, error\)](<#MockProductRepository.GetHouseholdByID>)
   - [func \(m \*MockProductRepository\) GetLastInsertedProduct\(householdID uint\) \(dbModel.Product, error\)](<#MockProductRepository.GetLastInsertedProduct>)
@@ -16105,7 +16167,7 @@ Package mocks provides test utilities that import controllers/database. It is a 
   - [func \(m \*MockProductRepository\) GetUserProductsBulkSorted\(userID uint, limit, offset int, sortValue, orderValue string\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserProductsBulkSorted>)
   - [func \(m \*MockProductRepository\) GetUserProductsByIDs\(userID uint, ids \[\]uint\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.GetUserProductsByIDs>)
   - [func \(m \*MockProductRepository\) GetUsersByHouseholdID\(householdID uint\) \(\[\]authentication.User, error\)](<#MockProductRepository.GetUsersByHouseholdID>)
-  - [func \(m \*MockProductRepository\) GetWasteThisMonth\(userID uint\) \(int, error\)](<#MockProductRepository.GetWasteThisMonth>)
+  - [func \(m \*MockProductRepository\) GetWasteThisMonth\(userID uint, now time.Time\) \(int, error\)](<#MockProductRepository.GetWasteThisMonth>)
   - [func \(m \*MockProductRepository\) ListProductsWithoutPackSize\(afterID uint, limit int\) \(\[\]dbModel.Product, error\)](<#MockProductRepository.ListProductsWithoutPackSize>)
   - [func \(m \*MockProductRepository\) MarkProductOpened\(productID, userID uint, openedAt time.Time, force bool\) \(dbModel.Product, \*time.Time, bool, error\)](<#MockProductRepository.MarkProductOpened>)
   - [func \(m \*MockProductRepository\) RestoreProduct\(productID, userID uint\) error](<#MockProductRepository.RestoreProduct>)
@@ -17449,7 +17511,7 @@ func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, bar
 ### func \(\*MockProductRepository\) [GetExpiredProductsCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L192>)
 
 ```go
-func (m *MockProductRepository) GetExpiredProductsCount(userID uint) (int, error)
+func (m *MockProductRepository) GetExpiredProductsCount(userID uint, now time.Time) (int, error)
 ```
 
 
@@ -17485,7 +17547,7 @@ func (m *MockProductRepository) GetExpiringProductsForMailDigest(householdID uin
 ### func \(\*MockProductRepository\) [GetExpiringSoonCount](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L270>)
 
 ```go
-func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error)
+func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error)
 ```
 
 
@@ -17494,7 +17556,7 @@ func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int) (int
 ### func \(\*MockProductRepository\) [GetExpiringSoonProducts](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L213>)
 
 ```go
-func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error)
 ```
 
 
@@ -17503,7 +17565,7 @@ func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int) (
 ### func \(\*MockProductRepository\) [GetExpiryTrend](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L210>)
 
 ```go
-func (m *MockProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
+func (m *MockProductRepository) GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error)
 ```
 
 
@@ -17773,7 +17835,7 @@ func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authe
 ### func \(\*MockProductRepository\) [GetWasteThisMonth](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/mocks/mock_repositories.go#L300>)
 
 ```go
-func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error)
+func (m *MockProductRepository) GetWasteThisMonth(userID uint, now time.Time) (int, error)
 ```
 
 
@@ -18934,7 +18996,7 @@ static implements "constants" used in proviant
 ```go
 const (
     // Version is the current proviant version
-    Version = "v0.24.0"
+    Version = "v0.25.0"
 
     // TokenRealm is the realm of tokens
     TokenRealm = "proviant"

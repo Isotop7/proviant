@@ -140,7 +140,7 @@ tasks:
     desc: Generate API documentation (Swagger)
     dir: src
     cmds:
-      - go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency -o ./docs/
+      - go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency --quiet -o ./docs/
 
   doc:
     desc: Generate all documentation
