@@ -14,6 +14,11 @@
 }
 
 .bento__cell {
+  // The layout engine writes the arrangement onto the tile. The defaults keep
+  // the rule below valid before it runs.
+  --tile-order: 0;
+  --tile-w: 1;
+  --tile-h: 1;
   position: relative;
   display: flex;
   flex-direction: column;
