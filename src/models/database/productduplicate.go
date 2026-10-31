@@ -48,14 +48,14 @@ func sameStorageLocation(a, b *uint) bool {
 // sameExpiryDay reports whether two effective expiries fall on the same
 // calendar day.
 //
-// The stored expiry carries a time of day: the client sends the UTC midnight
-// of the day it picked, and an opened shelf life is that midnight plus whole
+// The stored expiry carries a time of day: the client sends the midnight of
+// the day it picked, and an opened shelf life is that midnight plus whole
 // days. Two rows therefore land on the same day at different instants, and
-// only the day is what the user means. The day is read in UTC, because that
-// is the zone the server renders dates in.
+// only the day is what the user means. The day is read in the container's
+// zone, because that is the zone the server renders dates in.
 func sameExpiryDay(a, b time.Time) bool {
 	if a.IsZero() || b.IsZero() {
 		return a.IsZero() && b.IsZero()
 	}
-	return a.UTC().Format("2006-01-02") == b.UTC().Format("2006-01-02")
+	return a.In(time.Local).Format("2006-01-02") == b.In(time.Local).Format("2006-01-02")
 }

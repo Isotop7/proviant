@@ -27,14 +27,14 @@ func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 	var from, to *time.Time
 
 	if fromStr := ctx.Query("from"); fromStr != "" {
-		if t, err := time.Parse(util.DefaultDateFormatParseStr, fromStr); err == nil {
+		if t, err := time.ParseInLocation(util.DefaultDateFormatParseStr, fromStr, time.Local); err == nil {
 			from = &t
 		}
 	}
 
 	if toStr := ctx.Query("to"); toStr != "" {
-		if t, err := time.Parse(util.DefaultDateFormatParseStr, toStr); err == nil {
-			endOfDay := t.Add(24*time.Hour - time.Nanosecond)
+		if t, err := time.ParseInLocation(util.DefaultDateFormatParseStr, toStr, time.Local); err == nil {
+			endOfDay := t.AddDate(0, 0, 1).Add(-time.Nanosecond)
 			to = &endOfDay
 		}
 	}

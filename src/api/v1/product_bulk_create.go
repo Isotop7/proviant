@@ -264,7 +264,7 @@ func draftPriceOverride(draft *apiModel.BulkProductDraft, quantity int) *float64
 // be read is parked as a failed create.
 func parseDraftExpiry(value string) (time.Time, error) {
 	trimmed := strings.TrimSpace(value)
-	if parsed, err := time.Parse(util.DefaultDateFormatParseStr, trimmed); err == nil {
+	if parsed, err := time.ParseInLocation(util.DefaultDateFormatParseStr, trimmed, time.Local); err == nil {
 		return parsed, nil
 	}
 	return time.Parse(time.RFC3339, trimmed)

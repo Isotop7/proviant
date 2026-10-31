@@ -483,7 +483,8 @@ func (r *NotificationRepository) DeleteMailDigestUnsubscribeToken(tokenStr strin
 }
 
 func (r *NotificationRepository) GetWasteStatsForHousehold(householdID uint, month time.Time) (models.WasteStats, error) {
-	start := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.UTC)
+	month = month.In(time.Local)
+	start := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.Local)
 	end := start.AddDate(0, 1, 0)
 	prevStart := start.AddDate(0, -1, 0)
 

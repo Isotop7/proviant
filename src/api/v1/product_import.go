@@ -331,7 +331,7 @@ func parseImportRow(
 	product.PackSize = row.packSize
 
 	if row.expiry != "" {
-		expireAt, dateErr := time.Parse(util.DefaultDateFormatParseStr, row.expiry)
+		expireAt, dateErr := time.ParseInLocation(util.DefaultDateFormatParseStr, row.expiry, time.Local)
 		if dateErr != nil {
 			return product, fmt.Sprintf("expiry_date '%s' is not a %s date", row.expiry, util.DefaultDateFormatParseStr)
 		}

@@ -10,10 +10,10 @@ import (
 // nothing else: two yogurts of one brand with two best-before dates are two
 // products, not a duplicate.
 func TestIsDuplicateOf(t *testing.T) {
-	expiry := time.Date(2026, time.October, 29, 0, 0, 0, 0, time.UTC)
+	expiry := time.Date(2026, time.October, 29, 0, 0, 0, 0, time.Local)
 	location := uint(4)
 	otherLocation := uint(5)
-	openedAt := time.Date(2026, time.October, 20, 0, 0, 0, 0, time.UTC)
+	openedAt := time.Date(2026, time.October, 20, 0, 0, 0, 0, time.Local)
 	shelfLife := 9
 
 	base := Product{
@@ -120,7 +120,7 @@ func TestIsDuplicateOf(t *testing.T) {
 // Two products without a location sit in the same nowhere, so they are
 // duplicates of each other.
 func TestIsDuplicateOf_WithoutLocation(t *testing.T) {
-	expiry := time.Date(2026, time.October, 29, 0, 0, 0, 0, time.UTC)
+	expiry := time.Date(2026, time.October, 29, 0, 0, 0, 0, time.Local)
 	base := Product{Barcode: "4006381333931", ExpireAt: expiry}
 	other := Product{Barcode: "4006381333931", ExpireAt: expiry}
 
@@ -138,7 +138,7 @@ func TestIsDuplicateOf_WithoutLocation(t *testing.T) {
 // An undated product is not a duplicate of a dated one: one of them expires,
 // the other never does.
 func TestIsDuplicateOf_UndatedAgainstDated(t *testing.T) {
-	expiry := time.Date(2026, time.October, 29, 0, 0, 0, 0, time.UTC)
+	expiry := time.Date(2026, time.October, 29, 0, 0, 0, 0, time.Local)
 	undated := Product{Barcode: "4006381333931"}
 	dated := Product{Barcode: "4006381333931", ExpireAt: expiry}
 
