@@ -166,7 +166,7 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 			entry := apiModel.StatsExpiringProduct{
 				ID:          fullRows[i].ID,
 				ProductName: fullRows[i].ProductName,
-				ExpireAt:    expiry.Format(util.DefaultDateFormatParseStr),
+				ExpireAt:    expiry.In(time.Local).Format(util.DefaultDateFormatParseStr),
 				Quantity:    fullRows[i].Quantity,
 				PackSize:    fullRows[i].PackSize,
 			}

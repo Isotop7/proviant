@@ -1968,7 +1968,7 @@ func ExpiringProductStats(product *database.Product, expirationTime time.Time) a
 	entry := apiModel.StatsExpiringProduct{
 		ID:          product.ID,
 		ProductName: product.ProductName,
-		ExpireAt:    expirationTime.Format(util.DefaultDateFormatParseStr),
+		ExpireAt:    expirationTime.In(time.Local).Format(util.DefaultDateFormatParseStr),
 		Quantity:    product.Quantity,
 		PackSize:    product.PackSize,
 	}
@@ -2042,7 +2042,7 @@ func BuildUseFirstProducts(products []database.Product, limit int) []apiModel.St
 			PackSize:    product.PackSize,
 		}
 		if expiry := product.EffectiveExpireAt(); !expiry.IsZero() {
-			entry.ExpireAt = expiry.Format(util.DefaultDateFormatParseStr)
+			entry.ExpireAt = expiry.In(time.Local).Format(util.DefaultDateFormatParseStr)
 		}
 		if product.StorageLocation != nil {
 			entry.StorageLocationID = &product.StorageLocation.ID

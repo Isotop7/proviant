@@ -285,9 +285,9 @@ func NewLabelledProductResponse(product *dbModel.Product) ProductResponse {
 	resp := NewProductResponse(product)
 	resp.Label = fmt.Sprintf("%s; Created: %s; Expire at: %s; Notified at: %s",
 		product.ProductName,
-		product.CreatedAt.Format(productLabelTimeFormat),
-		product.ExpireAt.Format(productLabelTimeFormat),
-		product.NotifiedAt.Format(productLabelTimeFormat))
+		product.CreatedAt.In(time.Local).Format(productLabelTimeFormat),
+		product.ExpireAt.In(time.Local).Format(productLabelTimeFormat),
+		product.NotifiedAt.In(time.Local).Format(productLabelTimeFormat))
 	return resp
 }
 

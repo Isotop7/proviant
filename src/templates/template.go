@@ -41,19 +41,19 @@ func SetExpiryThresholds(critical, soon int) {
 }
 
 func humanDateTime(lang string, t time.Time) string {
-	return t.Format(i18n.T(lang, "date.format.dateTime"))
+	return t.In(time.Local).Format(i18n.T(lang, "date.format.dateTime"))
 }
 
 func humanDateTimeFromSQL(lang string, t gorm.DeletedAt) string {
-	return t.Time.Format(i18n.T(lang, "date.format.dateTime"))
+	return t.Time.In(time.Local).Format(i18n.T(lang, "date.format.dateTime"))
 }
 
 func humanDate(lang string, t time.Time) string {
-	return t.Format(i18n.T(lang, "date.format.date"))
+	return t.In(time.Local).Format(i18n.T(lang, "date.format.date"))
 }
 
 func inputDate(t time.Time) string {
-	return t.Format(util.DefaultDateFormatParseStr)
+	return t.In(time.Local).Format(util.DefaultDateFormatParseStr)
 }
 
 func today() string {

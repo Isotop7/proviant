@@ -45,11 +45,11 @@ func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 func productToExportRow(p *dbModel.Product) []string {
 	expireAt := ""
 	if !p.ExpireAt.IsZero() {
-		expireAt = p.ExpireAt.Format(util.DefaultDateFormatParseStr)
+		expireAt = p.ExpireAt.In(time.Local).Format(util.DefaultDateFormatParseStr)
 	}
 	addedAt := ""
 	if !p.CreatedAt.IsZero() {
-		addedAt = p.CreatedAt.Format(util.DefaultDateFormatParseStr)
+		addedAt = p.CreatedAt.In(time.Local).Format(util.DefaultDateFormatParseStr)
 	}
 	return []string{
 		p.ProductName,
@@ -181,7 +181,7 @@ func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext) {
 		if !product.DeletedAt.Valid {
 			row = append(row, "")
 		} else {
-			row = append(row, product.DeletedAt.Time.Format(util.DefaultDateFormatParseStr))
+			row = append(row, product.DeletedAt.Time.In(time.Local).Format(util.DefaultDateFormatParseStr))
 		}
 		if err := writer.Write(row); err != nil {
 			appCtx.Logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)

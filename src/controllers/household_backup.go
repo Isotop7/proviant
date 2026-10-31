@@ -106,7 +106,7 @@ func BuildFullExport(
 		Version: apiModel.BackupSchemaVersion,
 		Household: &apiModel.FullExportHousehold{
 			Name:                    household.Name,
-			CreatedAt:               household.CreatedAt.Format(util.DefaultDateFormatParseStr),
+			CreatedAt:               household.CreatedAt.In(time.Local).Format(util.DefaultDateFormatParseStr),
 			Description:             household.Description,
 			MonthlyWasteGoalType:    household.MonthlyWasteGoalType,
 			MonthlyWasteGoalCount:   household.MonthlyWasteGoalCount,
