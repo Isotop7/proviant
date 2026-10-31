@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Isotop7/proviant/models"
+	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/rs/zerolog"
@@ -178,4 +180,49 @@ func TestEmailProvider_SendInvitationEmail(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
+}
+
+// The monthly report names the reason the food was wasted, so the household
+// can act on it instead of only seeing the money it lost.
+func TestEmailProvider_MonthlyWasteReportCarriesTheCauses(t *testing.T) {
+	e := &EmailNotificationProvider{
+		Configuration: configuration.SMTPConfiguration{
+			Host:        "smtp.example.com",
+			Port:        587,
+			FromAddress: "noreply@example.com",
+		},
+	}
+	stats := &models.WasteStats{
+		HouseholdName: "Test Household",
+		MonthLabel:    "2026-04",
+		WastedEvents:  4,
+		Causes: []apiModel.WasteCauseStat{
+			{Cause: "spoiled", Count: 3, Share: 75},
+			{Cause: "", Count: 1, Share: 25},
+		},
+		Insight:          "The most common reason for your waste: It spoiled \u2014 3 of the 4 items you wasted.",
+		InsightAvailable: true,
+	}
+
+	origFunc := emailSendFunc
+	var body string
+	emailSendFunc = func(d *gomail.Dialer, m *gomail.Message) error {
+		var buffer bytes.Buffer
+		if _, err := m.WriteTo(&buffer); err != nil {
+			return err
+		}
+		body = buffer.String()
+		return nil
+	}
+	defer func() { emailSendFunc = origFunc }()
+
+	if err := e.SendMonthlyWasteReport("test@example.com", stats, "en"); err != nil {
+		t.Fatalf("SendMonthlyWasteReport() error = %v", err)
+	}
+
+	for _, want := range []string{"Spoiled", "No reason", "It spoiled"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("report does not carry %q", want)
+		}
+	}
 }

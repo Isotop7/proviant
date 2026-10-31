@@ -34,6 +34,15 @@ proviant.tn = function (key, n) {
   return proviant.t.apply(null, [lookup, n].concat(Array.prototype.slice.call(arguments, 2)));
 };
 
+// wasteCauseLabel names the reason a product was wasted. A cause the catalog
+// does not know keeps its raw token: the key would show up as text otherwise.
+proviant.wasteCauseLabel = function (cause) {
+  if (!cause) return proviant.t("waste.cause.none");
+  const key = `waste.cause.${cause}`;
+  const label = proviant.t(key);
+  return label === key ? cause : label;
+};
+
 // quantityLabel renders a pack count the way every quantity surface does: the
 // count and the localized pack noun ("2 Stk."). A count never depends on a
 // unit, so the label is the same everywhere.
@@ -267,12 +276,142 @@ proviant.updateProductQuantity = async function (productID, delta, clientMutatio
   return proviant._sendQuantityDelta(productID, delta, clientMutationId);
 };
 
+/* ── Household categories ────────────────────────────────────────────────────── */
+
+// The shelf life of a category is filled from today, so the date is written
+// the way a date input reads it.
+function formatDateForInput(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// A category token is prepared the way the server prepares it: the language
+// tag is dropped, the token is lower-cased and dashes become spaces.
+function normalizeCategoryToken(token) {
+  const trimmed = String(token === undefined || token === null ? "" : token).trim();
+  const colon = trimmed.indexOf(":");
+  const withoutLanguage = colon === -1 ? trimmed : trimmed.slice(colon + 1).trim();
+  return withoutLanguage.toLowerCase().replace(/-/g, " ").trim();
+}
+
+// The canonical category a free-text category string names. The rule is the
+// server's: among all categories whose key the text names, the longest key
+// wins, and a tie goes to the lexicographically smaller key. The text is never
+// rewritten — the server keeps the free text for the recipe suggestions.
+proviant.resolveCategoryKey = function (categoriesText, categories) {
+  const tokens = String(categoriesText === undefined || categoriesText === null ? "" : categoriesText)
+    .split(",")
+    .map(normalizeCategoryToken)
+    .filter(Boolean);
+  if (!tokens.length) return "";
+  let best = "";
+  let bestNormalized = "";
+  (categories || []).forEach(function (category) {
+    const normalized = normalizeCategoryToken(category.categoryKey);
+    if (!normalized) return;
+    const matches = tokens.some(function (token) {
+      return token.indexOf(normalized) !== -1 || normalized.indexOf(token) !== -1;
+    });
+    if (!matches) return;
+    if (normalized.length > bestNormalized.length || (normalized.length === bestNormalized.length && normalized < bestNormalized)) {
+      best = category.categoryKey;
+      bestNormalized = normalized;
+    }
+  });
+  return best;
+};
+
+proviant.categoryByKey = function (categories, categoryKey) {
+  if (!categoryKey) return null;
+  const found = (categories || []).find(function (category) {
+    return category.categoryKey === categoryKey;
+  });
+  return found || null;
+};
+
+// The shelf life the household gave a category, or null when it gave none.
+proviant.categoryShelfLifeDays = function (categories, categoryKey) {
+  const category = proviant.categoryByKey(categories, categoryKey);
+  if (!category) return null;
+  const days = category.defaultShelfLifeDays;
+  return typeof days === "number" && days > 0 ? days : null;
+};
+
+// Fills the expiry field with the shelf life the household gave the category.
+// A date the user set is theirs: the suggestion is only applied while the
+// field is untouched. It answers the date it wrote, or null.
+proviant.applyExpirySuggestion = function (input, categories, categoryKey) {
+  if (!input) return null;
+  if (input.dataset.userEdited === "1") return null;
+  const days = proviant.categoryShelfLifeDays(categories, categoryKey);
+  if (days === null) return null;
+  const base = new Date();
+  base.setDate(base.getDate() + days);
+  const value = formatDateForInput(base);
+  input.value = value;
+  input.dataset.suggested = "1";
+  return value;
+};
+
 /* ── Product API ─────────────────────────────────────────────────────────────── */
-proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId) {
+// The details carry what the household itself knows about the product: the
+// name it calls it and the size of one pack. Both are free text, so both are
+// optional — a client that names neither leaves the barcode's own answers in
+// place.
+proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate = false, clientSyncId, allowDuplicate = false, categoryKey = null, details = null) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ barcode, expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null }) });
+  const payload = { barcode, expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate, clientSyncId: clientSyncId || null };
+  if (allowDuplicate) payload.allowDuplicate = true;
+  if (categoryKey) payload.categoryKey = categoryKey;
+  if (details && details.productName) payload.productName = details.productName;
+  if (details && details.packSize) payload.packSize = details.packSize;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const body = await res.json();
-  return { code: res.status, message: body.message };
+  // A refusal that names a duplicate carries the matched product, so the
+  // client can ask whether the pack belongs to that row.
+  return { code: res.status, message: body.message, action: body.action, duplicate: body.duplicate || null, clientSyncId: clientSyncId || null };
+};
+
+proviant._sendProductAction = async function (action, productID, quantity, clientMutationId, wasteCause) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/${productID}/${action}`;
+  const payload = { quantity, clientMutationId };
+  if (wasteCause) payload.wasteCause = wasteCause;
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (cause) {
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.transport = true;
+    throw err;
+  }
+  let body;
+  try {
+    body = await res.json();
+  } catch (cause) {
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.status = res.status;
+    throw err;
+  }
+  return {
+    code: res.status,
+    message: body.message,
+    removed: typeof body.removed === "number" ? body.removed : null,
+    retryAfter: res.headers && res.headers.get ? res.headers.get("Retry-After") : null,
+  };
+};
+
+proviant.consumeProduct = async function (productID, quantity, clientMutationId) {
+  return proviant._sendProductAction("consume", productID, quantity, clientMutationId);
+};
+
+proviant.wasteProduct = async function (productID, quantity, clientMutationId, wasteCause) {
+  return proviant._sendProductAction("waste", productID, quantity, clientMutationId, wasteCause);
 };
 
 proviant.getOpenFoodFactsData = async function (barcode) {
@@ -287,6 +426,21 @@ proviant.getProductsByBarcode = async function (barcode) {
   const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();
   return { code: res.status, message: body };
+};
+
+// The staples the household buys repeatedly. The answer is a server response,
+// so it is gone when the server is: the caller gets an empty list instead of
+// a failure, and the form it fills keeps working.
+proviant.getFrequentlyBoughtProducts = async function () {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/frequently-bought`;
+  try {
+    const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } });
+    const body = await res.json();
+    if (res.status !== 200 || !Array.isArray(body)) return { code: res.status, message: [] };
+    return { code: res.status, message: body };
+  } catch (_) {
+    return { code: 0, message: [] };
+  }
 };
 
 proviant.editProduct = async function (product) {
@@ -346,6 +500,36 @@ proviant.addToShoppingList = async function (productId, quantity) {
   }
   const body = await res.json();
   return { code: res.status, message: body };
+};
+
+// Buys a shopping list item: the server creates the product, checks the item
+// and links the two. The answer carries the item as it now stands and the
+// product the purchase landed in.
+proviant.purchaseShoppingListItem = async function (itemID, payload) {
+  const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/shopping-list/${itemID}/purchase`;
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
+    });
+  } catch (cause) {
+    const err = new Error(cause && cause.message ? cause.message : String(cause));
+    err.transport = true;
+    throw err;
+  }
+  let body = {};
+  try { body = await res.json(); } catch (_) { /* a non-JSON body stays {} */ }
+  return {
+    code: res.status,
+    message: body.message || "",
+    action: body.action || "",
+    duplicate: body.duplicate || null,
+    item: body.item || null,
+    product: body.product || null,
+    created: body.created === true,
+  };
 };
 
 /* runWithButtonBusyState runs `work` while showing a spinner on `btn`,
@@ -411,9 +595,11 @@ proviant.bulkConsumeProducts = async function (productIDs) {
   return { code: res.status, message: body.message, failedIds: body.failedIds || [] };
 };
 
-proviant.bulkWasteProducts = async function (productIDs) {
+proviant.bulkWasteProducts = async function (productIDs, wasteCause) {
   const url = `${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products/bulkWaste`;
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productIDs }) });
+  const payload = { productIDs };
+  if (wasteCause) payload.wasteCause = wasteCause;
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const body = await res.json();
   return { code: res.status, message: body.message, failedIds: body.failedIds || [] };
 };
@@ -476,7 +662,7 @@ function clearBulkSelectionAndReload() {
 }
 
 proviant.bulkAction = async function (type, ids, options = {}) {
-  const { confirm: needsConfirm = false, confirmTitle = '', confirmMsg = '', onDone = () => clearBulkSelectionAndReload() } = options;
+  const { confirm: needsConfirm = false, confirmTitle = '', confirmMsg = '', onDone = () => clearBulkSelectionAndReload(), wasteCause = '' } = options;
   const fn = { delete: proviant.bulkWasteProducts, restore: proviant.bulkRestoreProducts, archive: proviant.bulkConsumeProducts }[type];
   if (!fn) return;
   // Failures must reach the user, and the reload must wait for that message:
@@ -500,7 +686,7 @@ proviant.bulkAction = async function (type, ids, options = {}) {
   // a stale selection.
   const run = async () => {
     try {
-      finish(await fn(ids));
+      finish(await fn(ids, wasteCause));
     } catch (err) {
       proviant.showFeedback("error", proviant.t("js.feedback.bulkActionFailed"), (err && err.message) || proviant.t("js.feedback.requestFailed"), onDone);
     }
@@ -519,10 +705,12 @@ proviant.bulkAction = async function (type, ids, options = {}) {
 };
 
 /* ── Auth / user API ─────────────────────────────────────────────────────────── */
-proviant.loginUser = async function (username, password) {
-  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+proviant.loginUser = async function (username, password, code) {
+  const payload = { username, password };
+  if (code) payload.code = code;
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
-  return { code: res.status, body: body.message || body.code || "", retryAfter: res.headers.get("Retry-After") };
+  return { code: res.status, body: body.message || body.code || "", errorReason: body.reason || "", qr: body.qr || "", retryAfter: res.headers.get("Retry-After") };
 };
 
 proviant.signupUser = async function (username, mailAddress, password, inviteToken) {
@@ -546,6 +734,44 @@ proviant.updateUserPassword = async function (username, password) {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
   const body = await res.json();
   return { code: res.status, message: body.message };
+};
+
+/* ── Two-factor authentication API ─────────────────────────────────────────── */
+
+proviant.getTOTPStatus = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/totp`, { method: "GET", headers: { "Content-Type": "application/json" } });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body, errorReason: body.reason || "" };
+};
+
+proviant.startTOTPEnrolment = async function () {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/totp`, { method: "POST", headers: { "Content-Type": "application/json" } });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body, errorReason: body.reason || "" };
+};
+
+proviant.confirmTOTPEnrolment = async function (code) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/totp/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body, errorReason: body.reason || "" };
+};
+
+proviant.disableTOTP = async function (password) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/user/totp/disable`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body.message, errorReason: body.reason || "" };
+};
+
+proviant.confirmTwoFactorSetup = async function (username, password, code) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/auth/totp/setup/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password, code }) });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body.message || "", body: body };
+};
+
+proviant.resetUserTwoFactor = async function (userID) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/admin/users/${userID}/reset-two-factor`, { method: "POST", headers: { "Content-Type": "application/json" } });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body.message, errorReason: body.reason || "" };
 };
 
 proviant.updateNotificationSettings = async function (preferences) {
@@ -762,6 +988,16 @@ proviant.updateHouseholdSettings = async function (settings) {
   });
   const body = await res.json();
   return { code: res.status, message: body };
+};
+
+proviant.updateHouseholdTwoFactorPolicy = async function (requireTwoFactor) {
+  const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/household/two-factor`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requireTwoFactor }),
+  });
+  let body = {}; try { body = await res.json(); } catch (_) { /* non-JSON body stays {} */ }
+  return { code: res.status, message: body, errorReason: body.reason || "" };
 };
 
 proviant.getSavingsStats = async function () {
@@ -998,5 +1234,10 @@ proviant.generateShoppingListFromMealPlan = async function (from, to) {
 proviant.getProducts = async function () {
   const res = await fetch(`${globalThis.location.protocol}//${globalThis.location.host}/api/v1/products`, { method: "GET", headers: { "Content-Type": "application/json" } });
   const body = await res.json();
-  return { code: res.status, products: Array.isArray(body) ? body : [], message: body.message };
+  // The products list answers with an envelope: the products of the page, the
+  // total number of products the filter matched and the window that produced
+  // the page. A body that is a bare array is read as the products themselves,
+  // so a server that still answers the old shape keeps working.
+  const products = Array.isArray(body) ? body : (body && Array.isArray(body.products) ? body.products : []);
+  return { code: res.status, products: products, message: body.message };
 };

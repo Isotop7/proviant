@@ -52,17 +52,17 @@ func TestDateUnmarshalJSON(t *testing.T) {
 		{
 			name:  "valid date",
 			input: `"2023-12-25"`,
-			want:  Date(time.Date(2023, 12, 25, 0, 0, 0, 0, time.UTC)),
+			want:  Date(time.Date(2023, 12, 25, 0, 0, 0, 0, time.Local)),
 		},
 		{
 			name:  "valid date - start of year",
 			input: `"2023-01-01"`,
-			want:  Date(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)),
+			want:  Date(time.Date(2023, 1, 1, 0, 0, 0, 0, time.Local)),
 		},
 		{
 			name:  "valid date - end of year",
 			input: `"2023-12-31"`,
-			want:  Date(time.Date(2023, 12, 31, 0, 0, 0, 0, time.UTC)),
+			want:  Date(time.Date(2023, 12, 31, 0, 0, 0, 0, time.Local)),
 		},
 		{name: "invalid format - no quotes", input: `2023-12-25`, wantErr: true},
 		{name: "invalid format - wrong date format", input: `"12/25/2023"`, wantErr: true},

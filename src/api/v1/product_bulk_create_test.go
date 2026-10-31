@@ -17,6 +17,7 @@ import (
 	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // newBulkTestSetup creates a user + household + storage location and wires a
@@ -52,7 +53,7 @@ func TestBulkCreateProducts(t *testing.T) {
 		ctx, w, appCtx, locationID := newBulkTestSetup(t)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "Milk", Quantity: 2, PackSize: "1 l", ExpireAt: "2030-01-02", Price: pricePtr(2.49)},
+				{ProductName: "Milk", Quantity: 2, PackSize: "1 l", ExpireAt: "2030-01-02", Price: new(2.49)},
 				{ProductName: "Bread", Quantity: 1, StorageLocationID: &locationID},
 			},
 		})
@@ -81,13 +82,43 @@ func TestBulkCreateProducts(t *testing.T) {
 		}
 	})
 
+	// A draft that names no date gets the shelf life the household gave its
+	// category, the same rule the single create follows.
+	t.Run("the household shelf life fills the missing date", func(t *testing.T) {
+		ctx, w, appCtx, _ := newBulkTestSetup(t)
+		seedBulkCategoryPrices(t, appCtx.DB)
+		seedHouseholdShelfLife(t, appCtx, "milk", 5)
+
+		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
+			Items: []apiModel.BulkProductDraft{
+				{ProductName: "Milk", Categories: "milk"},
+			},
+		})
+
+		BulkCreateProducts(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body = %s", w.Code, w.Body.String())
+		}
+		var stored dbModel.Product
+		if err := appCtx.DB.First(&stored, "product_name = ?", "Milk").Error; err != nil {
+			t.Fatalf("stored product: %v", err)
+		}
+		if stored.ExpireAt.IsZero() {
+			t.Fatal("the product has no expiry date")
+		}
+		if !stored.ExpireAt.After(time.Now().AddDate(0, 0, 4)) {
+			t.Errorf("expire at = %v, want about five days from now", stored.ExpireAt)
+		}
+	})
+
 	// The receipt prints the price of the whole line; the product carries the
 	// price of one pack.
 	t.Run("the line price becomes the price of one pack", func(t *testing.T) {
 		ctx, w, appCtx, _ := newBulkTestSetup(t)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "Milk", Quantity: 2, Price: pricePtr(2.49)},
+				{ProductName: "Milk", Quantity: 2, Price: new(2.49)},
 			},
 		})
 
@@ -109,7 +140,7 @@ func TestBulkCreateProducts(t *testing.T) {
 		ctx, w, appCtx, _ := newBulkTestSetup(t)
 		testutil.CreateTestRequest(ctx, apiModel.BulkCreateRequest{
 			Items: []apiModel.BulkProductDraft{
-				{ProductName: "Milk", Quantity: 3, PriceOverride: pricePtr(1.50)},
+				{ProductName: "Milk", Quantity: 3, PriceOverride: new(1.50)},
 			},
 		})
 
@@ -342,4 +373,29 @@ func TestBulkCreateProducts(t *testing.T) {
 	})
 }
 
-func pricePtr(v float64) *float64 { return &v }
+// seedBulkCategoryPrices writes the canonical categories a resolver resolves
+// the free text of a draft against.
+func seedBulkCategoryPrices(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	for _, row := range []dbModel.ProductCategoryPrice{
+		{CategoryKey: "milk", DisplayName: "Milk", AvgPriceEUR: 0.90, CO2KgPerKg: 3.20, WeightGrams: 1000},
+	} {
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatalf("seed canonical row: %v", err)
+		}
+	}
+}
+
+// seedHouseholdShelfLife gives the household a shelf life for a category.
+func seedHouseholdShelfLife(t *testing.T, appCtx *AppContext, categoryKey string, days int) {
+	t.Helper()
+	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
+	if err != nil {
+		t.Fatalf("household of the user: %v", err)
+	}
+	if _, err := appCtx.Repos.HouseholdCategories.Upsert(householdID, categoryKey, database.HouseholdCategoryOverride{
+		DefaultShelfLifeDays: &days,
+	}); err != nil {
+		t.Fatalf("seed the household shelf life: %v", err)
+	}
+}

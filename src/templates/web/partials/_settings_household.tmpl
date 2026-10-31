@@ -1,4 +1,71 @@
 {{ define "_settings_household" }}
+<div class="card card-section mb-7" id="householdCategories">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-tags"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">{{ t "household.categories" }}</h2>
+        </div>
+    </div>
+    <div class="card-body px-7 py-7">
+        <p class="fg-secondary small mb-5">{{ t "household.categoriesHelp" }}</p>
+        <ul class="list-group" id="householdCategoryList">
+            {{ range $index, $category := .Categories }}
+            <li class="list-group-item" data-category-key="{{ $category.CategoryKey }}" data-category-sort-order="{{ $category.SortOrder }}">
+                <div class="d-flex flex-column gap-3">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div class="flex-grow-1">
+                            <label class="form-label fw-medium small mb-1" for="categoryName-{{ $index }}">{{ t "household.categoryNameLabel" }}</label>
+                            <input type="text" class="form-control cat-name" id="categoryName-{{ $index }}" value="{{ $category.DisplayName }}" maxlength="80">
+                        </div>
+                        <div class="d-flex gap-1 flex-shrink-0">
+                            <button type="button" class="btn btn-outline theme-secondary btn-sm btn-cat-up"
+                                    aria-label="{{ t "household.categoryMoveUpAria" $category.DisplayName }}">
+                                <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline theme-secondary btn-sm btn-cat-down"
+                                    aria-label="{{ t "household.categoryMoveDownAria" $category.DisplayName }}">
+                                <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="md:col-6">
+                            <label class="form-label fw-medium small mb-1" for="categoryShelfLife-{{ $index }}">{{ t "household.categoryShelfLifeLabel" }}</label>
+                            <input type="number" class="form-control cat-shelf-life" id="categoryShelfLife-{{ $index }}"
+                                   min="0" max="3650" placeholder="{{ t "household.categoryNoShelfLife" }}"
+                                   value="{{ if $category.DefaultShelfLifeDays }}{{ $category.DefaultShelfLifeDays }}{{ end }}">
+                            <div class="form-text">{{ t "household.categoryShelfLifeHelp" }}</div>
+                        </div>
+                        <div class="md:col-6">
+                            <label class="form-label fw-medium small mb-1" for="categoryDaysAfterOpening-{{ $index }}">{{ t "household.categoryDaysAfterOpeningLabel" }}</label>
+                            <input type="number" class="form-control cat-days-after-opening" id="categoryDaysAfterOpening-{{ $index }}"
+                                   min="0" max="365" placeholder="{{ t "household.categoryNoShelfLife" }}"
+                                   value="{{ if $category.DefaultDaysAfterOpening }}{{ $category.DefaultDaysAfterOpening }}{{ end }}">
+                            <div class="form-text">{{ t "household.categoryDaysAfterOpeningHelp" }}</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                        <div class="form-field mb-0">
+                            <div class="switch">
+                                <input type="checkbox" role="switch" class="cat-visible" id="categoryVisible-{{ $index }}"
+                                       {{ if not $category.Hidden }}checked{{ end }}>
+                            </div>
+                            <label for="categoryVisible-{{ $index }}">{{ t "household.categoryVisibleLabel" }}</label>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-solid theme-primary btn-cat-save"
+                                data-category-key="{{ $category.CategoryKey }}">
+                            <i class="bi bi-save me-1" aria-hidden="true"></i>{{ t "common.save" }}
+                        </button>
+                    </div>
+                </div>
+            </li>
+            {{ end }}
+        </ul>
+    </div>
+</div>
+
 <div class="card card-section mb-7">
     <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
         <div class="d-flex align-items-center gap-3">
@@ -136,6 +203,30 @@
             <button type="button" class="btn btn-solid theme-primary btn-sm" id="btnSaveMonthlyGoal">
                 <i class="bi bi-save me-1"></i>{{ t "household.saveGoal" }}
             </button>
+        </div>
+        {{ end }}
+
+        {{/* Two-factor policy — admin only. The switch stays visible while the policy is set, so it can be withdrawn even when the deployment no longer offers a second factor. */}}
+        {{ if and .IsAdmin (or .TwoFactorEnabled .Household.RequireTwoFactor) }}
+        <div class="mb-7">
+            <h3 class="h6 fw-semibold mb-3"><i class="bi bi-shield-lock me-1"></i>{{ t "household.requireTwoFactorTitle" }}</h3>
+            <p class="fg-secondary small mb-3">{{ t "household.requireTwoFactorHelp" }}</p>
+            {{ if not .TwoFactorEnabled }}
+            <p class="fg-secondary small mb-3"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ t "household.requireTwoFactorInactive" }}</p>
+            {{ end }}
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="form-field mb-0">
+                    <div class="switch">
+                        <input type="checkbox" role="switch" id="inputRequireTwoFactor"
+                               data-require-two-factor="{{ .Household.RequireTwoFactor }}"
+                               {{ if .Household.RequireTwoFactor }}checked{{ end }}>
+                    </div>
+                    <label for="inputRequireTwoFactor">{{ t "household.requireTwoFactorLabel" }}</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-solid theme-primary" id="btnSaveRequireTwoFactor">
+                    <i class="bi bi-save me-1"></i>{{ t "common.save" }}
+                </button>
+            </div>
         </div>
         {{ end }}
 

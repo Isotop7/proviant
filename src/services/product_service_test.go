@@ -283,14 +283,14 @@ func TestProductService_WasteProduct(t *testing.T) {
 		user := testutil.CreateTestUser(db, household.ID)
 		product := testutil.CreateTestProduct(db, household.ID)
 
-		err := svc.WasteProduct(product.ID, user.ID)
+		err := svc.WasteProduct(product.ID, user.ID, "")
 		if err != nil {
 			t.Errorf("WasteProduct() error = %v, want nil", err)
 		}
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		err := svc.WasteProduct(9999, 1)
+		err := svc.WasteProduct(9999, 1, "")
 		if err != gorm.ErrRecordNotFound {
 			t.Errorf("WasteProduct() error = %v, want %v", err, gorm.ErrRecordNotFound)
 		}
@@ -327,7 +327,7 @@ func TestProductService_BulkWasteProducts(t *testing.T) {
 		product := testutil.CreateTestProduct(db, household.ID)
 
 		ids := []uint{product.ID, 9999}
-		failed, err := svc.BulkWasteProducts(ids, user.ID)
+		failed, err := svc.BulkWasteProducts(ids, user.ID, "")
 		if err != nil {
 			t.Errorf("BulkWasteProducts() error = %v, want nil (an unknown id is the caller's problem, not a server fault)", err)
 		}

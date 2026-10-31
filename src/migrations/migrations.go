@@ -258,10 +258,7 @@ func legacyMinStockPacks(amount, minStock int, unit string) int {
 	if amount < 1 {
 		return 1
 	}
-	packs := int(math.Round(float64(minStock) / float64(amount)))
-	if packs < 1 {
-		packs = 1
-	}
+	packs := max(int(math.Round(float64(minStock)/float64(amount))), 1)
 	return min(packs, util.MaxProductQuantity)
 }
 
@@ -575,6 +572,11 @@ func RunBreakingDatabaseMigrations(logger *zerolog.Logger, db *gorm.DB) error {
 
 	logger.Debug().Msg("Convert recipe ingredient amounts into portions")
 	if err := ConvertRecipeIngredientsToPortions(logger, db); err != nil {
+		return err
+	}
+
+	logger.Debug().Msg("Fill the canonical category of the products")
+	if err := BackfillProductCategoryKeys(logger, db); err != nil {
 		return err
 	}
 

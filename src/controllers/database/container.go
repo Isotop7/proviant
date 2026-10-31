@@ -14,8 +14,10 @@ type RepositoryContainer struct {
 	Households            HouseholdRepositoryInterface
 	Invitations           InvitationRepositoryInterface
 	StorageLocations      StorageLocationRepositoryInterface
+	HouseholdCategories   HouseholdCategoryRepositoryInterface
 	Webhooks              WebhookRepositoryInterface
 	PATs                  PATRepositoryInterface
+	TOTPs                 TOTPRepositoryInterface
 	RecipeCaches          RecipeCacheRepositoryInterface
 	Recipes               RecipeRepositoryInterface
 	MealPlans             MealPlanRepositoryInterface
@@ -43,14 +45,16 @@ func NewRepositoryContainer(db *gorm.DB, logger *zerolog.Logger) *RepositoryCont
 		Households:            NewHouseholdRepository(db),
 		Invitations:           NewInvitationRepository(db),
 		StorageLocations:      NewStorageLocationRepository(db),
+		HouseholdCategories:   NewHouseholdCategoryRepository(db),
 		Webhooks:              NewWebhookRepository(db),
 		PATs:                  NewPATRepository(db),
+		TOTPs:                 NewTOTPRepository(db),
 		RecipeCaches:          NewRecipeCacheRepository(db),
 		Recipes:               NewRecipeRepository(db),
 		MealPlans:             NewMealPlanRepository(db),
 		Savings:               NewSavingsRepository(db),
 		WasteAnalytics:        NewWasteAnalyticsRepository(db),
-		Notifications:         NewNotificationRepository(db),
+		Notifications:         NewNotificationRepositoryWithLogger(db, logger),
 		Streaks:               NewStreakRepository(db),
 		ExpiryScan:            NewExpiryScanRepository(db),
 		CalendarTokens:        NewCalendarTokenRepository(db),

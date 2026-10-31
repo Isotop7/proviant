@@ -33,7 +33,7 @@ func TestOfflineSyncRateLimitMiddleware_AdmitsBackToBackCreateBatches(t *testing
 		return recorder
 	}
 
-	for i := 0; i < offlineSyncBurstCap; i++ {
+	for i := range offlineSyncBurstCap {
 		if code := request().Code; code != http.StatusOK {
 			t.Fatalf("drain request %d got HTTP %d, want 200", i+1, code)
 		}
@@ -242,11 +242,9 @@ func TestGetLimiterBurst_ConcurrentCreationYieldsSingleLimiter(t *testing.T) {
 	returned := make(chan *rate.Limiter, goroutines)
 	var wg sync.WaitGroup
 	for range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			returned <- getLimiterBurst(store, "client", rate.Every(time.Second), 1)
-		}()
+		})
 	}
 	wg.Wait()
 	close(returned)

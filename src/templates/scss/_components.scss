@@ -99,15 +99,18 @@
 }
 
 // Button loading state
-.btn-loading {
+// The wrapper classes are app-owned: Bootstrap 6 uses `.btn-text` for a
+// borderless button variant, so a label span must not carry that name.
+.btn-busy {
   display: none;
 }
 .btn-primary.loading,
+.btn-solid.loading,
 .btn-bulk.loading {
-  .btn-text {
+  .btn-label {
     display: none;
   }
-  .btn-loading {
+  .btn-busy {
     display: inline-flex;
     align-items: center;
   }
@@ -489,6 +492,25 @@
   justify-content: flex-end;
 }
 
+// A list row that leads to the product it names. The sheet draws the whole
+// row as the target, with the row itself as the hover surface.
+.list-group-item__link {
+  color: var(--fg);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--motion-base) var(--ease-out);
+
+  &:hover {
+    background: var(--surface-warm);
+  }
+
+  // The row fills the scroll body to its edges, so a focus ring drawn outside
+  // the row is clipped away by the container. It has to be drawn inside.
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
 // The status bar in front of a list row. It is never the only signal: the row
 // carries a status chip too.
 .list-group-item__stripe {
@@ -513,6 +535,10 @@
 
 .list-group-item__stripe--fresh {
   background: var(--status-fresh);
+}
+
+.list-group-item__stripe--neutral {
+  background: var(--status-neutral);
 }
 
 // Sidebar nav
@@ -856,4 +882,91 @@
 .bento .kpi:hover,
 .bento .card:not(.card-accent):hover {
   box-shadow: var(--elev-raised);
+}
+
+// ── Frequently bought ───────────────────────────────────────────────────────
+
+// The staples the household buys repeatedly, offered as a row of chips in the
+// add-product dialog. The row scrolls sideways: a household has more staples
+// than fit on one phone screen.
+.frequent-products {
+  margin-top: var(--space-4);
+}
+
+.frequent-products__title {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--meta);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-button);
+}
+
+.frequent-products__list {
+  display: flex;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.frequent-product {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  transition: background-color var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out), color var(--motion-base) var(--ease-out);
+
+  &:hover {
+    color: var(--accent-text);
+    background: var(--accent-soft);
+    border-color: var(--accent-border);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
+// ── Brand lockup ───────────────────────────────────────────────────────────
+
+// The mark and the wordmark. The design system's own logo component: the
+// accent-filled square with the P, the wordmark in the body ink. Every page
+// that shows the brand shows this one — the auth panel overrides the colours
+// for its accent surface, nothing else.
+.brand-logo {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.brand-logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  font-weight: var(--weight-bold);
+  color: var(--accent-on);
+  letter-spacing: -.5px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.brand-logo-name {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-bold);
+  color: var(--fg);
+  letter-spacing: -.02em;
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,7 +38,7 @@ type Recipe struct {
 	ImageURL    string
 	SourceURL   string
 	Ingredients []string
-	SearchTerm string
+	SearchTerm  string
 }
 
 // RecipeSuggestion is a recipe matched to household products.
@@ -177,7 +178,7 @@ func (rc *RecipeController) GetSuggestions(
 	for i := range expiringProducts {
 		expiringIDs = append(expiringIDs, expiringProducts[i].ID)
 	}
-	sort.Slice(expiringIDs, func(i, j int) bool { return expiringIDs[i] < expiringIDs[j] })
+	slices.Sort(expiringIDs)
 
 	providerName := rc.Config.Provider
 	if rc.Provider != nil {
@@ -381,7 +382,7 @@ func (rc *RecipeController) collectKeywords(products []dbModel.Product) []string
 		if len(keywords) >= maxRecipeKeywords {
 			return keywords
 		}
-		for _, cat := range strings.Split(products[i].Categories, ",") {
+		for cat := range strings.SplitSeq(products[i].Categories, ",") {
 			if len(keywords) >= maxRecipeKeywords {
 				return keywords
 			}
@@ -558,7 +559,7 @@ func buildNormalizedIndex(allProducts []dbModel.Product) []productIndex {
 	for i := range allProducts {
 		p := &allProducts[i]
 		var cats []string
-		for _, c := range strings.Split(p.Categories, ",") {
+		for c := range strings.SplitSeq(p.Categories, ",") {
 			if nc := normalizeString(c); nc != "" {
 				cats = append(cats, nc)
 			}
@@ -729,12 +730,7 @@ func bareIngredientName(normIng string) string {
 // (lowercase, punctuation stripped, hyphens as spaces), so whitespace is a
 // sufficient boundary and the tokens can be computed once at index time.
 func containsWholeWord(words []string, needle string) bool {
-	for _, field := range words {
-		if field == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(words, needle)
 }
 
 // termCoversIngredient reports whether a search term names the ingredient it

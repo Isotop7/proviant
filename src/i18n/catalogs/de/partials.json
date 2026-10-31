@@ -53,6 +53,7 @@
   "partial.searchBar.searchProducts": "Produkte suchen",
   "partial.searchBar.showAll": "Alle anzeigen",
   "partial.searchBar.sortCreatedAt": "Erstellt am",
+  "partial.searchBar.sortEffectiveExpiry": "Effektives Ablaufdatum",
   "partial.searchBar.sortExpireAt": "Ablaufdatum",
   "partial.searchBar.sortNotifiedAt": "Benachrichtigt am",
   "partial.searchBar.sortOrder": "Sortierreihenfolge",

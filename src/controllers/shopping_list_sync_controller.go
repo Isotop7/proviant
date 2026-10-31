@@ -122,8 +122,10 @@ func ReconcileShoppingListIntegration(
 		if !ok || item == nil || item.Checked == remoteChecked {
 			continue
 		}
-		item.Checked = remoteChecked
-		if updateErr := repos.ShoppingListItems.Update(item); updateErr != nil && logger != nil {
+		// Only the checked state is written: the row was read before the
+		// provider was asked, so a full write would carry a stale copy of
+		// everything else with it and undo a purchase's product link.
+		if updateErr := repos.ShoppingListItems.SetChecked(item.ID, item.HouseholdID, remoteChecked); updateErr != nil && logger != nil {
 			logger.Warn().Msgf("Shopping list sync: failed to update checked state for item %d: %s", item.ID, updateErr)
 		}
 	}

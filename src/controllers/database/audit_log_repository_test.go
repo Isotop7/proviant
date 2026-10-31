@@ -25,7 +25,7 @@ func TestAuditLogRepositoryHouseholdScoping(t *testing.T) {
 	userA := testutil.CreateTestUser(db, householdA.ID)
 	userB := testutil.CreateTestUser(db, householdB.ID)
 
-	entryTime := time.Date(2026, time.March, 5, 12, 0, 0, 0, time.UTC)
+	entryTime := time.Date(2026, time.March, 5, 12, 0, 0, 0, time.Local)
 
 	created := &database.AuditLog{
 		Timestamp: entryTime,

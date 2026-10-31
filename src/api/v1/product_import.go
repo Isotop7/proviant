@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -203,6 +204,20 @@ func ImportProducts(ctx *gin.Context, appCtx *AppContext) {
 		})
 	}
 
+	// The canonical category of every imported product, resolved once for the
+	// whole file: the free text the file carries names it.
+	categories := loadBatchCategories(appCtx)
+	for i := range products {
+		if products[i].Product.CategoryKey == nil && categories.resolver != nil {
+			if key, ok := categories.resolver.ResolveKey(products[i].Product.Categories); ok {
+				products[i].Product.CategoryKey = &key
+			}
+		}
+		// A row that names no date gets the shelf life the household gave
+		// its category, the same rule the single create follows.
+		database.ApplyHouseholdShelfLife(&products[i].Product, categories.defaults, products[i].Product.CategoryKey)
+	}
+
 	response := apiModel.ImportProductsResponse{
 		TotalRows: len(rows),
 		Imported:  len(products),
@@ -316,7 +331,7 @@ func parseImportRow(
 	product.PackSize = row.packSize
 
 	if row.expiry != "" {
-		expireAt, dateErr := time.Parse(util.DefaultDateFormatParseStr, row.expiry)
+		expireAt, dateErr := time.ParseInLocation(util.DefaultDateFormatParseStr, row.expiry, time.Local)
 		if dateErr != nil {
 			return product, fmt.Sprintf("expiry_date '%s' is not a %s date", row.expiry, util.DefaultDateFormatParseStr)
 		}
@@ -492,10 +507,8 @@ func (i *importNewlineIndex) lineAt(end int64, counted int) int {
 func hasLegacyCsvHeader(header []string) bool {
 	for _, cell := range header {
 		name := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(cell, "\ufeff")))
-		for _, legacy := range util.CsvLegacyColumnHeaders {
-			if name == legacy {
-				return true
-			}
+		if slices.Contains(util.CsvLegacyColumnHeaders, name) {
+			return true
 		}
 	}
 	return false

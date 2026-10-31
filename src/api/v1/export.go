@@ -27,14 +27,14 @@ func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 	var from, to *time.Time
 
 	if fromStr := ctx.Query("from"); fromStr != "" {
-		if t, err := time.Parse(util.DefaultDateFormatParseStr, fromStr); err == nil {
+		if t, err := time.ParseInLocation(util.DefaultDateFormatParseStr, fromStr, time.Local); err == nil {
 			from = &t
 		}
 	}
 
 	if toStr := ctx.Query("to"); toStr != "" {
-		if t, err := time.Parse(util.DefaultDateFormatParseStr, toStr); err == nil {
-			endOfDay := t.Add(24*time.Hour - time.Nanosecond)
+		if t, err := time.ParseInLocation(util.DefaultDateFormatParseStr, toStr, time.Local); err == nil {
+			endOfDay := t.AddDate(0, 0, 1).Add(-time.Nanosecond)
 			to = &endOfDay
 		}
 	}
@@ -45,11 +45,11 @@ func parseDateRange(ctx *gin.Context) (*time.Time, *time.Time) {
 func productToExportRow(p *dbModel.Product) []string {
 	expireAt := ""
 	if !p.ExpireAt.IsZero() {
-		expireAt = p.ExpireAt.Format(util.DefaultDateFormatParseStr)
+		expireAt = p.ExpireAt.In(time.Local).Format(util.DefaultDateFormatParseStr)
 	}
 	addedAt := ""
 	if !p.CreatedAt.IsZero() {
-		addedAt = p.CreatedAt.Format(util.DefaultDateFormatParseStr)
+		addedAt = p.CreatedAt.In(time.Local).Format(util.DefaultDateFormatParseStr)
 	}
 	return []string{
 		p.ProductName,
@@ -181,7 +181,7 @@ func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext) {
 		if !product.DeletedAt.Valid {
 			row = append(row, "")
 		} else {
-			row = append(row, product.DeletedAt.Time.Format(util.DefaultDateFormatParseStr))
+			row = append(row, product.DeletedAt.Time.In(time.Local).Format(util.DefaultDateFormatParseStr))
 		}
 		if err := writer.Write(row); err != nil {
 			appCtx.Logger.Error().Msgf(errors.ErrExportCSVWriteWrapper, err)

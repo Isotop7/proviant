@@ -118,9 +118,7 @@ func (c *OffDumpController) Dispatch() {
 		if c.stopped || c.ctx.Err() != nil {
 			return
 		}
-		c.workers.Add(1)
-		go func() {
-			defer c.workers.Done()
+		c.workers.Go(func() {
 			c.logInfo("OpenFoodFacts dump import dispatched (expiry: %d days)", c.Configuration.DumpImportExpiryDays)
 			c.runGuarded()
 			interval := time.Duration(util.OpenFoodFactsDumpCheckIntervalHours) * time.Hour
@@ -134,7 +132,7 @@ func (c *OffDumpController) Dispatch() {
 					c.runGuarded()
 				}
 			}
-		}()
+		})
 	})
 }
 
@@ -433,7 +431,7 @@ func (w *offDumpProgressWriter) Write(data []byte) (int, error) {
 // server rejects the range or the object changed, so a stale partial download
 // is never stitched onto a different dump.
 func (c *OffDumpController) openDumpStream(ctx context.Context, resumeFrom int64, validator string) (*http.Response, bool, error) {
-	for attempt := 0; attempt < 2; attempt++ {
+	for range 2 {
 		resp, err := c.fetchDump(ctx, resumeFrom, validator)
 		if err != nil {
 			return nil, false, fmt.Errorf("downloading dump: %w", err)

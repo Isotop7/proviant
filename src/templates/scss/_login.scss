@@ -66,31 +66,20 @@
 }
 
 .auth__brand .brand-logo {
-  display: flex;
-  gap: 12px;
-  align-items: center;
   margin-bottom: 52px;
 }
 
-.brand-logo-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  font-size: 20px;
-  font-weight: 700;
+// The panel carries the accent fill, so the mark outlines itself in the
+// on-accent ink instead of filling with the accent, and the wordmark takes
+// the same ink.
+.auth__brand .brand-logo-mark {
   color: var(--accent-on);
-  letter-spacing: -.5px;
+  background: transparent;
   border: 1px solid color-mix(in oklab, var(--accent-on) 25%, transparent);
-  border-radius: 12px;
 }
 
-.brand-logo-name {
-  font-size: 22px;
-  font-weight: 700;
+.auth__brand .brand-logo-name {
   color: var(--accent-on);
-  letter-spacing: -.5px;
 }
 
 .brand-headline {
@@ -423,31 +412,10 @@
 }
 
 // ── Mobile logo ───────────────────────────────────────────────────────────────
+// The lockup is the shared one; this wrapper only decides when it shows.
 .mobile-logo {
   display: none;
-  gap: 10px;
-  align-items: center;
   margin-bottom: 32px;
-}
-
-.mobile-logo-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  font-size: 18px;
-  font-weight: 700;
-  color: white;
-  background: var(--accent);
-  border-radius: 10px;
-}
-
-.mobile-logo-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--fg);
-  letter-spacing: -.4px;
 }
 
 // ── Responsive ────────────────────────────────────────────────────────────────

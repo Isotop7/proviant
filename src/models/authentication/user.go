@@ -70,6 +70,26 @@ type User struct {
 	ReceiptScanPreferences  ReceiptScanPreferences  `gorm:"embedded;embeddedPrefix:receipt_scan_" json:"-"`
 	FailedLoginAttempts     uint                    `gorm:"default:0" json:"-"`
 	LockedUntil             gorm.DeletedAt          `json:"-"`
+
+	// TwoFactorEnabled reports whether a second factor is active for this
+	// account. TwoFactorSecret holds the encrypted TOTP secret and
+	// TwoFactorLastUsedStep the counter of the last accepted code, which
+	// rejects a replayed code. TwoFactorPendingSecret holds a secret that was
+	// generated for an enrolment that has not been confirmed yet. Every field
+	// is json:"-": a TOTP secret must never leave the server in a response.
+	TwoFactorEnabled       bool       `gorm:"default:false" json:"-"`
+	TwoFactorSecret        string     `gorm:"column:two_factor_secret;type:text" json:"-"`
+	TwoFactorLastUsedStep  int64      `gorm:"default:0" json:"-"`
+	TwoFactorPendingSecret string     `gorm:"column:two_factor_pending_secret;type:text" json:"-"`
+	TwoFactorPendingExpiry *time.Time `json:"-"`
+
+	// TwoFactorVerified records that this session was completed with a second
+	// factor. It is never persisted; it only travels into the JWT claims.
+	TwoFactorVerified bool `gorm:"-" json:"-"`
+
+	// TwoFactorRecovered records that this session was completed with a
+	// recovery code, which turned the second factor off.
+	TwoFactorRecovered bool `gorm:"-" json:"-"`
 }
 
 // EffectiveName returns DisplayName if set, otherwise falls back to Username.

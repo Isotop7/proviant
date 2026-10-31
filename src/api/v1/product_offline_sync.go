@@ -22,7 +22,7 @@ import (
 
 // SyncOfflineProducts creates queued mobile entries idempotently.
 // @Summary       Sync offline product entries
-// @Description   Creates queued drafts. Replayed clientSyncId values return the existing product.
+// @Description   Creates queued drafts. Replayed clientSyncId values return the existing product. The queue is insert-only: a queued draft that duplicates a row of the household — the same barcode in the same storage location with the same effective expiry — is written as a row of its own, because the sync runs unattended and a duplicate cannot be answered with a question.
 // @Tags          product
 // @Accept        json
 // @Produce       json
@@ -87,6 +87,11 @@ func SyncOfflineProducts(ctx *gin.Context, appCtx *AppContext) {
 	if user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID); userErr == nil {
 		bulkActorInfo.userName = user.DisplayName
 	}
+
+	// The canonical categories and the household's shelf-life defaults are read
+	// once for the whole batch, so the category of every queued item is
+	// checked against the same set.
+	categories := loadBatchCategories(appCtx)
 
 	// The fallback name below is written into the row and outlives this request, so
 	// it is resolved once for the whole batch — and it is resolved in the language
@@ -154,7 +159,7 @@ func SyncOfflineProducts(ctx *gin.Context, appCtx *AppContext) {
 			}
 		}
 
-		product, result := bulkCreateItem(appCtx, i, &draft.BulkProductDraft, validLocationIDs, clientSyncID)
+		product, result := bulkCreateItem(appCtx, i, &draft.BulkProductDraft, validLocationIDs, clientSyncID, categories)
 		if result.Status != apiModel.BulkItemStatusCreated {
 			// A retry may race with another worker that already inserted this
 			// client sync id; report the existing row instead of a failure.

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -196,13 +197,9 @@ func format(text string, args []any) string {
 func JSON(lang string) string {
 	load()
 	merged := map[string]string{}
-	for key, text := range catalogs[DefaultLanguage] {
-		merged[key] = text
-	}
+	maps.Copy(merged, catalogs[DefaultLanguage])
 	if base := Normalize(lang); base != "" && base != DefaultLanguage {
-		for key, text := range catalogs[base] {
-			merged[key] = text
-		}
+		maps.Copy(merged, catalogs[base])
 	}
 	raw, err := json.Marshal(merged)
 	if err != nil {
@@ -265,7 +262,7 @@ func parseAcceptLanguage(header string) string {
 		q   float64
 	}
 	var candidates []candidate
-	for _, part := range strings.Split(header, ",") {
+	for part := range strings.SplitSeq(header, ",") {
 		fields := strings.Split(part, ";")
 		tag := strings.TrimSpace(fields[0])
 		if tag == "" {

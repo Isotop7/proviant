@@ -25,12 +25,13 @@
     'activity': { order: 6, w: 6, h: 2 },
     'savings-eur': { order: 7, w: 2, h: 1 },
     'savings-co2': { order: 8, w: 2, h: 1 },
-    'expiring-list': { order: 9, w: 6, h: 2 },
-    'chart-waste': { order: 10, w: 3, h: 2 },
-    'chart-categories': { order: 11, w: 3, h: 2 },
-    'chart-expiry': { order: 12, w: 6, h: 2 },
-    'cta-waste': { order: 13, w: 3, h: 1 },
-    'cta-recipes': { order: 14, w: 3, h: 1 },
+    'use-first': { order: 9, w: 6, h: 2 },
+    'expiring-list': { order: 10, w: 6, h: 2 },
+    'chart-waste': { order: 11, w: 3, h: 2 },
+    'chart-categories': { order: 12, w: 3, h: 2 },
+    'chart-expiry': { order: 13, w: 6, h: 2 },
+    'cta-waste': { order: 14, w: 3, h: 1 },
+    'cta-recipes': { order: 15, w: 3, h: 1 },
   };
 
   let grid = null;
@@ -42,6 +43,9 @@
   let editing = false;
   let slot = null;
   let slotTimer = null;
+
+  // The reflow animation that runs on a cell, so a new one can cancel it.
+  const reflowAnimations = new WeakMap();
 
   function announce(message) {
     const status = document.getElementById('dashboard-status');
@@ -136,8 +140,9 @@
     const target = clamp(index, 0, ordered.length - 1);
     if (current === target) return false;
 
-    // The dragged tile follows the pointer, so it must not be animated.
-    animateReflow(drag ? drag.tile : null, function () {
+    // The moved tile lands in its new place and the dragged tile follows the
+    // pointer: neither of them may be animated.
+    animateReflow(tile, function () {
       ordered.splice(current, 1);
       ordered.splice(target, 0, tile);
       ordered.forEach(function (entry, position) { entry.order = position; });
@@ -316,16 +321,14 @@
     return slot;
   }
 
-  // The slot follows the cell without the drag offset, so it stays where the
-  // tile will land.
+  // The slot marks the place the tile will land: the cell's layout position
+  // in the grid's padding box.
   function positionSlot(cell) {
     if (!slot) return;
-    const rect = cell.getBoundingClientRect();
-    const gridRect = grid.getBoundingClientRect();
-    slot.style.left = (rect.left - drag.transformX - gridRect.left) + 'px';
-    slot.style.top = (rect.top - drag.transformY - gridRect.top) + 'px';
-    slot.style.width = rect.width + 'px';
-    slot.style.height = rect.height + 'px';
+    slot.style.left = cell.offsetLeft + 'px';
+    slot.style.top = cell.offsetTop + 'px';
+    slot.style.width = cell.offsetWidth + 'px';
+    slot.style.height = cell.offsetHeight + 'px';
   }
 
   function showSlot(cell) {
@@ -357,17 +360,60 @@
     return Number.isNaN(duration) ? 0 : duration;
   }
 
+  // The grid's place in the viewport. The cells' layout positions hang off it.
+  function gridOrigin() {
+    const rect = grid.getBoundingClientRect();
+    return { left: rect.left + grid.clientLeft, top: rect.top + grid.clientTop };
+  }
+
+  // The cell's place in the grid, in viewport coordinates, without the
+  // transform a drag or an animation may have put on it: the offset of a cell
+  // is its layout position, a transform does not move it.
+  function layoutOrigin(cell) {
+    const origin = gridOrigin();
+    return { left: origin.left + cell.offsetLeft, top: origin.top + cell.offsetTop };
+  }
+
+  // The area the tiles live in, in viewport coordinates.
+  function gridContentBox() {
+    const origin = gridOrigin();
+    const styles = window.getComputedStyle(grid);
+    const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0;
+    const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
+    const paddingRight = Number.parseFloat(styles.paddingRight) || 0;
+    const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0;
+    const left = origin.left + paddingLeft;
+    const top = origin.top + paddingTop;
+    return {
+      left: left,
+      top: top,
+      right: left + (grid.clientWidth - paddingLeft - paddingRight),
+      bottom: top + (grid.clientHeight - paddingTop - paddingBottom),
+    };
+  }
+
+  // A tile that is still gliding must not be measured while it is displaced:
+  // the running animation goes first.
+  function cancelReflow(element) {
+    const running = reflowAnimations.get(element);
+    if (!running) return;
+    running.cancel();
+    reflowAnimations.delete(element);
+  }
+
   // The tiles that change their place glide there: the grid has already placed
   // them, the animation plays the difference back.
   function animateReflow(excluded, mutate) {
-    const moved = tiles.filter(function (tile) { return tile.element !== excluded; });
+    const moved = tiles.filter(function (tile) { return tile !== excluded; });
     if (moved.length === 0 || typeof moved[0].element.animate !== 'function') {
       mutate();
       return;
     }
 
+    moved.forEach(function (tile) { cancelReflow(tile.element); });
+
     const before = moved.map(function (tile) {
-      return { element: tile.element, rect: tile.element.getBoundingClientRect() };
+      return { element: tile.element, left: tile.element.offsetLeft, top: tile.element.offsetTop };
     });
 
     mutate();
@@ -376,33 +422,48 @@
     if (!duration) return;
 
     before.forEach(function (entry) {
-      const next = entry.element.getBoundingClientRect();
-      const dx = entry.rect.left - next.left;
-      const dy = entry.rect.top - next.top;
+      const dx = entry.left - entry.element.offsetLeft;
+      const dy = entry.top - entry.element.offsetTop;
       if (!dx && !dy) return;
-      entry.element.animate(
+      const animation = entry.element.animate(
         [{ transform: 'translate(' + dx + 'px, ' + dy + 'px)' }, { transform: 'translate(0, 0)' }],
         { duration: duration, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
       );
+      reflowAnimations.set(entry.element, animation);
     });
   }
 
-  // The insertion point of a pointer: the number of tiles whose centre lies
-  // before it in reading order.
+  // The point that decides where a dragged tile lands: the middle of the tile
+  // that is being dragged, not the pointer. The grip sits in the corner of a
+  // tile, so the pointer runs half a tile ahead of it — it would ask for a
+  // row the tile has not entered and a slot it has not reached.
+  function dragReference() {
+    const cell = drag.tile.element;
+    return {
+      x: drag.layoutLeft + drag.transformX + cell.offsetWidth / 2,
+      y: drag.layoutTop + drag.transformY + cell.offsetHeight / 2,
+    };
+  }
+
+  // The insertion point of a reference point: the number of tiles it has
+  // passed in reading order. The row is the row the reference is in, the place
+  // in the row is the slot whose left edge the reference has passed — the
+  // reference has entered that slot, so the tile lands there.
   function insertionIndex(x, y, dragged) {
     const others = orderedTiles().filter(function (tile) { return tile !== dragged; });
+    const origin = gridOrigin();
     let index = 0;
     for (let i = 0; i < others.length; i++) {
-      const rect = others[i].element.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const band = rect.height / 4;
+      const cell = others[i].element;
+      const left = origin.left + cell.offsetLeft;
+      const centerY = origin.top + cell.offsetTop + cell.offsetHeight / 2;
+      const band = cell.offsetHeight / 4;
       if (y > centerY + band) {
         index++;
         continue;
       }
       if (y < centerY - band) break;
-      if (x > centerX) index++;
+      if (x > left) index++;
       else break;
     }
     return index;
@@ -414,20 +475,26 @@
     const tile = tileFor(cell);
     if (!tile) return;
 
-    const rect = cell.getBoundingClientRect();
+    const origin = layoutOrigin(cell);
     drag = {
       tile: tile,
       pointerId: event.pointerId,
-      grabOffsetX: event.clientX - rect.left,
-      grabOffsetY: event.clientY - rect.top,
+      grabOffsetX: event.clientX - origin.left,
+      grabOffsetY: event.clientY - origin.top,
+      layoutLeft: origin.left,
+      layoutTop: origin.top,
+      pointerX: event.clientX,
+      pointerY: event.clientY,
       transformX: 0,
       transformY: 0,
       index: orderedTiles().indexOf(tile),
     };
 
+    cancelReflow(cell);
     if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
     cell.classList.remove('bento__cell--landed');
     cell.classList.add('bento__cell--dragging');
+    grid.classList.add('bento--dragging');
     showSlot(cell);
     document.addEventListener('pointermove', onMovePointerMove);
     document.addEventListener('pointerup', onMovePointerUp);
@@ -435,32 +502,50 @@
     event.preventDefault();
   }
 
+  // The pointer may not leave the area in which the dragged tile still fits
+  // into the grid: a drag must not move a tile out of the grid.
+  function pointerBounds() {
+    const box = gridContentBox();
+    const cell = drag.tile.element;
+    return {
+      left: box.left + drag.grabOffsetX,
+      right: box.right - cell.offsetWidth + drag.grabOffsetX,
+      top: box.top + drag.grabOffsetY,
+      bottom: box.bottom - cell.offsetHeight + drag.grabOffsetY,
+    };
+  }
+
+  // Puts the dragged tile under the pointer.
+  function applyDragTransform() {
+    const cell = drag.tile.element;
+    drag.transformX = drag.pointerX - drag.grabOffsetX - drag.layoutLeft;
+    drag.transformY = drag.pointerY - drag.grabOffsetY - drag.layoutTop;
+    cell.style.transform = 'translate(' + drag.transformX + 'px, ' + drag.transformY + 'px)';
+  }
+
   function onMovePointerMove(event) {
     if (!drag) return;
     const cell = drag.tile.element;
+    const bounds = pointerBounds();
 
-    const rect = cell.getBoundingClientRect();
-    const slotLeft = rect.left - drag.transformX;
-    const slotTop = rect.top - drag.transformY;
-    drag.transformX = event.clientX - drag.grabOffsetX - slotLeft;
-    drag.transformY = event.clientY - drag.grabOffsetY - slotTop;
-    cell.style.transform = 'translate(' + drag.transformX + 'px, ' + drag.transformY + 'px)';
+    drag.pointerX = clamp(event.clientX, bounds.left, bounds.right);
+    drag.pointerY = clamp(event.clientY, bounds.top, bounds.bottom);
+    applyDragTransform();
     positionSlot(cell);
 
-    const index = insertionIndex(event.clientX, event.clientY, drag.tile);
+    const reference = dragReference();
+    const index = insertionIndex(reference.x, reference.y, drag.tile);
     if (index === drag.index) return;
 
     drag.index = index;
     moveTileTo(drag.tile, index);
 
-    // The reorder moved the slot under the tile: the tile has to follow the
-    // pointer again.
-    const moved = cell.getBoundingClientRect();
-    const movedSlotLeft = moved.left - drag.transformX;
-    const movedSlotTop = moved.top - drag.transformY;
-    drag.transformX = event.clientX - drag.grabOffsetX - movedSlotLeft;
-    drag.transformY = event.clientY - drag.grabOffsetY - movedSlotTop;
-    cell.style.transform = 'translate(' + drag.transformX + 'px, ' + drag.transformY + 'px)';
+    // The reorder gave the tile another place in the grid: the transform has
+    // to be built from that place again.
+    const origin = layoutOrigin(cell);
+    drag.layoutLeft = origin.left;
+    drag.layoutTop = origin.top;
+    applyDragTransform();
     positionSlot(cell);
   }
 
@@ -470,6 +555,7 @@
     tile.element.classList.remove('bento__cell--dragging');
     tile.element.classList.add('bento__cell--landed');
     tile.element.style.transform = '';
+    grid.classList.remove('bento--dragging');
     hideSlot();
     document.removeEventListener('pointermove', onMovePointerMove);
     document.removeEventListener('pointerup', onMovePointerUp);
@@ -510,6 +596,7 @@
     };
 
     if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
+    cancelReflow(cell);
     cell.classList.remove('bento__cell--landed');
     cell.classList.add('bento__cell--resizing');
     document.addEventListener('pointermove', onResizePointerMove);

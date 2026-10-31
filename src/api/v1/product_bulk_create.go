@@ -12,6 +12,7 @@ import (
 
 	"github.com/Isotop7/proviant/api"
 	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/errors"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	dbModel "github.com/Isotop7/proviant/models/database"
@@ -46,7 +47,7 @@ var bulkSideEffectBatches atomic.Int64
 // per-item and partial success is allowed: every submitted item reports its
 // own outcome, a failing item never blocks the others.
 // @Summary       Create multiple products
-// @Description   Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack.
+// @Description   Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack. A batch is insert-only: a draft that duplicates a row of the household — the same barcode in the same storage location with the same effective expiry — is written as a row of its own, because a batch may hold several packs of one product and a duplicate cannot be answered with a question.
 // @Tags          product
 // @Accept        json
 // @Produce       json
@@ -114,10 +115,15 @@ func BulkCreateProducts(ctx *gin.Context, appCtx *AppContext) {
 		logger.Warn().Msgf("Bulk create: activity log will use empty user name, user lookup failed: %s", userErr)
 	}
 
+	// The canonical categories and the household's shelf-life defaults are read
+	// once for the whole batch, so the category of every item is checked
+	// against the same set.
+	categories := loadBatchCategories(appCtx)
+
 	results := make([]apiModel.BulkItemResult, 0, len(req.Items))
 	createdProducts := make([]*dbModel.Product, 0, len(req.Items))
 	for i := range req.Items {
-		product, result := bulkCreateItem(appCtx, i, &req.Items[i], validLocationIDs, "")
+		product, result := bulkCreateItem(appCtx, i, &req.Items[i], validLocationIDs, "", categories)
 		if result.Status == apiModel.BulkItemStatusCreated {
 			logger.Info().Msgf("Bulk create: item %d created product %d", i, *result.ProductID)
 			createdProducts = append(createdProducts, product)
@@ -251,10 +257,25 @@ func draftPriceOverride(draft *apiModel.BulkProductDraft, quantity int) *float64
 	return nil
 }
 
+// parseDraftExpiry reads the expiry date of a draft. Two spellings are in the
+// wild: the receipt scan writes a plain date, while the browser writes the
+// date input's value as an RFC 3339 timestamp. Both have to be accepted —
+// the offline outbox replays the browser's spelling, and a draft that cannot
+// be read is parked as a failed create.
+func parseDraftExpiry(value string) (time.Time, error) {
+	trimmed := strings.TrimSpace(value)
+	if parsed, err := time.ParseInLocation(util.DefaultDateFormatParseStr, trimmed, time.Local); err == nil {
+		return parsed, nil
+	}
+	return time.Parse(time.RFC3339, trimmed)
+}
+
 // bulkCreateItem validates one draft and creates it. Validation failures and
 // DB errors are item-level outcomes, never request-level ones. The created
 // product is returned for the caller's side-effect worker; nil on failure.
-func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDraft, validLocationIDs map[uint]bool, clientSyncID string) (*dbModel.Product, apiModel.BulkItemResult) {
+// The categories are the canonical categories and the household's shelf-life
+// defaults of the request; an empty resolver skips the category check.
+func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDraft, validLocationIDs map[uint]bool, clientSyncID string, categories batchCategories) (*dbModel.Product, apiModel.BulkItemResult) {
 	// Overlong names are clamped, not rejected: the receipt scan path clamps
 	// names the same way and the other string fields are truncated, so a
 	// direct API client gets the same permissive-but-bounded treatment.
@@ -266,7 +287,7 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 
 	expireAt := time.Time{}
 	if strings.TrimSpace(draft.ExpireAt) != "" {
-		parsed, parseErr := time.Parse(util.DefaultDateFormatParseStr, draft.ExpireAt)
+		parsed, parseErr := parseDraftExpiry(draft.ExpireAt)
 		if parseErr != nil {
 			// Truncate before echoing: draft.ExpireAt is unvalidated client
 			// input and %q-escaping a ~100KB string would blow it up to
@@ -302,6 +323,25 @@ func bulkCreateItem(appCtx *AppContext, index int, draft *apiModel.BulkProductDr
 		PriceOverride: priceOverride,
 		IsPrivate:     draft.IsPrivate,
 	}
+	if draft.CategoryKey != nil {
+		categoryKey, categoryErr := database.CanonicalCategoryKey(categories.resolver, draft.CategoryKey)
+		if categoryErr != nil {
+			return nil, terminalBulkItem(index, "unknown category")
+		}
+		product.CategoryKey = categoryKey
+	} else if categories.resolver != nil {
+		// A draft that names no category still names one through its free
+		// text: the same rule the savings and the waste analytics use.
+		if key, ok := categories.resolver.ResolveKey(product.Categories); ok {
+			product.CategoryKey = &key
+		}
+	}
+	if draft.DaysAfterOpening != nil {
+		product.DaysAfterOpening = draft.DaysAfterOpening
+	}
+	// A draft that names no date gets the shelf life the household gave its
+	// category, the same rule the single create follows.
+	database.ApplyHouseholdShelfLife(&product, categories.defaults, product.CategoryKey)
 	if draft.StorageLocationID != nil {
 		if !validLocationIDs[*draft.StorageLocationID] {
 			return nil, terminalBulkItem(index, "unknown storage location")

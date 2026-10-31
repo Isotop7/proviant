@@ -206,9 +206,7 @@ func (c *PackSizeController) Dispatch() {
 		if c.stopped || c.ctx.Err() != nil {
 			return
 		}
-		c.workers.Add(1)
-		go func() {
-			defer c.workers.Done()
+		c.workers.Go(func() {
 			if c.Logger != nil {
 				c.Logger.Info().Msgf("PackSizeController dispatched (interval: %s)", packSizeBackfillInterval)
 			}
@@ -228,7 +226,7 @@ func (c *PackSizeController) Dispatch() {
 					cancel()
 				}
 			}
-		}()
+		})
 	})
 }
 

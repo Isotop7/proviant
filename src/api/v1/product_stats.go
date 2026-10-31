@@ -3,11 +3,13 @@ package v1
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Isotop7/proviant/api"
 	"github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/errors"
 	apiModel "github.com/Isotop7/proviant/models/api"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,14 +57,16 @@ func GetExpired(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/summary [get]
 func GetProductSummary(ctx *gin.Context, appCtx *AppContext) {
-	expiringSoonCount, err := appCtx.Repos.Products.GetExpiringSoonCount(appCtx.UserID, 7)
+	now := time.Now()
+
+	expiringSoonCount, err := appCtx.Repos.Products.GetExpiringSoonCount(appCtx.UserID, 7, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
 		return
 	}
 
-	expiredCount, err := appCtx.Repos.Products.GetExpiredProductsCount(appCtx.UserID)
+	expiredCount, err := appCtx.Repos.Products.GetExpiredProductsCount(appCtx.UserID, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -76,7 +80,7 @@ func GetProductSummary(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	wasteThisMonth, err := appCtx.Repos.Products.GetWasteThisMonth(appCtx.UserID)
+	wasteThisMonth, err := appCtx.Repos.Products.GetWasteThisMonth(appCtx.UserID, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetWasteThisMonth: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -93,7 +97,7 @@ func GetProductSummary(ctx *gin.Context, appCtx *AppContext) {
 
 // GetProductStats returns aggregated product statistics for the authenticated user
 // @Summary      Return product statistics
-// @Description  Returns waste rate, top archived products, category breakdown and expiry trend
+// @Description  Returns waste rate, top archived products, category breakdown and expiry trend. The useFirst list names the products of the whole household ordered by the effective expiry, soonest first, with the storage location and the pack count of each.
 // @Tags         product
 // @Produce      json
 // @Success      200  {object}  apiModel.ProductStatsResponse
@@ -101,6 +105,10 @@ func GetProductSummary(ctx *gin.Context, appCtx *AppContext) {
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/stats [get]
 func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
+	// One instant for the whole response: the counts and the month buckets of
+	// a stats document have to describe the same point in time.
+	now := time.Now()
+
 	totalActive, err := appCtx.Repos.Products.GetActiveProductsCount(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetActiveProductsCount, err)
@@ -108,7 +116,7 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	wasteCount, err := appCtx.Repos.Products.GetExpiredProductsCount(appCtx.UserID)
+	wasteCount, err := appCtx.Repos.Products.GetExpiredProductsCount(appCtx.UserID, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingWasteCount})
@@ -125,10 +133,17 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 		expiringSoonDays = user.NotificationPreferences.NotificationThresholdDays
 	}
 
-	expiringSoon, err := appCtx.Repos.Products.GetExpiringSoonProducts(appCtx.UserID, expiringSoonDays)
+	expiringSoon, err := appCtx.Repos.Products.GetExpiringSoonProducts(appCtx.UserID, expiringSoonDays, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
+		return
+	}
+
+	useFirst, err := appCtx.Repos.Products.GetUseFirstProducts(appCtx.UserID, util.UseFirstProductsLimit)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("GetUseFirstProducts: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
@@ -139,7 +154,7 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	expiryTrend, err := appCtx.Repos.Products.GetExpiryTrend(appCtx.UserID)
+	expiryTrend, err := appCtx.Repos.Products.GetExpiryTrend(appCtx.UserID, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiryTrend, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiryTrend})
@@ -173,6 +188,7 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 		LastInsertedProduct: lastInsertedProduct,
 		ExpiringSoon:        expiringSoon,
 		ExpiringSoonDays:    expiringSoonDays,
+		UseFirst:            useFirst,
 		Categories:          categories,
 		ExpiryTrend:         expiryTrend,
 	})

@@ -10,12 +10,13 @@ import { loadClassicScript } from "./helpers/loadScript.js";
  */
 const RESET_REALM = "localStorage.clear(); document.body.innerHTML = '';";
 
-function freshProducts(cookedItems) {
+function freshProducts(cookedItems, listBody) {
+  const body = listBody === undefined ? [{ id: 7, productName: "Flour", quantity: 5 }] : listBody;
   const fetchStub = async (url) => {
     if (url.indexOf("/api/v1/products?ids=") === 0) {
       return {
         ok: true,
-        json: async () => [{ id: 7, productName: "Flour", quantity: 5 }],
+        json: async () => body,
       };
     }
     return { ok: true, json: async () => ({}) };
@@ -82,5 +83,20 @@ describe("products.js cook modal", () => {
     await submitCook();
 
     expect(cooked).toEqual([{ productId: 7, quantity: 5 }]);
+  });
+
+  it("reads the products out of the paged list envelope", async () => {
+    const { openCookModalInner, realm } = freshProducts(cooked, {
+      products: [{ id: 7, productName: "Flour", quantity: 5 }],
+      total: 1,
+      limit: 100,
+      offset: 0,
+    });
+
+    await openCookModalInner([7], realm.document.getElementById("cookModalItems"));
+
+    const row = realm.document.querySelector(".cook-item-row");
+    expect(row).not.toBeNull();
+    expect(row.dataset.maxQuantity).toBe("5");
   });
 });

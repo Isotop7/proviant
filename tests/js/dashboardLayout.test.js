@@ -23,8 +23,11 @@ const PAGE_MARKUP = `
     <div class="bento__cell bento__cell--2" data-tile="consumed">
       <div class="kpi"><div class="kpi__label">Total Consumed</div></div>
     </div>
-    <div class="bento__cell bento__cell--6" data-tile="expiring-list">
+    <div class="bento__cell bento__cell--6" data-tile="expiring-list" data-tile-label="Expiring">
       <div class="card"><div class="card-header">Expiring</div></div>
+    </div>
+    <div class="bento__cell bento__cell--6" data-tile="use-first">
+      <div class="card"><div class="card-header">Use me first</div></div>
     </div>
   </div>
 `;
@@ -42,6 +45,7 @@ let realm;
 let getDashboardLayout;
 let saveDashboardLayout;
 let phoneLayout = false;
+const animations = [];
 
 /**
  * jsdom has no matchMedia. The stub answers the phone breakpoint only while a
@@ -55,6 +59,46 @@ function matchMediaStub(query) {
     removeEventListener() {},
     addListener() {},
     removeListener() {},
+  };
+}
+
+/**
+ * jsdom has no layout: every box measures zero. The stub gives the grid and
+ * its cells a size, so the engine can measure them. The cells stand where
+ * their order puts them.
+ */
+function stubGeometry() {
+  const grid = realm.document.getElementById("dashboard");
+  Object.defineProperty(grid, "clientWidth", { value: 1200, configurable: true });
+  Object.defineProperty(grid, "clientHeight", { value: 600, configurable: true });
+  grid.getBoundingClientRect = () => ({
+    left: 0, top: 0, right: 1200, bottom: 600, width: 1200, height: 600, x: 0, y: 0,
+  });
+
+  ["hero", "consumed", "expiring-list", "use-first"].forEach((id) => {
+    const cell = tile(id);
+    const order = () => Number(cell.style.getPropertyValue("--tile-order")) || 0;
+    Object.defineProperty(cell, "offsetLeft", { get: () => order() * 200, configurable: true });
+    Object.defineProperty(cell, "offsetTop", { get: () => 0, configurable: true });
+    Object.defineProperty(cell, "offsetWidth", { get: () => 200, configurable: true });
+    Object.defineProperty(cell, "offsetHeight", { get: () => 120, configurable: true });
+    // The rendered box stands somewhere else: the engine must not measure it.
+    cell.getBoundingClientRect = () => ({
+      left: 999, top: 999, right: 1199, bottom: 1119, width: 200, height: 120, x: 999, y: 999,
+    });
+  });
+}
+
+/**
+ * jsdom has no Web Animations. The stub records the animations the engine
+ * starts, so a test can see which cells are animated and which are not.
+ */
+function stubAnimations() {
+  realm.Element.prototype.animate = function (keyframes, options) {
+    const animation = { element: this, keyframes, options, cancelled: false };
+    animation.cancel = () => { animation.cancelled = true; };
+    animations.push(animation);
+    return animation;
   };
 }
 
@@ -73,6 +117,7 @@ beforeAll(() => {
     },
   });
   realm = loaded.realm;
+  stubAnimations();
 });
 
 beforeEach(() => {
@@ -80,6 +125,8 @@ beforeEach(() => {
   phoneLayout = false;
   realm.document.body.innerHTML = PAGE_MARKUP;
   realm.localStorage.clear();
+  realm.document.documentElement.style.removeProperty("--motion-base");
+  animations.length = 0;
   getDashboardLayout.mockReset();
   getDashboardLayout.mockResolvedValue({ code: 200, message: { version: 1, tiles: {} } });
   saveDashboardLayout.mockClear();
@@ -113,7 +160,20 @@ describe("dashboardLayout.js arrangement", () => {
     expect(span("consumed", "--tile-order")).toBe("1");
     expect(span("consumed", "--tile-w")).toBe("2");
     expect(span("expiring-list", "--tile-w")).toBe("6");
+    expect(span("use-first", "--tile-w")).toBe("6");
+    expect(span("use-first", "--tile-h")).toBe("2");
     expect(tile("hero").dataset.tileSpan).toBe("true");
+  });
+
+  it("gives a tile the dashboard did not know yet its default place", async () => {
+    await boot();
+
+    // The use-first tile joined the dashboard after the stored arrangement was
+    // written: it lands on its default place and the other tiles keep theirs.
+    expect(span("use-first", "--tile-order")).toBe("2");
+    expect(span("hero", "--tile-order")).toBe("0");
+    expect(span("consumed", "--tile-order")).toBe("1");
+    expect(span("expiring-list", "--tile-order")).toBe("3");
   });
 
   it("applies the stored arrangement", async () => {
@@ -144,7 +204,7 @@ describe("dashboardLayout.js arrangement", () => {
 
     expect(span("consumed", "--tile-order")).toBe("0");
     expect(span("hero", "--tile-order")).toBe("1");
-    expect(realm.document.querySelectorAll("[data-tile]").length).toBe(3);
+    expect(realm.document.querySelectorAll("[data-tile]").length).toBe(4);
   });
 
   it("scales the width for the narrower grids", async () => {
@@ -167,6 +227,15 @@ describe("dashboardLayout.js edit mode", () => {
     expect(realm.document.getElementById("dashboard-reset-layout").hidden).toBe(true);
     expect(realm.document.getElementById("dashboard").classList.contains("bento--editing")).toBe(false);
     handles("hero").forEach((handle) => expect(handle.hidden).toBe(true));
+  });
+
+  it("names the grips after the tile, not after its content", async () => {
+    await boot();
+
+    // The tile label is what the grip announces. The content of the tile — a
+    // count, a date — would make the name of the grip change with it.
+    const move = tile("expiring-list").querySelector(".bento__handle--move");
+    expect(move.getAttribute("aria-label")).toBe("Move Expiring");
   });
 
   it("shows the grips and the reset while the dashboard is edited", async () => {
@@ -220,7 +289,7 @@ describe("dashboardLayout.js arranging", () => {
 
     expect(span("hero", "--tile-order")).toBe("1");
     expect(span("consumed", "--tile-order")).toBe("0");
-    expect(span("expiring-list", "--tile-order")).toBe("2");
+    expect(span("expiring-list", "--tile-order")).toBe("3");
     expect(saveDashboardLayout).toHaveBeenCalledTimes(1);
     expect(saveDashboardLayout.mock.calls[0][0].tiles.hero).toEqual({ order: 1, w: 3, h: 1 });
     expect(realm.document.getElementById("dashboard-status").textContent).not.toBe("");
@@ -275,6 +344,7 @@ describe("dashboardLayout.js pointer", () => {
   it("marks the place a dragged tile will land in", async () => {
     await boot();
     enterEditMode();
+    stubGeometry();
 
     const handle = tile("hero").querySelector(".bento__handle--move");
     handle.dispatchEvent(pointer("pointerdown", 10, 10));
@@ -292,6 +362,115 @@ describe("dashboardLayout.js pointer", () => {
 
     await vi.advanceTimersByTimeAsync(400);
     expect(realm.document.querySelector(".bento__slot")).toBe(null);
+  });
+
+  it("puts the landing shadow on the place the tile will take", async () => {
+    await boot();
+    enterEditMode();
+    stubGeometry();
+
+    const handle = tile("hero").querySelector(".bento__handle--move");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+
+    const slot = realm.document.querySelector(".bento__slot");
+    expect(slot.style.left).toBe("0px");
+    expect(slot.style.top).toBe("0px");
+    expect(slot.style.width).toBe("200px");
+    expect(slot.style.height).toBe("120px");
+
+    realm.document.dispatchEvent(pointer("pointermove", 250, 30));
+
+    expect(slot.style.left).toBe("200px");
+  });
+
+  it("reorders while the pointer stays at the top of the tile", async () => {
+    await boot();
+    enterEditMode();
+    stubGeometry();
+
+    const handle = tile("hero").querySelector(".bento__handle--move");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+    // The grip sits at the top of the tile, so the pointer never enters the
+    // row of the tiles: the tile itself decides where it lands.
+    realm.document.dispatchEvent(pointer("pointermove", 250, 10));
+
+    expect(span("hero", "--tile-order")).toBe("1");
+  });
+
+  it("does not animate the tile that is dragged", async () => {
+    await boot();
+    enterEditMode();
+    stubGeometry();
+    realm.document.documentElement.style.setProperty("--motion-base", "180ms");
+
+    const handle = tile("hero").querySelector(".bento__handle--move");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+    realm.document.dispatchEvent(pointer("pointermove", 250, 30));
+
+    expect(span("hero", "--tile-order")).toBe("1");
+    const animated = animations.map((animation) => animation.element);
+    expect(animated).not.toContain(tile("hero"));
+    expect(animated).toContain(tile("consumed"));
+  });
+
+  it("measures the layout position and not the rendered one", async () => {
+    await boot();
+    enterEditMode();
+    stubGeometry();
+    realm.document.documentElement.style.setProperty("--motion-base", "180ms");
+
+    const handle = tile("hero").querySelector(".bento__handle--move");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+    realm.document.dispatchEvent(pointer("pointermove", 250, 30));
+
+    expect(animations).toHaveLength(1);
+    expect(animations[0].element).toBe(tile("consumed"));
+    expect(animations[0].keyframes[0].transform).toBe("translate(200px, 0px)");
+  });
+
+  it("cancels the reflow that is still running", async () => {
+    await boot();
+    enterEditMode();
+    stubGeometry();
+    realm.document.documentElement.style.setProperty("--motion-base", "180ms");
+
+    const handle = tile("hero").querySelector(".bento__handle--move");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+    realm.document.dispatchEvent(pointer("pointermove", 250, 30));
+    realm.document.dispatchEvent(pointer("pointermove", 450, 30));
+
+    expect(animations.length).toBeGreaterThan(1);
+    expect(animations[0].cancelled).toBe(true);
+  });
+
+  it("keeps the dragged tile inside the grid", async () => {
+    await boot();
+    enterEditMode();
+    stubGeometry();
+
+    const handle = tile("hero").querySelector(".bento__handle--move");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+    realm.document.dispatchEvent(pointer("pointermove", 5000, 5000));
+
+    const match = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(tile("hero").style.transform);
+    const layoutLeft = Number(tile("hero").style.getPropertyValue("--tile-order")) * 200;
+    const right = layoutLeft + Number(match[1]) + 200;
+
+    expect(right).toBeLessThanOrEqual(1200);
+  });
+
+  it("snaps into place without motion", async () => {
+    await boot();
+    enterEditMode();
+    stubGeometry();
+    realm.document.documentElement.style.setProperty("--motion-base", "0ms");
+
+    const handle = tile("hero").querySelector(".bento__handle--move");
+    handle.dispatchEvent(pointer("pointerdown", 10, 10));
+    realm.document.dispatchEvent(pointer("pointermove", 250, 30));
+
+    expect(span("hero", "--tile-order")).toBe("1");
+    expect(animations).toHaveLength(0);
   });
 
   it("shows the size a resized tile will have", async () => {

@@ -68,6 +68,27 @@ const (
 	ConsumptionSourceMinStock = "min_stock"
 	ConsumptionSourceNone     = "none"
 
+	// UseFirstProductsLimit is how many products the "use me first" list
+	// carries. The list answers "what do we eat next" for the whole pantry,
+	// so it shows the head of the order, not every row.
+	UseFirstProductsLimit = 10
+
+	// FrequentProductMinPurchases is how often a household must have bought a
+	// product before it counts as a staple. A product bought once is not a
+	// staple, it is a one-off.
+	FrequentProductMinPurchases = 2
+
+	// FrequentProductLimit is how many staples the "frequently bought" strip
+	// carries. The strip is a row of chips, not a list, so it shows the head
+	// of the order.
+	FrequentProductLimit = 8
+
+	// MaxProductListOffset bounds the offset a product list may be read at. An
+	// offset skips rows the database has to walk past, so a household that
+	// holds far more products than any of them is not a thing; the bound keeps
+	// a request from asking for a window nobody can reach.
+	MaxProductListOffset = 1000000
+
 	// Waste analytics period identifiers
 	PeriodValueMonth    = "month"
 	PeriodValue3Months  = "3months"
@@ -152,6 +173,30 @@ const (
 	// templates used to ship. It is public, so validation refuses to start
 	// with it: anyone who knows it can forge a session token for any user.
 	RetiredTokenPassword = "secret key" //nolint:gosec // G101: published placeholder being rejected, not a credential
+
+	// TwoFactorEncryptionKeyBytes is the required length of the decoded
+	// server.twoFactor.encryptionKey. It matches the AES-256 key size.
+	TwoFactorEncryptionKeyBytes = 32
+
+	// RetiredTwoFactorEncryptionKey is the server.twoFactor.encryptionKey value
+	// the config templates ship. It is public, so validation refuses to start
+	// with it: anyone who knows it could decrypt a TOTP secret from a database
+	// dump and mint codes for every enrolled account.
+	RetiredTwoFactorEncryptionKey = "cHJvdmlhbnQtZGVmYXVsdC10b3RwLWtleS0wMDAwMDA=" //nolint:gosec // G101: published placeholder being rejected, not a credential
+
+	// DefaultTwoFactorIssuer is the account name prefix shown in the
+	// authenticator app when server.twoFactor.issuer is left empty.
+	DefaultTwoFactorIssuer = "Proviant"
+
+	// DefaultTwoFactorRecoveryCodeCount is the number of recovery codes issued
+	// when server.twoFactor.recoveryCodeCount is left unset.
+	DefaultTwoFactorRecoveryCodeCount = 10
+
+	// Route labels for the two-factor authentication endpoints
+	RouteUserTOTP        = "/totp"
+	RouteUserTOTPConfirm = "/totp/confirm"
+	RouteUserTOTPDisable = "/totp/disable"
+	RouteAuthTOTPSetup   = "/auth/totp/setup/confirm"
 
 	// Receipt scan (issue #61)
 	ReceiptOCRProviderOpenAI  = "openai"

@@ -1,0 +1,31 @@
+{{ define "duplicateProductModal" }}
+<!-- Duplicate prompt: the household already has this product, the user decides
+     what happens with the new pack -->
+<dialog class="dialog" id="duplicateProductModal" aria-labelledby="duplicateProductModalLabel">
+            <div class="dialog-header">
+                <div class="dialog-icon dialog-icon-accent">
+                    <i class="bi bi-layers"></i>
+                </div><h5 class="dialog-title mb-0" id="duplicateProductModalLabel">{{ t "products.duplicateTitle" }}</h5>
+                <div class="dialog-subtitle" id="duplicateProductName"></div>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <p class="text-fg-2 small mb-1" id="duplicateProductExpiry"></p>
+                <p class="text-fg-2 small mb-3" id="duplicateProductLocation"></p>
+                <p class="mb-2">{{ t "products.duplicateHint" }}</p>
+                <ul class="mb-0">
+                    <li>{{ t "products.duplicateOptionAddPack" }}</li>
+                    <li>{{ t "products.duplicateOptionAddSeparately" }}</li>
+                    <li>{{ t "products.duplicateOptionCancel" }}</li>
+                </ul>
+                <div id="duplicateProductAnnouncement" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+            </div>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" id="btnDuplicateCancel">{{ t "products.duplicateCancel" }}</button>
+                <button type="button" class="btn btn-outline theme-secondary" id="btnDuplicateAddSeparately">{{ t "products.duplicateAddSeparately" }}</button>
+                <button type="button" class="btn btn-solid theme-primary" id="btnDuplicateAddPack">{{ t "products.duplicateAddPack" }}</button>
+            </div>
+        </dialog>
+{{ end }}

@@ -26,6 +26,15 @@
   border: 1px solid var(--border);
 }
 
+// Two-factor enrolment QR code
+.totp-qr {
+  max-width: 260px;
+  height: auto;
+  padding: var(--space-2);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+}
+
 // Icon chip inverse (white background on accent cards)
 .icon-chip-inverse {
   background: var(--surface);

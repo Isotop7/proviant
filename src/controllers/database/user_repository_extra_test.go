@@ -241,7 +241,7 @@ func TestUserRepository_LoginLockout(t *testing.T) {
 	})
 
 	t.Run("failed attempts below threshold do not lock", func(t *testing.T) {
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			if err := repo.RecordFailedLoginAttempt(user.ID, 3, 5); err != nil {
 				t.Fatalf("RecordFailedLoginAttempt() error = %v", err)
 			}

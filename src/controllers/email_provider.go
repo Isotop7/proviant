@@ -81,7 +81,7 @@ func (e *EmailNotificationProvider) IsConfigured() bool {
 	return e.Configuration.Host != "" && e.Configuration.Port > 0
 }
 
-func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo interface{}, lang string) error {
+func (e *EmailNotificationProvider) SendNotification(product *dbModel.Product, recipientInfo any, lang string) error {
 	recipient, ok := recipientInfo.(string)
 	if !ok {
 		return fmt.Errorf("invalid recipient type for email provider")
@@ -218,6 +218,32 @@ func (e *EmailNotificationProvider) SendEmailVerificationEmail(email, username, 
 		MagicLink: magicLink,
 		ExpiresAt: expiresAt.Format("2006-01-02 15:04"),
 		Email:     email,
+	}, lang)
+}
+
+// SendTwoFactorEnabledEmail tells the recipient that a second factor was
+// enrolled on their account. The first enrolment of a second factor always
+// rests on the password alone, so the account owner has to learn about it.
+func (e *EmailNotificationProvider) SendTwoFactorEnabledEmail(email, username, lang string) error {
+	return e.sendHTML(email, i18n.T(lang, "notify.subject.twoFactorEnabled"), "notification/two_factor_enabled.html", struct {
+		Username string
+		Email    string
+	}{
+		Username: username,
+		Email:    email,
+	}, lang)
+}
+
+// SendTwoFactorRemovedEmail tells the recipient that a second factor was
+// removed from their account. An admin can clear a member's second factor, and
+// that happens behind the member's back — they have to learn about it.
+func (e *EmailNotificationProvider) SendTwoFactorRemovedEmail(email, username, lang string) error {
+	return e.sendHTML(email, i18n.T(lang, "notify.subject.twoFactorRemoved"), "notification/two_factor_removed.html", struct {
+		Username string
+		Email    string
+	}{
+		Username: username,
+		Email:    email,
 	}, lang)
 }
 

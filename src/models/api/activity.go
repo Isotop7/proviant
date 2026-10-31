@@ -14,5 +14,8 @@ type ActivityEntry struct {
 	ProductID   uint   `json:"productId"`
 	ProductName string `json:"productName"`
 	Quantity    int    `json:"quantity"`
-	Timestamp   string `json:"timestamp"`
+	// WasteCause is why the action wasted the product. It is empty for every
+	// action but a waste that carried a reason.
+	WasteCause string `json:"wasteCause"`
+	Timestamp  string `json:"timestamp"`
 }

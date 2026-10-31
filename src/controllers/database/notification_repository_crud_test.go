@@ -1,6 +1,7 @@
 package database
 
 import (
+	stderrors "errors"
 	"testing"
 	"time"
 
@@ -237,4 +238,49 @@ func TestNotificationRepository_GetWasteStatsForHousehold(t *testing.T) {
 			t.Errorf("Delta = %v %v, want neutral = #6A9580", stats.DeltaSymbol, stats.DeltaColor)
 		}
 	})
+}
+
+// A ledger read fault must not discard the counts the report already
+// confirmed: the monthly report goes out without the reasons.
+func TestGetWasteStatsForHouseholdSurvivesABrokenLedger(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	logger := zerolog.Nop()
+	repo := NewNotificationRepositoryWithLogger(db, &logger)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+	product := testutil.CreateTestProduct(db, household.ID, user.ID)
+	now := time.Now()
+	if err := db.Model(product).Update("deleted_at", now).Error; err != nil {
+		t.Fatalf("archive product: %v", err)
+	}
+	db.Create(&dbModel.SavingsRecord{
+		HouseholdID: household.ID, ProductID: product.ID, ProductName: product.ProductName,
+		EventType: dbModel.SavingsEventTypeWasted, WasteCause: dbModel.WasteCauseSpoiled,
+		PriceEUR: 1, Amount: 1,
+	})
+
+	// The breakdown reads its rows through GORM's Row callback (Scan), not the
+	// Query callback, and GORM reports the alias of "savings_records AS s" as
+	// the statement table.
+	name := "test:fail_savings_records"
+	db.Callback().Row().Before("gorm:row").Register(name, func(tx *gorm.DB) {
+		if tx.Statement.Table == "s" {
+			_ = tx.AddError(stderrors.New("injected query failure"))
+		}
+	})
+	t.Cleanup(func() { db.Callback().Row().Remove(name) })
+
+	stats, err := repo.GetWasteStatsForHousehold(household.ID, now)
+	if err != nil {
+		t.Fatalf("GetWasteStatsForHousehold() error = %v, want the report to survive a broken ledger", err)
+	}
+	if stats.WastedCount == 0 {
+		t.Error("the confirmed counts must survive a broken ledger")
+	}
+	if len(stats.Causes) != 0 {
+		t.Errorf("causes = %+v, want none", stats.Causes)
+	}
+	if stats.Overbuy.Count != 0 {
+		t.Errorf("overbuy = %+v, want none", stats.Overbuy)
+	}
 }

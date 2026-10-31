@@ -209,6 +209,52 @@ function renderTrendChart(s) {
   });
 }
 
+function renderInsight(s) {
+  const box = document.getElementById('wasteInsight');
+  if (!box) return;
+  box.textContent = s.insight || '';
+  box.classList.toggle('fg-secondary', !s.insightAvailable);
+}
+
+function renderCauses(s) {
+  const list = document.getElementById('wasteCauses');
+  if (!list) return;
+  list.innerHTML = '';
+  const causes = Array.isArray(s.causes) ? s.causes : [];
+  if (causes.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'text-center fg-secondary py-5';
+    empty.textContent = proviant.t('js.waste.noCauses');
+    list.appendChild(empty);
+    return;
+  }
+  causes.forEach((cause) => {
+    const item = document.createElement('div');
+    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+    const name = document.createElement('span');
+    name.className = 'waste-cat__name';
+    name.textContent = proviant.wasteCauseLabel(cause.cause);
+
+    const meta = document.createElement('span');
+    meta.className = 'd-flex align-items-center gap-3 small';
+
+    const count = document.createElement('span');
+    count.className = 'badge badge--neutral';
+    count.textContent = String(cause.count || 0);
+
+    const share = document.createElement('span');
+    share.className = 'fg-secondary';
+    share.textContent = `${(cause.share || 0).toFixed(1)}%`;
+
+    meta.appendChild(count);
+    meta.appendChild(share);
+    item.appendChild(name);
+    item.appendChild(meta);
+    list.appendChild(item);
+  });
+}
+
 function renderTable(s) {
   const tbody = document.querySelector('#monthlyTable tbody');
   if (!tbody) return;
@@ -347,6 +393,8 @@ async function load(period) {
   setActivePeriod(s.period || currentPeriod);
   setActiveSort(currentSort);
   renderTiles(s);
+  renderInsight(s);
+  renderCauses(s);
   renderMonthlyChart(s);
   renderTrendChart(s);
   renderTable(s);

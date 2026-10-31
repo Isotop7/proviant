@@ -55,14 +55,18 @@ func (t *TelegramNotificationProvider) SendNotification(product *dbModel.Product
 
 // SendMonthlyWasteReport sends the monthly waste report to a Telegram chat.
 func (t *TelegramNotificationProvider) SendMonthlyWasteReport(chatID string, stats *models.WasteStats, lang string) error {
-	text := strings.Join([]string{
+	lines := []string{
 		i18n.T(lang, "notify.telegram.monthlyTitle", stats.MonthLabel),
 		"",
 		i18n.T(lang, "notify.telegram.monthlyHousehold", stats.HouseholdName),
 		i18n.T(lang, "notify.telegram.monthlyItems", stats.WastedCount, stats.DeletedCount, stats.ExpiredCount),
 		i18n.T(lang, "notify.telegram.monthlyWasteRate", fmt.Sprintf("%.1f%%", stats.WasteRatePct)),
 		i18n.T(lang, "notify.telegram.monthlyDelta", stats.DeltaSymbol, fmt.Sprintf("%+.1f%%", stats.Delta)),
-	}, "\n")
+	}
+	if stats.InsightAvailable && stats.Insight != "" {
+		lines = append(lines, stats.Insight)
+	}
+	text := strings.Join(lines, "\n")
 	return t.sendMessage(chatID, text)
 }
 

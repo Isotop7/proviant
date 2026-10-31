@@ -1,6 +1,8 @@
 package database
 
 import (
+	"slices"
+
 	"github.com/Isotop7/proviant/errors"
 	"github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/util"
@@ -128,10 +130,5 @@ func containsEvent(eventsJSON, event string) bool {
 	if err := json.Unmarshal([]byte(eventsJSON), &events); err != nil {
 		return false
 	}
-	for _, e := range events {
-		if e == event {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(events, event)
 }

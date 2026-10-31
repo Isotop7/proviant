@@ -32,6 +32,7 @@ var testModels = []any{
 	&dbModel.EmailVerification{},
 	&dbModel.PasswordReset{},
 	&dbModel.ProductCategoryPrice{},
+	&dbModel.HouseholdCategory{},
 	&dbModel.ActivityLog{},
 	&dbModel.AuditLog{},
 	&authentication.RevokedToken{},
@@ -46,6 +47,7 @@ var testModels = []any{
 	&dbModel.Recipe{},
 	&dbModel.RecipeIngredient{},
 	&dbModel.MealPlanEntry{},
+	&dbModel.TwoFactorRecoveryCode{},
 }
 
 func SetupTestDB(t *testing.T) *gorm.DB {

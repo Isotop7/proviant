@@ -32,7 +32,7 @@ func TestProductRepository_UnknownUserErrors(t *testing.T) {
 		if _, err := repo.GetUserProductsByIDs(9999, []uint{1}); err == nil {
 			t.Error("GetUserProductsByIDs(9999) error = nil")
 		}
-		if _, err := repo.GetUserArchivedProductsBulk(9999, 10); err == nil {
+		if _, err := repo.GetUserArchivedProductsBulk(9999, 10, 0); err == nil {
 			t.Error("GetUserArchivedProductsBulk(9999) error = nil")
 		}
 		if _, err := repo.GetActiveProductProjections(9999, 0); err == nil {
@@ -47,7 +47,7 @@ func TestProductRepository_UnknownUserErrors(t *testing.T) {
 		if _, err := repo.GetUserProductsBulkByBarcodes(9999, []string{"1"}); err == nil {
 			t.Error("GetUserProductsBulkByBarcodes(9999) error = nil")
 		}
-		if _, err := repo.GetExpiredProductsCount(9999); err == nil {
+		if _, err := repo.GetExpiredProductsCount(9999, time.Now()); err == nil {
 			t.Error("GetExpiredProductsCount(9999) error = nil")
 		}
 		if _, err := repo.GetActiveProductsCount(9999); err == nil {
@@ -62,16 +62,16 @@ func TestProductRepository_UnknownUserErrors(t *testing.T) {
 		if _, err := repo.GetProductCategoryBreakdown(9999); err == nil {
 			t.Error("GetProductCategoryBreakdown(9999) error = nil")
 		}
-		if _, err := repo.GetExpiryTrend(9999); err == nil {
+		if _, err := repo.GetExpiryTrend(9999, time.Now()); err == nil {
 			t.Error("GetExpiryTrend(9999) error = nil")
 		}
-		if _, err := repo.GetExpiringSoonProducts(9999, 7); err == nil {
+		if _, err := repo.GetExpiringSoonProducts(9999, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonProducts(9999) error = nil")
 		}
 		if _, err := repo.GetExpiringInDays(9999, 7); err == nil {
 			t.Error("GetExpiringInDays(9999) error = nil")
 		}
-		if _, err := repo.GetExpiringSoonCount(9999, 7); err == nil {
+		if _, err := repo.GetExpiringSoonCount(9999, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonCount(9999) error = nil")
 		}
 		if _, _, err := repo.GetActiveExpiryCounts(9999, time.Now(), 7); err == nil {
@@ -83,7 +83,7 @@ func TestProductRepository_UnknownUserErrors(t *testing.T) {
 		if _, err := repo.GetUserArchivedProductsFiltered(9999, &from, &to); err == nil {
 			t.Error("GetUserArchivedProductsFiltered(9999) error = nil")
 		}
-		if _, err := repo.SearchProducts(ProductName, "x", "", "", 9999); err == nil {
+		if _, err := repo.SearchProducts(ProductName, "x", "", "", 9999, 0, 0); err == nil {
 			t.Error("SearchProducts(9999) error = nil")
 		}
 		if _, err := repo.SearchProductProjections(ProductName, "x", "", "", 9999, 0); err == nil {
@@ -311,10 +311,8 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 		deletedCount := 0
 		vanishedCount := 0
 		start := make(chan struct{})
-		for i := 0; i < 2; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		for range 2 {
+			wg.Go(func() {
 				<-start
 				deleted, _, err := repo.UpdateProductQuantity(product.ID, user.ID, -2, nil)
 				if stderrors.Is(err, gorm.ErrRecordNotFound) {
@@ -333,7 +331,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 				mu.Lock()
 				deletedCount++
 				mu.Unlock()
-			}()
+			})
 		}
 		close(start)
 		wg.Wait()
@@ -483,10 +481,8 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		appliedCount := 0
-		for i := 0; i < 2; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		for range 2 {
+			wg.Go(func() {
 				<-start
 				_, applied, err := repo.UpdateProductQuantity(product.ID, user.ID, 3, &mutationID)
 				if err != nil {
@@ -497,7 +493,7 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 					appliedCount++
 					mu.Unlock()
 				}
-			}()
+			})
 		}
 		close(start)
 		wg.Wait()
@@ -520,14 +516,12 @@ func TestProductRepository_UpdateProductQuantity(t *testing.T) {
 	t.Run("concurrent deltas on one product all land", func(t *testing.T) {
 		product := setup(t, 0)
 		var wg sync.WaitGroup
-		for i := 0; i < 8; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		for range 8 {
+			wg.Go(func() {
 				if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err != nil {
 					t.Errorf("UpdateProductQuantity() error = %v", err)
 				}
-			}()
+			})
 		}
 		wg.Wait()
 
@@ -652,7 +646,7 @@ func TestProductRepository_GetProductCategoryBreakdownEdges(t *testing.T) {
 
 	t.Run("more than eight categories folds the rest into Other", func(t *testing.T) {
 		categories := make([]string, 0, 10)
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			categories = append(categories, fmt.Sprintf("cat-%d", i))
 		}
 		_, repo, user := seed(t, categories...)
@@ -795,19 +789,19 @@ func TestProductRepository_SearchErrors(t *testing.T) {
 	}
 
 	t.Run("invalid search parameter", func(t *testing.T) {
-		if _, err := repo.SearchProducts(InvalidParameter, "x", "", "", user.ID); err != errors.ErrDatabaseInvalidSearchParameter {
+		if _, err := repo.SearchProducts(InvalidParameter, "x", "", "", user.ID, 0, 0); err != errors.ErrDatabaseInvalidSearchParameter {
 			t.Errorf("SearchProducts() error = %v, want %v", err, errors.ErrDatabaseInvalidSearchParameter)
 		}
 	})
 
 	t.Run("invalid sort parameter", func(t *testing.T) {
-		if _, err := repo.SearchProducts(ProductName, "x", "not-a-column", "", user.ID); err != errors.ErrDatabaseInvalidSortParameter {
+		if _, err := repo.SearchProducts(ProductName, "x", "not-a-column", "", user.ID, 0, 0); err != errors.ErrDatabaseInvalidSortParameter {
 			t.Errorf("SearchProducts() error = %v, want %v", err, errors.ErrDatabaseInvalidSortParameter)
 		}
 	})
 
 	t.Run("invalid sort direction", func(t *testing.T) {
-		if _, err := repo.SearchProducts(ProductName, "x", "product_name", "sideways", user.ID); err != errors.ErrDatabaseInvalidSortParameter {
+		if _, err := repo.SearchProducts(ProductName, "x", "product_name", "sideways", user.ID, 0, 0); err != errors.ErrDatabaseInvalidSortParameter {
 			t.Errorf("SearchProducts() error = %v, want %v", err, errors.ErrDatabaseInvalidSortParameter)
 		}
 	})
@@ -853,7 +847,7 @@ func TestProductRepository_CreateProductsBulkEdges(t *testing.T) {
 	// The rejection is whole: no products and no locations were written.
 	t.Run("too many distinct new locations is rejected whole", func(t *testing.T) {
 		rows := make([]ImportedProduct, 0, util.CsvImportMaxNewLocations+1)
-		for i := 0; i < util.CsvImportMaxNewLocations+1; i++ {
+		for i := range util.CsvImportMaxNewLocations + 1 {
 			rows = append(rows, ImportedProduct{
 				Product:         dbModel.Product{ProductName: fmt.Sprintf("P%d", i), Barcode: fmt.Sprintf("77%011d", i)},
 				NewLocationName: fmt.Sprintf("Location %d", i),
@@ -1087,7 +1081,7 @@ func TestProductRepository_ConsumeAndWasteNotFound(t *testing.T) {
 	if err := repo.ConsumeProduct(9999, user.ID); err == nil {
 		t.Error("ConsumeProduct(9999) error = nil, want error")
 	}
-	if err := repo.WasteProduct(9999, user.ID); err == nil {
+	if err := repo.WasteProduct(9999, user.ID, ""); err == nil {
 		t.Error("WasteProduct(9999) error = nil, want error")
 	}
 }
@@ -1101,59 +1095,6 @@ func TestProductRepository_GetConsumedSamplesEmptyInput(t *testing.T) {
 	}
 }
 
-func TestProductRepository_GetTopArchivedProductsEdges(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-	household := testutil.CreateTestHousehold(db, 0)
-	user := testutil.CreateTestUser(db, household.ID)
-
-	t.Run("no archived products returns empty", func(t *testing.T) {
-		top, err := repo.GetTopArchivedProducts(user.ID, 10)
-		if err != nil {
-			t.Fatalf("GetTopArchivedProducts() error = %v", err)
-		}
-		if len(top) != 0 {
-			t.Errorf("GetTopArchivedProducts() returned %d, want 0", len(top))
-		}
-	})
-
-	t.Run("groups by barcode and respects the limit", func(t *testing.T) {
-		seedArchived := func(t *testing.T, barcode string) {
-			t.Helper()
-			product := testutil.CreateTestProduct(db, household.ID, user.ID)
-			product.Barcode = barcode
-			if err := db.Save(product).Error; err != nil {
-				t.Fatalf("save product: %v", err)
-			}
-			if err := db.Delete(product).Error; err != nil {
-				t.Fatalf("delete product: %v", err)
-			}
-		}
-		seedArchived(t, "4000000000001")
-		seedArchived(t, "4000000000001")
-		seedArchived(t, "4000000000002")
-
-		top, err := repo.GetTopArchivedProducts(user.ID, 10)
-		if err != nil {
-			t.Fatalf("GetTopArchivedProducts() error = %v", err)
-		}
-		if len(top) != 2 {
-			t.Fatalf("GetTopArchivedProducts() returned %d, want 2 distinct barcodes", len(top))
-		}
-		if top[0].Barcode != "4000000000001" {
-			t.Errorf("top[0].Barcode = %q, want the twice-archived barcode", top[0].Barcode)
-		}
-
-		top, err = repo.GetTopArchivedProducts(user.ID, 1)
-		if err != nil {
-			t.Fatalf("GetTopArchivedProducts() error = %v", err)
-		}
-		if len(top) != 1 {
-			t.Errorf("GetTopArchivedProducts(limit=1) returned %d, want 1", len(top))
-		}
-	})
-}
-
 func TestProductRepository_GetUserProductsBulkByBarcodesChunking(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewProductRepository(db)
@@ -1164,7 +1105,7 @@ func TestProductRepository_GetUserProductsBulkByBarcodesChunking(t *testing.T) {
 	// More than one chunk (bulkQueryChunkSize = 500): the matching barcode
 	// sits in the second chunk.
 	barcodes := make([]string, 0, bulkQueryChunkSize+1)
-	for i := 0; i < bulkQueryChunkSize; i++ {
+	for i := range bulkQueryChunkSize {
 		barcodes = append(barcodes, fmt.Sprintf("5%012d", i))
 	}
 	barcodes = append(barcodes, product.Barcode)

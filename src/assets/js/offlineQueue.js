@@ -35,6 +35,14 @@
     DEFAULT_MAX_BATCH_BYTES;
   // How long a drain waits before picking up a backlog it had to hand back.
   var REARM_DRAIN_SECONDS = 30;
+  // The server forgets an applied mutation id after this window, so a replay
+  // it no longer recognizes would apply the change a second time. The server
+  // injects the value it enforces; the constant mirrors util.ProductMutationClaimTTL
+  // for a client that was cached before the injection existed.
+  var DEFAULT_MUTATION_CLAIM_TTL_SECONDS = 30 * 24 * 60 * 60;
+  var MUTATION_CLAIM_TTL_SECONDS =
+    (window.proviantLimits && window.proviantLimits.mutationClaimTtlSeconds) ||
+    DEFAULT_MUTATION_CLAIM_TTL_SECONDS;
 
   function openDB() {
     return new Promise(function (resolve, reject) {
@@ -184,7 +192,8 @@
     if (item.type === 'createProduct' && !item.payload.clientSyncId) {
       item.payload.clientSyncId = item.id;
     }
-    if (item.type === 'updateAmount' && !item.payload.clientMutationId) {
+    var stockMutation = item.type === 'updateAmount' || item.type === 'consumeProduct' || item.type === 'wasteProduct';
+    if (stockMutation && !item.payload.clientMutationId) {
       item.payload.clientMutationId = item.id;
     }
     await put('outbox', item);
@@ -408,21 +417,47 @@
     }
   }
 
-  async function sendQuantityDelta(item) {
+  // The server forgets an applied mutation id after a bounded window, so a
+  // queued change older than that window can no longer be recognized as a
+  // replay: sending it would apply the change a second time. Such an op is
+  // parked for the user instead of being sent.
+  function mutationExpired(item) {
+    var ttl = MUTATION_CLAIM_TTL_SECONDS * 1000;
+    return typeof item.createdAt === 'number' && Date.now() - item.createdAt > ttl;
+  }
+
+  async function sendProductMutation(item) {
     // Only proviant.js tags transport failures; a rejected body after an
     // answered response stays a plain error and costs an attempt like any
     // other server answer.
-    var result = await proviant._sendQuantityDelta(item.payload.productID, item.payload.delta, item.payload.clientMutationId);
-    // _sendQuantityDelta resolves for every JSON error body, so its status is the
-    // only signal that the delta was not applied. Dropping the op on a non-2xx
+    var result;
+    if (item.type === 'updateAmount') {
+      result = await proviant._sendQuantityDelta(item.payload.productID, item.payload.delta, item.payload.clientMutationId);
+    } else {
+      var action = item.type === 'consumeProduct' ? 'consume' : 'waste';
+      result = await proviant._sendProductAction(action, item.payload.productID, item.payload.quantity, item.payload.clientMutationId, item.payload.wasteCause);
+    }
+    // The send helpers resolve for every JSON error body, so status is the only
+    // signal that the mutation was not applied. Dropping the op on a non-2xx
     // would lose the mutation outright.
     if (result.code === 429) throw throttled(parseRetryAfter(result.retryAfter));
     if (result.code === 404) {
       // 404 means the product is gone *or* belongs to another household — the
       // handler answers both alike on purpose, so the two cannot be told apart
-      // here. Neither can ever succeed, so the op is dropped in both cases.
+      // here. Neither can ever succeed, so the op is dropped in both cases. A
+      // replay of an already archived full action is terminal for the same reason.
       await remove('outbox', item.id);
       return;
+    }
+    if (result.code === 409) {
+      // 409 is the server's guarded write losing a race: the same request can
+      // succeed a moment later. A plain 4xx would be parked as a refusal, so
+      // this error carries the throttle flag instead — the drain keeps the op
+      // in place and retries it, and a later mutation cannot overtake it.
+      const conflict = new Error(result.message || 'HTTP 409');
+      conflict.throttled = true;
+      conflict.retryAfterSeconds = 1;
+      throw conflict;
     }
     if (result.code < 200 || result.code >= 300) {
       const refused = new Error('HTTP ' + result.code);
@@ -434,12 +469,19 @@
 
   // Returns { wait } to pause before the next op, { stop } to hand the rest of
   // the drain back to the re-arm, and {} when there is no reason to pause.
-  async function drainQuantityDelta(item) {
+  async function drainProductMutation(item) {
+    if (mutationExpired(item)) {
+      // The server cannot recognize this mutation id any more, so sending it
+      // could apply the change a second time. The change is parked for the
+      // user, who can redo it knowingly.
+      await park(item, new Error(proviant.t ? proviant.t('js.app.offlineMutationExpired') : 'This queued change is too old to sync safely'));
+      return {};
+    }
     item.status = 'syncing';
     item.updatedAt = Date.now();
     await put('outbox', item);
     try {
-      await sendQuantityDelta(item);
+      await sendProductMutation(item);
       return {};
     } catch (err) {
       if (isAuthRejection(err)) {
@@ -499,7 +541,7 @@
   }
 
   // Returns true when it handed the rest of the drain back — throttled out of
-  // budget or the connection gone — so the caller does not start the deltas
+  // budget or the connection gone — so the caller does not start the stock mutations
   // against the same refusing server.
   async function drainCreates(creates) {
     var pacing = new ThrottlePacing();
@@ -553,13 +595,27 @@
     return false;
   }
 
-  async function drainDeltas(deltas) {
+  // The mutations drain one after another, in the order the user made them.
+  // A throttled mutation keeps its place: the ones behind it wait, because a
+  // later consume or waste that overtakes an earlier one reverses what the
+  // user asked for (and can archive a product the earlier action saved). It is
+  // retried once in place; a second refusal hands the whole backlog back to
+  // the re-arm rather than spinning on a server that keeps saying no.
+  async function drainProductMutations(mutations) {
     var pacing = new ThrottlePacing();
-    for (var i = 0; i < deltas.length; i++) {
-      var outcome = await drainQuantityDelta(deltas[i]);
+    var index = 0;
+    var retried = false;
+    while (index < mutations.length) {
+      var outcome = await drainProductMutation(mutations[index]);
       if (outcome.stop) return;
-      if (!outcome.wait) continue;
+      if (!outcome.wait) {
+        index++;
+        retried = false;
+        continue;
+      }
+      if (retried) return;
       if (!await pacing.awaitRetryAfter(outcome.wait)) return;
+      retried = true;
     }
   }
 
@@ -568,20 +624,19 @@
     try {
       var items = await pendingItems();
       var creates = [];
-      var deltas = [];
+      var mutations = [];
       var unknown = [];
       items.forEach(function (item) {
         if (item.type === 'createProduct') creates.push(item);
-        else if (item.type === 'updateAmount') deltas.push(item);
+        else if (item.type === 'updateAmount' || item.type === 'consumeProduct' || item.type === 'wasteProduct') mutations.push(item);
         else unknown.push(item);
       });
 
-      // One request per queued create is what this used to do, and against a low
-      // request budget it meant every create after the first was refused. The
-      // endpoint already takes a whole batch, so a backlog of creates costs one
-      // call. Amount deltas have no batch endpoint and stay one request each.
+      // Creates use their batch endpoint. Every stock mutation then drains in
+      // creation order through one lane, so a delta and a consume/waste action
+      // against the same product cannot overtake each other.
       var handedBack = await drainCreates(creates);
-      if (!handedBack) await drainDeltas(deltas);
+      if (!handedBack) await drainProductMutations(mutations);
       // An op this build cannot execute is a change the user still owns, so it is
       // parked for them to see and discard rather than deleted — a renamed type in
       // a newer build would otherwise lose queued work silently.
@@ -705,20 +760,32 @@
 
   if (typeof proviant.createProduct === 'function') {
     var originalCreateProduct = proviant.createProduct;
-    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate) {
+    proviant.createProduct = async function (barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId, allowDuplicate, categoryKey, details) {
       // The sync id goes out on the online path too. Without it the server-side
       // idempotency check cannot fire, so a response lost after the server
       // committed — which is exactly what the catch below detects — would enqueue
       // a second create for a product that already exists.
-      var clientSyncId = generateId();
-      var draft = { barcode: barcode, expireAt: expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: clientSyncId };
+      //
+      // A caller that brings its own id keeps it: the retry of a create the
+      // server refused as a duplicate reuses the id, so that attempt is
+      // idempotent as well.
+      var syncId = clientSyncId || generateId();
+      // The queued draft carries the date the client resolved, not the
+      // household's default: the server fills a default only for a draft that
+      // carries no date at all.
+      var draft = { barcode: barcode, expireAt: expireAt, quantity: quantity || 1, storageLocationId: storageLocationId || null, isPrivate: !!isPrivate, clientSyncId: syncId };
+      if (categoryKey) draft.categoryKey = categoryKey;
+      // The household's own naming rides along, so a queued create stores the
+      // name the user knows the product by, not the one the barcode carries.
+      if (details && details.productName) draft.productName = details.productName;
+      if (details && details.packSize) draft.packSize = details.packSize;
       if (!navigator.onLine) {
-        return enqueueOrReport({ id: clientSyncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: clientSyncId });
+        return enqueueOrReport({ id: syncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: syncId });
       }
       try {
-        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, clientSyncId);
+        return await originalCreateProduct(barcode, expireAt, quantity, storageLocationId, isPrivate, syncId, allowDuplicate, categoryKey, details);
       } catch (_) {
-        return enqueueOrReport({ id: clientSyncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: clientSyncId });
+        return enqueueOrReport({ id: syncId, type: 'createProduct', payload: draft }, 202, { clientSyncId: syncId });
       }
     };
   }
@@ -740,6 +807,38 @@
         return enqueueOrReport({ type: 'updateAmount', payload: { productID: productID, delta: delta, clientMutationId: clientMutationId } }, 200);
       }
     };
+  }
+
+  function wrapOfflineProductAction(action, original) {
+    // The caller's mutation id is dropped: the wrapper mints one that covers
+    // the first send and every replay. It keeps its place in the argument
+    // list so the cause still lands on the right parameter.
+    return async function (productID, quantity, _clientMutationId, wasteCause) {
+      // One token covers the first send and every replay, including a send whose
+      // response was lost after the server committed the stock mutation.
+      var clientMutationId = generateId();
+      var draft = { productID: productID, clientMutationId: clientMutationId };
+      if (quantity !== undefined) draft.quantity = quantity;
+      // The cause belongs to the waste, so a queued waste keeps it: the
+      // replay sends the same reason the user gave.
+      if (wasteCause) draft.wasteCause = wasteCause;
+      var operation = { id: clientMutationId, type: action + 'Product', payload: draft };
+      if (!navigator.onLine) {
+        return enqueueOrReport(operation, 202, { clientMutationId: clientMutationId });
+      }
+      try {
+        return await original(productID, quantity, clientMutationId, wasteCause);
+      } catch (_) {
+        return enqueueOrReport(operation, 202, { clientMutationId: clientMutationId });
+      }
+    };
+  }
+
+  if (typeof proviant.consumeProduct === 'function') {
+    proviant.consumeProduct = wrapOfflineProductAction('consume', proviant.consumeProduct);
+  }
+  if (typeof proviant.wasteProduct === 'function') {
+    proviant.wasteProduct = wrapOfflineProductAction('waste', proviant.wasteProduct);
   }
 
   // The barcode lookup is the one product read the cached list snapshot cannot

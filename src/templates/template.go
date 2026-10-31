@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"maps"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -40,19 +41,19 @@ func SetExpiryThresholds(critical, soon int) {
 }
 
 func humanDateTime(lang string, t time.Time) string {
-	return t.Format(i18n.T(lang, "date.format.dateTime"))
+	return t.In(time.Local).Format(i18n.T(lang, "date.format.dateTime"))
 }
 
 func humanDateTimeFromSQL(lang string, t gorm.DeletedAt) string {
-	return t.Time.Format(i18n.T(lang, "date.format.dateTime"))
+	return t.Time.In(time.Local).Format(i18n.T(lang, "date.format.dateTime"))
 }
 
 func humanDate(lang string, t time.Time) string {
-	return t.Format(i18n.T(lang, "date.format.date"))
+	return t.In(time.Local).Format(i18n.T(lang, "date.format.date"))
 }
 
 func inputDate(t time.Time) string {
-	return t.Format(util.DefaultDateFormatParseStr)
+	return t.In(time.Local).Format(util.DefaultDateFormatParseStr)
 }
 
 func today() string {
@@ -116,9 +117,7 @@ func expiryStatusLabel(lang string, t time.Time) string {
 
 func queryWith(params url.Values, key, val string) template.URL {
 	p := url.Values{}
-	for k, v := range params {
-		p[k] = v
-	}
+	maps.Copy(p, params)
 	if val == "" {
 		p.Del(key)
 	} else {
@@ -191,8 +190,8 @@ func badgifyCategories(categories string, limit int) template.HTML {
 
 func splitString(source string) template.HTML {
 	var output strings.Builder
-	elements := strings.Split(source, ",")
-	for _, elem := range elements {
+	elements := strings.SplitSeq(source, ",")
+	for elem := range elements {
 		output.WriteString(elem)
 		output.WriteString("<br>")
 	}
@@ -307,9 +306,7 @@ func templateFunctions(lang string) template.FuncMap {
 			return QuantityLabel(lang, quantity)
 		},
 	}
-	for name, fn := range i18n.FuncMap(lang) {
-		functions[name] = fn
-	}
+	maps.Copy(functions, i18n.FuncMap(lang))
 	return functions
 }
 
@@ -403,6 +400,11 @@ func injectI18nData(ctx *gin.Context, data map[string]any) string {
 	// receipt review clamps to the same values the server enforces.
 	data["MaxProductQuantity"] = util.MaxProductQuantity
 	data["MaxPackSizeLength"] = util.MaxPackSizeLength
+	data["MaxProductNameLength"] = util.MaxProductNameLength
+	// The window in which the server still deduplicates a replayed stock
+	// mutation. The outbox learns it so it can refuse to replay a queued
+	// change the server would no longer recognize.
+	data["MutationClaimTTLSeconds"] = int(util.ProductMutationClaimTTL.Seconds())
 	// The page title and the nav key are two different things. The edit
 	// page keeps "Products" as its nav key so the sidebar stays lit, while
 	// its title is "Edit Product" — PageTitle carries the title, Title the

@@ -19,6 +19,7 @@ import (
 	"github.com/Isotop7/proviant/models/authentication"
 	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -488,6 +489,24 @@ func (nc *NotificationController) SendEmailVerification(email, username, token, 
 	return nil
 }
 
+// SendTwoFactorEnabled tells the account owner that a second factor was
+// enrolled on their account.
+func (nc *NotificationController) SendTwoFactorEnabled(email, username, lang string) error {
+	emailProvider := nc.newEmailProvider()
+
+	if !emailProvider.IsConfigured() {
+		return errors.New(MsgEmailProviderNotConfigured)
+	}
+
+	if err := emailProvider.SendTwoFactorEnabledEmail(email, username, lang); err != nil {
+		nc.Logger.Error().Msgf("Failed to send the two-factor notification to %s: %s", email, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Two-factor notification sent successfully to %s", email)
+	return nil
+}
+
 // SendPasswordReset sends a password reset email directly to the user.
 func (nc *NotificationController) SendPasswordReset(email, username, token, baseURL string, expiresAt time.Time, lang string) error {
 	emailProvider := nc.newEmailProvider()
@@ -505,16 +524,36 @@ func (nc *NotificationController) SendPasswordReset(email, username, token, base
 	return nil
 }
 
+// SendTwoFactorRemoved tells the recipient that a second factor was removed
+// from their account.
+func (nc *NotificationController) SendTwoFactorRemoved(email, username, lang string) error {
+	emailProvider := nc.newEmailProvider()
+
+	if !emailProvider.IsConfigured() {
+		return errors.New(MsgEmailProviderNotConfigured)
+	}
+
+	if err := emailProvider.SendTwoFactorRemovedEmail(email, username, lang); err != nil {
+		nc.Logger.Error().Msgf("Failed to send the two-factor notification to %s: %s", email, err)
+		return err
+	}
+
+	nc.Logger.Info().Msgf("Two-factor notification sent successfully to %s", email)
+	return nil
+}
+
 // DispatchMonthlyWasteReports starts a goroutine that sends household waste reports
-// on the configured day/hour (UTC) of each month to opted-in members via all enabled providers.
+// on the configured day/hour of each month to opted-in members via all enabled providers.
+// The day and the hour are the container's, so the report covers the month the
+// household just finished.
 func (nc *NotificationController) DispatchMonthlyWasteReports() {
 	emailProvider := nc.newEmailProvider()
 
 	notificationConfig := nc.Configuration.MonthlyWasteReport
 	go func() {
 		for {
-			now := time.Now().UTC()
-			next := time.Date(now.Year(), now.Month()+1, notificationConfig.Day, notificationConfig.Hour, 0, 0, 0, time.UTC)
+			now := time.Now()
+			next := time.Date(now.Year(), now.Month()+1, notificationConfig.Day, notificationConfig.Hour, 0, 0, 0, time.Local)
 			nc.Logger.Info().Msgf("Monthly waste report: next run at %s", next.Format(time.RFC3339))
 			time.Sleep(time.Until(next))
 			nc.processMonthlyWasteReports(emailProvider)
@@ -523,7 +562,7 @@ func (nc *NotificationController) DispatchMonthlyWasteReports() {
 }
 
 func (nc *NotificationController) processMonthlyWasteReports(emailProvider *EmailNotificationProvider) {
-	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
+	lastMonth := util.MonthShift(time.Now(), -1)
 	targets, err := nc.NotificationRepo.GetHouseholdsWithMonthlyWasteReportEnabled()
 	if err != nil {
 		nc.Logger.Error().Msgf("Monthly waste report: failed to fetch households: %s", err)
@@ -541,6 +580,7 @@ func (nc *NotificationController) processMonthlyWasteReports(emailProvider *Emai
 		stats.HouseholdName = target.HouseholdName
 
 		lang := nc.recipientLanguage(0, target.HouseholdID)
+		stats.Insight, stats.InsightAvailable = WasteInsight(lang, stats.Overbuy, stats.Causes, stats.WastedEvents)
 
 		nc.sendMonthlyWasteReportToEmailRecipients(emailProvider, target.Recipients, &stats, target.HouseholdID, lang)
 		nc.sendMonthlyWasteReportToTelegramRecipients(target.TelegramRecipients, &stats, target.HouseholdID, lang)
@@ -582,8 +622,9 @@ func (nc *NotificationController) sendMonthlyWasteReportToTelegramRecipients(
 	}
 }
 
-// DispatchStreakUpdates starts a goroutine that runs daily at midnight UTC to increment
-// or reset each household's waste-free streak and send milestone notifications.
+// DispatchStreakUpdates starts a goroutine that runs daily at midnight in the
+// container's zone to increment or reset each household's waste-free streak and
+// send milestone notifications.
 func (nc *NotificationController) DispatchStreakUpdates() {
 	if nc.StreakRepo == nil {
 		nc.Logger.Warn().Msg("StreakRepo not set, skipping streak updates")
@@ -591,8 +632,8 @@ func (nc *NotificationController) DispatchStreakUpdates() {
 	}
 	go func() {
 		for {
-			now := time.Now().UTC()
-			nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
+			now := time.Now()
+			nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.Local)
 			nc.Logger.Info().Msgf("Streak updater: next run at %s", nextMidnight.Format(time.RFC3339))
 			time.Sleep(time.Until(nextMidnight))
 			nc.processStreakUpdates()
@@ -613,7 +654,7 @@ func (nc *NotificationController) processStreakUpdates() {
 	nc.Logger.Info().Msgf("Streak updater: processing %d household(s)", len(streaks))
 
 	milestones := []int{7, 30, 100}
-	now := time.Now().UTC()
+	now := time.Now()
 
 	for i := range streaks {
 		streak := &streaks[i]
@@ -657,7 +698,7 @@ func (nc *NotificationController) handleStreakReset(householdID uint, previousSt
 			Action:      dbModel.ActivityActionStreakReset,
 			ProductName: fmt.Sprintf("Streak of %d day%s lost", previousStreak, pluralS(previousStreak)),
 			Quantity:    previousStreak,
-			Timestamp:   time.Now().UTC(),
+			Timestamp:   time.Now(),
 		})
 	}
 	nc.sendStreakResetNotifications(householdID, previousStreak)
@@ -930,7 +971,7 @@ func (nc *NotificationController) StartTelegramPollerPool() {
 	}
 
 	nc.pollerPool.wg.Add(numWorkers)
-	for workerID := 0; workerID < numWorkers; workerID++ {
+	for workerID := range numWorkers {
 		go nc.poolWorker(workerID)
 	}
 }
