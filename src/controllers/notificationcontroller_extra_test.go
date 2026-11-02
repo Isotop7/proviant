@@ -1693,13 +1693,17 @@ func TestMarkNotified(t *testing.T) {
 func TestSendViaProvider(t *testing.T) {
 	product := &dbModel.Product{Model: gorm.Model{ID: 1}, ProductName: "Milk", ExpireAt: time.Now().Add(-time.Hour)}
 
-	t.Run("email disabled returns nil", func(t *testing.T) {
+	t.Run("email disabled skips the send", func(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		provider := &EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{Host: "h", Port: 587}}
 		pref := &models.NotificationRecipientInfo{EmailAddress: "a@example.com"}
-		if err := nc.sendViaProvider(provider, product, pref, ""); err != nil {
+		attempted, err := nc.sendViaProvider(provider, product, pref, "")
+		if err != nil {
 			t.Errorf("sendViaProvider() = %v, want nil", err)
+		}
+		if attempted {
+			t.Error("sendViaProvider() attempted a send for a disabled channel")
 		}
 	})
 
@@ -1716,8 +1720,12 @@ func TestSendViaProvider(t *testing.T) {
 
 		provider := &EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{Host: "h", Port: 587}}
 		pref := &models.NotificationRecipientInfo{EmailEnabled: true, EmailAddress: "a@example.com"}
-		if err := nc.sendViaProvider(provider, product, pref, ""); err != nil {
+		attempted, err := nc.sendViaProvider(provider, product, pref, "")
+		if err != nil {
 			t.Errorf("sendViaProvider() = %v, want nil", err)
+		}
+		if !attempted {
+			t.Error("sendViaProvider() did not attempt a send")
 		}
 		if emails != 1 {
 			t.Errorf("emails = %d, want 1", emails)
@@ -1739,8 +1747,12 @@ func TestSendViaProvider(t *testing.T) {
 		mockRepos := repomocks.NewMockRepositoryContainer()
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		pref := &models.NotificationRecipientInfo{NtfyEnabled: true, NtfyURL: server.URL, NtfyTopic: "t"}
-		if err := nc.sendViaProvider(provider, product, pref, ""); err != nil {
+		attempted, err := nc.sendViaProvider(provider, product, pref, "")
+		if err != nil {
 			t.Errorf("sendViaProvider() = %v, want nil", err)
+		}
+		if !attempted {
+			t.Error("sendViaProvider() did not attempt a send")
 		}
 	})
 
@@ -1749,8 +1761,12 @@ func TestSendViaProvider(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, &configuration.NotificationConfiguration{})
 		provider := &unknownProvider{}
 		pref := &models.NotificationRecipientInfo{}
-		if err := nc.sendViaProvider(provider, product, pref, ""); err != nil {
+		attempted, err := nc.sendViaProvider(provider, product, pref, "")
+		if err != nil {
 			t.Errorf("sendViaProvider() = %v, want nil", err)
+		}
+		if attempted {
+			t.Error("sendViaProvider() attempted a send for an unknown provider")
 		}
 		if provider.sent {
 			t.Error("unknown provider's SendNotification was called")

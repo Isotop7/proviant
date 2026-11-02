@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/metrics"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/models/authentication"
 	"github.com/Isotop7/proviant/models/database"
@@ -2152,6 +2153,7 @@ func (r *ProductRepository) UserHasProductAccess(userID uint, productID int) boo
 func (r *ProductRepository) GetOpenFoodFactsCacheByBarcode(barcode string) (database.OpenFoodFactsCache, error) {
 	var entry database.OpenFoodFactsCache
 	result := r.DB.Where("barcode = ?", barcode).First(&entry)
+	metrics.RecordCacheLookup(result.Error == nil)
 	return entry, result.Error
 }
 
@@ -2168,11 +2170,36 @@ func (r *ProductRepository) GetOpenFoodFactsCachesByBarcodes(barcodes []string) 
 		var batch []database.OpenFoodFactsCache
 		queryErr := r.DB.Where("barcode IN ?", chunk).Find(&batch).Error
 		if queryErr != nil {
+			hits, misses := countCacheHits(barcodes, nil)
+			metrics.RecordCacheLookupBatch(hits, misses)
 			return []database.OpenFoodFactsCache{}, queryErr
 		}
 		entries = append(entries, batch...)
 	}
+	hits, misses := countCacheHits(barcodes, entries)
+	metrics.RecordCacheLookupBatch(hits, misses)
 	return entries, nil
+}
+
+// countCacheHits returns how many of the queried barcodes the cache holds and
+// how many it misses. A barcode listed twice is one lookup.
+func countCacheHits(barcodes []string, entries []database.OpenFoodFactsCache) (int, int) {
+	found := make(map[string]bool, len(entries))
+	for i := range entries {
+		found[entries[i].Barcode] = true
+	}
+	seen := make(map[string]bool, len(barcodes))
+	hits := 0
+	for _, barcode := range barcodes {
+		if seen[barcode] {
+			continue
+		}
+		seen[barcode] = true
+		if found[barcode] {
+			hits++
+		}
+	}
+	return hits, len(seen) - hits
 }
 
 func (r *ProductRepository) CreateOpenFoodFactsCache(entry *database.OpenFoodFactsCache) error {

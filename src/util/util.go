@@ -51,6 +51,23 @@ const (
 	RouteHealthReady = "/health/ready"
 	RouteMetrics     = "/metrics"
 
+	// Prometheus metric labels. These are the complete label sets of the
+	// worker and provider metrics: a value outside these lists would create a
+	// new time series, so they live here as constants instead of literals.
+	WorkerNotificationDispatch = "notification_dispatch"
+	WorkerInvitationRetry      = "invitation_retry"
+	WorkerMailDigest           = "mail_digest"
+	WorkerMonthlyWasteReport   = "monthly_waste_report"
+	WorkerStreakUpdates        = "streak_updates"
+	WorkerTelegramPoller       = "telegram_poller"
+	WorkerBackup               = "backup"
+	WorkerOffDumpImport        = "offdump_import"
+
+	ProviderEmail    = "email"
+	ProviderNtfy     = "ntfy"
+	ProviderTelegram = "telegram"
+	ProviderWebPush  = "webpush"
+
 	// ContentClassTable narrows a page to the measure the screen sheets give
 	// the table screens, where the columns need a readable line length.
 	ContentClassTable = "app__content--table"

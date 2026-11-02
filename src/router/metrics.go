@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Isotop7/proviant/metrics"
 	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
 var metricsRegistry = prometheus.NewRegistry()
@@ -25,6 +27,28 @@ func init() {
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
+	metrics.RegisterCollectors(metricsRegistry)
+}
+
+// databaseCollectorOnce guards the pool collector registration: the router is
+// set up more than once in the test suite and a second registration of the
+// same collector panics.
+var databaseCollectorOnce sync.Once
+
+// RegisterDatabaseCollector registers the connection pool collector for db
+// against the application registry.
+func RegisterDatabaseCollector(db *gorm.DB, logger *zerolog.Logger) {
+	if db == nil {
+		return
+	}
+	databaseCollectorOnce.Do(func() {
+		pool, err := db.DB()
+		if err != nil {
+			logger.Warn().Msgf("Metrics: database pool state is unavailable: %s", err)
+			return
+		}
+		metricsRegistry.MustRegister(metrics.NewDatabaseCollector(pool))
+	})
 }
 
 type promLogger struct {

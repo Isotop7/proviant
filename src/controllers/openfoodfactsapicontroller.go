@@ -11,8 +11,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/Isotop7/proviant/metrics"
 	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/models/external"
@@ -46,7 +48,9 @@ func (offacntrl *OpenFoodFactsAPIController) LookupOffline(barcode string) (data
 	if offacntrl.OfflineLookup == nil {
 		return database.Product{}, false
 	}
-	return offacntrl.OfflineLookup.LookupProduct(barcode)
+	product, found := offacntrl.OfflineLookup.LookupProduct(barcode)
+	metrics.RecordOfflineLookup(found)
+	return product, found
 }
 
 // GetDataset gets data from OpenFoodFacts by its API, consulting the imported
@@ -72,6 +76,15 @@ func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (dat
 	// channel nobody reads. Each offline sync batch calls this once per unnamed
 	// draft, so an unbuffered channel leaked goroutines in bulk.
 	queryChannel := make(chan bool, 1)
+	// The timeout and the request goroutine can both observe the same failed
+	// lookup, so the first one to notice wins: one failed request must not be
+	// counted twice.
+	var failureRecorded atomic.Bool
+	recordFailure := func() {
+		if failureRecorded.CompareAndSwap(false, true) {
+			metrics.RecordLiveFailure()
+		}
+	}
 	// Dataset to store query response
 	var dataset external.OpenFoodFactsAPIDataset
 	filteredDataset := external.OpenFoodFactsAPIDatasetDefinition
@@ -79,9 +92,11 @@ func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (dat
 	// Query API for dataset
 	go func() {
 		queryURL := fmt.Sprintf("%s/%s?fields=%s", offacntrl.Configuration.URL, barcode, filteredDataset)
+		metrics.RecordLiveRequest()
 		resp, err := http.Get(queryURL)
 		// If upstream error is received, we also throw it
 		if err != nil {
+			recordFailure()
 			offacntrl.Logger.Error().Msgf("Error decoding response: %s", err)
 			queryChannel <- false
 			return
@@ -90,6 +105,7 @@ func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (dat
 		// Read the response body
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
+			recordFailure()
 			offacntrl.Logger.Error().Msgf("Error reading response body: %s", err)
 			queryChannel <- false
 			return
@@ -104,6 +120,7 @@ func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (dat
 
 		// Check for HTTP errors before parsing
 		if resp.StatusCode >= 400 {
+			recordFailure()
 			offacntrl.Logger.Warn().Msgf("OpenFoodFacts API error: status %d, body: %s", resp.StatusCode, string(body))
 			queryChannel <- false
 			return
@@ -111,6 +128,7 @@ func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (dat
 
 		// Parse the response and populate the dataset struct
 		if err := json.Unmarshal(body, &dataset); err != nil {
+			recordFailure()
 			offacntrl.Logger.Error().Msgf("Error decoding response: %s", err)
 			queryChannel <- false
 			return
@@ -122,6 +140,7 @@ func (offacntrl *OpenFoodFactsAPIController) GetLiveDataset(barcode string) (dat
 	select {
 	case <-ctx.Done():
 		// Timeout occured
+		recordFailure()
 		return database.Product{}, errors.New("timeout occured")
 	case success := <-queryChannel:
 		if success {

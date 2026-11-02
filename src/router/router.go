@@ -89,6 +89,7 @@ func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.Pr
 
 	if proviantConfiguration.Server.MetricsEnabled {
 		engine.Use(MetricsMiddleware())
+		RegisterDatabaseCollector(dbHandle, logger)
 	}
 
 	engine.Use(ZerologMiddleware(logger), gin.Recovery())

@@ -8,9 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Isotop7/proviant/metrics"
 	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 )
 
@@ -125,6 +127,37 @@ func TestGetDataset_Timeout(t *testing.T) {
 	}
 	if err.Error() != "timeout occured" {
 		t.Errorf("GetDataset() error = %v, want timeout occured", err.Error())
+	}
+}
+
+// TestGetDataset_TimeoutCountsOneFailure proves a timed-out lookup is counted
+// once. The timeout and the request goroutine observe the same failed lookup,
+// and counting it twice would push the live failure rate above the request
+// rate.
+func TestGetDataset_TimeoutCountsOneFailure(t *testing.T) {
+	registry := prometheus.NewRegistry()
+	metrics.RegisterCollectors(registry)
+
+	released := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-released
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	controller := newTestOFFController(server.URL, 1)
+	failuresBefore := familyValue(t, registry, "proviant_openfoodfacts_live_failures_total")
+
+	if _, err := controller.GetDataset("1234567890123"); err == nil {
+		t.Fatal("GetDataset() error = nil, want timeout error")
+	}
+
+	close(released)
+	time.Sleep(300 * time.Millisecond)
+
+	failuresAfter := familyValue(t, registry, "proviant_openfoodfacts_live_failures_total")
+	if failuresAfter != failuresBefore+1 {
+		t.Errorf("live failures = %v, want %v", failuresAfter, failuresBefore+1)
 	}
 }
 

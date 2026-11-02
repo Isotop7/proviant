@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/metrics"
 	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/util"
@@ -90,22 +91,27 @@ func (c *BackupController) RunOnce(ctx context.Context) error {
 	if c.Configuration == nil || !c.Configuration.Enabled || c.DB == nil {
 		return nil
 	}
+	metrics.RecordWorkerAttempt(util.WorkerBackup)
 	directory := strings.TrimSpace(c.Configuration.Directory)
 	if directory == "" {
+		metrics.RecordWorkerFailure(util.WorkerBackup)
 		return fmt.Errorf("%w: empty directory", errors.ErrBackupInvalidDirectory)
 	}
 	if err := os.MkdirAll(directory, 0o750); err != nil {
+		metrics.RecordWorkerFailure(util.WorkerBackup)
 		return fmt.Errorf("%w: %s", errors.ErrBackupInvalidDirectory, err)
 	}
 
 	var households []dbModel.Household
 	if err := c.DB.WithContext(ctx).Find(&households).Error; err != nil {
+		metrics.RecordWorkerFailure(util.WorkerBackup)
 		return err
 	}
 
 	var firstErr error
 	for i := range households {
 		if err := ctx.Err(); err != nil {
+			metrics.RecordWorkerFailure(util.WorkerBackup)
 			return err
 		}
 		household := &households[i]
@@ -123,11 +129,17 @@ func (c *BackupController) RunOnce(ctx context.Context) error {
 			c.Logger.Info().Msgf("Backup job: household %d written to %s", household.ID, path)
 		}
 		if err := ctx.Err(); err != nil {
+			metrics.RecordWorkerFailure(util.WorkerBackup)
 			return err
 		}
 		c.pruneHouseholdBackups(directory, household.ID)
 	}
-	return firstErr
+	if firstErr != nil {
+		metrics.RecordWorkerFailure(util.WorkerBackup)
+		return firstErr
+	}
+	metrics.RecordWorkerSuccess(util.WorkerBackup)
+	return nil
 }
 
 // writeHouseholdBackup builds and atomically writes one household document.
@@ -162,6 +174,7 @@ func (c *BackupController) writeHouseholdBackup(
 		_ = os.Remove(tempPath)
 		return "", err
 	}
+	metrics.MarkBackupSuccess(time.Now())
 	return path, nil
 }
 

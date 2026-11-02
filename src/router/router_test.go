@@ -103,6 +103,14 @@ func TestSetupRouter_MetricsEnabled(t *testing.T) {
 	if !strings.Contains(w.Body.String(), `proviant_http_requests_total{method="GET",route="/health",status="200"}`) {
 		t.Errorf("metrics body missing the /health observation:\n%s", w.Body.String())
 	}
+	// The domain collectors have to be registered next to the HTTP ones: the
+	// worker, provider and Open Food Facts series are what tells an operator
+	// whether the background jobs still work.
+	for _, name := range []string{"proviant_openfoodfacts_live_requests_total", "proviant_db_connections"} {
+		if !strings.Contains(w.Body.String(), name) {
+			t.Errorf("metrics body missing the domain metric %q:\n%s", name, w.Body.String())
+		}
+	}
 }
 
 // TestSetupRouter_MetricsCountsRecoveredPanic pins the middleware order in the

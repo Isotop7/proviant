@@ -20,6 +20,7 @@ import (
 
 	dbController "github.com/Isotop7/proviant/controllers/database"
 	proviantErrors "github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/metrics"
 	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/models/external"
@@ -183,14 +184,26 @@ func (c *OffDumpController) RunOnce(ctx context.Context) error {
 	if c.Configuration == nil || !c.Configuration.DumpImportEnabled || c.Repository == nil {
 		return nil
 	}
+	metrics.RecordWorkerAttempt(util.WorkerOffDumpImport)
 	due, err := c.fullImportDue()
 	if err != nil {
+		metrics.RecordWorkerFailure(util.WorkerOffDumpImport)
 		return err
 	}
 	if due {
-		return c.importFullDump(ctx)
+		if err := c.importFullDump(ctx); err != nil {
+			metrics.RecordWorkerFailure(util.WorkerOffDumpImport)
+			return err
+		}
+		metrics.RecordWorkerSuccess(util.WorkerOffDumpImport)
+		return nil
 	}
-	return c.importDeltas(ctx)
+	if err := c.importDeltas(ctx); err != nil {
+		metrics.RecordWorkerFailure(util.WorkerOffDumpImport)
+		return err
+	}
+	metrics.RecordWorkerSuccess(util.WorkerOffDumpImport)
+	return nil
 }
 
 // LookupProduct resolves a barcode from the imported dump. It reports false on
