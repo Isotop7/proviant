@@ -14,17 +14,26 @@ type ProductCategoryPrice struct {
 	WeightGrams float64 `gorm:"not null;default:500" json:"weightGrams"`
 }
 
+// SavingsEventType names the kind of action a savings record was written for.
+const (
+	SavingsEventTypeConsumed = "consumed"
+	SavingsEventTypeWasted   = "wasted"
+)
+
 // SavingsRecord is written once per consume or waste action. It captures the monetary
 // value and CO2 equivalent at the time of the event so that later changes to
 // ProductCategoryPrice do not retroactively alter history.
 type SavingsRecord struct {
 	gorm.Model
-	HouseholdID uint    `gorm:"index;not null" json:"-"`
-	ProductID   uint    `gorm:"index"          json:"productId"`
-	ProductName string  `gorm:"not null"       json:"productName"`
-	EventType   string  `gorm:"not null;index" json:"eventType"` // "consumed" or "wasted"
-	PriceEUR    float64 `gorm:"not null"       json:"priceEur"`
-	CO2Kg       float64 `gorm:"not null"       json:"co2Kg"`
+	HouseholdID uint   `gorm:"index;not null" json:"-"`
+	ProductID   uint   `gorm:"index"          json:"productId"`
+	ProductName string `gorm:"not null"       json:"productName"`
+	EventType   string `gorm:"not null;index" json:"eventType"` // SavingsEventTypeConsumed or SavingsEventTypeWasted
+	// WasteCause is why the event wasted the product. It is empty for a
+	// consumed event and for a waste that carried no reason.
+	WasteCause string  `gorm:"default:''"          json:"wasteCause"`
+	PriceEUR   float64 `gorm:"not null"       json:"priceEur"`
+	CO2Kg      float64 `gorm:"not null"       json:"co2Kg"`
 	// Amount is the number of packs the event covered. A record written before
 	// the count model holds a net content instead, which is why such a record
 	// is marked as legacy.

@@ -24,6 +24,9 @@ func PasswordValidatorFromConfig(cfg PasswordConfig) *PasswordValidator {
 type Login struct {
 	Username string `form:"username" json:"username" binding:"required"`
 	Password string `form:"password" json:"password" binding:"required"`
+	// Code carries the second factor of an account that has one. It stays
+	// empty for every account without a second factor.
+	Code string `form:"code" json:"code"`
 }
 
 // IsValid checks if the given login instance is valid

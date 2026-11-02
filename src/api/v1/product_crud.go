@@ -28,10 +28,15 @@ const (
 
 // GetProducts returns the products of a user
 // @Summary      Return a list of products
-// @Description  Return a list of products of user
+// @Description  Return a list of products of user. The list is ordered by the effective expiry by default — the earlier of the printed expiry and the opened-shelf-life date — with the products without a date last. A product that carries a shelf life is ordered by the date it goes off, not by the date printed on it. The order is the same on every request: products that share the sort key keep the order of their ids, so a client that walks the pages by offset reads every product exactly once. The response carries the products of the page, the total number of products the filter matched, and the window that produced the page. The total counts the whole set, not the page. An offset walk is stable as long as the household's products do not change in between: a product that is added or removed shifts the rows behind it. A page ordered by the effective expiry is resolved before it is cut out, because the effective expiry has no sortable column — every page costs the same as reading the whole list.
 // @Tags         product
 // @Produce      json
-// @Success      200  {object}  []apiModel.ProductResponse
+// @Param        sort   query     string  false  "Sort field (product_name, expire_at, created_at, effective_expire_at)"  default(effective_expire_at)
+// @Param        order  query     string  false  "Sort order (asc, desc)"  default(asc)
+// @Param        limit  query     int     false  "Number of products to return (1-1000)"  default(100)
+// @Param        offset query     int     false  "Number of products to skip before the first one returned"  default(0)
+// @Param        ids    query     string  false  "Ids of the products to return (comma separated, max 1000). ids wins over limit, offset and sort: the named products are returned in id order, unpaged, and the total is the number of them the caller may see."
+// @Success      200  {object}  apiModel.ProductListResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products [get]
@@ -40,7 +45,6 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 	if !ok {
 		return
 	}
-	limit := q.Limit
 
 	if len(q.IDs) > 0 {
 		products, idsErr := appCtx.Repos.Products.GetUserProductsByIDs(appCtx.UserID, q.IDs)
@@ -49,11 +53,16 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 			ctx.JSON(http.StatusInternalServerError, api.InternalError())
 			return
 		}
-		ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
+		ctx.JSON(http.StatusOK, apiModel.NewProductListResponse(apiModel.NewProductResponses(products), len(products), 0, 0))
 		return
 	}
 
-	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulk(appCtx.UserID, limit)
+	sort, sortOk := ParseProductSortQuery(ctx)
+	if !sortOk {
+		return
+	}
+
+	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulkSorted(appCtx.UserID, q.Limit, q.Offset, sort.Sort, sort.Order)
 	if productBulkErr != nil {
 		appCtx.Logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
@@ -66,7 +75,15 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 		}
 		return
 	}
-	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
+
+	total, countErr := appCtx.Repos.Products.GetActiveProductsCount(appCtx.UserID)
+	if countErr != nil {
+		appCtx.Logger.Error().Msgf("Error counting products of user: %s", countErr)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		return
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.NewProductListResponse(apiModel.NewProductResponses(products), total, q.Limit, q.Offset))
 }
 
 // GetProduct return a single product of a user
@@ -121,7 +138,7 @@ func syncIDVisibleTo(existing *dbModel.Product, userID uint) bool {
 
 // CreateProduct creates a new product of a user
 // @Summary      	Creates a new product
-// @Description  	Creates a new product of a user. The body carries the pack count and the size of one pack ("1 l"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.
+// @Description  	Creates a new product of a user. The body carries the pack count and the size of one pack ("1 l"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read. A create that duplicates an active row of the household — the same barcode in the same storage location with the same effective expiry — is answered with 409 and the matched product in the body, so the client can ask whether to add a pack to it, to create a separate product, or to cancel. Archived rows and other members' private products are never matches. A body that sets allowDuplicate skips the duplicate check and writes the row as it is.
 // @Tags         	product
 // @Accept			json
 // @Produce      	json
@@ -129,7 +146,7 @@ func syncIDVisibleTo(existing *dbModel.Product, userID uint) bool {
 // @Success      	201  {object}  apiModel.ProductResponse
 // @Success      	200  {object}  apiModel.ProductResponse
 // @Failure      	400  {object}  api.APIResponse
-// @Failure      	409  {object}  api.APIResponse
+// @Failure      	409  {object}  api.ProductConflictResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products [post]
 func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
@@ -176,7 +193,9 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 			// index on (household, sync id) forbids a second one: refuse rather
 			// than fall through to an insert that would fail.
 			logger.Warn().Msg("clientSyncId collides with another member's private product")
-			api.RespondError(ctx, http.StatusConflict, errors.ErrClientSyncIDConflict)
+			ctx.JSON(http.StatusConflict, api.ProductConflictResponse{
+				APIResponse: api.APIResponse{Message: errors.ErrClientSyncIDConflict.Error()},
+			})
 			return
 		case !stderrors.Is(syncErr, gorm.ErrRecordNotFound):
 			logger.Error().Msgf("Error looking up product by client sync id: %s", syncErr)
@@ -185,6 +204,9 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
+	// The barcode is trimmed before anything reads it: a padded barcode is
+	// the same barcode, and a blank one is no barcode at all.
+	product.Barcode = dbModel.NormalizeBarcode(product.Barcode)
 	if product.Barcode == "" {
 		logger.Warn().Msgf("Body is missing barcode")
 		api.RespondError(ctx, http.StatusBadRequest, errors.ErrBarcodeMissing)
@@ -199,17 +221,85 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 	}
 	var apiProduct dbModel.Product
 	apiProduct, err := offacntrl.GetDataset(product.Barcode)
-	if err == nil {
-		apiProduct.ScannedAt = time.Now()
-		apiProduct.ExpireAt = product.ExpireAt
-		apiProduct.Quantity = product.Quantity
+	// The lookup owns the product's identity, not its stock: where the packs
+	// go, who may see them and when they were opened are the client's
+	// answers, and the lookup must not drop them. A lookup that answered with
+	// nothing leaves the client's product as it is, so the row keeps its
+	// barcode and its name.
+	//
+	// Every field is listed, because the ones that are not on this list are
+	// the server's: the notification stamp, the removal reason and the
+	// archive state must not be settable through a create request.
+	if err == nil && apiProduct.Barcode != "" {
+		packSize := apiProduct.PackSize
 		// The barcode knows the size of a pack, but a client that named one
 		// knows better.
 		if product.PackSize != "" {
-			apiProduct.PackSize = product.PackSize
+			packSize = product.PackSize
 		}
-		apiProduct.ClientSyncID = product.ClientSyncID
-		product = apiProduct
+		// The name follows the same rule: a household that calls its staple
+		// "Milk" knows better than the label Open Food Facts prints.
+		productName := apiProduct.ProductName
+		if clientName := util.ProductNameLabel(product.ProductName); clientName != "" {
+			productName = clientName
+		}
+		product = dbModel.Product{
+			Barcode:              product.Barcode,
+			ProductName:          productName,
+			Categories:           apiProduct.Categories,
+			Countries:            apiProduct.Countries,
+			ImageURL:             apiProduct.ImageURL,
+			ExpireAt:             product.ExpireAt,
+			ScannedAt:            time.Now(),
+			IsPrivate:            product.IsPrivate,
+			Quantity:             product.Quantity,
+			PackSize:             packSize,
+			StorageLocationID:    product.StorageLocationID,
+			ClientSyncID:         product.ClientSyncID,
+			PriceOverride:        product.PriceOverride,
+			CO2KgPerKg:           apiProduct.CO2KgPerKg,
+			NotificationLeadDays: product.NotificationLeadDays,
+			MinStockAmount:       product.MinStockAmount,
+			OpenedAt:             product.OpenedAt,
+			DaysAfterOpening:     product.DaysAfterOpening,
+			CategoryKey:          product.CategoryKey,
+			AllowDuplicate:       product.AllowDuplicate,
+		}
+	} else {
+		// Without a lookup the client's own name is the only name the product
+		// has. It is free text, so it is collapsed and capped like the pack
+		// size, which the repository normalises the same way.
+		product.ProductName = util.ProductNameLabel(product.ProductName)
+	}
+
+	if !applyHouseholdCategory(ctx, appCtx, &product) {
+		return
+	}
+
+	// A create that would duplicate an active row is refused instead of
+	// written: the pack may belong to the product that is already there. The
+	// server cannot know the user's intent, so it hands the matched row back
+	// and lets the client ask whether to add a pack to it, to create a
+	// separate product, or to cancel.
+	if !product.AllowDuplicate {
+		duplicate, isDuplicate, duplicateErr := repos.Products.FindDuplicateProduct(userID, &product)
+		if duplicateErr != nil {
+			logger.Error().Msgf("Error looking up a duplicate product: %s", duplicateErr)
+			ctx.JSON(http.StatusInternalServerError, api.CreateFailedError())
+			return
+		}
+		if isDuplicate {
+			logger.Info().Msgf("Product create for barcode '%s' duplicates product #%d", product.Barcode, duplicate.ID)
+			matched := apiModel.NewProductResponse(&duplicate)
+			ctx.JSON(http.StatusConflict, api.ProductConflictResponse{
+				APIResponse: api.APIResponse{
+					Message: errors.ErrDuplicateProduct.Error(),
+					Action:  "Add a pack to the existing product, create a separate one, or cancel",
+				},
+				Duplicate: &matched,
+			})
+			return
+		}
 	}
 
 	createResult := repos.Products.CreateProduct(userID, &product)
@@ -233,7 +323,9 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 			existing, lookupErr := repos.Products.GetProductBySyncID(userID, clientSyncID)
 			if lookupErr == nil && !syncIDVisibleTo(&existing, userID) {
 				logger.Warn().Msg("clientSyncId collides with another member's private product")
-				api.RespondError(ctx, http.StatusConflict, errors.ErrClientSyncIDConflict)
+				ctx.JSON(http.StatusConflict, api.ProductConflictResponse{
+					APIResponse: api.APIResponse{Message: errors.ErrClientSyncIDConflict.Error()},
+				})
 				return
 			}
 			if lookupErr == nil {
@@ -246,42 +338,7 @@ func CreateProduct(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	go func() {
-		householdID, _ := repos.Users.GetUserHouseholdByID(userID)
-		userName := ""
-		if user, err := repos.Users.GetUserByID(userID); err == nil {
-			userName = user.DisplayName
-		}
-		logEntry := &dbModel.ActivityLog{
-			HouseholdID: householdID,
-			UserID:      &userID,
-			UserName:    userName,
-			Action:      dbModel.ActivityActionAdd,
-			ProductID:   product.ID,
-			ProductName: product.ProductName,
-			Quantity:    1,
-			Timestamp:   time.Now(),
-		}
-		if repos.ActivityLogs == nil {
-			return
-		}
-		ctxBg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = repos.ActivityLogs.Create(ctxBg, logEntry)
-	}()
-
-	go func() {
-		if ws := controllers.GetWebhookService(); ws != nil {
-			ws.FireEvent("product.created", map[string]any{
-				"id":          product.ID,
-				"productName": product.ProductName,
-				"barcode":     product.Barcode,
-				"expireAt":    product.ExpireAt,
-				"quantity":    product.Quantity,
-				"householdId": product.HouseholdID,
-			})
-		}
-	}()
+	fireProductCreated(repos, userID, &product, 1)
 
 	ctx.JSON(http.StatusCreated, apiModel.NewProductResponse(&product))
 }
@@ -393,6 +450,12 @@ func updateProduct(ctx *gin.Context, appCtx *AppContext, mode updateMode) {
 		appCtx.Logger.Warn().Msgf("Rejected product update for %d: %s", productID, updateErr)
 		ctx.JSON(http.StatusBadRequest, api.InvalidInputErrorWithDetail(updateErr.Error()))
 		return
+	case errors.ErrCategoryNotFound:
+		// The request named a category that is not one of the canonical
+		// categories — user input, not a server fault.
+		appCtx.Logger.Warn().Msgf("Rejected product update for %d: %s", productID, updateErr)
+		api.RespondError(ctx, http.StatusBadRequest, updateErr)
+		return
 	default:
 		appCtx.Logger.Error().Msgf("Error saving product: %s", updateErr)
 		ctx.JSON(http.StatusInternalServerError, api.UpdateFailedError())
@@ -424,6 +487,7 @@ func productResponse(stored *dbModel.Product, patch *dbModel.ProductDTOPatch) db
 		PriceOverride:        stored.PriceOverride,
 		OpenedAt:             stored.OpenedAt,
 		DaysAfterOpening:     stored.DaysAfterOpening,
+		CategoryKey:          stored.CategoryKey,
 	}
 }
 

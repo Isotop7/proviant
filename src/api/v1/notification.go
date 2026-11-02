@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Isotop7/proviant/api"
 	"github.com/Isotop7/proviant/controllers/database"
@@ -66,7 +67,7 @@ func invitationNotificationItems(repos *database.RepositoryContainer, logger *ze
 			ID:        inv.ID,
 			Type:      "invitation",
 			Title:     "Invitation pending: " + inv.Email,
-			CreatedAt: inv.CreatedAt.Format(util.DefaultDateFormatParseStr),
+			CreatedAt: inv.CreatedAt.In(time.Local).Format(util.DefaultDateFormatParseStr),
 		})
 	}
 	return items
@@ -92,7 +93,7 @@ func incomingApplicationNotificationItems(repos *database.RepositoryContainer, l
 			ID:        app.ID,
 			Type:      "application_incoming",
 			Title:     applicantName + " wants to join your household",
-			CreatedAt: app.CreatedAt.Format(util.DefaultDateFormatParseStr),
+			CreatedAt: app.CreatedAt.In(time.Local).Format(util.DefaultDateFormatParseStr),
 		})
 	}
 	return items
@@ -114,7 +115,7 @@ func outgoingApplicationNotificationItems(repos *database.RepositoryContainer, l
 			ID:        app.ID,
 			Type:      "application_outgoing",
 			Title:     "Awaiting approval to join " + householdName,
-			CreatedAt: app.CreatedAt.Format(util.DefaultDateFormatParseStr),
+			CreatedAt: app.CreatedAt.In(time.Local).Format(util.DefaultDateFormatParseStr),
 		})
 	}
 	return items

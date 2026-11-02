@@ -185,10 +185,7 @@ func writeBackupFile(ctx context.Context, path string, payload []byte) error {
 			_ = file.Close()
 			return err
 		}
-		end := offset + backupWriteChunkSize
-		if end > len(payload) {
-			end = len(payload)
-		}
+		end := min(offset+backupWriteChunkSize, len(payload))
 		if _, err := file.Write(payload[offset:end]); err != nil {
 			_ = file.Close()
 			return err
@@ -255,9 +252,7 @@ func (c *BackupController) Dispatch() {
 		if c.stopped || c.ctx.Err() != nil {
 			return
 		}
-		c.workers.Add(1)
-		go func() {
-			defer c.workers.Done()
+		c.workers.Go(func() {
 			if c.Logger != nil {
 				c.Logger.Info().Msgf("BackupController dispatched (interval: %d hours, directory: %s)", intervalHours, c.Configuration.Directory)
 			}
@@ -281,6 +276,6 @@ func (c *BackupController) Dispatch() {
 					cancel()
 				}
 			}
-		}()
+		})
 	})
 }

@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	apiModel "github.com/Isotop7/proviant/models/api"
+)
 
 // WasteStats holds aggregated waste data for one household for one calendar month.
 type WasteStats struct {
@@ -17,6 +21,22 @@ type WasteStats struct {
 	Delta            float64 // WasteRatePct - PrevWasteRatePct (positive = worse)
 	DeltaColor       string  // inline CSS hex color for the trend indicator
 	DeltaSymbol      string  // "▲", "▼", or "="
+	// WastedEvents counts the wasted ledger events of the month. It is not the
+	// same measure as WastedCount: that one counts the products that left the
+	// pantry plus the ones that expired in it, this one counts the waste
+	// actions the savings ledger holds.
+	WastedEvents int
+	// Causes breaks the month's wasted events down by the reason they were
+	// wasted. A waste without a reason lands in the empty cause.
+	Causes []apiModel.WasteCauseStat
+	// Overbuy names the category the household most over-buys.
+	Overbuy apiModel.WasteOverbuyStat
+	// Insight is the one-sentence insight about the month's waste, in the
+	// recipient's language.
+	Insight string
+	// InsightAvailable is false when there is too little data to state an
+	// insight; the Insight then holds the empty-state sentence.
+	InsightAvailable bool
 }
 
 // TelegramRecipient pairs a Telegram chat ID with the user's own bot token.

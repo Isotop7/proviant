@@ -84,10 +84,12 @@ func writeBulkActionResult(ctx *gin.Context, appCtx *AppContext, ids, failed []u
 
 // GetArchivedProducts returns the archived products of a user
 // @Summary      Return a list of archived products
-// @Description  Return a list of archived products of user
+// @Description  Return a list of archived products of user. The response carries the products of the page, the total number of archived products the caller may see, and the window that produced the page. The total counts the whole archived set, not the page. The archived products are ordered by their id, so a client that walks the pages by offset reads every one of them exactly once. The endpoint pages by its own window: an ids parameter is not read here, the archived list is never narrowed to named products.
 // @Tags         product
 // @Produce      json
-// @Success      200  {object}  []apiModel.ProductResponse
+// @Param        limit  query  int  false  "Number of archived products to return (1-1000)"  default(100)
+// @Param        offset query  int  false  "Number of archived products to skip before the first one returned"  default(0)
+// @Success      200  {object}  apiModel.ProductListResponse
 // @Failure      400  {object}  api.APIResponse
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/archived [get]
@@ -96,9 +98,8 @@ func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext) {
 	if !ok {
 		return
 	}
-	limit := q.Limit
 
-	products, productBulkErr := appCtx.Repos.Products.GetUserArchivedProductsBulk(appCtx.UserID, limit)
+	products, productBulkErr := appCtx.Repos.Products.GetUserArchivedProductsBulk(appCtx.UserID, q.Limit, q.Offset)
 	if productBulkErr != nil {
 		appCtx.Logger.Warn().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
@@ -111,7 +112,15 @@ func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext) {
 		}
 		return
 	}
-	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
+
+	total, countErr := appCtx.Repos.Products.GetArchivedProductsCount(appCtx.UserID)
+	if countErr != nil {
+		appCtx.Logger.Error().Msgf("Error counting archived products of user: %s", countErr)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		return
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.NewProductListResponse(apiModel.NewProductResponses(products), total, q.Limit, q.Offset))
 }
 
 // RestoreProduct restores an archived product of a user

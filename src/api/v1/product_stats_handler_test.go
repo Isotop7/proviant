@@ -119,6 +119,55 @@ func TestGetProductStatsHandler(t *testing.T) {
 	}
 }
 
+func TestGetProductStatsUseFirstList(t *testing.T) {
+	env := setupHandlerTest(t)
+	location := testutil.CreateTestStorageLocation(env.DB, env.Household.ID)
+
+	soon := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
+	soon.ProductName = "Soon"
+	soon.Quantity = 3
+	soon.PackSize = "250g"
+	soon.ExpireAt = time.Now().Add(2 * 24 * time.Hour)
+	soon.StorageLocationID = &location.ID
+	env.DB.Save(soon)
+
+	later := testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
+	later.ProductName = "Later"
+	later.ExpireAt = time.Now().Add(20 * 24 * time.Hour)
+	env.DB.Save(later)
+
+	env.Ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/stats", nil)
+
+	GetProductStats(env.Ctx, env.AppCtx)
+
+	if env.W.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
+	}
+	var resp apiModel.ProductStatsResponse
+	if err := json.Unmarshal(env.W.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.UseFirst) != 2 {
+		t.Fatalf("useFirst = %+v, want both active products", resp.UseFirst)
+	}
+	if resp.UseFirst[0].ProductName != "Soon" {
+		t.Errorf("useFirst[0] = %q, want the product that expires first", resp.UseFirst[0].ProductName)
+	}
+	entry := resp.UseFirst[0]
+	if entry.Quantity != 3 {
+		t.Errorf("quantity = %d, want 3", entry.Quantity)
+	}
+	if entry.PackSize != "250g" {
+		t.Errorf("packSize = %q, want %q", entry.PackSize, "250g")
+	}
+	if entry.StorageLocationName != location.Name {
+		t.Errorf("storageLocationName = %q, want %q", entry.StorageLocationName, location.Name)
+	}
+	if entry.ExpireAt == "" {
+		t.Errorf("expireAt empty, want the effective expiry")
+	}
+}
+
 func TestGetProductStatsUsesNotificationThreshold(t *testing.T) {
 	env := setupHandlerTest(t)
 	env.User.NotificationPreferences.NotificationThresholdDays = 14

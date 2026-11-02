@@ -47,6 +47,9 @@ jobs:
         run: |
           cd ./src
           go mod verify
+      - name: Check Go modernizations
+        working-directory: .
+        run: bash scripts/check-modernize.sh
       - name: Lint code
         uses: golangci/golangci-lint-action@db9de0fc1a667e1a49d2291a1a042dff081d78f6 # v9
         with:
@@ -95,6 +98,11 @@ jobs:
         run: |
           cd ./src
           go test -race $(go list ./... | grep -v /vendor/)
+      # The wall-clock budget only means something without the race detector:
+      # it inflates the row scan ~6x, and the multiplier differs per machine.
+      - name: Test wall-clock budgets
+        working-directory: src
+        run: go test -vet=off -count=1 -run TestProductListPerformance10k ./controllers/database/
       # The unit-table guards read tests/js/helpers/loadScript.js at runtime, a
       # file the Go test cache does not track, so a fixture-only change would
       # replay the cached result of the step above.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"html/template"
+	"maps"
 	"net/http"
 	"net/url"
 	"sort"
@@ -212,6 +213,11 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
 
+	categories, categoriesErr := repos.HouseholdCategories.List(user.HouseholdID)
+	if categoriesErr != nil {
+		logger.Warn().Msgf("User settings: household categories: %s", categoriesErr)
+	}
+
 	minLength := 12
 	requireUppercase := false
 	requireDigit := false
@@ -228,6 +234,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 	shoppingListSyncEnabled := false
 	bringSyncEnabled := false
 	todoistSyncEnabled := false
+	twoFactorEnabled := false
 
 	if cfgVal, ok := ctx.Get(util.ContextKeyProviantConfig); ok {
 		if cfg, ok := cfgVal.(*configuration.ProviantConfiguration); ok {
@@ -246,6 +253,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 			shoppingListSyncEnabled = cfg.ShoppingListSync.Enabled
 			bringSyncEnabled = cfg.ShoppingListSync.IsProviderEnabled(util.ShoppingListProviderBring)
 			todoistSyncEnabled = cfg.ShoppingListSync.IsProviderEnabled(util.ShoppingListProviderTodoist)
+			twoFactorEnabled = cfg.Server.TwoFactor.Enabled
 		}
 	}
 
@@ -261,6 +269,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"MyApplications":            myApplications,
 		"TelegramConfigured":        telegramConfigured,
 		"Locations":                 locations,
+		"Categories":                categories,
 		"PasswordMinLength":         minLength,
 		"PasswordRequireUppercase":  requireUppercase,
 		"PasswordRequireDigit":      requireDigit,
@@ -270,6 +279,7 @@ func (frontend *Frontend) UserSettings(ctx *gin.Context) {
 		"ShoppingListSyncEnabled":   shoppingListSyncEnabled,
 		"BringSyncEnabled":          bringSyncEnabled,
 		"TodoistSyncEnabled":        todoistSyncEnabled,
+		"TwoFactorEnabled":          twoFactorEnabled,
 		"AvailableLanguages":        i18n.LanguageOptions(),
 	}
 
@@ -400,9 +410,7 @@ func renderProductsFetchError(ctx *gin.Context, frontend *Frontend, logger *zero
 // and Set replaces that entry rather than touching any other key's slice.
 func pageURL(params url.Values, page int) string {
 	paged := make(url.Values, len(params)+1)
-	for key, value := range params {
-		paged[key] = value
-	}
+	maps.Copy(paged, params)
 	paged.Set("page", strconv.Itoa(page))
 	return "?" + paged.Encode()
 }
@@ -450,10 +458,7 @@ func hydrateProductsPage(repos *database.RepositoryContainer, userID uint, ids [
 // since it was written lands on a valid page instead of rendering an empty one
 // that reads like data loss.
 func sliceProductPage(candidates []dbModel.Product, rawPage string) (ids []uint, page, totalPages int) {
-	totalPages = (len(candidates) + productsPageSize - 1) / productsPageSize
-	if totalPages < 1 {
-		totalPages = 1
-	}
+	totalPages = max((len(candidates)+productsPageSize-1)/productsPageSize, 1)
 
 	page = 1
 	if requested, err := strconv.Atoi(rawPage); err == nil && requested > 1 {
@@ -464,10 +469,7 @@ func sliceProductPage(candidates []dbModel.Product, rawPage string) (ids []uint,
 	}
 
 	start := (page - 1) * productsPageSize
-	end := start + productsPageSize
-	if end > len(candidates) {
-		end = len(candidates)
-	}
+	end := min(start+productsPageSize, len(candidates))
 	ids = make([]uint, 0, end-start)
 	for i := start; i < end; i++ {
 		ids = append(ids, candidates[i].ID)
@@ -565,6 +567,11 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		isAdmin = currentUser.Role == authentication.RoleAdmin
 	}
 
+	categories, categoriesErr := repos.HouseholdCategories.ListByUser(userID)
+	if categoriesErr != nil {
+		logger.Warn().Msgf("Products page: household categories: %s", categoriesErr)
+	}
+
 	productQuery := &productQueryParams{
 		statusFilter:   statusFilter,
 		locationFilter: locationFilter,
@@ -626,8 +633,16 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	// actually ran — search params can accompany the archived view, and a
 	// location filter narrows (not shadows) the search branch, which stays
 	// SQL-ordered.
+	//
+	// The effective expiry is the list's order, and the sort key names it, so
+	// a link can spell the order out. Its direction is honoured for it — the
+	// repository reads the direction case-insensitively, so the page does too.
 	if statusFilter != "archived" && !searchOrdered {
-		database.SortByEffectiveExpiry(projections)
+		if sort == database.SortEffectiveExpiry && strings.EqualFold(order, "desc") {
+			database.SortByEffectiveExpiryDescending(projections)
+		} else {
+			database.SortByEffectiveExpiry(projections)
+		}
 	}
 
 	pageIDs, page, totalPages := sliceProductPage(projections, ctx.Query("page"))
@@ -644,9 +659,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	}
 
 	params := url.Values{}
-	for k, v := range ctx.Request.URL.Query() {
-		params[k] = v
-	}
+	maps.Copy(params, ctx.Request.URL.Query())
 	// Filter and view links start over at page 1: carrying ?page= along would
 	// mean a page number that no longer refers to anything under the new filter.
 	delete(params, "page")
@@ -671,6 +684,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"Order":              order,
 		"Locations":          locations,
 		"StorageLocations":   locations,
+		"Categories":         categories,
 		"LocationFilter":     locationFilter,
 		"View":               view,
 		"StatusFilter":       statusFilter,
@@ -687,6 +701,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 		"CurrentUserID":      userID,
 		"IsAdmin":            isAdmin,
 		"ReceiptScanEnabled": receiptScanEnabled,
+		"WasteCauses":        dbModel.WasteCauseList(),
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "products.tmpl", pageData)
 }
@@ -699,9 +714,31 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 // @Success      200  {string}  html
 // @Router       /web/products/scan [get]
 func (frontend *Frontend) ProductsScan(ctx *gin.Context) {
+	logger, _ := ctx.MustGet(util.ContextKeyLogger).(*zerolog.Logger)
+	repos, ok := ctx.MustGet(util.ContextKeyRepos).(*database.RepositoryContainer)
+	if !ok {
+		logger.Error().Msg(api.ResponseErrDatabaseContextNotFound.Message)
+		templates.RenderError(ctx, frontend.TemplateCache, http.StatusInternalServerError, errors.ErrDatabaseContextNotFound.Error())
+		return
+	}
+
+	// The category list is a convenience: a scan without it still works, so a
+	// caller the page cannot name a household for still gets the page.
+	var categories []dbModel.HouseholdCategoryView
+	if claims := jwt.ExtractClaims(ctx); claims != nil {
+		if idClaim, hasClaim := claims[static.TokenIdentityKey].(float64); hasClaim && idClaim > 0 {
+			listed, categoriesErr := repos.HouseholdCategories.ListByUser(uint(idClaim))
+			if categoriesErr != nil {
+				logger.Warn().Msgf("Scan page: household categories: %s", categoriesErr)
+			}
+			categories = listed
+		}
+	}
+
 	pageData := map[string]any{
 		"InviteToken": ctx.Query("invite_token"),
 		"Title":       "Scan Product",
+		"Categories":  categories,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "productsScan.tmpl", pageData)
 }
@@ -826,6 +863,14 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 	}
 
 	locations, _ := repos.StorageLocations.GetByHousehold(userID)
+	categories, categoriesErr := repos.HouseholdCategories.ListByUser(userID)
+	if categoriesErr != nil {
+		logger.Warn().Msgf("Product edit page: household categories: %s", categoriesErr)
+	}
+	selectedCategoryKey := ""
+	if product.CategoryKey != nil {
+		selectedCategoryKey = *product.CategoryKey
+	}
 
 	pageData := map[string]any{
 		"InviteToken":                     ctx.Query("invite_token"),
@@ -833,6 +878,8 @@ func (frontend *Frontend) ProductsEdit(ctx *gin.Context) {
 		"PageTitle":                       "EditProduct",
 		"Product":                         product,
 		"Locations":                       locations,
+		"Categories":                      categories,
+		"SelectedCategoryKey":             selectedCategoryKey,
 		"IsArchived":                      product.DeletedAt.Valid,
 		"GlobalNotificationThresholdDays": user.NotificationPreferences.NotificationThresholdDays,
 	}
@@ -1151,6 +1198,12 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
 
 	unchecked = append(unchecked, checked...)
 
+	// The purchase dialog needs the household's categories to fill the expiry
+	// from the category's shelf life, and the storage locations to say where
+	// the bought packs go.
+	categories, _ := repos.HouseholdCategories.ListByUser(userID)
+	locations, _ := repos.StorageLocations.GetByHousehold(userID)
+
 	pageData := map[string]any{
 		"InviteToken":   ctx.Query("invite_token"),
 		"Title":         "Shopping List",
@@ -1162,6 +1215,9 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
 		"AutoItemCount": len(filteredAutoProducts),
 		"HasAutoItems":  len(filteredAutoProducts) > 0,
 		"ItemsJSON":     toJSON(unchecked),
+		"CategoriesJSON": toJSON(apiModel.NewHouseholdCategoryResponses(
+			categories)),
+		"Locations": locations,
 	}
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "base", "shoppingList.tmpl", pageData)
 }
@@ -1284,6 +1340,20 @@ func (frontend *Frontend) ResetPassword(ctx *gin.Context) {
 	}
 
 	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "baseAuth", "resetPassword.tmpl", data)
+}
+
+// Offline renders the fallback screen the service worker serves when a
+// navigation cannot reach the network. The page is precached by the worker
+// and carries the app stylesheet, so it looks like the app it replaces.
+//
+// @Summary      Offline fallback page
+// @Description  Renders the app-styled offline screen the service worker serves from its cache when a navigation fails.
+// @Tags         web
+// @Produce      html
+// @Success      200  {string}  html
+// @Router       /offline [get]
+func (frontend *Frontend) Offline(ctx *gin.Context) {
+	templates.Render(ctx, frontend.TemplateCache, http.StatusOK, "offline.tmpl", "offline.tmpl", map[string]any{})
 }
 
 // BrandFeature is a single icon+text row in the brand panel of the

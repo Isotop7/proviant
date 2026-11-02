@@ -69,14 +69,16 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 
 // SearchProducts returns a list of products based on a query
 // @Summary      	Search products
-// @Description  	Returns a list of products based on a query
+// @Description  	Returns a list of products based on a query. The response carries the products of the page, the total number of products the search matched, and the window that produced the page. The total counts every match, not the page. The matches that share the sort key keep the order of their ids, so a client that walks the pages by offset reads every match exactly once. A limit that is not set returns every match. A page ordered by the effective expiry is resolved before it is cut out, because the effective expiry has no sortable column — every page costs the same as reading every match.
 // @Tags         	product
 // @Produce      	json
 // @Param        	queryParam  query  string  true  	"Search field (product_name, barcode)"
 // @Param        	queryValue  query  string  true  	"Search value"
-// @Param        	sort        query  string  false  "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode)"  default(product_name)
+// @Param        	sort        query  string  false  "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode, effective_expire_at)"  default(product_name)
 // @Param        	order       query  string  false  "Sort order (asc, desc)"  default(asc)
-// @Success      	200  {object}  []apiModel.ProductResponse
+// @Param        	limit       query  int     false  "Number of matches to return (max 1000). Without a limit every match is returned."
+// @Param        	offset      query  int     false  "Number of matches to skip before the first one returned"  default(0)
+// @Success      	200  {object}  apiModel.ProductListResponse
 // @Failure      	400  {object}  api.APIResponse
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/search [GET]
@@ -93,7 +95,7 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	products, productErr := appCtx.Repos.Products.SearchProducts(enumParam, q.QueryValue, q.Sort, q.Order, appCtx.UserID)
+	products, productErr := appCtx.Repos.Products.SearchProducts(enumParam, q.QueryValue, q.Sort, q.Order, appCtx.UserID, q.Limit, q.Offset)
 	if productErr != nil {
 		// The caller picked the sort column/direction and owns their account
 		// row: those misses are client input, not server faults. The query
@@ -106,9 +108,9 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
 			appCtx.Logger.Warn().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: productErr.Error()})
 			return
-		case gorm.ErrRecordNotFound:
-			// The caller's own account row is gone: report the account state,
-			// never gorm's internal "record not found".
+		case gorm.ErrRecordNotFound, errors.ErrInvalidUserData:
+			// The caller's own account row is gone or has no household: report
+			// the account state, never gorm's internal "record not found".
 			appCtx.Logger.Warn().Msgf("%s: %s", errors.MsgErrGettingProducts, productErr)
 			ctx.JSON(http.StatusBadRequest, api.APIResponse{Message: errors.ErrInvalidUserData.Error()})
 			return
@@ -119,7 +121,14 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
-	ctx.JSON(http.StatusOK, apiModel.NewProductResponses(products))
+	total, countErr := appCtx.Repos.Products.CountSearchProducts(enumParam, q.QueryValue, appCtx.UserID)
+	if countErr != nil {
+		appCtx.Logger.Error().Msgf("%s: %s", errors.MsgErrGettingProducts, countErr)
+		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, apiModel.NewProductListResponse(apiModel.NewProductResponses(products), total, q.Limit, q.Offset))
 }
 
 func validEAN13Format(barcode string) bool {

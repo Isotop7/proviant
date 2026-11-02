@@ -101,11 +101,12 @@ func BuildFullExport(
 		}
 	}
 
+	now := time.Now()
 	response := apiModel.FullExportResponse{
 		Version: apiModel.BackupSchemaVersion,
 		Household: &apiModel.FullExportHousehold{
 			Name:                    household.Name,
-			CreatedAt:               household.CreatedAt.Format(util.DefaultDateFormatParseStr),
+			CreatedAt:               household.CreatedAt.In(time.Local).Format(util.DefaultDateFormatParseStr),
 			Description:             household.Description,
 			MonthlyWasteGoalType:    household.MonthlyWasteGoalType,
 			MonthlyWasteGoalCount:   household.MonthlyWasteGoalCount,
@@ -117,8 +118,8 @@ func BuildFullExport(
 			Active:   activeExport,
 			Archived: archivedExport,
 		},
-		Stats:      buildFullExportStats(activeProducts, archivedProducts, viewerThreshold),
-		ExportedAt: time.Now().Format(time.RFC3339),
+		Stats:      buildFullExportStats(activeProducts, archivedProducts, viewerThreshold, now),
+		ExportedAt: now.Format(time.RFC3339),
 	}
 	if logger != nil {
 		logger.Debug().Msgf("Built household backup document for household %d (%d active, %d archived)", householdID, len(activeProducts), len(archivedProducts))
@@ -130,8 +131,9 @@ func BuildFullExport(
 // themselves. The user-facing stats endpoints answer from SQL with a privacy
 // scope; a backup document has no single viewer once it is written to disk, so
 // deriving from the rows it already carries keeps the file self-consistent.
-func buildFullExportStats(active, archived []dbModel.Product, notificationThresholdDays int) apiModel.ProductStatsResponse {
-	now := time.Now()
+// The anchor is the instant the window is measured from, so the document and
+// the dashboard it mirrors name the same months.
+func buildFullExportStats(active, archived []dbModel.Product, notificationThresholdDays int, now time.Time) apiModel.ProductStatsResponse {
 	expiringSoonDays := 7
 	if notificationThresholdDays > 0 {
 		expiringSoonDays = notificationThresholdDays
@@ -139,9 +141,10 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 
 	wasteCount := 0
 	categories := make(map[string]int)
-	monthCounts := make(map[string]int, 12)
-	for i := 0; i < 12; i++ {
-		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
+	monthKeys := util.UpcomingMonthKeys(now, 12)
+	monthCounts := make(map[string]int, len(monthKeys))
+	for _, key := range monthKeys {
+		monthCounts[key] = 0
 	}
 
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -158,15 +161,12 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 			if expiry.Before(now) {
 				wasteCount++
 			}
-			month := expiry.Format(util.DefaultDateFormatMonthStr)
+			month := util.MonthKey(expiry)
 			if _, tracked := monthCounts[month]; tracked {
 				monthCounts[month]++
 			}
 			if !expiry.Before(startOfToday) && !expiry.After(endOfWindow) {
-				expiringSoon = append(expiringSoon, apiModel.StatsExpiringProduct{
-					ProductName: product.ProductName,
-					ExpireAt:    expiry.Format(util.DefaultDateFormatParseStr),
-				})
+				expiringSoon = append(expiringSoon, database.ExpiringProductStats(product, expiry))
 			}
 		}
 		if product.CreatedAt.After(lastInsertedAt) {
@@ -189,10 +189,9 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 		return expiringSoon[i].ExpireAt < expiringSoon[j].ExpireAt
 	})
 
-	expiryTrend := make([]apiModel.StatsMonthlyCount, 0, 12)
-	for i := 0; i < 12; i++ {
-		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
-		expiryTrend = append(expiryTrend, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
+	expiryTrend := make([]apiModel.StatsMonthlyCount, 0, len(monthKeys))
+	for _, key := range monthKeys {
+		expiryTrend = append(expiryTrend, apiModel.StatsMonthlyCount{Month: key, Count: monthCounts[key]})
 	}
 
 	return apiModel.ProductStatsResponse{
@@ -204,6 +203,7 @@ func buildFullExportStats(active, archived []dbModel.Product, notificationThresh
 		LastInsertedProduct: lastInserted,
 		ExpiringSoon:        expiringSoon,
 		ExpiringSoonDays:    expiringSoonDays,
+		UseFirst:            database.BuildUseFirstProducts(active, util.UseFirstProductsLimit),
 		Categories:          summarizeFullExportCategories(categories),
 		ExpiryTrend:         expiryTrend,
 	}
@@ -256,7 +256,7 @@ func countFullExportCategory(counts map[string]int, raw string) {
 		counts["Uncategorized"]++
 		return
 	}
-	first := strings.SplitN(trimmed, ",", 2)[0]
+	first, _, _ := strings.Cut(trimmed, ",")
 	first = strings.TrimSpace(first)
 	if idx := strings.Index(first, ":"); idx != -1 {
 		first = strings.TrimSpace(first[idx+1:])
@@ -367,6 +367,28 @@ func RestoreHouseholdBackup(
 			products = append(products, product)
 		}
 		if len(products) > 0 {
+			// The canonical category of every restored product, resolved once
+			// for the whole backup: the free text the backup carries names it.
+			resolver, resolverErr := database.LoadCategoryResolver(tx)
+			if resolverErr != nil {
+				return resolverErr
+			}
+			defaults, defaultsErr := database.NewHouseholdCategoryRepository(tx).Defaults(householdID)
+			if defaultsErr != nil {
+				return defaultsErr
+			}
+			for i := range products {
+				if products[i].CategoryKey == nil {
+					if key, ok := resolver.ResolveKey(products[i].Categories); ok {
+						products[i].CategoryKey = &key
+					}
+				}
+				// A restored product that names no date gets the shelf life
+				// the household gave its category, the same rule the create
+				// paths follow: the restore re-establishes the household's
+				// pantry, so its rules apply to it.
+				database.ApplyHouseholdShelfLife(&products[i], defaults, products[i].CategoryKey)
+			}
 			if err := insertRestoreProducts(tx, restoreProductRowMaps(products)); err != nil {
 				return err
 			}
@@ -418,6 +440,7 @@ func restoreProductFromRow(
 		PriceOverride:        row.PriceOverride,
 		CO2KgPerKg:           row.CO2KgPerKg,
 		RemovalReason:        row.RemovalReason,
+		WasteCause:           row.WasteCause,
 		NotificationLeadDays: row.NotificationLeadDays,
 		MinStockAmount:       row.MinStockAmount,
 		OpenedAt:             row.OpenedAt,
@@ -471,10 +494,12 @@ var restoreProductColumns = []string{
 	"price_override",
 	"co2_kg_per_kg",
 	"removal_reason",
+	"waste_cause",
 	"notification_lead_days",
 	"min_stock_amount",
 	"opened_at",
 	"days_after_opening",
+	"category_key",
 	"household_id",
 	"user_id",
 	"created_at",
@@ -496,15 +521,9 @@ func insertRestoreProducts(tx *gorm.DB, rows []map[string]any) error {
 		return err
 	}
 	tableName := statement.Schema.Table
-	batchRows := restoreProductMaxParameters / len(restoreProductColumns)
-	if batchRows < 1 {
-		batchRows = 1
-	}
+	batchRows := max(restoreProductMaxParameters/len(restoreProductColumns), 1)
 	for start := 0; start < len(rows); start += batchRows {
-		end := start + batchRows
-		if end > len(rows) {
-			end = len(rows)
-		}
+		end := min(start+batchRows, len(rows))
 
 		var insert strings.Builder
 		insert.WriteString("INSERT INTO ")
@@ -571,10 +590,12 @@ func restoreProductRowMaps(products []dbModel.Product) []map[string]any {
 			"price_override":         nullable(product.PriceOverride),
 			"co2_kg_per_kg":          nullable(product.CO2KgPerKg),
 			"removal_reason":         product.RemovalReason,
+			"waste_cause":            product.WasteCause,
 			"notification_lead_days": nullable(product.NotificationLeadDays),
 			"min_stock_amount":       product.MinStockAmount,
 			"opened_at":              nullable(product.OpenedAt),
 			"days_after_opening":     nullable(product.DaysAfterOpening),
+			"category_key":           nullable(product.CategoryKey),
 			"household_id":           product.HouseholdID,
 			"user_id":                product.UserID,
 			"created_at":             createdAt,

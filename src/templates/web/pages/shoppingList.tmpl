@@ -84,6 +84,9 @@
                 <button type="button" data-qty-action="inc" data-item-id="{{ $item.ID }}" aria-label="{{ t "shoppingList.increaseQuantity" $item.Name }}">+</button>
             </div>
             <div class="shopping-list__actions">
+                <button type="button" class="btn-icon fg-secondary" data-buy-item="{{ $item.ID }}" title="{{ t "shoppingList.buyItem" }}" aria-label="{{ t "shoppingList.buyItemLabel" $item.Name }}">
+                    <i class="bi bi-bag-check" aria-hidden="true"></i>
+                </button>
                 <button type="button" class="btn-icon fg-secondary" data-notes-toggle="{{ $item.ID }}" title="{{ t "shoppingList.notes" }}" aria-label="{{ t "shoppingList.toggleNotes" $item.Name }}">
                     <i class="bi bi-chat-left-text" aria-hidden="true"></i>
                 </button>
@@ -109,10 +112,86 @@
 </div>
 {{ end }}
 
+<!-- Purchase dialog: a list item becomes a product of the household -->
+<dialog class="dialog" id="purchaseItemDialog" aria-labelledby="purchaseItemDialogLabel">
+    <div class="dialog-header">
+        <div class="dialog-icon dialog-icon-accent">
+            <i class="bi bi-bag-check"></i>
+        </div><h5 class="dialog-title mb-0" id="purchaseItemDialogLabel">{{ t "shoppingList.purchaseTitle" }}</h5>
+        <div class="dialog-subtitle" id="purchaseItemName"></div>
+        <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}">
+            <i class="bi bi-x"></i>
+        </button>
+    </div>
+    <form id="purchaseForm" data-bs-validate novalidate>
+        <div class="dialog-body">
+            <label class="form-label" for="purchaseQuantity">{{ t "shoppingList.purchaseQuantity" }}</label>
+            <input type="number" class="form-control mb-5" id="purchaseQuantity" min="1" value="1" required>
+
+            <p class="small fg-secondary d-none mb-5" id="purchaseExistingProduct"></p>
+
+            <div data-purchase-field="expiry">
+                <label class="form-label" for="purchaseExpiry">
+                    {{ t "shoppingList.purchaseExpiry" }} <span class="fg-danger" aria-hidden="true">*</span>
+                </label>
+                <input type="date" class="form-control mb-5" id="purchaseExpiry" aria-required="true">
+                <small id="purchaseExpiryHint" class="fg-secondary d-none mb-5" aria-live="polite"></small>
+            </div>
+
+            <div data-purchase-field="category">
+                <label class="form-label" for="purchaseCategory">{{ t "shoppingList.purchaseCategory" }}</label>
+                <select class="form-control mb-5" id="purchaseCategory" aria-label="{{ t "shoppingList.purchaseCategory" }}">
+                    <option value="">{{ t "shoppingList.purchaseNoneOption" }}</option>
+                </select>
+            </div>
+
+            <div data-purchase-field="packSize">
+                <label class="form-label" for="purchasePackSize">{{ t "shoppingList.purchasePackSize" }}</label>
+                <input type="text" class="form-control mb-5" id="purchasePackSize" autocomplete="off">
+            </div>
+
+            <div data-purchase-field="location">
+                <label class="form-label" for="purchaseStorageLocation">{{ t "shoppingList.purchaseStorageLocation" }}</label>
+                <select class="form-control mb-5" id="purchaseStorageLocation" aria-label="{{ t "shoppingList.purchaseStorageLocation" }}">
+                    <option value="">{{ t "shoppingList.purchaseNoneOption" }}</option>
+                    {{ range .Locations }}
+                    <option value="{{ .ID }}">{{ .Icon }} {{ .Name }}</option>
+                    {{ end }}
+                </select>
+            </div>
+
+            <div data-purchase-field="barcode">
+                <label class="form-label" for="purchaseBarcode">{{ t "shoppingList.purchaseBarcode" }}</label>
+                <input type="text" class="form-control mb-5" id="purchaseBarcode" inputmode="numeric" autocomplete="off">
+            </div>
+        </div>
+        <div class="dialog-footer">
+            <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+            <button type="submit" class="btn btn-solid theme-primary" id="btnPurchase">
+                <span class="btn-label"><i class="bi bi-bag-check me-1" aria-hidden="true"></i>{{ t "shoppingList.purchaseSubmit" }}</span>
+                <span class="btn-busy"><span class="spinner-border spinner-sm me-1" role="status" aria-hidden="true"></span>{{ t "shoppingList.purchaseSubmit" }}</span>
+            </button>
+        </div>
+    </form>
+</dialog>
+
+<!-- The announcement lives outside the dialog: a closed dialog is hidden, and
+     a live region inside it never announces. -->
+<div id="purchaseAnnouncement" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+
+<!-- The same-item prompt of the product list: the bought product matches one
+     the household already has, and the user decides what happens with it. -->
+{{ template "duplicateProductModal" . }}
+
 <script type="application/json" id="shoppingListData">
 {{ .ItemsJSON }}
 </script>
 
+<script type="application/json" id="shoppingListCategories">
+{{ .CategoriesJSON }}
+</script>
+
+<script src="/assets/js/productsDuplicate.js"></script>
 <script src="/assets/js/shoppingList.js"></script>
 
 {{ end }}

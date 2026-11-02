@@ -27,7 +27,9 @@ Agent coding guidelines for Proviant codebase.
 | `task icons` / `task fonts` | `res/icons/` or font files changed (`fonts` runs as a dep of `css`). |
 | `task lint` (`-css`/`-js`/`-html`) | Before frontend commits. |
 | `task vet` / `task tidy` | Quick `go vet`; before Go commits (`go fmt` + `go mod tidy`). |
+| `task modernize` / `task modernize-fix` | Report/apply the Go modernizations `go fix` would make. |
 | `task test` / `task test-js` | Go suite `-race`; Vitest suite in `tests/js/`. |
+| `task test-perf` | Wall-clock budget test on a clean build (the race detector inflates it past usefulness). |
 | `task check` / `task check-changed` | Go lint via the golangci-lint container; only files changed vs `HEAD`. |
 | `task doc` | After adding/changing exported Go symbols or Swagger annotations. |
 | `task run` | Local dev server. |
@@ -36,7 +38,7 @@ Agent coding guidelines for Proviant codebase.
 | `task vuln-image` | Scan container image (needs podman/docker; excluded from `task vuln`). |
 | `task seed` / `task seed-reset` | Populate / wipe demo products. |
 
-**Never call the underlying tools directly — always the task**: `npm install` / `npm test` / `npm run *` → `task init` / `test` / `css` / `js` / `lint` (`npm run test-js` → `task test-js`); `podman`/`docker build` → `task containerimage`; `golangci-lint run` → `task check`; `go run` for the dev server → `task run`. Single test: `cd src && go test -race -vet=off ./path/to/package [-run TestName]`.
+**Never call the underlying tools directly — always the task**: `npm install` / `npm test` / `npm run *` → `task init` / `test` / `css` / `js` / `lint` (`npm run test-js` → `task test-js`); `podman`/`docker build` → `task containerimage`; `golangci-lint run` → `task check`; `go run` for the dev server → `task run`; `go fix` → `task modernize` (report) / `task modernize-fix` (apply). Single test: `cd src && go test -race -vet=off ./path/to/package [-run TestName]`.
 
 ## Dependency Auditing
 
@@ -60,6 +62,18 @@ Rules that must not regress:
 
 ### Formatting
 - `task tidy` before commits (`go fmt` + `go mod tidy`); tabs; ~120 chars max (unenforced).
+
+### Modern Go Idioms
+
+The codebase is kept modernized: `go fix` (Go 1.26 ships the modernizers — `rangeint`, `minmax`, `slicescontains`, `slicessort`, `stringscut`, `stringsseq`, `mapsloop`, `waitgroup`, `testingcontext`, `newexpr`, `any`) reports nothing.
+
+- **Write the modern form the first time.** `for i := range n` over `for i := 0; i < n; i++`; `slices.Contains` over a hand-rolled search loop; `min`/`max` over an `if` guard; `strings.Cut` over `strings.SplitN`/`strings.Index`; `strings.SplitSeq` over `strings.Split` when only the elements are used; `maps.Copy` over a `m[k] = v` loop; `sync.WaitGroup.Go` over `wg.Add(1)` + `go func()`; `t.Context()` over `context.WithCancel` in tests; `any` over `interface{}`; `new(expr)` over a `&v` helper; `for b.Loop()` over `for i := 0; i < b.N; i++`.
+- **`task modernize`** reports what is missing (read-only, exits non-zero when anything is pending) and covers the test files `task check` skips; **`task modernize-fix`** applies it. Run `task modernize` before committing Go changes — `task check` (golangci-lint, `modernize` linter enabled) gates the production code, CI gates everything via `scripts/check-modernize.sh`.
+- **The policy lives once in `scripts/check-modernize.sh`** — never inline `go fix` into a workflow or the Taskfile; edit that script. It fails (rather than reporting "clean") when the tree does not compile: a package that fails to typecheck aborts the whole `go fix` run and yields an empty patch, which would otherwise read as "no modernizations pending". The check needs the compiled assets — on a fresh clone run `task css` (or `task init`) first.
+- **One `go fix` pass can expose the next fix** (a nested `min`/`max` only collapses after the inner one landed) — `task modernize-fix` iterates until the diff stays empty.
+- **A rewrite that changes behaviour is not a modernization.** Keep the loop when `range` is not equivalent: a counter mutated inside the body (the placeholder scanner in `i18n/i18n.go`), a step other than one (the batch inserts in `product_repository.go`), a compound bound (`i < len(counts) && i < limit`), or a loop without a post statement (`backup_controller.go`).
+- **`rangeint` skips a `b.N` limit on purpose** (it is reserved for the `bloop` analyzer, which `go fix` does not ship), so benchmark loops are `for b.Loop()` — `b.Loop()` resets the timer itself, so the explicit `b.ResetTimer()` goes away with it. `b.Loop()` also runs the setup once instead of once per calibration round, so a recorded benchmark baseline has to be re-taken.
+- **A wall clock is not a portable regression gate.** The race detector inflates a row scan ~6x and the multiplier differs per machine and per load, so a `-race` budget either flakes on a slow runner or has to be so loose it catches nothing. `TestProductListPerformance10k` therefore asserts its budget only on a clean build (`task test-perf`); under `-race` it skips the assertion and keeps the correctness check.
 
 ### Comments
 

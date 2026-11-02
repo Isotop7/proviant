@@ -24,6 +24,19 @@ server:
     password_require_digit: false
     password_require_special: false
     password_check_breached: true
+  twoFactor:
+    # Master switch for TOTP two-factor authentication. While it is off the
+    # server exposes no enrolment endpoints and stores no secrets.
+    enabled: false
+    # REQUIRED when enabled: true. 32 random bytes, base64 encoded.
+    # The value below is the published placeholder: startup refuses it, so it
+    # has to be replaced. Generation: openssl rand -base64 32
+    # Can also be supplied via PROVIANT_SERVER_TWOFACTOR_ENCRYPTIONKEY.
+    # Must differ from server.authentication.tokenPassword.
+    encryptionKey: "cHJvdmlhbnQtZGVmYXVsdC10b3RwLWtleS0wMDAwMDA="
+    # Shown as the account name in the authenticator app.
+    issuer: "Proviant"
+    recoveryCodeCount: 10
   cors:
     allowAllOrigins: false
     allowedOrigins:

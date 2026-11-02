@@ -218,7 +218,7 @@ func TestDeleteHouseholdUser(t *testing.T) {
 }
 
 func TestAdminResetUserPassword(t *testing.T) {
-	t.Run("creates reset verification for member", func(t *testing.T) {
+	t.Run("creates a password reset for member", func(t *testing.T) {
 		env := setupHandlerTest(t)
 		member := env.addMember(t, "member")
 		env.Ctx.Params = []gin.Param{{Key: "id", Value: itoa(member.ID)}}
@@ -228,10 +228,18 @@ func TestAdminResetUserPassword(t *testing.T) {
 		if env.W.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200; body = %s", env.W.Code, env.W.Body.String())
 		}
+		// The reset has to land in the password reset store: the email
+		// verification link only marks the address as verified and never
+		// changes the password.
 		var count int64
-		env.DB.Model(&dbModel.EmailVerification{}).Where("user_id = ?", member.ID).Count(&count)
+		env.DB.Model(&dbModel.PasswordReset{}).Where("user_id = ?", member.ID).Count(&count)
 		if count != 1 {
-			t.Errorf("email verifications = %d, want 1", count)
+			t.Errorf("password resets = %d, want 1", count)
+		}
+		var verifications int64
+		env.DB.Model(&dbModel.EmailVerification{}).Where("user_id = ?", member.ID).Count(&verifications)
+		if verifications != 0 {
+			t.Errorf("email verifications = %d, want 0", verifications)
 		}
 	})
 

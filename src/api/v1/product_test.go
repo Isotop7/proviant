@@ -253,7 +253,7 @@ func TestCreateProduct(t *testing.T) {
 		productData := dbModel.Product{
 			ProductName:      "Bad Shelf Life",
 			Barcode:          "0000000000000",
-			DaysAfterOpening: intPtr(9999),
+			DaysAfterOpening: new(9999),
 		}
 		body, _ := json.Marshal(productData)
 		ctx.Request = &http.Request{
@@ -295,7 +295,7 @@ func TestCreateProduct(t *testing.T) {
 		productData := dbModel.Product{
 			ProductName:      "Bad Shelf Life",
 			Barcode:          "0000000000000",
-			DaysAfterOpening: intPtr(9999),
+			DaysAfterOpening: new(9999),
 			ClientSyncID:     &syncID,
 		}
 		body, _ := json.Marshal(productData)
@@ -361,8 +361,6 @@ func TestCreateProduct(t *testing.T) {
 		}
 	})
 }
-
-func intPtr(v int) *int { return &v }
 
 // TestUpdateProduct tests the UpdateProduct endpoint
 func TestUpdateProduct(t *testing.T) {

@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers"
 	"github.com/Isotop7/proviant/errors"
+	"github.com/Isotop7/proviant/i18n"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/util"
 
@@ -19,7 +21,9 @@ import (
 // @Summary      Get waste analytics
 // @Description  Returns per-month consumed vs. wasted metrics, top wasted categories
 // @Description  with monetary and CO2 impact (each category nests its top wasted products),
-// @Description  and a 6-month trend. EUR prices come from per-product overrides (if set)
+// @Description  the waste broken down by the reason it was wasted, the category the household
+// @Description  most over-buys and a one-sentence insight about it, and a 6-month trend.
+// @Description  EUR prices come from per-product overrides (if set)
 // @Description  or category averages; CO2 is sourced from the Agribalyse LCA database via
 // @Description  Open Food Facts ecoscore_data.
 // @Tags         stats
@@ -32,6 +36,7 @@ import (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/stats/waste [get]
 func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
+	lang := appCtx.analyticsLanguage(ctx)
 	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil || householdID == 0 {
 		// No household: return zeroed response, do not error.
@@ -40,7 +45,9 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 			Sort:      "count",
 			Monthly:   []apiModel.WasteMonthly{},
 			Trend:     []apiModel.StatsMonthlyCount{},
+			Causes:    []apiModel.WasteCauseStat{},
 			CO2Source: "Agribalyse LCA database via Open Food Facts ecoscore_data",
+			Insight:   i18n.T(lang, "waste.insight.insufficientData"),
 		})
 		return
 	}
@@ -73,7 +80,7 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	now := time.Now()
-	since := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).AddDate(0, -months+1, 0)
+	since := util.MonthWindowStart(now, months)
 
 	row, err := appCtx.Repos.WasteAnalytics.GetConsumedVsWasted(householdID, since)
 	if err != nil {
@@ -82,7 +89,7 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	monthly, err := appCtx.Repos.WasteAnalytics.GetMonthlyBreakdown(householdID, since, months)
+	monthly, err := appCtx.Repos.WasteAnalytics.GetMonthlyBreakdown(householdID, months, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetMonthlyBreakdown: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -108,9 +115,16 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
-	trend, err := appCtx.Repos.WasteAnalytics.GetTrendMonths(householdID, 6)
+	trend, err := appCtx.Repos.WasteAnalytics.GetTrendMonths(householdID, 6, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetTrendMonths: %s", err)
+		ctx.JSON(http.StatusInternalServerError, api.InternalError())
+		return
+	}
+
+	breakdown, err := appCtx.Repos.WasteAnalytics.GetWasteCauseBreakdown(householdID, since)
+	if err != nil {
+		appCtx.Logger.Error().Msgf("GetWasteCauseBreakdown: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
@@ -130,6 +144,11 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 	if trend == nil {
 		trend = []apiModel.StatsMonthlyCount{}
 	}
+	if breakdown.Causes == nil {
+		breakdown.Causes = []apiModel.WasteCauseStat{}
+	}
+
+	insight, insightAvailable := controllers.WasteInsight(lang, breakdown.Overbuy, breakdown.Causes, breakdown.WastedEvents)
 
 	ctx.JSON(http.StatusOK, apiModel.WasteAnalyticsResponse{
 		Period:               period,
@@ -144,7 +163,29 @@ func GetWasteAnalytics(ctx *gin.Context, appCtx *AppContext) {
 		MostWastedCategories: categories,
 		Trend:                trend,
 		CO2Source:            "Agribalyse LCA database via Open Food Facts ecoscore_data",
+		Causes:               breakdown.Causes,
+		Overbuy:              breakdown.Overbuy,
+		Insight:              insight,
+		InsightAvailable:     insightAvailable,
 	})
+}
+
+// analyticsLanguage resolves the language the insight is written in: the
+// user's preference, then the household's, then the Accept-Language header. A
+// failed preference lookup still leaves the header as a fallback, so the
+// insight never falls back to the default language while the browser asks for
+// another one.
+func (a *AppContext) analyticsLanguage(ctx *gin.Context) string {
+	userLanguage, householdLanguage, err := a.Repos.Users.GetUserDisplayPreferencesByID(a.UserID)
+	if err != nil {
+		a.Logger.Warn().Msgf("Waste analytics: could not read the language preferences: %s", err)
+		userLanguage, householdLanguage = "", ""
+	}
+	acceptLanguage := ""
+	if ctx.Request != nil {
+		acceptLanguage = ctx.GetHeader("Accept-Language")
+	}
+	return i18n.ResolveLanguage(userLanguage, householdLanguage, acceptLanguage)
 }
 
 func periodToMonths(p string) (int, bool) {

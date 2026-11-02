@@ -17,6 +17,7 @@ type HouseholdUserResponse struct {
 	Role               string `json:"role"`
 	TelegramConfigured bool   `json:"telegramConfigured"`
 	TelegramLinked     bool   `json:"telegramLinked"`
+	TwoFactorEnabled   bool   `json:"twoFactorEnabled"`
 }
 
 // NewHouseholdUserResponse projects a user onto the admin-facing view.
@@ -32,6 +33,7 @@ func NewHouseholdUserResponse(user *authentication.User) HouseholdUserResponse {
 		Role:               user.Role,
 		TelegramConfigured: user.NotificationPreferences.TelegramBotToken != "",
 		TelegramLinked:     user.NotificationPreferences.TelegramChatID != "",
+		TwoFactorEnabled:   user.TwoFactorEnabled,
 	}
 }
 
@@ -161,10 +163,12 @@ type ProductResponse struct {
 	PriceOverride        *float64                 `json:"priceOverride,omitempty"`
 	CO2KgPerKg           *float64                 `json:"co2KgPerKg,omitempty"`
 	RemovalReason        string                   `json:"removalReason"`
+	WasteCause           string                   `json:"wasteCause"`
 	NotificationLeadDays *int                     `json:"notificationLeadDays,omitempty"`
 	MinStockAmount       int                      `json:"minStockAmount"`
 	OpenedAt             *time.Time               `json:"openedAt,omitempty"`
 	DaysAfterOpening     *int                     `json:"daysAfterOpening,omitempty"`
+	CategoryKey          *string                  `json:"categoryKey,omitempty"`
 
 	// Label is set only by NewLabelledProductResponse, to keep the format cost
 	// off list responses.
@@ -193,10 +197,12 @@ func NewProductResponse(product *dbModel.Product) ProductResponse {
 		PriceOverride:        product.PriceOverride,
 		CO2KgPerKg:           product.CO2KgPerKg,
 		RemovalReason:        product.RemovalReason,
+		WasteCause:           product.WasteCause,
 		NotificationLeadDays: product.NotificationLeadDays,
 		MinStockAmount:       product.MinStockAmount,
 		OpenedAt:             product.OpenedAt,
 		DaysAfterOpening:     product.DaysAfterOpening,
+		CategoryKey:          product.CategoryKey,
 	}
 	if product.StorageLocation != nil {
 		location := NewStorageLocationResponse(product.StorageLocation)
@@ -223,6 +229,54 @@ func NewProductResponses[T dbModel.Product | *dbModel.Product](products []T) []P
 	return out
 }
 
+// ProductListResponse is the paged view of a product list: the rows of the
+// page, the number of rows the filter matched in total, and the window that
+// produced the page.
+//
+// Total counts the whole filtered set — the household's products the caller may
+// see, minus the archived ones — not the rows of the page. A client that walks
+// the set compares the rows it collected against it.
+type ProductListResponse struct {
+	Products []ProductResponse `json:"products"`
+	Total    int               `json:"total"`
+	Limit    int               `json:"limit"`
+	Offset   int               `json:"offset"`
+}
+
+// NewProductListResponse builds the envelope of a product page. A page without
+// rows answers with an empty array and never with null: a client walks the page
+// by iterating it, and a null would break the iteration.
+func NewProductListResponse(products []ProductResponse, total, limit, offset int) ProductListResponse {
+	if products == nil {
+		products = []ProductResponse{}
+	}
+	return ProductListResponse{
+		Products: products,
+		Total:    total,
+		Limit:    limit,
+		Offset:   offset,
+	}
+}
+
+// FrequentProduct is one of the products a household buys repeatedly: the
+// barcode the household's purchases are grouped by, the naming and the pack
+// size the household itself used, and how often and how recently it bought
+// the product.
+//
+// The category and the storage location are the household's own as well, so a
+// suggestion reflects what this household actually buys rather than what the
+// product is called somewhere else.
+type FrequentProduct struct {
+	Barcode           string    `json:"barcode"`
+	ProductName       string    `json:"productName"`
+	PackSize          string    `json:"packSize,omitempty"`
+	CategoryKey       *string   `json:"categoryKey,omitempty"`
+	StorageLocationID *uint     `json:"storageLocationId,omitempty"`
+	ImageURL          string    `json:"imageUrl,omitempty"`
+	PurchaseCount     int       `json:"purchaseCount"`
+	LastBoughtAt      time.Time `json:"lastBoughtAt"`
+}
+
 // NewLabelledProductResponse projects a product and renders its dropdown label.
 func NewLabelledProductResponse(product *dbModel.Product) ProductResponse {
 	if product == nil {
@@ -231,9 +285,9 @@ func NewLabelledProductResponse(product *dbModel.Product) ProductResponse {
 	resp := NewProductResponse(product)
 	resp.Label = fmt.Sprintf("%s; Created: %s; Expire at: %s; Notified at: %s",
 		product.ProductName,
-		product.CreatedAt.Format(productLabelTimeFormat),
-		product.ExpireAt.Format(productLabelTimeFormat),
-		product.NotifiedAt.Format(productLabelTimeFormat))
+		product.CreatedAt.In(time.Local).Format(productLabelTimeFormat),
+		product.ExpireAt.In(time.Local).Format(productLabelTimeFormat),
+		product.NotifiedAt.In(time.Local).Format(productLabelTimeFormat))
 	return resp
 }
 
@@ -260,7 +314,10 @@ type ShoppingListItemResponse struct {
 	ProductID *uint  `json:"productId"`
 	Name      string `json:"name"`
 	Category  string `json:"category"`
-	Quantity  int    `json:"quantity"`
+	// CategoryKey is the canonical category the entry belongs to. It is what
+	// the household's shelf-life defaults are looked up by.
+	CategoryKey *string `json:"categoryKey,omitempty"`
+	Quantity    int     `json:"quantity"`
 	// PackSize is the size of one pack of the linked product, empty when the
 	// entry is not linked to a product or the product has no known size.
 	PackSize  string `json:"packSize,omitempty"`
@@ -279,15 +336,16 @@ func NewShoppingListItemResponse[T dbModel.ShoppingListItem | *dbModel.ShoppingL
 			return ShoppingListItemResponse{}
 		}
 		return ShoppingListItemResponse{
-			ID:        typed.ID,
-			ProductID: typed.ProductID,
-			Name:      typed.Name,
-			Category:  typed.Category,
-			Quantity:  typed.Quantity,
-			PackSize:  typed.PackSize,
-			Checked:   typed.Checked,
-			Notes:     typed.Notes,
-			CreatedBy: typed.CreatedBy,
+			ID:          typed.ID,
+			ProductID:   typed.ProductID,
+			Name:        typed.Name,
+			Category:    typed.Category,
+			CategoryKey: typed.CategoryKey,
+			Quantity:    typed.Quantity,
+			PackSize:    typed.PackSize,
+			Checked:     typed.Checked,
+			Notes:       typed.Notes,
+			CreatedBy:   typed.CreatedBy,
 		}
 	}
 	return ShoppingListItemResponse{}

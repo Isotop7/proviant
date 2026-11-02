@@ -23,6 +23,8 @@ type MockProductRepository struct {
 	Users         []authentication.User
 	StatsMonthly  []apiModel.StatsMonthlyCount
 	ExpiringProds []apiModel.StatsExpiringProduct
+	UseFirstProds []apiModel.StatsUseFirstProduct
+	FrequentProds []apiModel.FrequentProduct
 	BoolResult    bool
 	IntResult     int
 	MapResult     map[string]int
@@ -31,12 +33,18 @@ type MockProductRepository struct {
 	// SyncIDProduct is what GetProductBySyncID resolves to; nil means the sync
 	// id is unknown, which is the case every create path hits first.
 	SyncIDProduct *dbModel.Product
+	// DuplicateProduct is what FindDuplicateProduct resolves to; nil means the
+	// draft duplicates nothing, which is the case every create path hits.
+	DuplicateProduct *dbModel.Product
 	// SyncIDLookups counts GetProductBySyncID calls, so a test can assert a
 	// path spent the lookup only when a lost race could explain it.
 	SyncIDLookups int
 	// CreateErr overrides Err for CreateProduct only, so a test can make the
 	// sync id lookup miss while the insert fails.
 	CreateErr error
+	// DuplicateErr overrides Err for FindDuplicateProduct only, so a failing
+	// duplicate lookup does not make every other read fail too.
+	DuplicateErr error
 	// MutationDeltas records the clientMutationID of every UpdateProductQuantity
 	// call, so a test can assert the handler forwarded the idempotency token.
 	MutationDeltas []*string
@@ -52,16 +60,28 @@ type MockProductRepository struct {
 	// ConsumePartialErr overrides the error returned by ConsumeProductPartial,
 	// independent of Err (which GetProductByID also returns); nil falls back
 	// to Err.
-	ConsumePartialErr error
+	ConsumePartialErr         error
+	WastePartialErr           error
+	WastePartialFullyConsumed *bool
+	PartialApplied            *bool
+	ConsumePartialMutationIDs []*string
+	WastePartialMutationIDs   []*string
+	ConsumePartialQuantities  []int
+	WastePartialQuantities    []int
+	// WastePartialCauses records the cause of every recorded waste.
+	WastePartialCauses []string
 }
 
 func (m *MockProductRepository) GetUserProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
+func (m *MockProductRepository) GetUserProductsBulkSorted(userID uint, limit, offset int, sortValue, orderValue string) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
 func (m *MockProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]dbModel.Product, error) {
+func (m *MockProductRepository) GetUserArchivedProductsBulk(userID uint, limit, offset int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) GetActiveProductProjections(userID, locationID uint) ([]dbModel.Product, error) {
@@ -79,6 +99,15 @@ func (m *MockProductRepository) GetUserProductsBulkByBarcode(userID uint, barcod
 func (m *MockProductRepository) GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
+func (m *MockProductRepository) FindDuplicateProduct(userID uint, draft *dbModel.Product) (dbModel.Product, bool, error) {
+	if m.DuplicateErr != nil {
+		return dbModel.Product{}, false, m.DuplicateErr
+	}
+	if m.DuplicateProduct == nil {
+		return dbModel.Product{}, false, nil
+	}
+	return *m.DuplicateProduct, true, nil
+}
 func (m *MockProductRepository) GetProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
@@ -88,8 +117,11 @@ func (m *MockProductRepository) GetProductIdentity(productID, userID uint) (dbMo
 func (m *MockProductRepository) GetArchivedProductByID(productID, userID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
 }
-func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]dbModel.Product, error) {
+func (m *MockProductRepository) SearchProducts(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint, limit, offset int) ([]dbModel.Product, error) {
 	return m.Products, m.Err
+}
+func (m *MockProductRepository) CountSearchProducts(queryParam database.SearchParameterEnum, queryValue string, userID uint) (int, error) {
+	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) SearchProductProjections(queryParam database.SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]dbModel.Product, error) {
 	return m.Products, m.Err
@@ -157,7 +189,7 @@ func (m *MockProductRepository) GetProductsExpired(userID uint) ([]*dbModel.Prod
 	}
 	return ptrs, m.Err
 }
-func (m *MockProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
+func (m *MockProductRepository) GetExpiredProductsCount(userID uint, now time.Time) (int, error) {
 	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) GetArchivedProductsCount(userID uint) (int, error) {
@@ -166,8 +198,8 @@ func (m *MockProductRepository) GetArchivedProductsCount(userID uint) (int, erro
 func (m *MockProductRepository) GetUniqueArchivedProductsCount(userID uint) (int, error) {
 	return m.IntResult, m.Err
 }
-func (m *MockProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]dbModel.Product, error) {
-	return m.Products, m.Err
+func (m *MockProductRepository) GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error) {
+	return m.FrequentProds, m.Err
 }
 func (m *MockProductRepository) GetActiveProductsCount(userID uint) (int, error) {
 	return m.IntResult, m.Err
@@ -175,11 +207,14 @@ func (m *MockProductRepository) GetActiveProductsCount(userID uint) (int, error)
 func (m *MockProductRepository) GetProductCategoryBreakdown(userID uint) (map[string]int, error) {
 	return m.MapResult, m.Err
 }
-func (m *MockProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error) {
+func (m *MockProductRepository) GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error) {
 	return m.StatsMonthly, m.Err
 }
-func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error) {
+func (m *MockProductRepository) GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error) {
 	return m.ExpiringProds, m.Err
+}
+func (m *MockProductRepository) GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error) {
+	return m.UseFirstProds, m.Err
 }
 func (m *MockProductRepository) GetLastNotifiedProduct(householdID uint) (dbModel.Product, error) {
 	return m.Product, m.Err
@@ -232,7 +267,7 @@ func (m *MockProductRepository) GetUserArchivedProductsFiltered(userID uint, fro
 func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error) {
 	return m.Users, m.Err
 }
-func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error) {
+func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error) {
 	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (int, int, error) {
@@ -262,7 +297,7 @@ func (m *MockProductRepository) GetActiveExpiryCounts(userID uint, now time.Time
 	}
 	return expired, critical, nil
 }
-func (m *MockProductRepository) GetWasteThisMonth(userID uint) (int, error) {
+func (m *MockProductRepository) GetWasteThisMonth(userID uint, now time.Time) (int, error) {
 	return m.IntResult, m.Err
 }
 func (m *MockProductRepository) GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]dbModel.Product, error) {
@@ -281,20 +316,48 @@ func (m *MockProductRepository) GetConsumedSamples(householdID, userID uint, bar
 	return nil, m.Err
 }
 func (m *MockProductRepository) ConsumeProduct(productID, userID uint) error { return m.Err }
-func (m *MockProductRepository) ConsumeProductPartial(product *dbModel.Product, amount int) (int, bool, error) {
+func (m *MockProductRepository) ConsumeProductPartial(product *dbModel.Product, amount int, mutationID *string) (int, bool, bool, error) {
+	m.ConsumePartialMutationIDs = append(m.ConsumePartialMutationIDs, mutationID)
+	m.ConsumePartialQuantities = append(m.ConsumePartialQuantities, amount)
 	if m.ConsumePartialErr != nil {
-		return 0, false, m.ConsumePartialErr
+		return 0, false, false, m.ConsumePartialErr
 	}
 	if m.Err != nil {
-		return 0, false, m.Err
+		return 0, false, false, m.Err
 	}
 	fullyConsumed := true
 	if m.ConsumePartialFullyConsumed != nil {
 		fullyConsumed = *m.ConsumePartialFullyConsumed
 	}
-	return amount, fullyConsumed, nil
+	applied := true
+	if m.PartialApplied != nil {
+		applied = *m.PartialApplied
+	}
+	return amount, fullyConsumed, applied, nil
 }
-func (m *MockProductRepository) WasteProduct(productID, userID uint) error { return m.Err }
+func (m *MockProductRepository) WasteProduct(productID, userID uint, cause string) error {
+	return m.Err
+}
+func (m *MockProductRepository) WasteProductPartial(product *dbModel.Product, amount int, mutationID *string, cause string) (int, bool, bool, error) {
+	m.WastePartialMutationIDs = append(m.WastePartialMutationIDs, mutationID)
+	m.WastePartialQuantities = append(m.WastePartialQuantities, amount)
+	m.WastePartialCauses = append(m.WastePartialCauses, cause)
+	if m.WastePartialErr != nil {
+		return 0, false, false, m.WastePartialErr
+	}
+	if m.Err != nil {
+		return 0, false, false, m.Err
+	}
+	fullyWasted := true
+	if m.WastePartialFullyConsumed != nil {
+		fullyWasted = *m.WastePartialFullyConsumed
+	}
+	applied := true
+	if m.PartialApplied != nil {
+		applied = *m.PartialApplied
+	}
+	return amount, fullyWasted, applied, nil
+}
 func (m *MockProductRepository) MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (dbModel.Product, *time.Time, bool, error) {
 	previous := m.Product.OpenedAt
 	if previous != nil && !force {
@@ -306,7 +369,7 @@ func (m *MockProductRepository) MarkProductOpened(productID, userID uint, opened
 func (m *MockProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) []database.BulkOperationError {
 	return nil
 }
-func (m *MockProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []database.BulkOperationError {
+func (m *MockProductRepository) BulkWasteProducts(productIDs []uint, userID uint, cause string) []database.BulkOperationError {
 	return nil
 }
 
@@ -325,6 +388,8 @@ type MockUserRepository struct {
 	MailAddressExistsResult bool
 	LockDuration            time.Duration
 	IsLocked                bool
+	PasswordValid           bool
+	RecoveryCodeConsumable  bool
 	Err                     error
 }
 
@@ -368,6 +433,73 @@ func (m *MockUserRepository) UpdateAdminUserFields(userID uint, username, mailAd
 func (m *MockUserRepository) UpdateDisplayName(userID uint, displayName string) error { return m.Err }
 func (m *MockUserRepository) UpdateUserPassword(userID uint, login *authentication.Login) error {
 	return m.Err
+}
+func (m *MockUserRepository) VerifyPassword(userID uint, password string) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	return m.PasswordValid, nil
+}
+func (m *MockUserRepository) EnableTwoFactor(userID uint, encryptedSecret string) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	if m.User.TwoFactorEnabled {
+		return false, nil
+	}
+	m.User.TwoFactorEnabled = true
+	m.User.TwoFactorSecret = encryptedSecret
+	return true, nil
+}
+func (m *MockUserRepository) DisableTwoFactor(userID uint) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.User.TwoFactorEnabled = false
+	m.User.TwoFactorSecret = ""
+	m.User.TwoFactorLastUsedStep = 0
+	m.User.TwoFactorPendingSecret = ""
+	m.User.TwoFactorPendingExpiry = nil
+	return nil
+}
+func (m *MockUserRepository) SetTwoFactorPendingSecret(userID uint, encryptedSecret string, expiry time.Time) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.User.TwoFactorPendingSecret = encryptedSecret
+	m.User.TwoFactorPendingExpiry = &expiry
+	return nil
+}
+func (m *MockUserRepository) ClearTwoFactorPendingSecret(userID uint) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.User.TwoFactorPendingSecret = ""
+	m.User.TwoFactorPendingExpiry = nil
+	return nil
+}
+func (m *MockUserRepository) AdvanceTwoFactorStep(userID uint, step int64) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	if m.User.TwoFactorLastUsedStep >= step {
+		return false, nil
+	}
+	m.User.TwoFactorLastUsedStep = step
+	return true, nil
+}
+func (m *MockUserRepository) ConsumeRecoveryCodeAndDisable(userID uint, codeHash string, usedAt time.Time) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	if !m.RecoveryCodeConsumable {
+		return false, nil
+	}
+	m.RecoveryCodeConsumable = false
+	m.User.TwoFactorEnabled = false
+	m.User.TwoFactorSecret = ""
+	m.User.TwoFactorLastUsedStep = 0
+	return true, nil
 }
 func (m *MockUserRepository) IsAccountLocked(userID uint, maxLoginAttempts int, lockoutDurationMins int) (bool, time.Duration) {
 	return m.IsLocked, m.LockDuration
@@ -481,7 +613,10 @@ func (m *MockHouseholdRepository) CancelApplication(applicationID, applicantUser
 func (m *MockHouseholdRepository) UpdateHouseholdName(householdID, adminUserID uint, name string) error {
 	return m.Err
 }
-func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, goalType string, goalCount *int, goalPercent *float64, language *string) error {
+func (m *MockHouseholdRepository) UpdateHouseholdSettings(householdID, adminUserID uint, settings database.HouseholdSettings) error {
+	return m.Err
+}
+func (m *MockHouseholdRepository) UpdateHouseholdTwoFactorPolicy(householdID, adminUserID uint, requireTwoFactor bool) error {
 	return m.Err
 }
 func (m *MockHouseholdRepository) RemoveMemberFromHousehold(memberUserID, adminUserID uint) error {
@@ -612,17 +747,63 @@ func (m *MockPATRepository) UpdateLastUsed(patID uint) error    { return m.Err }
 
 var _ database.PATRepositoryInterface = (*MockPATRepository)(nil)
 
+// MockTOTPRepository is a configurable in-memory stub for TOTPRepositoryInterface.
+type MockTOTPRepository struct {
+	Codes       []dbModel.TwoFactorRecoveryCode
+	UnusedCount int64
+	Consumed    bool
+	Err         error
+}
+
+func (m *MockTOTPRepository) CreateRecoveryCodes(userID uint, codeHashes []string) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	for _, codeHash := range codeHashes {
+		m.Codes = append(m.Codes, dbModel.TwoFactorRecoveryCode{UserID: userID, CodeHash: codeHash})
+	}
+	m.UnusedCount += int64(len(codeHashes))
+	return nil
+}
+func (m *MockTOTPRepository) ReplaceRecoveryCodes(userID uint, codeHashes []string) error {
+	if m.Err != nil {
+		return m.Err
+	}
+	m.Codes = nil
+	m.UnusedCount = 0
+	return m.CreateRecoveryCodes(userID, codeHashes)
+}
+func (m *MockTOTPRepository) GetRecoveryCodesByUserID(userID uint) ([]dbModel.TwoFactorRecoveryCode, error) {
+	return m.Codes, m.Err
+}
+func (m *MockTOTPRepository) CountUnusedRecoveryCodes(userID uint) (int64, error) {
+	return m.UnusedCount, m.Err
+}
+func (m *MockTOTPRepository) ConsumeRecoveryCode(userID uint, codeHash string, usedAt time.Time) (bool, error) {
+	if m.Err != nil {
+		return false, m.Err
+	}
+	return m.Consumed, nil
+}
+
+var _ database.TOTPRepositoryInterface = (*MockTOTPRepository)(nil)
+
 // MockSavingsRepository is a configurable in-memory stub for SavingsRepositoryInterface.
 type MockSavingsRepository struct {
-	CategoryPrice *dbModel.ProductCategoryPrice
-	SavingsStats  apiModel.SavingsStatsResponse
+	SavingsStats apiModel.SavingsStatsResponse
+	// SavingsCauses records the cause of every recorded savings event.
+	SavingsCauses []string
 	Err           error
 }
 
-func (m *MockSavingsRepository) MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error) {
-	return m.CategoryPrice, m.Err
+func (m *MockSavingsRepository) LoadCategoryResolver() (*database.CategoryResolver, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	return database.NewCategoryResolver([]dbModel.ProductCategoryPrice{}), nil
 }
-func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error {
+func (m *MockSavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *database.CategoryResolver) error {
+	m.SavingsCauses = append(m.SavingsCauses, cause)
 	return m.Err
 }
 func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error) {
@@ -630,6 +811,36 @@ func (m *MockSavingsRepository) GetSavingsStats(householdID uint) (apiModel.Savi
 }
 
 var _ database.SavingsRepositoryInterface = (*MockSavingsRepository)(nil)
+
+// MockHouseholdCategoryRepository is a configurable in-memory stub for
+// HouseholdCategoryRepositoryInterface.
+type MockHouseholdCategoryRepository struct {
+	Categories       []dbModel.HouseholdCategoryView
+	CategoryDefaults map[string]database.HouseholdCategoryDefaults
+	Err              error
+}
+
+func (m *MockHouseholdCategoryRepository) List(householdID uint) ([]dbModel.HouseholdCategoryView, error) {
+	return m.Categories, m.Err
+}
+
+func (m *MockHouseholdCategoryRepository) ListByUser(userID uint) ([]dbModel.HouseholdCategoryView, error) {
+	return m.Categories, m.Err
+}
+
+func (m *MockHouseholdCategoryRepository) Upsert(householdID uint, categoryKey string, override database.HouseholdCategoryOverride) (dbModel.HouseholdCategoryView, error) {
+	return dbModel.HouseholdCategoryView{CategoryKey: categoryKey}, m.Err
+}
+
+func (m *MockHouseholdCategoryRepository) Reorder(householdID uint, categoryKeys []string) error {
+	return m.Err
+}
+
+func (m *MockHouseholdCategoryRepository) Defaults(householdID uint) (map[string]database.HouseholdCategoryDefaults, error) {
+	return m.CategoryDefaults, m.Err
+}
+
+var _ database.HouseholdCategoryRepositoryInterface = (*MockHouseholdCategoryRepository)(nil)
 
 // MockRecipeCacheRepository is a configurable in-memory stub for RecipeCacheRepositoryInterface.
 type MockRecipeCacheRepository struct {
@@ -1008,8 +1219,10 @@ type MockRepositoryContainer struct {
 	Households            *MockHouseholdRepository
 	Invitations           *MockInvitationRepository
 	StorageLocations      *MockStorageLocationRepository
+	HouseholdCategories   *MockHouseholdCategoryRepository
 	Webhooks              *MockWebhookRepository
 	PATs                  *MockPATRepository
+	TOTPs                 *MockTOTPRepository
 	Savings               *MockSavingsRepository
 	RecipeCaches          *MockRecipeCacheRepository
 	Recipes               *MockRecipeRepository
@@ -1030,8 +1243,10 @@ func NewMockRepositoryContainer() *MockRepositoryContainer {
 		Households:            &MockHouseholdRepository{},
 		Invitations:           &MockInvitationRepository{},
 		StorageLocations:      &MockStorageLocationRepository{},
+		HouseholdCategories:   &MockHouseholdCategoryRepository{},
 		Webhooks:              &MockWebhookRepository{},
 		PATs:                  &MockPATRepository{},
+		TOTPs:                 &MockTOTPRepository{},
 		Savings:               &MockSavingsRepository{},
 		RecipeCaches:          &MockRecipeCacheRepository{},
 		Recipes:               &MockRecipeRepository{},
@@ -1054,8 +1269,10 @@ func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryCo
 		Households:            m.Households,
 		Invitations:           m.Invitations,
 		StorageLocations:      m.StorageLocations,
+		HouseholdCategories:   m.HouseholdCategories,
 		Webhooks:              m.Webhooks,
 		PATs:                  m.PATs,
+		TOTPs:                 m.TOTPs,
 		RecipeCaches:          m.RecipeCaches,
 		Recipes:               m.Recipes,
 		MealPlans:             m.MealPlans,

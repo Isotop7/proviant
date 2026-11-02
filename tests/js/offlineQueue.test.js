@@ -741,6 +741,22 @@ describe("offlineQueue.js offline product list", () => {
     expect(JSON.parse(realm.localStorage.getItem("proviant_product_snapshot"))).toEqual(products);
   });
 
+  it("reads the products out of the paged list envelope", async () => {
+    const products = [{ id: 3, productName: "Milk" }];
+    const { proviant, realm } = await loadOutbox({
+      online: true,
+      responder: (call) =>
+        call.method === "GET"
+          ? { status: 200, ok: true, json: async () => ({ products, total: 1, limit: 100, offset: 0 }) }
+          : defaultResponder(call),
+    });
+
+    const online = await proviant.getProducts();
+
+    expect(online.products).toEqual(products);
+    expect(JSON.parse(realm.localStorage.getItem("proviant_product_snapshot"))).toEqual(products);
+  });
+
   it("parks an op type this build cannot execute instead of deleting it", async () => {
     const { proviant } = await loadOutbox({ online: true });
 

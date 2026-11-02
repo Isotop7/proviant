@@ -3,6 +3,9 @@ package api
 // BulkProductsAPIModel represents a bulk product operation request
 type BulkProductsAPIModel struct {
 	ProductIDs []uint `json:"productIDs"`
+	// WasteCause is why the products are wasted. It applies to every product
+	// of the request and is ignored by a bulk consume.
+	WasteCause *string `json:"wasteCause,omitempty"`
 }
 
 // CookItemAPIModel is one product entry of a cook request
@@ -35,6 +38,15 @@ type OnboardingStateResponse struct {
 type ProductQuantityDTO struct {
 	Delta            int     `json:"delta" binding:"required,min=-1000"`
 	ClientMutationID *string `json:"clientMutationId,omitempty"`
+}
+
+// ProductActionDTO is the optional request body for consuming or wasting packs.
+// A nil Quantity records the whole remaining stock.
+type ProductActionDTO struct {
+	Quantity         *int    `json:"quantity,omitempty"`
+	ClientMutationID *string `json:"clientMutationId,omitempty"`
+	// WasteCause is why the packs are wasted. It is ignored by a consume.
+	WasteCause *string `json:"wasteCause,omitempty"`
 }
 
 // HouseholdListItem represents a household in the discovery list

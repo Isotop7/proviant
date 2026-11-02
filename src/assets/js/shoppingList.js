@@ -2,6 +2,8 @@
 
 (function() {
   var debounceTimer = null;
+  var purchaseItemId = null;
+  var categoryTouched = false;
 
   document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('click', function (event) {
@@ -24,6 +26,12 @@
       if (delBtn) {
         var delId = delBtn.dataset.deleteItem;
         deleteItem(delId);
+        return;
+      }
+
+      var buyBtn = event.target.closest('[data-buy-item]');
+      if (buyBtn) {
+        openPurchaseDialog(buyBtn.dataset.buyItem);
         return;
       }
 
@@ -70,8 +78,35 @@
         debounceTimer = setTimeout(function() {
           updateItemNotes(itemId, notesInput.value);
         }, 500);
+        return;
+      }
+      // A date the user set is theirs: a later suggestion must not overwrite
+      // it.
+      if (event.target.id === 'purchaseExpiry') {
+        event.target.dataset.userEdited = '1';
+        delete event.target.dataset.suggested;
       }
     });
+
+    document.addEventListener('change', function (event) {
+      if (event.target.id === 'purchaseExpiry') {
+        event.target.dataset.userEdited = '1';
+        delete event.target.dataset.suggested;
+        return;
+      }
+      if (event.target.id === 'purchaseCategory') {
+        categoryTouched = true;
+        applyPurchaseExpiry();
+      }
+    });
+
+    var purchaseForm = document.getElementById('purchaseForm');
+    if (purchaseForm) {
+      purchaseForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        submitPurchase();
+      });
+    }
 
     var nameInput = document.getElementById('inputItemName');
     if (nameInput) {
@@ -250,6 +285,278 @@
     }
   }
 
+  // The items the page was rendered with. The rows are read from here and
+  // not from the DOM, so a row that was checked or deleted meanwhile cannot
+  // be bought by accident.
+  function shoppingListItems() {
+    var dataEl = document.getElementById('shoppingListData');
+    if (!dataEl) return [];
+    var rawText = (dataEl.textContent || '').trim();
+    if (!rawText) return [];
+    try {
+      var parsed = JSON.parse(rawText);
+      // If parsed is a string, try parsing it as JSON (handles template quoting issue)
+      if (typeof parsed === 'string') {
+        parsed = JSON.parse(parsed);
+      }
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      if (parsed && typeof parsed === 'object') {
+        return [parsed];
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  }
+
+  // The household's categories with the shelf life the household gave them.
+  function householdCategories() {
+    var dataEl = document.getElementById('shoppingListCategories');
+    if (!dataEl) return [];
+    var rawText = (dataEl.textContent || '').trim();
+    if (!rawText) return [];
+    try {
+      var parsed = JSON.parse(rawText);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // The id of an entry of the embedded payload. The model does not tag the
+  // primary key, so it travels under its Go name.
+  function itemID(entry) {
+    if (!entry) return null;
+    return entry.id !== undefined && entry.id !== null ? entry.id : entry.ID;
+  }
+
+  // The product an entry of the embedded payload points at. The model does
+  // not tag the column either.
+  function itemProductID(entry) {
+    if (!entry) return null;
+    var value = entry.ProductID !== undefined && entry.ProductID !== null ? entry.ProductID : entry.productId;
+    return value === undefined ? null : value;
+  }
+
+  function openPurchaseDialog(itemId) {
+    var item = shoppingListItems().find(function (entry) {
+      return String(itemID(entry)) === String(itemId);
+    });
+    if (!item) {
+      proviant.showFeedback('error', proviant.t("js.shoppingList.purchaseFailedTitle"));
+      return;
+    }
+    purchaseItemId = itemID(item);
+
+    var nameEl = document.getElementById('purchaseItemName');
+    if (nameEl) nameEl.textContent = item.name || '';
+
+    var quantityEl = document.getElementById('purchaseQuantity');
+    if (quantityEl) quantityEl.value = String(item.quantity || 1);
+
+    var packSizeEl = document.getElementById('purchasePackSize');
+    if (packSizeEl) packSizeEl.value = item.packSize || '';
+
+    var barcodeEl = document.getElementById('purchaseBarcode');
+    if (barcodeEl) barcodeEl.value = '';
+
+    var expiryEl = document.getElementById('purchaseExpiry');
+    if (expiryEl) {
+      expiryEl.value = '';
+      delete expiryEl.dataset.userEdited;
+      delete expiryEl.dataset.suggested;
+    }
+
+    var categories = householdCategories();
+    var categoryEl = document.getElementById('purchaseCategory');
+    fillCategoryOptions(categoryEl, categories);
+    var categoryKey = item.categoryKey || proviant.resolveCategoryKey(item.category, categories);
+    if (categoryEl) categoryEl.value = categoryKey || '';
+    categoryTouched = false;
+
+    // A product the household already tracks keeps its own date, category,
+    // pack size and location: the purchase only adds packs to it. The fields
+    // that would be ignored are hidden rather than filled with a value the
+    // server drops.
+    var linked = itemProductID(item);
+    var existingEl = document.getElementById('purchaseExistingProduct');
+    if (existingEl) {
+      existingEl.textContent = linked
+        ? proviant.t("js.shoppingList.purchaseIntoExisting", item.name || '')
+        : '';
+      existingEl.classList.toggle('d-none', !linked);
+    }
+    document.querySelectorAll('[data-purchase-field]').forEach(function (field) {
+      field.classList.toggle('d-none', Boolean(linked));
+    });
+
+    applyPurchaseExpiry();
+
+    var dialog = document.getElementById('purchaseItemDialog');
+    if (dialog && typeof bootstrap !== 'undefined' && bootstrap.Dialog) {
+      bootstrap.Dialog.getOrCreateInstance(dialog).show();
+    }
+    if (expiryEl && !expiryEl.value) {
+      expiryEl.focus();
+    }
+  }
+
+  function fillCategoryOptions(select, categories) {
+    if (!select) return;
+    select.innerHTML = '';
+    var noneOption = document.createElement('option');
+    noneOption.value = '';
+    noneOption.textContent = proviant.t("shoppingList.purchaseNoneOption");
+    select.appendChild(noneOption);
+    categories.forEach(function (category) {
+      if (category.hidden) return;
+      var option = document.createElement('option');
+      option.value = category.categoryKey;
+      option.textContent = category.displayName || category.categoryKey;
+      select.appendChild(option);
+    });
+  }
+
+  // The expiry comes from the shelf life the household gave the category. A
+  // category without one leaves the date empty and asks for it.
+  function applyPurchaseExpiry() {
+    var categoryEl = document.getElementById('purchaseCategory');
+    var expiryEl = document.getElementById('purchaseExpiry');
+    var hint = document.getElementById('purchaseExpiryHint');
+    if (!categoryEl || !expiryEl) return;
+    var categories = householdCategories();
+    var categoryKey = categoryEl.value;
+    var days = proviant.categoryShelfLifeDays(categories, categoryKey);
+    if (days === null) {
+      if (hint) hint.classList.add('d-none');
+      if (expiryEl.dataset.userEdited !== '1') {
+        expiryEl.value = '';
+      }
+      return;
+    }
+    var category = proviant.categoryByKey(categories, categoryKey);
+    var applied = proviant.applyExpirySuggestion(expiryEl, categories, categoryKey);
+    if (!applied) {
+      if (hint) hint.classList.add('d-none');
+      return;
+    }
+    if (hint) {
+      hint.textContent = proviant.t("js.shoppingList.expiryFromCategory", category ? category.displayName : categoryKey, days);
+      hint.classList.remove('d-none');
+    }
+  }
+
+  function purchasePayload() {
+    var payload = {};
+    var quantityEl = document.getElementById('purchaseQuantity');
+    if (quantityEl) payload.quantity = Number.parseInt(quantityEl.value, 10) || 1;
+    var expiryEl = document.getElementById('purchaseExpiry');
+    if (expiryEl && expiryEl.value) payload.expireAt = expiryEl.value;
+    var categoryEl = document.getElementById('purchaseCategory');
+    // An empty category that the user never touched means the item has no
+    // category of its own: the server keeps it. An empty one the user chose
+    // means the bought product has no category at all.
+    if (categoryEl && (categoryEl.value || categoryTouched)) {
+      payload.categoryKey = categoryEl.value;
+    }
+    var packSizeEl = document.getElementById('purchasePackSize');
+    if (packSizeEl) payload.packSize = packSizeEl.value;
+    var barcodeEl = document.getElementById('purchaseBarcode');
+    if (barcodeEl) payload.barcode = barcodeEl.value;
+    var locationEl = document.getElementById('purchaseStorageLocation');
+    if (locationEl && locationEl.value) {
+      payload.storageLocationId = Number.parseInt(locationEl.value, 10) || null;
+    }
+    return payload;
+  }
+
+  function submitPurchase(extra) {
+    if (purchaseItemId === null) return;
+    // The item is captured here: the dialog may be closed and opened for
+    // another item while the purchase is in flight, and the answer belongs
+    // to the item that was bought.
+    var itemId = purchaseItemId;
+    var payload = purchasePayload();
+    if (extra) {
+      Object.keys(extra).forEach(function (key) {
+        payload[key] = extra[key];
+      });
+    }
+    setPurchaseBusy(true);
+    proviant.purchaseShoppingListItem(itemId, payload).then(function (result) {
+      setPurchaseBusy(false);
+      if (result.code === 409) {
+        askAboutDuplicate(result);
+        return;
+      }
+      if (result.code !== 201) {
+        proviant.showFeedback('error', proviant.t("js.shoppingList.purchaseFailedTitle"));
+        return;
+      }
+      closePurchaseDialog(itemId);
+      markItemChecked(itemId);
+      announcePurchase(result.product);
+    }).catch(function () {
+      setPurchaseBusy(false);
+      proviant.showFeedback('error', proviant.t("js.shoppingList.purchaseFailedTitle"));
+    });
+  }
+
+  // The bought product matches one the household already has. The user
+  // decides: the packs belong to that product, or they are a product of
+  // their own. The prompt is the one of the product list.
+  function askAboutDuplicate(result) {
+    var duplicate = result.duplicate;
+    if (!duplicate || typeof proviant.showDuplicatePrompt !== 'function') {
+      proviant.showFeedback('error', proviant.t("js.shoppingList.purchaseDuplicateTitle"));
+      return;
+    }
+    proviant.showDuplicatePrompt({
+      duplicate: duplicate,
+      onAddPack: function () {
+        submitPurchase({ addToProductId: duplicate.id });
+      },
+      onAddSeparately: function () {
+        submitPurchase({ allowDuplicate: true });
+      },
+      onCancel: function () {},
+    });
+  }
+
+  function setPurchaseBusy(busy) {
+    var btn = document.getElementById('btnPurchase');
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.classList.toggle('loading', busy);
+  }
+
+  // Closes the dialog of the given item. A dialog that shows another item
+  // now — the user opened one while the purchase was in flight — stays open.
+  function closePurchaseDialog(itemId) {
+    if (itemId !== undefined && purchaseItemId !== itemId) return;
+    var dialog = document.getElementById('purchaseItemDialog');
+    if (dialog && typeof bootstrap !== 'undefined' && bootstrap.Dialog) {
+      bootstrap.Dialog.getOrCreateInstance(dialog).hide();
+    }
+  }
+
+  function markItemChecked(itemId) {
+    var row = document.getElementById('item-' + itemId);
+    if (row) row.classList.add('checked');
+    var checkbox = document.querySelector('.item-checkbox[data-item-id="' + itemId + '"]');
+    if (checkbox) checkbox.checked = true;
+    updateItemCount();
+  }
+
+  function announcePurchase(product) {
+    var name = product && product.productName ? product.productName : '';
+    var announcement = document.getElementById('purchaseAnnouncement');
+    if (announcement) announcement.textContent = proviant.t("js.shoppingList.announcePurchased", name);
+    proviant.showFeedback('success', proviant.t("js.shoppingList.purchaseSuccessTitle"), proviant.t("js.shoppingList.purchaseSuccess", name));
+  }
+
   // The print view is written into a same-origin window, so every value that
   // reaches the markup has to be escaped: an item name is user input.
   function escapePrintHtml(text) {
@@ -260,25 +567,7 @@
   }
 
   function printShoppingList() {
-    var dataEl = document.getElementById('shoppingListData');
-    if (!dataEl) return;
-    var rawText = (dataEl.textContent || '').trim();
-    if (!rawText) return;
-    var items = [];
-    try {
-      var parsed = JSON.parse(rawText);
-      // If parsed is a string, try parsing it as JSON (handles template quoting issue)
-      if (typeof parsed === 'string') {
-        parsed = JSON.parse(parsed);
-      }
-      if (Array.isArray(parsed)) {
-        items = parsed;
-      } else if (parsed && typeof parsed === 'object') {
-        items = [parsed];
-      }
-    } catch {
-      return;
-    }
+    var items = shoppingListItems();
     if (!items.length) return;
 
     // design-tokens:off — the print view is a standalone document with its own

@@ -24,6 +24,17 @@ const el = Object.freeze({
     btnExpireAdd3: document.getElementById('btnExpireAdd3'),
     btnExpireAdd7: document.getElementById('btnExpireAdd7'),
     btnExpireAdd1m: document.getElementById('btnExpireAdd1m'),
+    // The household's category list and the hint that names the shelf life of
+    // the category — both only present on the pages that render them.
+    productCategory: document.getElementById('productCategory'),
+    expirySuggestion: document.getElementById('expirySuggestion'),
+    // The staples the household buys repeatedly — only present on the pages
+    // that render the add-product dialog.
+    frequentProducts: document.getElementById('frequentProducts'),
+    frequentProductsList: document.getElementById('frequentProductsList'),
+    // The name the household calls the product and the size of one pack.
+    productName: document.getElementById('productName'),
+    packSize: document.getElementById('packSize'),
     // Batch scan mode — only present on the scan page, every use is guarded
     batchStartPanel: document.getElementById('batchStartPanel'),
     batchConfirmPanel: document.getElementById('batchConfirmPanel'),
@@ -67,13 +78,27 @@ function showAlert(isSuccess, message) {
         proviant.showFeedback('error', proviant.t("common.error"), message || proviant.t("js.products.createFailedMessage"));
     }
 }
-function clearProductInfo() {
-    if (el.productInfoImage) {
-        el.productInfoImage.src = '';
-        el.productInfoImage.alt = '';
+// The product's picture. An empty src queues an error event, and that event
+// outlives the image that follows it: the next lookup's picture would be
+// hidden by the previous one's failure. Removing the attribute asks for
+// nothing and queues nothing.
+function setProductImage(url, alt) {
+    const img = el.productInfoImage;
+    if (!img) return;
+    img.alt = alt || '';
+    if (!url) {
+        img.removeAttribute('src');
+        img.classList.add('d-none');
+        return;
     }
-    if (el.productInfoName) el.productInfoName.innerText = '';
-    if (el.productInfoGenericName) el.productInfoGenericName.innerText = '';
+    img.src = url;
+    img.classList.remove('d-none');
+}
+
+function clearProductInfo() {
+    setProductImage('', '');
+    if (el.productInfoName) el.productInfoName.textContent = '';
+    if (el.productInfoGenericName) el.productInfoGenericName.textContent = '';
     if (el.storageHint) {
         el.storageHint.textContent = '';
         el.storageHint.classList.add('d-none');
@@ -91,13 +116,14 @@ function setBarcodeLoading(loading) {
   }
 }
 function showProductData(product) {
-    if (el.productInfoImage) {
-        el.productInfoImage.src = product.imageUrl;
-        el.productInfoImage.alt = product.productName || proviant.t("js.products.productImageAlt");
-    }
-    if (el.productInfoName) el.productInfoName.innerText = product.productName;
+    setProductImage(product.imageUrl, product.productName || proviant.t("js.products.productImageAlt"));
+    if (el.productInfoName) el.productInfoName.textContent = product.productName;
+    // The name and the pack size are editable fields, so the lookup fills
+    // them: the user can correct what the barcode answered.
+    if (el.productName) el.productName.value = product.productName || '';
+    if (el.packSize && product.packSize) el.packSize.value = product.packSize;
     if (product.categories != 'undefined' && product.categories != null) {
-        if (el.productInfoGenericName) el.productInfoGenericName.innerText = product.categories;
+        if (el.productInfoGenericName) el.productInfoGenericName.textContent = product.categories;
     }
     if (el.storageHint) {
         if (product.storageHint) {
@@ -107,7 +133,212 @@ function showProductData(product) {
             el.storageHint.classList.add('d-none');
         }
     }
+    selectResolvedCategory(product.categories);
     if (el.productDataWrapper) el.productDataWrapper.classList.remove('d-none');
+}
+
+// The household's categories, read from the rendered list. The list carries
+// the shelf life of every category, so the suggestion works without a
+// request — and therefore offline.
+function householdCategories() {
+    const select = el.productCategory;
+    if (!select) return [];
+    return Array.from(select.options)
+        .filter((option) => option.value !== '')
+        .map((option) => ({
+            categoryKey: option.value,
+            displayName: (option.textContent || '').trim(),
+            defaultShelfLifeDays: option.dataset.shelfLifeDays
+                ? Number.parseInt(option.dataset.shelfLifeDays, 10)
+                : null,
+        }));
+}
+
+// Picks the category the looked-up product belongs to and fills the expiry
+// date the household gave it.
+function selectResolvedCategory(categoriesText) {
+    const select = el.productCategory;
+    if (!select) return;
+    const categories = householdCategories();
+    const categoryKey = proviant.resolveCategoryKey(categoriesText, categories);
+    select.value = categoryKey && categories.some((category) => category.categoryKey === categoryKey)
+        ? categoryKey
+        : '';
+    applyCategorySuggestion();
+}
+
+// The shelf life the household gave the selected category, if it has one.
+function expiryShelfLife() {
+    const select = el.productCategory;
+    if (!select) return null;
+    const categories = householdCategories();
+    const categoryKey = select.value;
+    const days = proviant.categoryShelfLifeDays(categories, categoryKey);
+    if (days === null) return null;
+    const category = proviant.categoryByKey(categories, categoryKey);
+    return {
+        categories: categories,
+        categoryKey: categoryKey,
+        days: days,
+        displayName: category ? category.displayName : categoryKey,
+    };
+}
+
+// Names the shelf life the household gave the category. The date is left to
+// the user: how long this pack lasts is not something the household's history
+// can answer, so the tap must not answer it either.
+function showExpiryShelfLife() {
+    const hint = el.expirySuggestion;
+    if (!hint) return;
+    const shelfLife = expiryShelfLife();
+    // A date the user set is theirs: the shelf life is not needed to explain
+    // it, and the hint would only tell them to set what they already set.
+    if (!shelfLife || (el.inputExpireAt && el.inputExpireAt.dataset.userEdited === '1')) {
+        hint.classList.add('d-none');
+        return;
+    }
+    hint.textContent = proviant.t("js.products.expiryShelfLife", shelfLife.displayName, shelfLife.days);
+    hint.classList.remove('d-none');
+}
+
+// Fills the expiry date with the shelf life of the selected category. A date
+// the user set is theirs and is never overwritten.
+function applyCategorySuggestion() {
+    const hint = el.expirySuggestion;
+    if (!el.productCategory) return;
+    const shelfLife = expiryShelfLife();
+    if (!shelfLife) {
+        if (hint) hint.classList.add('d-none');
+        return;
+    }
+    // The hint names the source of the date, so it may only show when the
+    // suggestion really wrote the date: a date the user set is theirs.
+    const applied = proviant.applyExpirySuggestion(el.inputExpireAt, shelfLife.categories, shelfLife.categoryKey);
+    if (!applied) {
+        if (hint) hint.classList.add('d-none');
+        return;
+    }
+    if (hint) {
+        hint.textContent = proviant.t("js.products.expirySuggested", shelfLife.displayName, shelfLife.days);
+        hint.classList.remove('d-none');
+    }
+}
+
+// ── Frequently bought ─────────────────────────────────────────────────────────
+
+// The staples the household buys repeatedly. The list is a server response, so
+// it is empty when the server is not there — the form it fills keeps working
+// either way.
+async function loadFrequentProducts() {
+    if (!el.frequentProducts || !el.frequentProductsList) return;
+    let products = [];
+    try {
+        const response = await proviant.getFrequentlyBoughtProducts();
+        if (response && response.code === 200 && Array.isArray(response.message)) {
+            products = response.message;
+        }
+    } catch (_) {
+        products = [];
+    }
+    renderFrequentProducts(products);
+}
+
+// The barcode field decides which barcodes the form accepts, so the strip
+// offers exactly those. A chip the form would reject fills a field that
+// blocks the submit, and the household is left with a button that does
+// nothing.
+//
+// The browser applies the rule: the pattern attribute is HTML's "v" dialect,
+// which a plain RegExp does not speak.
+function barcodeProbe() {
+    const input = el.inputBarcode;
+    if (!input) return null;
+    const pattern = input.getAttribute('pattern');
+    if (!pattern) return null;
+    const probe = document.createElement('input');
+    probe.setAttribute('pattern', pattern);
+    return probe;
+}
+
+function acceptsBarcode(probe, barcode) {
+    if (!probe) return true;
+    probe.value = barcode;
+    return probe.checkValidity();
+}
+
+function renderFrequentProducts(products) {
+    if (!el.frequentProducts || !el.frequentProductsList) return;
+    el.frequentProductsList.innerHTML = '';
+    if (!products || products.length === 0) {
+        el.frequentProducts.classList.add('d-none');
+        return;
+    }
+    const probe = barcodeProbe();
+    products.forEach((product) => {
+        const barcode = product.barcode || '';
+        if (!barcode || !acceptsBarcode(probe, barcode)) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'frequent-product';
+        button.dataset.barcode = barcode;
+        button.dataset.productName = product.productName || '';
+        button.dataset.packSize = product.packSize || '';
+        button.dataset.categoryKey = product.categoryKey || '';
+        button.dataset.storageLocationId = product.storageLocationId || '';
+        button.dataset.imageUrl = product.imageUrl || '';
+        button.textContent = product.productName || barcode;
+        el.frequentProductsList.appendChild(button);
+    });
+    if (el.frequentProductsList.childElementCount === 0) {
+        el.frequentProducts.classList.add('d-none');
+        return;
+    }
+    el.frequentProducts.classList.remove('d-none');
+}
+
+// Picks the category the household used for this product. A category the
+// household has since removed is not in the list, so the form is left without
+// one rather than with the previous product's.
+function selectStoredCategory(categoryKey) {
+    const select = el.productCategory;
+    if (!select) return;
+    const known = categoryKey && Array.from(select.options).some((option) => option.value === categoryKey);
+    select.value = known ? categoryKey : '';
+}
+
+// Picks the storage location the household used for this product. A location
+// the household has since removed is not in the list, so the form is left
+// without one rather than with the previous product's.
+function selectStoredLocation(locationID) {
+    const select = el.modalStorageLocation;
+    if (!select) return;
+    const known = locationID && Array.from(select.options).some((option) => option.value === String(locationID));
+    select.value = known ? String(locationID) : '';
+}
+
+// Fills the form with what the household already knows about the product.
+function applyFrequentProduct(entry) {
+    if (!entry || !entry.barcode) return;
+    // The banner belongs to one product: the previous one must not leave its
+    // categories and its storage hint under the new name.
+    clearProductInfo();
+    showBarcode(entry.barcode);
+    if (el.productName) el.productName.value = entry.productName || '';
+    if (el.packSize) el.packSize.value = entry.packSize || '';
+    if (el.productInfoName) el.productInfoName.textContent = entry.productName || '';
+    setProductImage(entry.imageUrl, entry.productName || '');
+    selectStoredCategory(entry.categoryKey);
+    selectStoredLocation(entry.storageLocationId);
+    // The suggestion carries no date: how long a pack lasts is not something
+    // the household's history can answer. The category does — the household
+    // gave it a shelf life — so the hint names it and the user sets the date.
+    // A hand-picked category fills the date instead; the tap must not.
+    showExpiryShelfLife();
+    // Revealing the product data is what advances the dialog to the form
+    // step, and the barcode lookup tells the form whether the household
+    // already holds the product.
+    storeBarcode(entry.barcode);
+    checkBarcode(entry.barcode);
 }
 
 // UI toggle functions
@@ -236,6 +467,9 @@ function shiftExpiry(days, months) {
     if (days !== 0) base.setDate(base.getDate() + days);
     if (months !== 0) base.setMonth(base.getMonth() + months);
     inputEl.value = formatInputDate(base);
+    // A quick adjustment is the user's own date: a later suggestion must not
+    // overwrite it.
+    inputEl.dataset.userEdited = '1';
     inputEl.classList.remove('date-updated');
     void inputEl.offsetWidth;
     inputEl.classList.add('date-updated');
@@ -584,6 +818,16 @@ async function queryProductInfoRequest(barcode) {
 // Function handlers
 function queryProductInfo(barcode) {
     clearProductInfo();
+    // A new product starts with an untouched expiry field, so the shelf life
+    // of its category may fill it again.
+    if (el.inputExpireAt) {
+        delete el.inputExpireAt.dataset.userEdited;
+        delete el.inputExpireAt.dataset.suggested;
+    }
+    // Another barcode is another product: the naming of the last one does not
+    // carry over. The lookup fills the fields again if it knows the product.
+    if (el.productName) el.productName.value = '';
+    if (el.packSize) el.packSize.value = '';
     setBarcodeLoading(true);
     queryProductInfoRequest(barcode).then((response) => {
         setBarcodeLoading(false);
@@ -609,7 +853,7 @@ function storeBarcode(barcode) {
 function getSelectedProductName() {
     const dropdown = el.instanceDropdown;
     if (!dropdown || dropdown.selectedIndex < 0) return '';
-    return dropdown[dropdown.selectedIndex].innerText.split(';')[0].trim();
+    return dropdown[dropdown.selectedIndex].textContent.split(';')[0].trim();
 }
 function checkBarcode(barcode) {
   proviant.getProductsByBarcode(barcode).then((response) => {
@@ -670,7 +914,15 @@ function handleScanButton() {
 };
 function handleBtnAddProduct() {
     if (!el.inputBarcode || !el.inputExpireAt) return;
-    if (!(el.inputBarcode.checkValidity() && el.inputExpireAt.checkValidity())) {
+    // The add button sits outside the form, so the browser never validates on
+    // its own. Without asking the field to report, an add that cannot happen
+    // says nothing at all.
+    if (!el.inputBarcode.checkValidity()) {
+        el.inputBarcode.reportValidity();
+        return;
+    }
+    if (!el.inputExpireAt.checkValidity()) {
+        el.inputExpireAt.reportValidity();
         return;
     }
 
@@ -684,13 +936,21 @@ function handleBtnAddProduct() {
     const quantity = qtyEl ? Number.parseInt(qtyEl.value, 10) || 1 : 1;
     const locationEl = el.modalStorageLocation;
     const storageLocationId = locationEl && locationEl.value ? Number.parseInt(locationEl.value, 10) : null;
+    const categoryEl = el.productCategory;
+    const categoryKey = categoryEl && categoryEl.value ? categoryEl.value : null;
+    // The name and the pack size the household wrote are sent along, so the
+    // row keeps the naming this household uses.
+    const details = {
+        productName: el.productName ? el.productName.value.trim() : '',
+        packSize: el.packSize ? el.packSize.value.trim() : '',
+    };
 
     const btn = el.btnAddProduct;
     if (!btn) return;
     btn.classList.add('loading');
     btn.disabled = true;
 
-    proviant.createProduct(barcode, expireAt, quantity, storageLocationId, false, null).then((response) => {
+    proviant.createProduct(barcode, expireAt, quantity, storageLocationId, false, null, false, categoryKey, details).then((response) => {
         btn.classList.remove('loading');
         btn.disabled = false;
         switch (response.code) {
@@ -700,6 +960,15 @@ function handleBtnAddProduct() {
                 break;
             case 202:
                 showAlert(true, proviant.t("js.products.productQueuedOffline"));
+                break;
+            case 409:
+                // A conflict that names no duplicate — a clientSyncId another
+                // member's private row holds — has nothing to offer.
+                if (!response.duplicate) {
+                    showAlert(false, response.message);
+                    break;
+                }
+                openDuplicatePrompt(response, { barcode: barcode, expireAt: expireAt, quantity: quantity, storageLocationId: storageLocationId, categoryKey: categoryKey, details: details });
                 break;
             case 400:
                 showAlert(false, proviant.t("js.scan.invalidRequestData"));
@@ -717,6 +986,70 @@ function handleBtnAddProduct() {
         showAlert(false, error);
     });
 }
+
+// The server refused the create because the household already has this
+// product: the same barcode, the same expiry date, the same storage
+// location. The user decides whether the pack belongs to that row, is a
+// product of its own, or was a mis-scan.
+function openDuplicatePrompt(response, draft) {
+    if (typeof proviant.showDuplicatePrompt !== 'function') {
+        showAlert(false, proviant.t("js.products.duplicateUnavailable"));
+        return;
+    }
+
+    proviant.showDuplicatePrompt({
+        duplicate: response.duplicate,
+        quantity: draft.quantity,
+        onAddPack: function (duplicate, quantity) {
+            proviant.updateProductQuantity(duplicate.id, quantity).then((result) => {
+                if (result.code !== 200 && result.code !== 202) {
+                    showAlert(false, proviant.t("js.products.duplicateAddPackFailed", result.message));
+                    return;
+                }
+                updateQuantityInPlace(duplicate, quantity);
+                showAlert(true, proviant.tn("js.products.duplicateAddedPack", quantity, duplicate.productName));
+            }).catch((error) => {
+                showAlert(false, error);
+            });
+        },
+        onAddSeparately: function () {
+            // The same id as the refused attempt: nothing was written under it,
+            // so the row this creates is idempotent as well.
+            proviant.createProduct(draft.barcode, draft.expireAt, draft.quantity, draft.storageLocationId, false, response.clientSyncId, true, draft.categoryKey, draft.details).then((result) => {
+                if (result.code === 200 || result.code === 201) {
+                    showAlert(true, proviant.t("js.products.productCreatedBarcode", draft.barcode));
+                    return;
+                }
+                // A queued create is a create: the row is written when the
+                // outbox drains, so it is not a failure.
+                if (result.code === 202) {
+                    showAlert(true, proviant.t("js.products.productQueuedOffline"));
+                    return;
+                }
+                showAlert(false, proviant.t("js.products.duplicateAddSeparatelyFailed", result.message));
+            }).catch((error) => {
+                showAlert(false, error);
+            });
+        },
+        onCancel: function () {
+            // Nothing was written, and nothing is written now.
+        },
+    });
+}
+
+// The merged row keeps its place in the list: its count grows by the packs
+// that were added. The count stops at the bound a product may hold, the same
+// bound the server writes.
+function updateQuantityInPlace(duplicate, quantity) {
+    const qtyEl = document.getElementById('qty-' + duplicate.id);
+    if (!qtyEl) return;
+    const maxQuantity = (window.proviantLimits && window.proviantLimits.maxQuantity) || 999;
+    qtyEl.dataset.quantity = String(Math.min(duplicate.quantity + quantity, maxQuantity));
+    if (typeof proviant.renderQuantityLabel === 'function') {
+        proviant.renderQuantityLabel(qtyEl);
+    }
+}
+
 function handleBtnShowProduct() {
     const dropdown = el.instanceDropdown;
     const productId = dropdown[dropdown.selectedIndex].value;
@@ -806,9 +1139,49 @@ document.addEventListener('submit', function (event) {
     }
 });
 
+/* The name and the pack size are bounded in bytes, because the columns are:
+   a character bound would let a name of multi-byte characters exceed what the
+   database stores. The field is trimmed to the same rule the server applies,
+   so what the user sees is what the row keeps. */
+function trimToBytes(value, limit) {
+    const encoder = new TextEncoder();
+    if (encoder.encode(value).length <= limit) return value;
+    let bytes = 0;
+    let end = 0;
+    for (const character of value) {
+        const size = encoder.encode(character).length;
+        if (bytes + size > limit) break;
+        bytes += size;
+        end += character.length;
+    }
+    return value.slice(0, end);
+}
+
+function enforceByteLimit(target) {
+    const limits = window.proviantLimits || {};
+    const limit = target.id === 'productName' ? limits.maxProductNameLength : limits.maxPackSizeLength;
+    if (!limit) return;
+    const trimmed = trimToBytes(target.value, limit);
+    if (trimmed !== target.value) target.value = trimmed;
+}
+
 /* Event delegation for all clicks */
 document.addEventListener('click', function (event) {
     const target = event.target;
+
+    const frequentProduct = target.closest('.frequent-product');
+    if (frequentProduct) {
+        event.preventDefault();
+        applyFrequentProduct({
+            barcode: frequentProduct.dataset.barcode,
+            productName: frequentProduct.dataset.productName,
+            packSize: frequentProduct.dataset.packSize,
+            categoryKey: frequentProduct.dataset.categoryKey,
+            storageLocationId: frequentProduct.dataset.storageLocationId,
+            imageUrl: frequentProduct.dataset.imageUrl,
+        });
+        return;
+    }
 
     if (target.closest('#btnAddProduct')) {
         event.preventDefault();
@@ -1005,10 +1378,57 @@ document.addEventListener('input', function (event) {
     }
 });
 
+/* A date the user set is theirs: a later suggestion must not overwrite it.
+   The change event covers the expiry scan, which writes the field and fires
+   it. */
+document.addEventListener('input', function (event) {
+    const target = event.target;
+    if (target.id !== 'expireAt') return;
+    target.dataset.userEdited = '1';
+    delete target.dataset.suggested;
+});
+
+/* The free-text fields are bounded in bytes, like their columns. */
+document.addEventListener('input', function (event) {
+    const target = event.target;
+    if (target.id !== 'productName' && target.id !== 'packSize') return;
+    enforceByteLimit(target);
+});
+
+document.addEventListener('change', function (event) {
+    const target = event.target;
+    if (target.id === 'expireAt') {
+        target.dataset.userEdited = '1';
+        delete target.dataset.suggested;
+        return;
+    }
+    if (target.id === 'productCategory') {
+        applyCategorySuggestion();
+    }
+});
+
 /* Restore a persisted batch queue after navigation */
 document.addEventListener('DOMContentLoaded', function () {
     restoreBatchQueue();
 });
+
+/* The staples are loaded when the add-product dialog opens: the household
+   buys between two adds, and the list is a server response anyway. The scan
+   page has no dialog, so nothing is loaded there. */
+const addProductModal = document.getElementById('addProductModal');
+if (addProductModal) {
+    addProductModal.addEventListener('shown.bs.dialog', function () {
+        void loadFrequentProducts();
+    });
+}
+
+/* A product picture that is gone — the image cache emptied, the file
+   removed — has nothing to show, and a broken icon is worse than none. */
+if (el.productInfoImage) {
+    el.productInfoImage.addEventListener('error', function () {
+        el.productInfoImage.classList.add('d-none');
+    });
+}
 
 /* Mobile Safari suspends the video track while the page is backgrounded
    without changing html5-qrcode's internal state, so the scanner looks

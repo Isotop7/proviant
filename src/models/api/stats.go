@@ -8,8 +8,28 @@ type StatsMonthlyCount struct {
 
 // StatsExpiringProduct represents a product expiring within a short window
 type StatsExpiringProduct struct {
-	ProductName string `json:"productName"`
-	ExpireAt    string `json:"expireAt"` // format: "2006-01-02"
+	ID                  uint   `json:"id"`
+	ProductName         string `json:"productName"`
+	ExpireAt            string `json:"expireAt"` // format: "2006-01-02"
+	Quantity            int    `json:"quantity"`
+	PackSize            string `json:"packSize,omitempty"`
+	StorageLocationID   *uint  `json:"storageLocationId,omitempty"`
+	StorageLocationName string `json:"storageLocationName,omitempty"`
+	StorageLocationIcon string `json:"storageLocationIcon,omitempty"`
+}
+
+// StatsUseFirstProduct is one row of the "use me first" list: an active
+// product of the household with the date it should be eaten by, where it lives
+// and how many packs are there.
+type StatsUseFirstProduct struct {
+	ID                  uint   `json:"id"`
+	ProductName         string `json:"productName"`
+	ExpireAt            string `json:"expireAt"` // the effective expiry, format: "2006-01-02"; empty when the product has no date
+	Quantity            int    `json:"quantity"`
+	PackSize            string `json:"packSize,omitempty"`
+	StorageLocationID   *uint  `json:"storageLocationId,omitempty"`
+	StorageLocationName string `json:"storageLocationName,omitempty"`
+	StorageLocationIcon string `json:"storageLocationIcon,omitempty"`
 }
 
 // ProductSummaryResponse is the response body for GET /api/v1/products/summary
@@ -32,10 +52,15 @@ type HouseholdSettingsResponse struct {
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
 	MonthlyWasteGoalPercent *float64 `json:"monthlyWasteGoalPercent"`
 	Language                string   `json:"language"`
+	RequireTwoFactor        bool     `json:"requireTwoFactor"`
 }
 
 // UpdateHouseholdSettingsRequest is the request body for PATCH /api/v1/household/settings.
 // Language is nil when omitted (unchanged), "" resets to automatic detection.
+//
+// The two-factor policy is not part of this request: the endpoint replaces
+// the waste goal wholesale, so it has its own route
+// (PATCH /api/v1/household/two-factor).
 type UpdateHouseholdSettingsRequest struct {
 	MonthlyWasteGoalType    string   `json:"monthlyWasteGoalType"`
 	MonthlyWasteGoalCount   *int     `json:"monthlyWasteGoalCount"`
@@ -53,6 +78,7 @@ type ProductStatsResponse struct {
 	LastInsertedProduct string                 `json:"lastInsertedProduct"`
 	ExpiringSoon        []StatsExpiringProduct `json:"expiringSoon"`
 	ExpiringSoonDays    int                    `json:"expiringSoonDays"`
+	UseFirst            []StatsUseFirstProduct `json:"useFirst"`
 	Categories          map[string]int         `json:"categories"`
 	ExpiryTrend         []StatsMonthlyCount    `json:"expiryTrend"`
 }

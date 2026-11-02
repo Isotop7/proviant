@@ -9,6 +9,7 @@
   "js.app.offlineQueuePending": "(%s ausstehende Änderung(en))",
   "js.app.offlineQueuePending_one": "(%s ausstehende Änderung)",
   "js.app.offlineQueuePending_other": "(%s ausstehende Änderungen)",
+  "js.app.offlineMutationExpired": "Diese gespeicherte Änderung ist zu alt, um sicher synchronisiert zu werden. Bitte wiederholen Sie sie.",
   "js.app.offlineStorageUnavailable": "Offline-Speicher ist nicht verfügbar — die Änderung wurde nicht vorgemerkt.",
   "js.chart.itemCount": "%d Produkte",
   "js.chart.itemCount_one": "%d Produkt",

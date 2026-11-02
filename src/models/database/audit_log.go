@@ -32,4 +32,9 @@ const (
 	AuditActionMemberLeft           = "member_left"
 	AuditActionAdminChanged         = "admin_changed"
 	AuditActionAccountDeleted       = "account_deleted"
+	AuditActionTwoFactorEnabled     = "two_factor_enabled"
+	AuditActionTwoFactorDisabled    = "two_factor_disabled"
+	AuditActionTwoFactorReset       = "two_factor_reset"
+	AuditActionTwoFactorRecovered   = "two_factor_recovered"
+	AuditActionTwoFactorFailed      = "two_factor_failed"
 )

@@ -94,22 +94,22 @@ func TestExtractIngredients(t *testing.T) {
 		},
 		{
 			name: "Some nil pointers",
-			ings: []*string{strPtr("chicken"), nil, strPtr("rice")},
+			ings: []*string{new("chicken"), nil, new("rice")},
 			want: []string{"chicken", "rice"},
 		},
 		{
 			name: "Empty strings filtered",
-			ings: []*string{strPtr("chicken"), strPtr(""), strPtr("rice")},
+			ings: []*string{new("chicken"), new(""), new("rice")},
 			want: []string{"chicken", "rice"},
 		},
 		{
 			name: "All valid",
-			ings: []*string{strPtr("chicken"), strPtr("garlic"), strPtr("salt")},
+			ings: []*string{new("chicken"), new("garlic"), new("salt")},
 			want: []string{"chicken", "garlic", "salt"},
 		},
 		{
 			name: "Nil and empty mixed",
-			ings: []*string{nil, strPtr(""), strPtr("onion")},
+			ings: []*string{nil, new(""), new("onion")},
 			want: []string{"onion"},
 		},
 	}
@@ -128,10 +128,6 @@ func TestExtractIngredients(t *testing.T) {
 			}
 		})
 	}
-}
-
-func strPtr(s string) *string {
-	return &s
 }
 
 func TestCollectKeywords(t *testing.T) {

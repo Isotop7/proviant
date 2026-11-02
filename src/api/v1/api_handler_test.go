@@ -358,7 +358,7 @@ func TestListWebhooks(t *testing.T) {
 			t.Errorf("Status = %v, want %v", w.Code, http.StatusOK)
 		}
 
-		var result map[string]interface{}
+		var result map[string]any
 		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
 			t.Errorf("unmarshal error: %v", err)
 		}

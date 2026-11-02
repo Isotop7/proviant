@@ -31,7 +31,7 @@ func TestLabelledProductResponse_LabelStartsWithProductName(t *testing.T) {
 // TestLabelledProductResponse_LabelTimeFormat pins the format string that
 // proviant.formatDate used, so the dropdown renders identically.
 func TestLabelledProductResponse_LabelTimeFormat(t *testing.T) {
-	stamp := time.Date(2026, 10, 11, 14, 30, 45, 0, time.UTC)
+	stamp := time.Date(2026, 10, 11, 14, 30, 45, 0, time.Local)
 	product := dbModel.Product{
 		ProductName: "Oat Milk",
 		ExpireAt:    stamp,

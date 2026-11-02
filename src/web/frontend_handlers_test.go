@@ -314,6 +314,42 @@ func TestProductsScanHandler(t *testing.T) {
 	requireStatus(t, w, http.StatusOK)
 }
 
+// The duplicate prompt is offered on both surfaces that create a product: the
+// products page and the scan page. A page that forgot the dialog would leave
+// the user with a refusal and no way to answer it.
+func TestDuplicatePromptRendersOnBothCreatePages(t *testing.T) {
+	env := newHandlerEnv(t)
+	_, user := seedHouseholdUser(t, env.db)
+
+	pages := []struct {
+		name    string
+		target  string
+		handler func(*gin.Context)
+	}{
+		{"products", "/web/products", env.frontend.Products},
+		{"scan", "/web/products/scan", env.frontend.ProductsScan},
+	}
+
+	for _, page := range pages {
+		t.Run(page.name, func(t *testing.T) {
+			w := env.run(user.ID, page.target, &configuration.ProviantConfiguration{}, page.handler)
+			requireStatus(t, w, http.StatusOK)
+			body := w.Body.String()
+			for _, marker := range []string{
+				`id="duplicateProductModal"`,
+				`id="btnDuplicateAddPack"`,
+				`id="btnDuplicateAddSeparately"`,
+				`id="btnDuplicateCancel"`,
+				`aria-live="polite"`,
+			} {
+				if !strings.Contains(body, marker) {
+					t.Errorf("the page does not carry %q", marker)
+				}
+			}
+		})
+	}
+}
+
 func TestProductsScanReceiptHandler(t *testing.T) {
 	env := newHandlerEnv(t)
 

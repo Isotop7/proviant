@@ -1,7 +1,6 @@
 package database
 
 import (
-	"strings"
 	"time"
 
 	apiModel "github.com/Isotop7/proviant/models/api"
@@ -12,8 +11,8 @@ import (
 )
 
 type SavingsRepositoryInterface interface {
-	MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error)
-	RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error
+	LoadCategoryResolver() (*CategoryResolver, error)
+	RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *CategoryResolver) error
 	GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error)
 }
 
@@ -29,41 +28,35 @@ func NewSavingsRepository(db *gorm.DB) *SavingsRepository {
 	return &SavingsRepository{DB: db}
 }
 
-// MatchCategory resolves a Product.Categories string to a ProductCategoryPrice row.
-// Returns nil if no match is found; caller should use zero-value pricing.
-func (r *SavingsRepository) MatchCategory(categories string) (*dbModel.ProductCategoryPrice, error) {
-	var allPrices []dbModel.ProductCategoryPrice
-	if err := r.DB.Find(&allPrices).Error; err != nil {
-		return nil, err
-	}
-
-	tokens := strings.Split(categories, ",")
-	for _, token := range tokens {
-		token = strings.TrimSpace(token)
-		if idx := strings.Index(token, ":"); idx != -1 {
-			token = strings.TrimSpace(token[idx+1:])
-		}
-		token = strings.ToLower(strings.ReplaceAll(token, "-", " "))
-
-		for i := range allPrices {
-			key := strings.ToLower(allPrices[i].CategoryKey)
-			if strings.Contains(token, key) || strings.Contains(key, token) {
-				return &allPrices[i], nil
-			}
-		}
-	}
-	return nil, nil
+// LoadCategoryResolver reads the canonical category rows and prepares them for
+// resolution. A caller that prices many products loads the resolver once and
+// hands it to every RecordSavingsEvent, so the canonical rows are read once
+// per request instead of once per product.
+func (r *SavingsRepository) LoadCategoryResolver() (*CategoryResolver, error) {
+	return LoadCategoryResolver(r.DB)
 }
 
 // RecordSavingsEvent writes a SavingsRecord for a consume or waste action.
-// eventType must be "consumed" or "wasted".
+// eventType must be dbModel.SavingsEventTypeConsumed or dbModel.SavingsEventTypeWasted.
+// The cause is why the event wasted the product; it does not change the event
+// type and stays empty for a consumed event and for an unattributed waste.
 // CO2 priority: per-product Agribalyse rate (product.CO2KgPerKg) > seeded category fallback.
 // Price priority: product.PriceOverride > seeded category average. The override is
 // the price of one pack, so it is multiplied by the number of packs.
-func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string) error {
-	catPrice, err := r.MatchCategory(product.Categories)
-	if err != nil {
-		return err
+// A nil resolver makes the repository load one; a caller that records many
+// events passes the resolver it already loaded.
+func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbModel.Product, eventType string, cause string, resolver *CategoryResolver) error {
+	if resolver == nil {
+		loaded, err := r.LoadCategoryResolver()
+		if err != nil {
+			return err
+		}
+		resolver = loaded
+	}
+
+	var catPrice *dbModel.ProductCategoryPrice
+	if resolved, ok := resolver.Resolve(product.Categories); ok {
+		catPrice = resolved
 	}
 
 	weightKg := 0.5
@@ -90,6 +83,7 @@ func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbMode
 		ProductID:   product.ID,
 		ProductName: product.ProductName,
 		EventType:   eventType,
+		WasteCause:  cause,
 		PriceEUR:    priceEUR,
 		CO2Kg:       co2Kg,
 		Amount:      product.Quantity,
@@ -104,7 +98,7 @@ func (r *SavingsRepository) RecordSavingsEvent(householdID uint, product *dbMode
 // reported so the gap can be explained.
 func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsStatsResponse, error) {
 	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	monthStart := util.MonthStart(now)
 	monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
 
 	var monthRecords []dbModel.SavingsRecord
@@ -123,20 +117,20 @@ func (r *SavingsRepository) GetSavingsStats(householdID uint) (apiModel.SavingsS
 	var resp apiModel.SavingsStatsResponse
 	for idx := range monthRecords {
 		switch monthRecords[idx].EventType {
-		case "consumed":
+		case dbModel.SavingsEventTypeConsumed:
 			resp.SavedEURThisMonth += monthRecords[idx].PriceEUR
 			resp.SavedCO2KgThisMonth += monthRecords[idx].CO2Kg
-		case "wasted":
+		case dbModel.SavingsEventTypeWasted:
 			resp.WastedEURThisMonth += monthRecords[idx].PriceEUR
 			resp.WastedCO2KgThisMonth += monthRecords[idx].CO2Kg
 		}
 	}
 	for idx := range allRecords {
 		switch allRecords[idx].EventType {
-		case "consumed":
+		case dbModel.SavingsEventTypeConsumed:
 			resp.SavedEURLifetime += allRecords[idx].PriceEUR
 			resp.SavedCO2KgLifetime += allRecords[idx].CO2Kg
-		case "wasted":
+		case dbModel.SavingsEventTypeWasted:
 			resp.WastedEURLifetime += allRecords[idx].PriceEUR
 			resp.WastedCO2KgLifetime += allRecords[idx].CO2Kg
 		}

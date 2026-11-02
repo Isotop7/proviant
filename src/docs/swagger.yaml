@@ -6,6 +6,13 @@ definitions:
         type: string
       message:
         type: string
+      reason:
+        description: |-
+          Reason is a stable machine-readable identifier of the cause. The message
+          is prose and may be reworded; a client that has to branch on the cause
+          reads this. It is not called "code" because the sign-in route answers
+          with a numeric code on success and the two would collide.
+        type: string
     type: object
   api.ActivityEntry:
     properties:
@@ -22,6 +29,11 @@ definitions:
       userId:
         type: integer
       userName:
+        type: string
+      wasteCause:
+        description: |-
+          WasteCause is why the action wasted the product. It is empty for every
+          action but a waste that carried a reason.
         type: string
     type: object
   api.ActivityLogResponse:
@@ -65,6 +77,13 @@ definitions:
           type: integer
         type: array
       message:
+        type: string
+      reason:
+        description: |-
+          Reason is a stable machine-readable identifier of the cause. The message
+          is prose and may be reworded; a client that has to branch on the cause
+          reads this. It is not called "code" because the sign-in route answers
+          with a numeric code on success and the two would collide.
         type: string
     type: object
   api.BulkCreateRequest:
@@ -112,6 +131,14 @@ definitions:
         type: string
       categories:
         type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the product belongs to. It is
+          sent as null when the draft names no category.
+        type: string
+      daysAfterOpening:
+        description: DaysAfterOpening is the shelf life after opening, in days.
+        type: integer
       expireAt:
         description: ExpireAt is the expiry date the receipt carries, as an RFC 3339
           date.
@@ -144,6 +171,18 @@ definitions:
         description: StorageLocationID is the location the product is stored in.
         type: integer
       unit:
+        type: string
+    type: object
+  api.BulkProductsAPIModel:
+    properties:
+      productIDs:
+        items:
+          type: integer
+        type: array
+      wasteCause:
+        description: |-
+          WasteCause is why the products are wasted. It applies to every product
+          of the request and is ignored by a bulk consume.
         type: string
     type: object
   api.ConsumptionRateResponse:
@@ -406,6 +445,27 @@ definitions:
         type: integer
       unit:
         type: string
+      wasteCause:
+        type: string
+    type: object
+  api.FrequentProduct:
+    properties:
+      barcode:
+        type: string
+      categoryKey:
+        type: string
+      imageUrl:
+        type: string
+      lastBoughtAt:
+        type: string
+      packSize:
+        type: string
+      productName:
+        type: string
+      purchaseCount:
+        type: integer
+      storageLocationId:
+        type: integer
     type: object
   api.FullExportHousehold:
     properties:
@@ -464,6 +524,21 @@ definitions:
         type: integer
       status:
         type: string
+    type: object
+  api.HouseholdCategoryResponse:
+    properties:
+      categoryKey:
+        type: string
+      defaultDaysAfterOpening:
+        type: integer
+      defaultShelfLifeDays:
+        type: integer
+      displayName:
+        type: string
+      hidden:
+        type: boolean
+      sortOrder:
+        type: integer
     type: object
   api.HouseholdIntegrationResponse:
     properties:
@@ -524,6 +599,8 @@ definitions:
         type: number
       monthlyWasteGoalType:
         type: string
+      requireTwoFactor:
+        type: boolean
     type: object
   api.HouseholdUserResponse:
     properties:
@@ -538,6 +615,8 @@ definitions:
       telegramConfigured:
         type: boolean
       telegramLinked:
+        type: boolean
+      twoFactorEnabled:
         type: boolean
       username:
         type: string
@@ -656,8 +735,16 @@ definitions:
         type: string
       categories:
         type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the product belongs to. It is
+          sent as null when the draft names no category.
+        type: string
       clientSyncId:
         type: string
+      daysAfterOpening:
+        description: DaysAfterOpening is the shelf life after opening, in days.
+        type: integer
       expireAt:
         description: ExpireAt is the expiry date the receipt carries, as an RFC 3339
           date.
@@ -756,6 +843,61 @@ definitions:
       storageHint:
         type: string
     type: object
+  api.ProductActionDTO:
+    properties:
+      clientMutationId:
+        type: string
+      quantity:
+        type: integer
+      wasteCause:
+        description: WasteCause is why the packs are wasted. It is ignored by a consume.
+        type: string
+    type: object
+  api.ProductActionResponse:
+    properties:
+      action:
+        type: string
+      message:
+        type: string
+      reason:
+        description: |-
+          Reason is a stable machine-readable identifier of the cause. The message
+          is prose and may be reworded; a client that has to branch on the cause
+          reads this. It is not called "code" because the sign-in route answers
+          with a numeric code on success and the two would collide.
+        type: string
+      removed:
+        type: integer
+    type: object
+  api.ProductConflictResponse:
+    properties:
+      action:
+        type: string
+      duplicate:
+        $ref: '#/definitions/api.ProductResponse'
+      message:
+        type: string
+      reason:
+        description: |-
+          Reason is a stable machine-readable identifier of the cause. The message
+          is prose and may be reworded; a client that has to branch on the cause
+          reads this. It is not called "code" because the sign-in route answers
+          with a numeric code on success and the two would collide.
+        type: string
+    type: object
+  api.ProductListResponse:
+    properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
+      products:
+        items:
+          $ref: '#/definitions/api.ProductResponse'
+        type: array
+      total:
+        type: integer
+    type: object
   api.ProductQuantityDTO:
     properties:
       clientMutationId:
@@ -771,6 +913,8 @@ definitions:
       barcode:
         type: string
       categories:
+        type: string
+      categoryKey:
         type: string
       co2KgPerKg:
         type: number
@@ -815,6 +959,8 @@ definitions:
         $ref: '#/definitions/api.StorageLocationResponse'
       storageLocationId:
         type: integer
+      wasteCause:
+        type: string
     type: object
   api.ProductStatsResponse:
     properties:
@@ -840,6 +986,10 @@ definitions:
         type: integer
       uniqueArchived:
         type: integer
+      useFirst:
+        items:
+          $ref: '#/definitions/api.StatsUseFirstProduct'
+        type: array
       wasteCount:
         type: integer
       wastePercent:
@@ -855,6 +1005,64 @@ definitions:
         type: integer
       wasteThisMonth:
         type: integer
+    type: object
+  api.PurchaseShoppingListItemRequest:
+    properties:
+      addToProductId:
+        description: |-
+          AddToProductID is the product the bought packs go into when it is not
+          the product the item points at: the caller resolved a same-item
+          conflict by hand.
+        type: integer
+      allowDuplicate:
+        description: |-
+          AllowDuplicate writes a second product instead of refusing when the
+          bought product matches one the household already has.
+        type: boolean
+      barcode:
+        description: |-
+          Barcode identifies the bought product. An empty barcode leaves the
+          product without one.
+        type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the bought product belongs to.
+          It defaults to the category of the item.
+        type: string
+      expireAt:
+        description: |-
+          ExpireAt is the expiry date the user confirmed, as "2006-01-02" or an
+          RFC 3339 timestamp. An empty value leaves the date to the household's
+          category default.
+        type: string
+      packSize:
+        description: |-
+          PackSize is the size of one pack. It defaults to the size of the
+          product the item points at.
+        type: string
+      quantity:
+        description: |-
+          Quantity is the number of packs bought. It defaults to the number of
+          packs the item asked for; the two are not the same number.
+        type: integer
+      scanned:
+        description: Scanned says the barcode was scanned rather than typed.
+        type: boolean
+      storageLocationId:
+        description: StorageLocationID is where the bought packs go.
+        type: integer
+    type: object
+  api.PurchaseShoppingListItemResponse:
+    properties:
+      created:
+        description: |-
+          Created says the purchase created a product. It is false when the
+          bought packs went into the product the item already pointed at.
+        type: boolean
+      item:
+        $ref: '#/definitions/api.ShoppingListItemResponse'
+      product:
+        $ref: '#/definitions/api.ProductResponse'
     type: object
   api.ReceiptItem:
     properties:
@@ -1024,6 +1232,11 @@ definitions:
     properties:
       category:
         type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the entry belongs to. It is what
+          the household's shelf-life defaults are looked up by.
+        type: string
       checked:
         type: boolean
       createdBy:
@@ -1049,7 +1262,19 @@ definitions:
       expireAt:
         description: 'format: "2006-01-02"'
         type: string
+      id:
+        type: integer
+      packSize:
+        type: string
       productName:
+        type: string
+      quantity:
+        type: integer
+      storageLocationIcon:
+        type: string
+      storageLocationId:
+        type: integer
+      storageLocationName:
         type: string
     type: object
   api.StatsMonthlyCount:
@@ -1058,6 +1283,27 @@ definitions:
         type: integer
       month:
         description: 'format: "2006-01"'
+        type: string
+    type: object
+  api.StatsUseFirstProduct:
+    properties:
+      expireAt:
+        description: 'the effective expiry, format: "2006-01-02"; empty when the product
+          has no date'
+        type: string
+      id:
+        type: integer
+      packSize:
+        type: string
+      productName:
+        type: string
+      quantity:
+        type: integer
+      storageLocationIcon:
+        type: string
+      storageLocationId:
+        type: integer
+      storageLocationName:
         type: string
     type: object
   api.StorageLocationResponse:
@@ -1076,6 +1322,31 @@ definitions:
       currentStreak:
         type: integer
       longestStreak:
+        type: integer
+    type: object
+  api.TOTPConfirmResponse:
+    properties:
+      recoveryCodes:
+        items:
+          type: string
+        type: array
+      twoFactorEnabled:
+        type: boolean
+    type: object
+  api.TOTPEnrolResponse:
+    properties:
+      expiresAt:
+        type: string
+      qr:
+        type: string
+    type: object
+  api.TOTPStatusResponse:
+    properties:
+      enabled:
+        type: boolean
+      pending:
+        type: boolean
+      recoveryCodesRemaining:
         type: integer
     type: object
   api.TokenResponse:
@@ -1212,10 +1483,26 @@ definitions:
     type: object
   api.WasteAnalyticsResponse:
     properties:
+      causes:
+        description: Causes breaks the wasted events down by the reason they were
+          wasted.
+        items:
+          $ref: '#/definitions/api.WasteCauseStat'
+        type: array
       co2Source:
         type: string
       consumedCount:
         type: integer
+      insight:
+        description: |-
+          Insight is the one-sentence insight about the household's waste, in the
+          user's language.
+        type: string
+      insightAvailable:
+        description: |-
+          InsightAvailable is false when there is too little data to state an
+          insight; the Insight then holds the empty-state sentence.
+        type: boolean
       monthly:
         items:
           $ref: '#/definitions/api.WasteMonthly'
@@ -1224,6 +1511,10 @@ definitions:
         items:
           $ref: '#/definitions/api.WasteCategoryStat'
         type: array
+      overbuy:
+        allOf:
+        - $ref: '#/definitions/api.WasteOverbuyStat'
+        description: Overbuy names the category the household most over-buys.
       period:
         description: '"month" | "3months" | "6months" | "12months"'
         type: string
@@ -1262,6 +1553,19 @@ definitions:
           $ref: '#/definitions/api.WasteProductStat'
         type: array
     type: object
+  api.WasteCauseStat:
+    properties:
+      cause:
+        type: string
+      costEur:
+        type: number
+      count:
+        type: integer
+      share:
+        description: Share is the cause's share of all wasted events in the window,
+          in percent.
+        type: number
+    type: object
   api.WasteMonthly:
     properties:
       consumedCount:
@@ -1274,6 +1578,22 @@ definitions:
       wastedCount:
         type: integer
       wastedEur:
+        type: number
+    type: object
+  api.WasteOverbuyStat:
+    properties:
+      categoryKey:
+        type: string
+      categoryWaste:
+        description: CategoryWaste is the number of all waste events in the category.
+        type: integer
+      count:
+        description: Count is the number of over-bought waste events in the category.
+        type: integer
+      displayName:
+        type: string
+      share:
+        description: Share is Count as a percentage of CategoryWaste.
         type: number
     type: object
   api.WasteProductStat:
@@ -1346,6 +1666,11 @@ definitions:
     type: object
   authentication.Login:
     properties:
+      code:
+        description: |-
+          Code carries the second factor of an account that has one. It stays
+          empty for every account without a second factor.
+        type: string
       password:
         type: string
       username:
@@ -1371,9 +1696,20 @@ definitions:
     type: object
   database.Product:
     properties:
+      allowDuplicate:
+        description: |-
+          AllowDuplicate says the caller has seen the duplicate refusal and wants
+          a row of its own anyway. It is a request flag and never stored.
+        type: boolean
       barcode:
         type: string
       categories:
+        type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category the product belongs to. It is what
+          the household's shelf-life defaults are looked up by. Categories keeps
+          the free text Open Food Facts wrote, which the recipe suggestions read.
         type: string
       clientSyncId:
         type: string
@@ -1421,6 +1757,11 @@ definitions:
         type: integer
       updatedAt:
         type: string
+      wasteCause:
+        description: |-
+          WasteCause is why the product was wasted. It is set when the waste
+          archives the row and is empty for an unattributed waste.
+        type: string
     type: object
   database.ProductDTOBarcode:
     properties:
@@ -1441,6 +1782,11 @@ definitions:
       ID:
         type: integer
       categories:
+        type: string
+      categoryKey:
+        description: |-
+          CategoryKey is the canonical category of the product. It is sent as
+          null to clear it.
         type: string
       countries:
         type: string
@@ -1601,6 +1947,26 @@ definitions:
       order:
         type: integer
       w:
+        type: integer
+    type: object
+  v1.householdCategoryOrderRequest:
+    properties:
+      keys:
+        items:
+          type: string
+        type: array
+    type: object
+  v1.householdCategoryRequest:
+    properties:
+      defaultDaysAfterOpening:
+        type: integer
+      defaultShelfLifeDays:
+        type: integer
+      displayName:
+        type: string
+      hidden:
+        type: boolean
+      sortOrder:
         type: integer
     type: object
   v1.receiptScanDefaultsResponse:
@@ -1868,6 +2234,42 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Reset user password
+      tags:
+      - household
+  /api/v1/admin/users/{id}/reset-two-factor:
+    post:
+      description: Removes the second factor and the recovery codes of a member of
+        the household and sends them a password reset mail. Caller must be admin.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Clear the two-factor authentication of a household member
       tags:
       - household
   /api/v1/calendar/export.ics:
@@ -2216,6 +2618,102 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Reject a household application
+      tags:
+      - household
+  /api/v1/household/categories:
+    get:
+      description: Returns every canonical category with the household's display name,
+        order, visibility and shelf-life defaults applied.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.HouseholdCategoryResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: List household categories
+      tags:
+      - household
+  /api/v1/household/categories/{categoryKey}:
+    patch:
+      consumes:
+      - application/json
+      description: Stores the household's display name, order, visibility and shelf-life
+        defaults for one canonical category. A shelf life of zero clears the stored
+        value.
+      parameters:
+      - description: Canonical category key
+        in: path
+        name: categoryKey
+        required: true
+        type: string
+      - description: Category overrides
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.householdCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdCategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Update a household category
+      tags:
+      - household
+  /api/v1/household/categories/order:
+    put:
+      consumes:
+      - application/json
+      description: Stores the household's order over the canonical categories. The
+        listed keys are written in the order they are given.
+      parameters:
+      - description: Category order
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.householdCategoryOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Reorder household categories
       tags:
       - household
   /api/v1/household/integrations:
@@ -2688,8 +3186,8 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Updates the monthly waste goal and language of the caller's household
-        (admin only)
+      description: Updates the monthly waste goal, the language and the two-factor
+        policy of the caller's household (admin only)
       parameters:
       - description: Settings
         in: body
@@ -2837,6 +3335,49 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Update a storage location
+      tags:
+      - household
+  /api/v1/household/two-factor:
+    patch:
+      consumes:
+      - application/json
+      description: Stores whether every member of the household has to use a second
+        factor at sign-in (admin only)
+      parameters:
+      - description: Policy
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: boolean
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.HouseholdSettingsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Updates the two-factor policy of the household
       tags:
       - household
   /api/v1/mealplans:
@@ -3311,16 +3852,53 @@ paths:
       - onboarding
   /api/v1/products:
     get:
-      description: Return a list of products of user
+      description: 'Return a list of products of user. The list is ordered by the
+        effective expiry by default — the earlier of the printed expiry and the opened-shelf-life
+        date — with the products without a date last. A product that carries a shelf
+        life is ordered by the date it goes off, not by the date printed on it. The
+        order is the same on every request: products that share the sort key keep
+        the order of their ids, so a client that walks the pages by offset reads every
+        product exactly once. The response carries the products of the page, the total
+        number of products the filter matched, and the window that produced the page.
+        The total counts the whole set, not the page. An offset walk is stable as
+        long as the household''s products do not change in between: a product that
+        is added or removed shifts the rows behind it. A page ordered by the effective
+        expiry is resolved before it is cut out, because the effective expiry has
+        no sortable column — every page costs the same as reading the whole list.'
+      parameters:
+      - default: effective_expire_at
+        description: Sort field (product_name, expire_at, created_at, effective_expire_at)
+        in: query
+        name: sort
+        type: string
+      - default: asc
+        description: Sort order (asc, desc)
+        in: query
+        name: order
+        type: string
+      - default: 100
+        description: Number of products to return (1-1000)
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of products to skip before the first one returned
+        in: query
+        name: offset
+        type: integer
+      - description: 'Ids of the products to return (comma separated, max 1000). ids
+          wins over limit, offset and sort: the named products are returned in id
+          order, unpaged, and the total is the number of them the caller may see.'
+        in: query
+        name: ids
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/api.ProductResponse'
-            type: array
+            $ref: '#/definitions/api.ProductListResponse'
         "400":
           description: Bad Request
           schema:
@@ -3342,7 +3920,12 @@ paths:
         exists in the household, the existing product is returned with 200 instead
         of creating a duplicate. A clientSyncId held by another member''s private
         product is answered with 409: the id is taken, but the row is not the caller''s
-        to read.'
+        to read. A create that duplicates an active row of the household — the same
+        barcode in the same storage location with the same effective expiry — is answered
+        with 409 and the matched product in the body, so the client can ask whether
+        to add a pack to it, to create a separate product, or to cancel. Archived
+        rows and other members'' private products are never matches. A body that sets
+        allowDuplicate skips the duplicate check and writes the row as it is.'
       parameters:
       - description: Product
         in: body
@@ -3368,7 +3951,7 @@ paths:
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.ProductConflictResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -3566,21 +4149,32 @@ paths:
       - product
   /api/v1/products/{id}/consume:
     post:
-      description: Soft-deletes (archives) a product without firing a product.wasted
-        webhook event
+      consumes:
+      - application/json
+      description: 'Consumes the requested number of packs. Omitting the body or quantity
+        consumes the whole stock. A partial consume leaves the remaining packs active;
+        a full consume soft-deletes the row with removal reason consumed. A cause
+        in the body is ignored: a consume has no reason. The response carries the
+        number of packs that actually left the stock.'
       parameters:
       - description: Product ID
         in: path
         name: id
         required: true
         type: integer
+      - description: Pack quantity, optional waste cause and optional offline mutation
+          ID
+        in: body
+        name: action
+        schema:
+          $ref: '#/definitions/api.ProductActionDTO'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.ProductActionResponse'
         "400":
           description: Bad Request
           schema:
@@ -3589,11 +4183,15 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.APIResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/api.APIResponse'
-      summary: Mark product as consumed
+      summary: Consume product packs
       tags:
       - product
   /api/v1/products/{id}/consumption-rate:
@@ -3826,20 +4424,34 @@ paths:
       - product
   /api/v1/products/{id}/waste:
     post:
-      description: Hard-deletes a product and fires the product.wasted webhook event
+      consumes:
+      - application/json
+      description: Wastes the requested number of packs. Omitting the body or quantity
+        wastes the whole stock. A partial waste leaves the remaining packs active;
+        a full waste soft-deletes the row with removal reason wasted and fires the
+        product.wasted webhook. The optional waste cause names why the packs were
+        wasted (spoiled, overbought, forgotten, disliked, other); a waste without
+        a cause is recorded as unattributed waste. The response carries the number
+        of packs that actually left the stock.
       parameters:
       - description: Product ID
         in: path
         name: id
         required: true
         type: integer
+      - description: Pack quantity, optional waste cause and optional offline mutation
+          ID
+        in: body
+        name: action
+        schema:
+          $ref: '#/definitions/api.ProductActionDTO'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.ProductActionResponse'
         "400":
           description: Bad Request
           schema:
@@ -3848,25 +4460,44 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.APIResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/api.APIResponse'
-      summary: Mark product as wasted
+      summary: Waste product packs
       tags:
       - product
   /api/v1/products/archived:
     get:
-      description: Return a list of archived products of user
+      description: 'Return a list of archived products of user. The response carries
+        the products of the page, the total number of archived products the caller
+        may see, and the window that produced the page. The total counts the whole
+        archived set, not the page. The archived products are ordered by their id,
+        so a client that walks the pages by offset reads every one of them exactly
+        once. The endpoint pages by its own window: an ids parameter is not read here,
+        the archived list is never narrowed to named products.'
+      parameters:
+      - default: 100
+        description: Number of archived products to return (1-1000)
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of archived products to skip before the first one returned
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/api.ProductResponse'
-            type: array
+            $ref: '#/definitions/api.ProductListResponse'
         "400":
           description: Bad Request
           schema:
@@ -3882,10 +4513,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates products from a list of drafts with per-item results. Partial
-        success is allowed; each item reports created or failed with a reason. The
-        price of a draft is the price of the whole line and is stored per pack, so
-        a draft of three packs at 6 EUR stores a price of 2 EUR per pack.
+      description: 'Creates products from a list of drafts with per-item results.
+        Partial success is allowed; each item reports created or failed with a reason.
+        The price of a draft is the price of the whole line and is stored per pack,
+        so a draft of three packs at 6 EUR stores a price of 2 EUR per pack. A batch
+        is insert-only: a draft that duplicates a row of the household — the same
+        barcode in the same storage location with the same effective expiry — is written
+        as a row of its own, because a batch may hold several packs of one product
+        and a duplicate cannot be answered with a question.'
       parameters:
       - description: Product drafts
         in: body
@@ -3994,18 +4629,18 @@ paths:
       consumes:
       - application/json
       description: 'Hard-deletes multiple products and fires the product.wasted webhook
-        per product. Reports the ids that were not touched: 404 when none could be
-        wasted (unknown or foreign ids), 200 with the failed ids in failedIds when
-        only some fail, 500 (also carrying failedIds) when a failure was server-side.'
+        per product. The optional waste cause names why the products were wasted (spoiled,
+        overbought, forgotten, disliked, other) and applies to every product of the
+        request. Reports the ids that were not touched: 404 when none could be wasted
+        (unknown or foreign ids), 200 with the failed ids in failedIds when only some
+        fail, 500 (also carrying failedIds) when a failure was server-side.'
       parameters:
-      - description: Product IDs
+      - description: Product IDs and the optional waste cause
         in: body
-        name: productIDs
+        name: request
         required: true
         schema:
-          items:
-            type: integer
-          type: array
+          $ref: '#/definitions/api.BulkProductsAPIModel'
       produces:
       - application/json
       responses:
@@ -4230,6 +4865,31 @@ paths:
       summary: Export products as JSON
       tags:
       - export
+  /api/v1/products/frequently-bought:
+    get:
+      description: Returns the archived products the household bought at least twice,
+        most frequent first and most recent second. Every entry carries the name,
+        the pack size, the category and the storage location the household itself
+        used, so a suggestion fills the add-product form with what this household
+        actually buys. Another member's private product is never part of the list
+        and never counts towards a barcode the household shares. The list is empty
+        when the household has no such product.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.FrequentProduct'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Return frequently bought products
+      tags:
+      - product
   /api/v1/products/import:
     post:
       consumes:
@@ -4444,7 +5104,14 @@ paths:
       - product
   /api/v1/products/search:
     get:
-      description: Returns a list of products based on a query
+      description: Returns a list of products based on a query. The response carries
+        the products of the page, the total number of products the search matched,
+        and the window that produced the page. The total counts every match, not the
+        page. The matches that share the sort key keep the order of their ids, so
+        a client that walks the pages by offset reads every match exactly once. A
+        limit that is not set returns every match. A page ordered by the effective
+        expiry is resolved before it is cut out, because the effective expiry has
+        no sortable column — every page costs the same as reading every match.
       parameters:
       - description: Search field (product_name, barcode)
         in: query
@@ -4458,7 +5125,7 @@ paths:
         type: string
       - default: product_name
         description: Sort field (product_name, expire_at, created_at, scanned_at,
-          notified_at, barcode)
+          notified_at, barcode, effective_expire_at)
         in: query
         name: sort
         type: string
@@ -4467,15 +5134,23 @@ paths:
         in: query
         name: order
         type: string
+      - description: Number of matches to return (max 1000). Without a limit every
+          match is returned.
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of matches to skip before the first one returned
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/api.ProductResponse'
-            type: array
+            $ref: '#/definitions/api.ProductListResponse'
         "400":
           description: Bad Request
           schema:
@@ -4490,7 +5165,9 @@ paths:
   /api/v1/products/stats:
     get:
       description: Returns waste rate, top archived products, category breakdown and
-        expiry trend
+        expiry trend. The useFirst list names the products of the whole household
+        ordered by the effective expiry, soonest first, with the storage location
+        and the pack count of each.
       produces:
       - application/json
       responses:
@@ -4535,8 +5212,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates queued drafts. Replayed clientSyncId values return the
-        existing product.
+      description: 'Creates queued drafts. Replayed clientSyncId values return the
+        existing product. The queue is insert-only: a queued draft that duplicates
+        a row of the household — the same barcode in the same storage location with
+        the same effective expiry — is written as a row of its own, because the sync
+        runs unattended and a duplicate cannot be answered with a question.'
       parameters:
       - description: Queued drafts
         in: body
@@ -4939,6 +5619,61 @@ paths:
       summary: Updates a shopping list item
       tags:
       - shopping-list
+  /api/v1/shopping-list/{id}/purchase:
+    post:
+      consumes:
+      - application/json
+      description: 'Turns a shopping list item into a product of the household and
+        checks the item. The pack count of the product is the number of packs bought,
+        which is not the number the item asked for. The expiry is the one the request
+        carries; without one the household''s shelf life of the category fills it.
+        An item that already points at a product gets the bought packs added to that
+        product instead of a second row — that product keeps its own expiry, category,
+        pack size and storage location, so the fields of the request that describe
+        a product do not apply to it. The product and the check land together or not
+        at all. A bought product that matches one the household already has is refused
+        with 409 and the matched product in the body: the caller decides whether the
+        packs belong to that row (addToProductId) or make a product of their own (allowDuplicate).'
+      parameters:
+      - description: Shopping list item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'The purchase: packs bought, expiry, category, storage location'
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.PurchaseShoppingListItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.PurchaseShoppingListItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.ProductConflictResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Buys a shopping list item
+      tags:
+      - shopping-list
   /api/v1/shopping-list/{id}/toggle:
     post:
       description: Flips the checked state of the shopping list item with the given
@@ -5016,7 +5751,9 @@ paths:
       description: |-
         Returns per-month consumed vs. wasted metrics, top wasted categories
         with monetary and CO2 impact (each category nests its top wasted products),
-        and a 6-month trend. EUR prices come from per-product overrides (if set)
+        the waste broken down by the reason it was wasted, the category the household
+        most over-buys and a one-sentence insight about it, and a 6-month trend.
+        EUR prices come from per-product overrides (if set)
         or category averages; CO2 is sourced from the Agribalyse LCA database via
         Open Food Facts ecoscore_data.
       parameters:
@@ -5447,6 +6184,140 @@ paths:
       summary: Deletes a personal access token
       tags:
       - user
+  /api/v1/user/totp:
+    get:
+      description: Reports whether the user has enrolled a second factor and how many
+        recovery codes are left
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TOTPStatusResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Reports the two-factor state of the user
+      tags:
+      - user
+    post:
+      description: Generates a TOTP secret and returns it as a QR code image. The
+        secret is stored encrypted and is never part of the response
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TOTPEnrolResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Starts a two-factor enrolment
+      tags:
+      - user
+  /api/v1/user/totp/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the code of the pending enrolment and activates the second
+        factor. The returned recovery codes are shown once and only their hashes are
+        stored
+      parameters:
+      - description: Code
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TOTPConfirmResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Confirms a two-factor enrolment
+      tags:
+      - user
+  /api/v1/user/totp/disable:
+    post:
+      consumes:
+      - application/json
+      description: Removes the TOTP secret and the recovery codes after the current
+        password was confirmed
+      parameters:
+      - description: Password
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Disables the two-factor authentication
+      tags:
+      - user
   /api/v1/webhooks:
     get:
       description: Lists all webhooks of the authenticated user
@@ -5825,6 +6696,44 @@ paths:
       summary: Creates a new user
       tags:
       - user
+  /auth/totp/setup/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Activates the TOTP second factor for an account whose household
+        requires one. The account is confirmed with its password and the code of the
+        pending enrolment
+      parameters:
+      - description: Username, password and code
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.TOTPConfirmResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Confirms a two-factor setup
+      tags:
+      - auth
   /auth/verify-email:
     post:
       consumes:
@@ -5904,6 +6813,20 @@ paths:
       summary: Prometheus metrics
       tags:
       - common
+  /offline:
+    get:
+      description: Renders the app-styled offline screen the service worker serves
+        from its cache when a navigation fails.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Offline fallback page
+      tags:
+      - web
   /web:
     get:
       description: Renders the home page showing product dashboard

@@ -276,6 +276,59 @@
                 }
             }
         },
+        "/api/v1/admin/users/{id}/reset-two-factor": {
+            "post": {
+                "description": "Removes the second factor and the recovery codes of a member of the household and sends them a password reset mail. Caller must be admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Clear the two-factor authentication of a household member",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/calendar/export.ics": {
             "get": {
                 "description": "Returns an iCalendar (RFC 5545) feed with VEVENTs for products expiring in the next 30 days. Use the token query parameter for authentication.",
@@ -724,6 +777,146 @@
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/categories": {
+            "get": {
+                "description": "Returns every canonical category with the household's display name, order, visibility and shelf-life defaults applied.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "List household categories",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.HouseholdCategoryResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/categories/order": {
+            "put": {
+                "description": "Stores the household's order over the canonical categories. The listed keys are written in the order they are given.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Reorder household categories",
+                "parameters": [
+                    {
+                        "description": "Category order",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.householdCategoryOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/categories/{categoryKey}": {
+            "patch": {
+                "description": "Stores the household's display name, order, visibility and shelf-life defaults for one canonical category. A shelf life of zero clears the stored value.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Update a household category",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Canonical category key",
+                        "name": "categoryKey",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Category overrides",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.householdCategoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdCategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -1458,7 +1651,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates the monthly waste goal and language of the caller's household (admin only)",
+                "description": "Updates the monthly waste goal, the language and the two-factor policy of the caller's household (admin only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -1666,6 +1859,72 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/household/two-factor": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stores whether every member of the household has to use a second factor at sign-in (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "household"
+                ],
+                "summary": "Updates the two-factor policy of the household",
+                "parameters": [
+                    {
+                        "description": "Policy",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.HouseholdSettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -2460,7 +2719,7 @@
         },
         "/api/v1/products": {
             "get": {
-                "description": "Return a list of products of user",
+                "description": "Return a list of products of user. The list is ordered by the effective expiry by default — the earlier of the printed expiry and the opened-shelf-life date — with the products without a date last. A product that carries a shelf life is ordered by the date it goes off, not by the date printed on it. The order is the same on every request: products that share the sort key keep the order of their ids, so a client that walks the pages by offset reads every product exactly once. The response carries the products of the page, the total number of products the filter matched, and the window that produced the page. The total counts the whole set, not the page. An offset walk is stable as long as the household's products do not change in between: a product that is added or removed shifts the rows behind it. A page ordered by the effective expiry is resolved before it is cut out, because the effective expiry has no sortable column — every page costs the same as reading the whole list.",
                 "produces": [
                     "application/json"
                 ],
@@ -2468,14 +2727,47 @@
                     "product"
                 ],
                 "summary": "Return a list of products",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "effective_expire_at",
+                        "description": "Sort field (product_name, expire_at, created_at, effective_expire_at)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort order (asc, desc)",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Number of products to return (1-1000)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of products to skip before the first one returned",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ids of the products to return (comma separated, max 1000). ids wins over limit, offset and sort: the named products are returned in id order, unpaged, and the total is the number of them the caller may see.",
+                        "name": "ids",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/api.ProductResponse"
-                            }
+                            "$ref": "#/definitions/api.ProductListResponse"
                         }
                     },
                     "400": {
@@ -2493,7 +2785,7 @@
                 }
             },
             "post": {
-                "description": "Creates a new product of a user. The body carries the pack count and the size of one pack (\"1 l\"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read.",
+                "description": "Creates a new product of a user. The body carries the pack count and the size of one pack (\"1 l\"); a count below one is stored as one. The price is the price of one pack, so the savings of the product are that price times the number of packs. When the body carries a clientSyncId that already exists in the household, the existing product is returned with 200 instead of creating a duplicate. A clientSyncId held by another member's private product is answered with 409: the id is taken, but the row is not the caller's to read. A create that duplicates an active row of the household — the same barcode in the same storage location with the same effective expiry — is answered with 409 and the matched product in the body, so the client can ask whether to add a pack to it, to create a separate product, or to cancel. Archived rows and other members' private products are never matches. A body that sets allowDuplicate skips the duplicate check and writes the row as it is.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2537,7 +2829,7 @@
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.ProductConflictResponse"
                         }
                     },
                     "500": {
@@ -2551,7 +2843,7 @@
         },
         "/api/v1/products/archived": {
             "get": {
-                "description": "Return a list of archived products of user",
+                "description": "Return a list of archived products of user. The response carries the products of the page, the total number of archived products the caller may see, and the window that produced the page. The total counts the whole archived set, not the page. The archived products are ordered by their id, so a client that walks the pages by offset reads every one of them exactly once. The endpoint pages by its own window: an ids parameter is not read here, the archived list is never narrowed to named products.",
                 "produces": [
                     "application/json"
                 ],
@@ -2559,14 +2851,27 @@
                     "product"
                 ],
                 "summary": "Return a list of archived products",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Number of archived products to return (1-1000)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of archived products to skip before the first one returned",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/api.ProductResponse"
-                            }
+                            "$ref": "#/definitions/api.ProductListResponse"
                         }
                     },
                     "400": {
@@ -2586,7 +2891,7 @@
         },
         "/api/v1/products/bulk": {
             "post": {
-                "description": "Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack.",
+                "description": "Creates products from a list of drafts with per-item results. Partial success is allowed; each item reports created or failed with a reason. The price of a draft is the price of the whole line and is stored per pack, so a draft of three packs at 6 EUR stores a price of 2 EUR per pack. A batch is insert-only: a draft that duplicates a row of the household — the same barcode in the same storage location with the same effective expiry — is written as a row of its own, because a batch may hold several packs of one product and a duplicate cannot be answered with a question.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2742,7 +3047,7 @@
         },
         "/api/v1/products/bulkWaste": {
             "post": {
-                "description": "Hard-deletes multiple products and fires the product.wasted webhook per product. Reports the ids that were not touched: 404 when none could be wasted (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.",
+                "description": "Hard-deletes multiple products and fires the product.wasted webhook per product. The optional waste cause names why the products were wasted (spoiled, overbought, forgotten, disliked, other) and applies to every product of the request. Reports the ids that were not touched: 404 when none could be wasted (unknown or foreign ids), 200 with the failed ids in failedIds when only some fail, 500 (also carrying failedIds) when a failure was server-side.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2755,15 +3060,12 @@
                 "summary": "Mark multiple products as wasted",
                 "parameters": [
                     {
-                        "description": "Product IDs",
-                        "name": "productIDs",
+                        "description": "Product IDs and the optional waste cause",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
-                            }
+                            "$ref": "#/definitions/api.BulkProductsAPIModel"
                         }
                     }
                 ],
@@ -3096,6 +3398,35 @@
                 }
             }
         },
+        "/api/v1/products/frequently-bought": {
+            "get": {
+                "description": "Returns the archived products the household bought at least twice, most frequent first and most recent second. Every entry carries the name, the pack size, the category and the storage location the household itself used, so a suggestion fills the add-product form with what this household actually buys. Another member's private product is never part of the list and never counts towards a barcode the household shares. The list is empty when the household has no such product.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "product"
+                ],
+                "summary": "Return frequently bought products",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/api.FrequentProduct"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/products/import": {
             "post": {
                 "description": "Creates products from an uploaded CSV file. Insert-only: a barcode that already exists among the household's active products is reported as a row error and never modified. Unknown storage locations are created. Rows without a name are completed from the Open Food Facts cache, and at most a bounded number of them may additionally trigger a live Open Food Facts lookup. The quantity column counts the packs of a product and the pack_size column states the size of one pack; a file written before products were counted in packs is rejected.",
@@ -3394,7 +3725,7 @@
         },
         "/api/v1/products/search": {
             "get": {
-                "description": "Returns a list of products based on a query",
+                "description": "Returns a list of products based on a query. The response carries the products of the page, the total number of products the search matched, and the window that produced the page. The total counts every match, not the page. The matches that share the sort key keep the order of their ids, so a client that walks the pages by offset reads every match exactly once. A limit that is not set returns every match. A page ordered by the effective expiry is resolved before it is cut out, because the effective expiry has no sortable column — every page costs the same as reading every match.",
                 "produces": [
                     "application/json"
                 ],
@@ -3420,7 +3751,7 @@
                     {
                         "type": "string",
                         "default": "product_name",
-                        "description": "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode)",
+                        "description": "Sort field (product_name, expire_at, created_at, scanned_at, notified_at, barcode, effective_expire_at)",
                         "name": "sort",
                         "in": "query"
                     },
@@ -3430,16 +3761,26 @@
                         "description": "Sort order (asc, desc)",
                         "name": "order",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of matches to return (max 1000). Without a limit every match is returned.",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of matches to skip before the first one returned",
+                        "name": "offset",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/api.ProductResponse"
-                            }
+                            "$ref": "#/definitions/api.ProductListResponse"
                         }
                     },
                     "400": {
@@ -3459,7 +3800,7 @@
         },
         "/api/v1/products/stats": {
             "get": {
-                "description": "Returns waste rate, top archived products, category breakdown and expiry trend",
+                "description": "Returns waste rate, top archived products, category breakdown and expiry trend. The useFirst list names the products of the whole household ordered by the effective expiry, soonest first, with the storage location and the pack count of each.",
                 "produces": [
                     "application/json"
                 ],
@@ -3523,7 +3864,7 @@
         },
         "/api/v1/products/sync-offline": {
             "post": {
-                "description": "Creates queued drafts. Replayed clientSyncId values return the existing product.",
+                "description": "Creates queued drafts. Replayed clientSyncId values return the existing product. The queue is insert-only: a queued draft that duplicates a row of the household — the same barcode in the same storage location with the same effective expiry — is written as a row of its own, because the sync runs unattended and a duplicate cannot be answered with a question.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3837,14 +4178,17 @@
         },
         "/api/v1/products/{id}/consume": {
             "post": {
-                "description": "Soft-deletes (archives) a product without firing a product.wasted webhook event",
+                "description": "Consumes the requested number of packs. Omitting the body or quantity consumes the whole stock. A partial consume leaves the remaining packs active; a full consume soft-deletes the row with removal reason consumed. A cause in the body is ignored: a consume has no reason. The response carries the number of packs that actually left the stock.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "product"
                 ],
-                "summary": "Mark product as consumed",
+                "summary": "Consume product packs",
                 "parameters": [
                     {
                         "type": "integer",
@@ -3852,13 +4196,21 @@
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Pack quantity, optional waste cause and optional offline mutation ID",
+                        "name": "action",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductActionDTO"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.ProductActionResponse"
                         }
                     },
                     "400": {
@@ -3869,6 +4221,12 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -4210,14 +4568,17 @@
         },
         "/api/v1/products/{id}/waste": {
             "post": {
-                "description": "Hard-deletes a product and fires the product.wasted webhook event",
+                "description": "Wastes the requested number of packs. Omitting the body or quantity wastes the whole stock. A partial waste leaves the remaining packs active; a full waste soft-deletes the row with removal reason wasted and fires the product.wasted webhook. The optional waste cause names why the packs were wasted (spoiled, overbought, forgotten, disliked, other); a waste without a cause is recorded as unattributed waste. The response carries the number of packs that actually left the stock.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "product"
                 ],
-                "summary": "Mark product as wasted",
+                "summary": "Waste product packs",
                 "parameters": [
                     {
                         "type": "integer",
@@ -4225,13 +4586,21 @@
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Pack quantity, optional waste cause and optional offline mutation ID",
+                        "name": "action",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductActionDTO"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.ProductActionResponse"
                         }
                     },
                     "400": {
@@ -4242,6 +4611,12 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -4891,6 +5266,76 @@
                 }
             }
         },
+        "/api/v1/shopping-list/{id}/purchase": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Turns a shopping list item into a product of the household and checks the item. The pack count of the product is the number of packs bought, which is not the number the item asked for. The expiry is the one the request carries; without one the household's shelf life of the category fills it. An item that already points at a product gets the bought packs added to that product instead of a second row — that product keeps its own expiry, category, pack size and storage location, so the fields of the request that describe a product do not apply to it. The product and the check land together or not at all. A bought product that matches one the household already has is refused with 409 and the matched product in the body: the caller decides whether the packs belong to that row (addToProductId) or make a product of their own (allowDuplicate).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "shopping-list"
+                ],
+                "summary": "Buys a shopping list item",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Shopping list item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The purchase: packs bought, expiry, category, storage location",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.PurchaseShoppingListItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/api.PurchaseShoppingListItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/api.ProductConflictResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/shopping-list/{id}/toggle": {
             "post": {
                 "security": [
@@ -4939,7 +5384,7 @@
         },
         "/api/v1/stats/waste": {
             "get": {
-                "description": "Returns per-month consumed vs. wasted metrics, top wasted categories\nwith monetary and CO2 impact (each category nests its top wasted products),\nand a 6-month trend. EUR prices come from per-product overrides (if set)\nor category averages; CO2 is sourced from the Agribalyse LCA database via\nOpen Food Facts ecoscore_data.",
+                "description": "Returns per-month consumed vs. wasted metrics, top wasted categories\nwith monetary and CO2 impact (each category nests its top wasted products),\nthe waste broken down by the reason it was wasted, the category the household\nmost over-buys and a one-sentence insight about it, and a 6-month trend.\nEUR prices come from per-product overrides (if set)\nor category averages; CO2 is sourced from the Agribalyse LCA database via\nOpen Food Facts ecoscore_data.",
                 "produces": [
                     "application/json"
                 ],
@@ -5575,6 +6020,210 @@
                 }
             }
         },
+        "/api/v1/user/totp": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reports whether the user has enrolled a second factor and how many recovery codes are left",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Reports the two-factor state of the user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.TOTPStatusResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generates a TOTP secret and returns it as a QR code image. The secret is stored encrypted and is never part of the response",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Starts a two-factor enrolment",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.TOTPEnrolResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/totp/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Verifies the code of the pending enrolment and activates the second factor. The returned recovery codes are shown once and only their hashes are stored",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Confirms a two-factor enrolment",
+                "parameters": [
+                    {
+                        "description": "Code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.TOTPConfirmResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/totp/disable": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the TOTP secret and the recovery codes after the current password was confirmed",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Disables the two-factor authentication",
+                "parameters": [
+                    {
+                        "description": "Password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/webhooks": {
             "get": {
                 "security": [
@@ -6155,6 +6804,61 @@
                 }
             }
         },
+        "/auth/totp/setup/confirm": {
+            "post": {
+                "description": "Activates the TOTP second factor for an account whose household requires one. The account is confirmed with its password and the code of the pending enrolment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Confirms a two-factor setup",
+                "parameters": [
+                    {
+                        "description": "Username, password and code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.TOTPConfirmResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/verify-email": {
             "post": {
                 "description": "Verifies a user's email address using a token from the verification email",
@@ -6261,6 +6965,26 @@
                     "common"
                 ],
                 "summary": "Prometheus metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/offline": {
+            "get": {
+                "description": "Renders the app-styled offline screen the service worker serves from its cache when a navigation fails.",
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "web"
+                ],
+                "summary": "Offline fallback page",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -6871,6 +7595,10 @@
                 },
                 "message": {
                     "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
+                    "type": "string"
                 }
             }
         },
@@ -6896,6 +7624,10 @@
                     "type": "integer"
                 },
                 "userName": {
+                    "type": "string"
+                },
+                "wasteCause": {
+                    "description": "WasteCause is why the action wasted the product. It is empty for every\naction but a waste that carried a reason.",
                     "type": "string"
                 }
             }
@@ -6963,6 +7695,10 @@
                 },
                 "message": {
                     "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
+                    "type": "string"
                 }
             }
         },
@@ -7022,6 +7758,14 @@
                 "categories": {
                     "type": "string"
                 },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category the product belongs to. It is\nsent as null when the draft names no category.",
+                    "type": "string"
+                },
+                "daysAfterOpening": {
+                    "description": "DaysAfterOpening is the shelf life after opening, in days.",
+                    "type": "integer"
+                },
                 "expireAt": {
                     "description": "ExpireAt is the expiry date the receipt carries, as an RFC 3339 date.",
                     "type": "string"
@@ -7053,6 +7797,21 @@
                     "type": "integer"
                 },
                 "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.BulkProductsAPIModel": {
+            "type": "object",
+            "properties": {
+                "productIDs": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "wasteCause": {
+                    "description": "WasteCause is why the products are wasted. It applies to every product\nof the request and is ignored by a bulk consume.",
                     "type": "string"
                 }
             }
@@ -7440,6 +8199,38 @@
                 },
                 "unit": {
                     "type": "string"
+                },
+                "wasteCause": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.FrequentProduct": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "categoryKey": {
+                    "type": "string"
+                },
+                "imageUrl": {
+                    "type": "string"
+                },
+                "lastBoughtAt": {
+                    "type": "string"
+                },
+                "packSize": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "purchaseCount": {
+                    "type": "integer"
+                },
+                "storageLocationId": {
+                    "type": "integer"
                 }
             }
         },
@@ -7532,6 +8323,29 @@
                 }
             }
         },
+        "api.HouseholdCategoryResponse": {
+            "type": "object",
+            "properties": {
+                "categoryKey": {
+                    "type": "string"
+                },
+                "defaultDaysAfterOpening": {
+                    "type": "integer"
+                },
+                "defaultShelfLifeDays": {
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "hidden": {
+                    "type": "boolean"
+                },
+                "sortOrder": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.HouseholdIntegrationResponse": {
             "type": "object",
             "properties": {
@@ -7621,6 +8435,9 @@
                 },
                 "monthlyWasteGoalType": {
                     "type": "string"
+                },
+                "requireTwoFactor": {
+                    "type": "boolean"
                 }
             }
         },
@@ -7643,6 +8460,9 @@
                     "type": "boolean"
                 },
                 "telegramLinked": {
+                    "type": "boolean"
+                },
+                "twoFactorEnabled": {
                     "type": "boolean"
                 },
                 "username": {
@@ -7818,8 +8638,16 @@
                 "categories": {
                     "type": "string"
                 },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category the product belongs to. It is\nsent as null when the draft names no category.",
+                    "type": "string"
+                },
                 "clientSyncId": {
                     "type": "string"
+                },
+                "daysAfterOpening": {
+                    "description": "DaysAfterOpening is the shelf life after opening, in days.",
+                    "type": "integer"
                 },
                 "expireAt": {
                     "description": "ExpireAt is the expiry date the receipt carries, as an RFC 3339 date.",
@@ -7948,6 +8776,77 @@
                 }
             }
         },
+        "api.ProductActionDTO": {
+            "type": "object",
+            "properties": {
+                "clientMutationId": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "wasteCause": {
+                    "description": "WasteCause is why the packs are wasted. It is ignored by a consume.",
+                    "type": "string"
+                }
+            }
+        },
+        "api.ProductActionResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
+                    "type": "string"
+                },
+                "removed": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.ProductConflictResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "duplicate": {
+                    "$ref": "#/definitions/api.ProductResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is a stable machine-readable identifier of the cause. The message\nis prose and may be reworded; a client that has to branch on the cause\nreads this. It is not called \"code\" because the sign-in route answers\nwith a numeric code on success and the two would collide.",
+                    "type": "string"
+                }
+            }
+        },
+        "api.ProductListResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.ProductResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.ProductQuantityDTO": {
             "type": "object",
             "required": [
@@ -7970,6 +8869,9 @@
                     "type": "string"
                 },
                 "categories": {
+                    "type": "string"
+                },
+                "categoryKey": {
                     "type": "string"
                 },
                 "co2KgPerKg": {
@@ -8032,6 +8934,9 @@
                 },
                 "storageLocationId": {
                     "type": "integer"
+                },
+                "wasteCause": {
+                    "type": "string"
                 }
             }
         },
@@ -8071,6 +8976,12 @@
                 "uniqueArchived": {
                     "type": "integer"
                 },
+                "useFirst": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.StatsUseFirstProduct"
+                    }
+                },
                 "wasteCount": {
                     "type": "integer"
                 },
@@ -8093,6 +9004,62 @@
                 },
                 "wasteThisMonth": {
                     "type": "integer"
+                }
+            }
+        },
+        "api.PurchaseShoppingListItemRequest": {
+            "type": "object",
+            "properties": {
+                "addToProductId": {
+                    "description": "AddToProductID is the product the bought packs go into when it is not\nthe product the item points at: the caller resolved a same-item\nconflict by hand.",
+                    "type": "integer"
+                },
+                "allowDuplicate": {
+                    "description": "AllowDuplicate writes a second product instead of refusing when the\nbought product matches one the household already has.",
+                    "type": "boolean"
+                },
+                "barcode": {
+                    "description": "Barcode identifies the bought product. An empty barcode leaves the\nproduct without one.",
+                    "type": "string"
+                },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category the bought product belongs to.\nIt defaults to the category of the item.",
+                    "type": "string"
+                },
+                "expireAt": {
+                    "description": "ExpireAt is the expiry date the user confirmed, as \"2006-01-02\" or an\nRFC 3339 timestamp. An empty value leaves the date to the household's\ncategory default.",
+                    "type": "string"
+                },
+                "packSize": {
+                    "description": "PackSize is the size of one pack. It defaults to the size of the\nproduct the item points at.",
+                    "type": "string"
+                },
+                "quantity": {
+                    "description": "Quantity is the number of packs bought. It defaults to the number of\npacks the item asked for; the two are not the same number.",
+                    "type": "integer"
+                },
+                "scanned": {
+                    "description": "Scanned says the barcode was scanned rather than typed.",
+                    "type": "boolean"
+                },
+                "storageLocationId": {
+                    "description": "StorageLocationID is where the bought packs go.",
+                    "type": "integer"
+                }
+            }
+        },
+        "api.PurchaseShoppingListItemResponse": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "description": "Created says the purchase created a product. It is false when the\nbought packs went into the product the item already pointed at.",
+                    "type": "boolean"
+                },
+                "item": {
+                    "$ref": "#/definitions/api.ShoppingListItemResponse"
+                },
+                "product": {
+                    "$ref": "#/definitions/api.ProductResponse"
                 }
             }
         },
@@ -8345,6 +9312,10 @@
                 "category": {
                     "type": "string"
                 },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category the entry belongs to. It is what\nthe household's shelf-life defaults are looked up by.",
+                    "type": "string"
+                },
                 "checked": {
                     "type": "boolean"
                 },
@@ -8379,7 +9350,25 @@
                     "description": "format: \"2006-01-02\"",
                     "type": "string"
                 },
+                "id": {
+                    "type": "integer"
+                },
+                "packSize": {
+                    "type": "string"
+                },
                 "productName": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "storageLocationIcon": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "storageLocationName": {
                     "type": "string"
                 }
             }
@@ -8392,6 +9381,36 @@
                 },
                 "month": {
                     "description": "format: \"2006-01\"",
+                    "type": "string"
+                }
+            }
+        },
+        "api.StatsUseFirstProduct": {
+            "type": "object",
+            "properties": {
+                "expireAt": {
+                    "description": "the effective expiry, format: \"2006-01-02\"; empty when the product has no date",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "packSize": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "storageLocationIcon": {
+                    "type": "string"
+                },
+                "storageLocationId": {
+                    "type": "integer"
+                },
+                "storageLocationName": {
                     "type": "string"
                 }
             }
@@ -8420,6 +9439,45 @@
                     "type": "integer"
                 },
                 "longestStreak": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.TOTPConfirmResponse": {
+            "type": "object",
+            "properties": {
+                "recoveryCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "twoFactorEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "api.TOTPEnrolResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "qr": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.TOTPStatusResponse": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "pending": {
+                    "type": "boolean"
+                },
+                "recoveryCodesRemaining": {
                     "type": "integer"
                 }
             }
@@ -8626,11 +9684,26 @@
         "api.WasteAnalyticsResponse": {
             "type": "object",
             "properties": {
+                "causes": {
+                    "description": "Causes breaks the wasted events down by the reason they were wasted.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/api.WasteCauseStat"
+                    }
+                },
                 "co2Source": {
                     "type": "string"
                 },
                 "consumedCount": {
                     "type": "integer"
+                },
+                "insight": {
+                    "description": "Insight is the one-sentence insight about the household's waste, in the\nuser's language.",
+                    "type": "string"
+                },
+                "insightAvailable": {
+                    "description": "InsightAvailable is false when there is too little data to state an\ninsight; the Insight then holds the empty-state sentence.",
+                    "type": "boolean"
                 },
                 "monthly": {
                     "type": "array",
@@ -8643,6 +9716,14 @@
                     "items": {
                         "$ref": "#/definitions/api.WasteCategoryStat"
                     }
+                },
+                "overbuy": {
+                    "description": "Overbuy names the category the household most over-buys.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/api.WasteOverbuyStat"
+                        }
+                    ]
                 },
                 "period": {
                     "description": "\"month\" | \"3months\" | \"6months\" | \"12months\"",
@@ -8701,6 +9782,24 @@
                 }
             }
         },
+        "api.WasteCauseStat": {
+            "type": "object",
+            "properties": {
+                "cause": {
+                    "type": "string"
+                },
+                "costEur": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "share": {
+                    "description": "Share is the cause's share of all wasted events in the window, in percent.",
+                    "type": "number"
+                }
+            }
+        },
         "api.WasteMonthly": {
             "type": "object",
             "properties": {
@@ -8718,6 +9817,29 @@
                     "type": "integer"
                 },
                 "wastedEur": {
+                    "type": "number"
+                }
+            }
+        },
+        "api.WasteOverbuyStat": {
+            "type": "object",
+            "properties": {
+                "categoryKey": {
+                    "type": "string"
+                },
+                "categoryWaste": {
+                    "description": "CategoryWaste is the number of all waste events in the category.",
+                    "type": "integer"
+                },
+                "count": {
+                    "description": "Count is the number of over-bought waste events in the category.",
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "share": {
+                    "description": "Share is Count as a percentage of CategoryWaste.",
                     "type": "number"
                 }
             }
@@ -8834,6 +9956,10 @@
                 "username"
             ],
             "properties": {
+                "code": {
+                    "description": "Code carries the second factor of an account that has one. It stays\nempty for every account without a second factor.",
+                    "type": "string"
+                },
                 "password": {
                     "type": "string"
                 },
@@ -8867,10 +9993,18 @@
         "database.Product": {
             "type": "object",
             "properties": {
+                "allowDuplicate": {
+                    "description": "AllowDuplicate says the caller has seen the duplicate refusal and wants\na row of its own anyway. It is a request flag and never stored.",
+                    "type": "boolean"
+                },
                 "barcode": {
                     "type": "string"
                 },
                 "categories": {
+                    "type": "string"
+                },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category the product belongs to. It is what\nthe household's shelf-life defaults are looked up by. Categories keeps\nthe free text Open Food Facts wrote, which the recipe suggestions read.",
                     "type": "string"
                 },
                 "clientSyncId": {
@@ -8941,6 +10075,10 @@
                 },
                 "updatedAt": {
                     "type": "string"
+                },
+                "wasteCause": {
+                    "description": "WasteCause is why the product was wasted. It is set when the waste\narchives the row and is empty for an unattributed waste.",
+                    "type": "string"
                 }
             }
         },
@@ -8973,6 +10111,10 @@
                     "type": "integer"
                 },
                 "categories": {
+                    "type": "string"
+                },
+                "categoryKey": {
+                    "description": "CategoryKey is the canonical category of the product. It is sent as\nnull to clear it.",
                     "type": "string"
                 },
                 "countries": {
@@ -9217,6 +10359,37 @@
                     "type": "integer"
                 },
                 "w": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.householdCategoryOrderRequest": {
+            "type": "object",
+            "properties": {
+                "keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "v1.householdCategoryRequest": {
+            "type": "object",
+            "properties": {
+                "defaultDaysAfterOpening": {
+                    "type": "integer"
+                },
+                "defaultShelfLifeDays": {
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "hidden": {
+                    "type": "boolean"
+                },
+                "sortOrder": {
                     "type": "integer"
                 }
             }

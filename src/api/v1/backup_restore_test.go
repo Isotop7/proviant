@@ -149,7 +149,7 @@ func TestRestoreFullJSONClearsProductReferences(t *testing.T) {
 		t.Fatalf("create expiry scan: %v", err)
 	}
 
-	payload := []byte(fmt.Sprintf(`{"version": %d, "products": {"active": [], "archived": []}}`, apiModel.BackupSchemaVersion))
+	payload := fmt.Appendf(nil, `{"version": %d, "products": {"active": [], "archived": []}}`, apiModel.BackupSchemaVersion)
 	env.Ctx.Request = httptest.NewRequest(http.MethodPost, "/api/v1/products/restore/full.json", bytes.NewReader(payload))
 	env.Ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
@@ -188,13 +188,13 @@ func TestRestoreFullJSONClearsProductReferences(t *testing.T) {
 // bounds as create/update instead of trusting the backup file.
 func TestRestoreFullJSONRejectsInvalidOpenedLifecycle(t *testing.T) {
 	env := setupHandlerTest(t)
-	payload := []byte(fmt.Sprintf(`{
+	payload := fmt.Appendf(nil, `{
 		"version": %d,
 		"products": {
 			"active": [{"productName": "Bad", "barcode": "3333333333333", "daysAfterOpening": 400}],
 			"archived": []
 		}
-	}`, apiModel.BackupSchemaVersion))
+	}`, apiModel.BackupSchemaVersion)
 	env.Ctx.Request = httptest.NewRequest(http.MethodPost, "/api/v1/products/restore/full.json", bytes.NewReader(payload))
 	env.Ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
@@ -218,7 +218,7 @@ func TestRestoreFullJSONRequiresAdminRole(t *testing.T) {
 	env := setupHandlerTest(t)
 	member := env.addMember(t, "member")
 	env.useMember(member)
-	payload := []byte(fmt.Sprintf(`{"version": %d, "products": {"active": [], "archived": []}}`, apiModel.BackupSchemaVersion))
+	payload := fmt.Appendf(nil, `{"version": %d, "products": {"active": [], "archived": []}}`, apiModel.BackupSchemaVersion)
 	env.Ctx.Request = httptest.NewRequest(http.MethodPost, "/api/v1/products/restore/full.json", bytes.NewReader(payload))
 	env.Ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
@@ -233,13 +233,13 @@ func TestRestoreFullJSONRequiresAdminRole(t *testing.T) {
 // same barcode bounds as the CSV import before it can reach Open Food Facts.
 func TestRestoreFullJSONRejectsInvalidBarcode(t *testing.T) {
 	env := setupHandlerTest(t)
-	payload := []byte(fmt.Sprintf(`{
+	payload := fmt.Appendf(nil, `{
 		"version": %d,
 		"products": {
 			"active": [{"productName": "Bad", "barcode": "../etc/passwd"}],
 			"archived": []
 		}
-	}`, apiModel.BackupSchemaVersion))
+	}`, apiModel.BackupSchemaVersion)
 	env.Ctx.Request = httptest.NewRequest(http.MethodPost, "/api/v1/products/restore/full.json", bytes.NewReader(payload))
 	env.Ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
@@ -276,7 +276,7 @@ func TestRestoreFullJSONRejectsMissingVersion(t *testing.T) {
 // schema out of the database rather than partially interpreting it.
 func TestRestoreFullJSONRejectsUnsupportedVersion(t *testing.T) {
 	env := setupHandlerTest(t)
-	payload := []byte(fmt.Sprintf(`{"version": %d, "products": {"active": [], "archived": []}}`, apiModel.BackupSchemaVersion+1))
+	payload := fmt.Appendf(nil, `{"version": %d, "products": {"active": [], "archived": []}}`, apiModel.BackupSchemaVersion+1)
 	env.Ctx.Request = httptest.NewRequest(http.MethodPost, "/api/v1/products/restore/full.json", bytes.NewReader(payload))
 	env.Ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
@@ -299,7 +299,7 @@ func TestRestoreFullJSONRejectsUnsupportedVersion(t *testing.T) {
 func TestRestoreFullJSONRejectsMalformedDocument(t *testing.T) {
 	env := setupHandlerTest(t)
 	testutil.CreateTestProduct(env.DB, env.Household.ID, env.User.ID)
-	env.Ctx.Request = httptest.NewRequest(http.MethodPost, "/api/v1/products/restore/full.json", bytes.NewReader([]byte(fmt.Sprintf(`{"version": %d,`, apiModel.BackupSchemaVersion))))
+	env.Ctx.Request = httptest.NewRequest(http.MethodPost, "/api/v1/products/restore/full.json", bytes.NewReader(fmt.Appendf(nil, `{"version": %d,`, apiModel.BackupSchemaVersion)))
 	env.Ctx.Request.Header.Set(util.RequestHeaderContentType, "application/json")
 
 	RestoreFullJSON(env.Ctx, env.AppCtx)

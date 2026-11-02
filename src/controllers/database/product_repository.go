@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	stderrors "errors"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -91,17 +92,20 @@ type ImportedProduct struct {
 
 type ProductRepositoryInterface interface {
 	GetUserProductsBulk(userID uint, limit int) ([]database.Product, error)
+	GetUserProductsBulkSorted(userID uint, limit, offset int, sortValue, orderValue string) ([]database.Product, error)
 	GetUserProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
-	GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error)
+	GetUserArchivedProductsBulk(userID uint, limit, offset int) ([]database.Product, error)
 	GetActiveProductProjections(userID, locationID uint) ([]database.Product, error)
 	GetArchivedProductProjections(userID uint) ([]database.Product, error)
 	GetUserArchivedProductsByIDs(userID uint, ids []uint) ([]database.Product, error)
 	GetUserProductsBulkByBarcode(userID uint, barcode int) ([]database.Product, error)
 	GetUserProductsBulkByBarcodes(userID uint, barcodes []string) ([]database.Product, error)
+	FindDuplicateProduct(userID uint, draft *database.Product) (database.Product, bool, error)
 	GetProductByID(productID, userID uint) (database.Product, error)
 	GetProductIdentity(productID, userID uint) (database.Product, error)
 	GetArchivedProductByID(productID, userID uint) (database.Product, error)
-	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error)
+	SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint, limit, offset int) ([]database.Product, error)
+	CountSearchProducts(queryParam SearchParameterEnum, queryValue string, userID uint) (int, error)
 	SearchProductProjections(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID, locationID uint) ([]database.Product, error)
 	CreateProduct(userID uint, product *database.Product) error
 	GetProductBySyncID(userID uint, clientSyncID string) (database.Product, error)
@@ -116,14 +120,15 @@ type ProductRepositoryInterface interface {
 	SetProductExpireAt(productID uint, userID uint, expireAt database.Timestamp) error
 	SetProductNotifiedAt(productID uint) error
 	GetProductsExpired(userID uint) ([]*database.Product, error)
-	GetExpiredProductsCount(userID uint) (int, error)
+	GetExpiredProductsCount(userID uint, now time.Time) (int, error)
 	GetArchivedProductsCount(userID uint) (int, error)
 	GetUniqueArchivedProductsCount(userID uint) (int, error)
-	GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error)
+	GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error)
 	GetActiveProductsCount(userID uint) (int, error)
 	GetProductCategoryBreakdown(userID uint) (map[string]int, error)
-	GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error)
-	GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error)
+	GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error)
+	GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error)
+	GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error)
 	GetLastNotifiedProduct(householdID uint) (database.Product, error)
 	GetExpiringInDays(userID uint, days int) ([]database.Product, error)
 	GetLastInsertedProduct(householdID uint) (database.Product, error)
@@ -141,18 +146,19 @@ type ProductRepositoryInterface interface {
 	GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
 	GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]database.Product, error)
 	GetUsersByHouseholdID(householdID uint) ([]authentication.User, error)
-	GetExpiringSoonCount(userID uint, days int) (int, error)
+	GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error)
 	GetActiveExpiryCounts(userID uint, now time.Time, criticalDays int) (expired, critical int, err error)
-	GetWasteThisMonth(userID uint) (int, error)
+	GetWasteThisMonth(userID uint, now time.Time) (int, error)
 	GetExpiringProductsByHousehold(householdID uint, daysAhead int) ([]database.Product, error)
 	GetProductsByHousehold(householdID uint) ([]database.Product, error)
 	GetSubThresholdProducts(userID uint) ([]database.Product, error)
 	ConsumeProduct(productID, userID uint) error
-	ConsumeProductPartial(product *database.Product, quantity int) (int, bool, error)
-	WasteProduct(productID, userID uint) error
+	ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error)
+	WasteProduct(productID, userID uint, cause string) error
+	WasteProductPartial(product *database.Product, quantity int, mutationID *string, cause string) (int, bool, bool, error)
 	MarkProductOpened(productID, userID uint, openedAt time.Time, force bool) (database.Product, *time.Time, bool, error)
 	BulkConsumeProducts(productIDs []uint, userID uint) []BulkOperationError
-	BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError
+	BulkWasteProducts(productIDs []uint, userID uint, cause string) []BulkOperationError
 	GetExpiringProductsForMailDigest(householdID uint) (MailDigestProductGroup, error)
 	GetConsumedSamples(householdID, userID uint, barcode, name string, since time.Time) ([]database.Product, error)
 }
@@ -232,6 +238,94 @@ func (r *ProductRepository) privacyScope(userID uint) func(db *gorm.DB) *gorm.DB
 	}
 }
 
+// activeProductsQuery returns the query every read of the household's active
+// products shares: the household's rows, the ones the caller may see, the rows
+// that are not archived.
+//
+// The list and the count that describes it are both built from it, so the count
+// cannot report a different set than the list — a count that leaked another
+// household's rows or another member's private ones would be a leak of its own.
+//
+// The query it returns is single-use: it carries one statement, so every
+// terminal call (a Find, a Count) needs a query of its own.
+func (r *ProductRepository) activeProductsQuery(userID uint) (*gorm.DB, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.DB.
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull), nil
+}
+
+// archivedProductsQuery is the archived counterpart of activeProductsQuery: the
+// same household and the same privacy rules, but the rows that are archived.
+func (r *ProductRepository) archivedProductsQuery(userID uint) (*gorm.DB, error) {
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.DB.Unscoped().
+		Scopes(r.privacyScope(userID)).
+		Where(util.WhereDeletedIsNotNull).
+		Where(util.QueryHouseholdId, householdID), nil
+}
+
+// pageWindow returns the rows a page covers: the rows after the offset, at
+// most limit of them. A limit of zero means every remaining row, an offset
+// beyond the last row means an empty page.
+func pageWindow(rows []database.Product, limit, offset int) []database.Product {
+	if offset > 0 {
+		if offset >= len(rows) {
+			return []database.Product{}
+		}
+		rows = rows[offset:]
+	}
+	if limit > 0 && len(rows) > limit {
+		rows = rows[:limit]
+	}
+	return rows
+}
+
+// applyPage limits a query to the window a page covers.
+//
+// An offset always carries a limit: MySQL has no OFFSET without a LIMIT and
+// rejects the statement, while the SQLite driver rewrites a bare OFFSET into
+// "LIMIT -1 OFFSET n" on its own. A limit of zero means "every row", so the
+// offset alone becomes the largest limit the database can express.
+func applyPage(query *gorm.DB, limit, offset int) *gorm.DB {
+	if limit <= 0 && offset > 0 {
+		limit = math.MaxInt
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	return query
+}
+
+// orderProductsByID returns the rows in the order of the given ids and drops the
+// rows that are not among them. The hydration reads the rows by id, so the
+// order the projections were sorted in has to be restored here.
+func orderProductsByID(rows []database.Product, ids []uint) []database.Product {
+	byID := make(map[uint]database.Product, len(rows))
+	for i := range rows {
+		byID[rows[i].ID] = rows[i]
+	}
+	ordered := make([]database.Product, 0, len(ids))
+	for _, id := range ids {
+		if row, ok := byID[id]; ok {
+			ordered = append(ordered, row)
+		}
+	}
+	return ordered
+}
+
 // SortByEffectiveExpiry orders products by the earlier of the printed expiry
 // and the opened-shelf-life date, with undated rows last. It is the products
 // list's ordering: the repository sorts full rows with it, and the products page
@@ -242,42 +336,113 @@ func (r *ProductRepository) privacyScope(userID uint) func(db *gorm.DB) *gorm.DB
 // an arbitrary tie order that differs between the projection pass and any later
 // pass over the same data lets a product land on two pages or on none.
 func SortByEffectiveExpiry(products []database.Product) {
+	sortByEffectiveExpiry(products, false)
+}
+
+// SortByEffectiveExpiryDescending orders the same rows latest first. The
+// undated rows stay at the end in both directions: a product without a date is
+// not the freshest one, it is the one nobody knows when it goes off.
+func SortByEffectiveExpiryDescending(products []database.Product) {
+	sortByEffectiveExpiry(products, true)
+}
+
+// sortByEffectiveExpiry orders the rows by their effective expiry, soonest
+// first or latest first. The undated rows come last either way, and the sort
+// is stable, so the order a caller handed in survives as the tie order.
+func sortByEffectiveExpiry(products []database.Product, descending bool) {
 	sort.SliceStable(products, func(i, j int) bool {
 		ti, tj := products[i].EffectiveExpireAt(), products[j].EffectiveExpireAt()
-		if ti.IsZero() && tj.IsZero() {
-			return false
-		}
 		if ti.IsZero() {
 			return false
 		}
 		if tj.IsZero() {
 			return true
 		}
+		if descending {
+			return tj.Before(ti)
+		}
 		return ti.Before(tj)
 	})
 }
 
+// GetUserProductsBulk returns the household's active products in the order the
+// products list uses: by effective expiry, soonest first.
 func (r *ProductRepository) GetUserProductsBulk(userID uint, limit int) ([]database.Product, error) {
-	householdID, err := r.getUserHouseholdID(userID)
+	return r.GetUserProductsBulkSorted(userID, limit, 0, SortEffectiveExpiry, "asc")
+}
+
+// GetUserProductsBulkSorted returns one page of the household's active products
+// in the order the caller asked for: one of the columns the database can sort
+// by, or the effective expiry, which only Go can compute.
+//
+// A column sort is ordered and limited by the database in one query. The
+// effective expiry has no portable SQL form, so those rows are ordered in Go
+// and the page is cut out there too — otherwise the database would hand back
+// an arbitrary subset of the pantry and the "soonest first" order would only
+// hold inside that subset.
+//
+// The offset is a window into the ordered set, so the order has to be the same
+// on every request: resolveSortClause breaks the ties of a column sort by id,
+// and the effective expiry keeps the id order the projections came in.
+func (r *ProductRepository) GetUserProductsBulkSorted(userID uint, limit, offset int, sortValue, orderValue string) ([]database.Product, error) {
+	sort, sortErr := resolveSortClause(sortValue, orderValue)
+	if sortErr != nil {
+		return []database.Product{}, sortErr
+	}
+
+	if sort.byEffectiveExpiry {
+		products, err := r.getProductsByEffectiveExpiry(userID, limit, offset, sort.descending)
+		if err != nil {
+			return []database.Product{}, err
+		}
+		return products, nil
+	}
+
+	query, err := r.activeProductsQuery(userID)
 	if err != nil {
 		return []database.Product{}, err
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID))
+	listQuery := applyPage(query.Preload("StorageLocation").Order(sort.clause), limit, offset)
 
-	if limit > 0 {
-		query = query.Limit(limit)
+	if findErr := listQuery.Find(&products).Error; findErr != nil {
+		return []database.Product{}, findErr
 	}
-
-	queryErr := query.Find(&products).Error
-	if queryErr != nil {
-		return []database.Product{}, queryErr
-	}
-
-	SortByEffectiveExpiry(products)
 
 	return products, nil
+}
+
+// getProductsByEffectiveExpiry returns the household's active products ordered
+// by the effective expiry, limited to the page that starts at the offset.
+//
+// The narrow projection is sorted in Go and only the rows that make up the
+// page are hydrated, so the database never materialises the whole pantry as
+// full rows with their storage location.
+func (r *ProductRepository) getProductsByEffectiveExpiry(userID uint, limit, offset int, descending bool) ([]database.Product, error) {
+	projections, err := r.GetActiveProductProjections(userID, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	if descending {
+		SortByEffectiveExpiryDescending(projections)
+	} else {
+		SortByEffectiveExpiry(projections)
+	}
+
+	page := pageWindow(projections, limit, offset)
+	ids := make([]uint, 0, len(page))
+	for i := range page {
+		ids = append(ids, page[i].ID)
+	}
+
+	rows, err := r.hydrateProductsByIDs(userID, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	return orderProductsByID(rows, ids), nil
 }
 
 // GetUserProductsByIDs returns the active products with the given IDs that belong to the user's household.
@@ -296,20 +461,23 @@ func (r *ProductRepository) GetUserProductsByIDs(userID uint, ids []uint) ([]dat
 	return products, nil
 }
 
-func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit int) ([]database.Product, error) {
-	householdID, err := r.getUserHouseholdID(userID)
+// GetUserArchivedProductsBulk returns one page of the household's archived
+// products, oldest id first.
+//
+// The archived rows are ordered by id because they have no expiry to order
+// them by: without an order the database hands the rows back in whatever order
+// it finds them, and a client that walks the pages by offset would skip and
+// repeat rows.
+func (r *ProductRepository) GetUserArchivedProductsBulk(userID uint, limit, offset int) ([]database.Product, error) {
+	query, err := r.archivedProductsQuery(userID)
 	if err != nil {
 		return []database.Product{}, err
 	}
 
 	var products []database.Product
-	query := r.DB.Preload("StorageLocation").Unscoped().Where(util.WhereDeletedIsNotNull).Where(util.QueryHouseholdId, householdID).Scopes(r.privacyScope(userID))
+	listQuery := applyPage(query.Preload("StorageLocation").Order("id"), limit, offset)
 
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-
-	queryErr := query.Find(&products).Error
+	queryErr := listQuery.Find(&products).Error
 	if queryErr != nil {
 		return []database.Product{}, queryErr
 	}
@@ -419,10 +587,7 @@ const bulkQueryChunkSize = 500
 func chunkStrings(values []string, size int) [][]string {
 	chunks := make([][]string, 0, (len(values)+size-1)/size)
 	for start := 0; start < len(values); start += size {
-		end := start + size
-		if end > len(values) {
-			end = len(values)
-		}
+		end := min(start+size, len(values))
 		chunks = append(chunks, values[start:end])
 	}
 	return chunks
@@ -461,6 +626,50 @@ func (r *ProductRepository) GetUserProductsBulkByBarcodes(userID uint, barcodes 
 		products = append(products, batch...)
 	}
 	return products, nil
+}
+
+// FindDuplicateProduct returns the household's active product that the given
+// draft would duplicate, and reports whether there is one. A duplicate is a
+// row with the same barcode, the same storage location and the same effective
+// expiry: the same packs of the same thing in the same place.
+//
+// The lookup is scoped to the household and to privacyScope, so another
+// member's private row is neither matched nor disclosed. Archived rows are
+// skipped: they are history, not stock, and restoring one is a different
+// action.
+//
+// The candidate set is the household's rows with that barcode, so the
+// comparison runs in Go through Product.IsDuplicateOf and the rule cannot
+// drift from the one the client is told about. The candidate query trims the
+// stored barcode as well, because a row written with a padded barcode is the
+// same barcode and must not slip past the rule.
+func (r *ProductRepository) FindDuplicateProduct(userID uint, draft *database.Product) (database.Product, bool, error) {
+	if draft == nil || draft.Barcode == "" {
+		return database.Product{}, false, nil
+	}
+
+	householdID, err := r.getUserHouseholdID(userID)
+	if err != nil {
+		return database.Product{}, false, err
+	}
+
+	var candidates []database.Product
+	queryErr := r.DB.Preload("StorageLocation").
+		Scopes(r.privacyScope(userID)).
+		Where(util.QueryHouseholdId, householdID).
+		Where(util.WhereDeletedIsNull).
+		Where("TRIM(barcode) = ?", database.NormalizeBarcode(draft.Barcode)).
+		Find(&candidates).Error
+	if queryErr != nil {
+		return database.Product{}, false, queryErr
+	}
+
+	for i := range candidates {
+		if candidates[i].IsDuplicateOf(draft) {
+			return candidates[i], true, nil
+		}
+	}
+	return database.Product{}, false, nil
 }
 
 func (r *ProductRepository) GetProductByID(productID, userID uint) (database.Product, error) {
@@ -582,10 +791,11 @@ func (r *ProductRepository) GetArchivedProductByID(productID, userID uint) (data
 	return product, nil
 }
 
-// productSortColumns is the allowlist of columns permitted in a request-driven
-// ORDER BY clause. Sort values are interpolated verbatim into SQL, so the only
-// string that may reach Order() is a value resolved through this map: the key
-// is what a caller sends, the value is the real column name.
+// productSortColumns maps a caller-supplied sort key onto the column the
+// database orders by. It is the allowlist of columns permitted in a
+// request-driven ORDER BY clause: sort values are interpolated verbatim into
+// SQL, so every value that may reach Order() is a value resolved through this
+// map — the key is what a caller sends, the value is the real column name.
 var productSortColumns = map[string]string{
 	"product_name": "product_name",
 	"created_at":   "created_at",
@@ -595,44 +805,85 @@ var productSortColumns = map[string]string{
 	"barcode":      "barcode",
 }
 
+// SortEffectiveExpiry is the sort key that orders a product list by the
+// effective expiry — the earlier of the printed expiry and the
+// opened-shelf-life date. It has no column: the opened-shelf-life date needs
+// date arithmetic that no two database engines spell the same way, so a list
+// sorted by it is ordered in Go, with SortByEffectiveExpiry.
+const SortEffectiveExpiry = "effective_expire_at"
+
+// productSort is a resolved ordering: the ORDER BY the database applies, and
+// what still has to happen to the rows in Go.
+type productSort struct {
+	clause            string
+	byEffectiveExpiry bool
+	descending        bool
+}
+
 // resolveSortClause maps a caller-supplied sort key and direction onto a safe
-// ORDER BY clause. Empty values fall back to the defaults; any value outside
-// the allowlist returns ErrDatabaseInvalidSortParameter rather than silently
-// falling back, so misuse stays visible instead of masquerading as a working
-// sort. It lives here, at the single Order() call site, so both the web and the
-// API entry points are covered by one guard.
-func resolveSortClause(sortValue, orderValue string) (string, error) {
+// ordering. A column the database can sort by becomes an ORDER BY clause; the
+// effective expiry becomes the id order that makes the Go sort stable, and the
+// resolved sort says the rows still have to be sorted in Go. Empty values fall
+// back to the defaults; any value outside the allowlist returns
+// ErrDatabaseInvalidSortParameter rather than silently falling back, so misuse
+// stays visible instead of masquerading as a working sort. It lives here, at
+// the single Order() call site, so both the web and the API entry points are
+// covered by one guard.
+//
+// A column sort breaks its ties by id. Two products that share the sort key
+// would otherwise come back in whatever order the database finds them, and a
+// client that walks the pages by offset would then skip and repeat rows
+// instead of reading every one of them exactly once. The effective expiry
+// breaks its ties the same way: the id order is the order the projections
+// arrive in, and the Go sort keeps it.
+func resolveSortClause(sortValue, orderValue string) (productSort, error) {
 	if sortValue == "" {
 		sortValue = "product_name"
 	}
 	if orderValue == "" {
 		orderValue = "asc"
 	}
-	column, ok := productSortColumns[sortValue]
-	if !ok {
-		return "", errors.ErrDatabaseInvalidSortParameter
-	}
 	direction := strings.ToUpper(orderValue)
 	if direction != "ASC" && direction != "DESC" {
-		return "", errors.ErrDatabaseInvalidSortParameter
+		return productSort{}, errors.ErrDatabaseInvalidSortParameter
 	}
-	return column + " " + direction, nil
+	descending := direction == "DESC"
+
+	if sortValue == SortEffectiveExpiry {
+		return productSort{clause: "id " + direction, byEffectiveExpiry: true, descending: descending}, nil
+	}
+
+	column, ok := productSortColumns[sortValue]
+	if !ok {
+		return productSort{}, errors.ErrDatabaseInvalidSortParameter
+	}
+	return productSort{clause: column + " " + direction + ", id " + direction, descending: descending}, nil
+}
+
+// applyEffectiveExpirySort orders the rows the way the resolved sort asks for.
+func applyEffectiveExpirySort(products []database.Product, sort productSort) {
+	if sort.descending {
+		SortByEffectiveExpiryDescending(products)
+		return
+	}
+	SortByEffectiveExpiry(products)
 }
 
 // searchProductsQuery builds the shared predicate for both search entry points:
 // the API's full-row search and the products page's projection search. Keeping
 // it in one place means a new search field cannot be added to one and forgotten
-// in the other.
+// in the other. The count of the matches is built from it as well, so it
+// cannot report more matches than the search returns.
+//
+// The household comes from the same resolution every other read uses, so a user
+// without a household is an account in error: the API answers 400 and the
+// products page reports the failed fetch. The search used to answer an empty
+// list for such a user, which hid the broken account behind a blank page.
 func (r *ProductRepository) searchProductsQuery(queryParam SearchParameterEnum, queryValue string, userID uint) (*gorm.DB, error) {
-	var user authentication.User
-	if err := r.DB.First(&user, userID).Error; err != nil {
+	query, err := r.activeProductsQuery(userID)
+	if err != nil {
 		return nil, err
 	}
-
-	query := r.DB.
-		Scopes(r.privacyScope(userID)).
-		Where(util.QueryHouseholdId, user.HouseholdID).
-		Where(util.WhereDeletedIsNull)
 
 	likeValue := fmt.Sprintf("%%%s%%", queryValue)
 	switch queryParam {
@@ -646,23 +897,88 @@ func (r *ProductRepository) searchProductsQuery(queryParam SearchParameterEnum, 
 	return query, nil
 }
 
-func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint) ([]database.Product, error) {
+// SearchProducts returns one page of the products that match the search.
+//
+// A column sort is paged by the database. The effective expiry has no sortable
+// column, so those matches are resolved as narrow projections, ordered in Go
+// and only the rows of the page are hydrated.
+func (r *ProductRepository) SearchProducts(queryParam SearchParameterEnum, queryValue, sortValue, orderValue string, userID uint, limit, offset int) ([]database.Product, error) {
+	sort, sortErr := resolveSortClause(sortValue, orderValue)
+	if sortErr != nil {
+		return []database.Product{}, sortErr
+	}
+
+	if sort.byEffectiveExpiry {
+		products, searchErr := r.searchProductsByEffectiveExpiry(queryParam, queryValue, sort, userID, limit, offset)
+		if searchErr != nil {
+			return []database.Product{}, searchErr
+		}
+		return products, nil
+	}
+
 	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
 	if queryErr != nil {
 		return []database.Product{}, queryErr
 	}
 
-	sortClause, sortErr := resolveSortClause(sortValue, orderValue)
-	if sortErr != nil {
-		return []database.Product{}, sortErr
-	}
-
 	var foundProducts []database.Product
-	findErr := query.Preload("StorageLocation").Order(sortClause).Find(&foundProducts)
-	if findErr.Error != nil {
+	listQuery := applyPage(query.Preload("StorageLocation").Order(sort.clause), limit, offset)
+	if findErr := listQuery.Find(&foundProducts); findErr.Error != nil {
 		return []database.Product{}, findErr.Error
 	}
 	return foundProducts, nil
+}
+
+// searchProductsByEffectiveExpiry returns the page of the matches that starts
+// at the offset, ordered by the effective expiry.
+//
+// The matches are resolved as narrow projections and ordered in Go, because the
+// effective expiry has no sortable column; only the rows of the page are
+// hydrated as full rows.
+func (r *ProductRepository) searchProductsByEffectiveExpiry(queryParam SearchParameterEnum, queryValue string, sort productSort, userID uint, limit, offset int) ([]database.Product, error) {
+	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
+	if queryErr != nil {
+		return nil, queryErr
+	}
+
+	projections, projectionErr := r.searchProductProjections(query, sort)
+	if projectionErr != nil {
+		return nil, projectionErr
+	}
+
+	page := pageWindow(projections, limit, offset)
+	ids := make([]uint, 0, len(page))
+	for i := range page {
+		ids = append(ids, page[i].ID)
+	}
+
+	rows, err := r.hydrateProductsByIDs(userID, ids)
+	if err != nil {
+		return nil, err
+	}
+	return orderProductsByID(rows, ids), nil
+}
+
+// CountSearchProducts counts the products the search matches. The count uses
+// the predicate of the search itself — the household's products the caller may
+// see, minus the archived ones, that match the searched value — so it cannot
+// describe a different set than the search returns. It counts in SQL and does
+// not load the matches into memory.
+//
+// The count runs on a query of its own: a statement that already carries a
+// LIMIT would cap the count at the page size, and one that carries an OFFSET
+// would skip the count's own row and answer zero.
+func (r *ProductRepository) CountSearchProducts(queryParam SearchParameterEnum, queryValue string, userID uint) (int, error) {
+	query, queryErr := r.searchProductsQuery(queryParam, queryValue, userID)
+	if queryErr != nil {
+		return 0, queryErr
+	}
+
+	var count int64
+	if err := query.Model(&database.Product{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 // SearchProductProjections is the products page's search: same predicate and the
@@ -683,14 +999,23 @@ func (r *ProductRepository) SearchProductProjections(
 		query = query.Where("storage_location_id = ?", locationID)
 	}
 
-	sortClause, sortErr := resolveSortClause(sortValue, orderValue)
+	sort, sortErr := resolveSortClause(sortValue, orderValue)
 	if sortErr != nil {
 		return nil, sortErr
 	}
 
+	return r.searchProductProjections(query, sort)
+}
+
+// searchProductProjections resolves the matches as narrow projections and
+// orders them the way the resolved sort asks for.
+func (r *ProductRepository) searchProductProjections(query *gorm.DB, sort productSort) ([]database.Product, error) {
 	var foundProducts []database.Product
-	if err := query.Select(productProjectionColumns).Order(sortClause).Find(&foundProducts).Error; err != nil {
+	if err := query.Select(productProjectionColumns).Order(sort.clause).Find(&foundProducts).Error; err != nil {
 		return nil, err
+	}
+	if sort.byEffectiveExpiry {
+		applyEffectiveExpirySort(foundProducts, sort)
 	}
 	return foundProducts, nil
 }
@@ -715,10 +1040,18 @@ func (r *ProductRepository) CreateProduct(userID uint, product *database.Product
 
 	product.HouseholdID = user.HouseholdID
 	product.UserID = userID
+	// The barcode is normalised in one place, like the pack size: every path
+	// stores the same trimmed barcode, so the duplicate rule compares equal
+	// barcodes whatever wrote the row.
+	product.Barcode = database.NormalizeBarcode(product.Barcode)
 	// The pack size is free text that several write paths fill, so it is
 	// normalised in one place: every path stores the same collapsed, capped
 	// label.
 	product.PackSize = util.PackSizeLabel(product.PackSize)
+	// The name is free text too, and its column is a bounded varchar: a name
+	// that exceeds it is refused by the database rather than stored. Every
+	// path stores the same collapsed, capped label.
+	product.ProductName = util.ProductNameLabel(product.ProductName)
 	product.Quantity = util.ClampProductQuantity(product.Quantity)
 	createErr := r.DB.Create(&product)
 	return createErr.Error
@@ -788,6 +1121,7 @@ func (r *ProductRepository) CreateProductsBulk(userID uint, rows []ImportedProdu
 			rows[i].Product.HouseholdID = user.HouseholdID
 			rows[i].Product.UserID = userID
 			rows[i].Product.PackSize = util.PackSizeLabel(rows[i].Product.PackSize)
+			rows[i].Product.ProductName = util.ProductNameLabel(rows[i].Product.ProductName)
 			rows[i].Product.Quantity = util.ClampProductQuantity(rows[i].Product.Quantity)
 			products[i] = rows[i].Product
 			if locationID, ok := createdIDs[strings.ToLower(rows[i].NewLocationName)]; ok {
@@ -922,6 +1256,35 @@ func (r *ProductRepository) UpdateProduct(productID uint, userID uint, product *
 	}
 	if product.Has("daysAfterOpening") {
 		dbProduct.DaysAfterOpening = product.DaysAfterOpening
+	}
+	if product.Has("categoryKey") || product.Has("categories") {
+		resolver, resolveErr := LoadCategoryResolver(r.DB)
+		if resolveErr != nil {
+			return resolveErr
+		}
+		if product.Has("categoryKey") {
+			categoryKey, categoryErr := CanonicalCategoryKey(resolver, product.CategoryKey)
+			if categoryErr != nil {
+				return categoryErr
+			}
+			dbProduct.CategoryKey = categoryKey
+		} else if key, ok := resolver.ResolveKey(dbProduct.Categories); ok {
+			// The free text names the canonical category, so a change of the
+			// text changes the category unless the request named one itself.
+			dbProduct.CategoryKey = &key
+		} else {
+			dbProduct.CategoryKey = nil
+		}
+		// A request that assigns a category and states no date leaves the
+		// product without one, so the household's default for that category
+		// fills it — the rule the create paths follow.
+		if !product.Has("expireAt") {
+			defaults, defaultsErr := NewHouseholdCategoryRepository(r.DB).Defaults(dbProduct.HouseholdID)
+			if defaultsErr != nil {
+				return defaultsErr
+			}
+			ApplyHouseholdShelfLife(&dbProduct, defaults, dbProduct.CategoryKey)
+		}
 	}
 
 	saveResult := r.DB.Save(&dbProduct)
@@ -1095,6 +1458,7 @@ func (r *ProductRepository) RestoreProduct(productID, userID uint) error {
 
 	product.DeletedAt = gorm.DeletedAt{}
 	product.RemovalReason = ""
+	product.WasteCause = ""
 
 	saveResult := r.DB.Save(&product)
 	return saveResult.Error
@@ -1114,6 +1478,7 @@ func (r *ProductRepository) BulkRestoreProducts(productIDs []uint, userID uint) 
 		}
 		product.DeletedAt = gorm.DeletedAt{}
 		product.RemovalReason = ""
+		product.WasteCause = ""
 		saveResult := r.DB.Save(&product)
 		if saveResult.Error != nil {
 			bulkErrors = append(bulkErrors, BulkOperationError{productID, saveResult.Error})
@@ -1240,13 +1605,11 @@ func (r *ProductRepository) GetProductsExpired(userID uint) ([]*database.Product
 //
 // The prune deliberately also matches rows with a zero expire_at, which the Go
 // loop below skips — a product with no expiry set is never expired.
-func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
+func (r *ProductRepository) GetExpiredProductsCount(userID uint, now time.Time) (int, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return 0, err
 	}
-
-	now := time.Now()
 
 	var rows []expiryCandidate
 	err = r.DB.Model(&database.Product{}).
@@ -1274,70 +1637,114 @@ func (r *ProductRepository) GetExpiredProductsCount(userID uint) (int, error) {
 	return count, nil
 }
 
-func (r *ProductRepository) GetTopArchivedProducts(userID uint, limit int) ([]database.Product, error) {
-	archivedProducts, err := r.GetUserArchivedProductsBulk(userID, -1)
+// frequentlyBoughtQuery ranks the household's archived products by how often
+// it bought them and how recently, and carries the most recent row of every
+// barcode so a suggestion names the product the way the household does.
+//
+// The archive is grouped in SQL: the query returns one row per barcode, so
+// its cost does not grow with the size of the pantry.
+//
+// The privacy filter sits inside the grouping on purpose. A private product
+// of another member must neither appear nor inflate the count of a barcode
+// the household shares.
+//
+// The recency key is the id, not the creation date: the id is the order the
+// household bought the product in, and it compares as a number on every
+// database. The creation date of that purchase rides along as the date of the
+// row the query joins to.
+const frequentlyBoughtQuery = `
+SELECT p.barcode, p.product_name, p.pack_size, p.category_key,
+       p.storage_location_id, p.image_url, p.created_at,
+       b.purchase_count
+FROM (
+    SELECT barcode,
+           COUNT(*) AS purchase_count,
+           MAX(id)   AS last_id
+    FROM products
+    WHERE household_id = ? AND deleted_at IS NOT NULL
+      AND (is_private = 0 OR user_id = ?) AND barcode <> ''
+    GROUP BY barcode
+    HAVING COUNT(*) >= ?
+) b
+JOIN products p ON p.id = b.last_id
+ORDER BY b.purchase_count DESC, b.last_id DESC
+LIMIT ?`
+
+// frequentProductRow is one row of the frequently-bought query. It is a
+// private shape, so the soft-delete scope of GORM never touches the raw SQL.
+type frequentProductRow struct {
+	Barcode           string    `gorm:"column:barcode"`
+	ProductName       string    `gorm:"column:product_name"`
+	PackSize          string    `gorm:"column:pack_size"`
+	CategoryKey       *string   `gorm:"column:category_key"`
+	StorageLocationID *uint     `gorm:"column:storage_location_id"`
+	ImageURL          string    `gorm:"column:image_url"`
+	LastBoughtAt      time.Time `gorm:"column:created_at"`
+	PurchaseCount     int       `gorm:"column:purchase_count"`
+}
+
+// GetFrequentlyBoughtProducts returns the staples the household buys
+// repeatedly, most frequent first and most recent second. A product the
+// household bought fewer than util.FrequentProductMinPurchases times is not a
+// staple and never appears.
+func (r *ProductRepository) GetFrequentlyBoughtProducts(userID uint, limit int) ([]apiModel.FrequentProduct, error) {
+	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(archivedProducts) == 0 {
-		return []database.Product{}, nil
+	if limit <= 0 {
+		return []apiModel.FrequentProduct{}, nil
 	}
 
-	barcodeCounts := make(map[string]int)
-	barcodeToProduct := make(map[string]database.Product)
-
-	for i := range archivedProducts {
-		product := &archivedProducts[i]
-		barcodeCounts[product.Barcode]++
-		if _, exists := barcodeToProduct[product.Barcode]; !exists {
-			barcodeToProduct[product.Barcode] = *product
-		}
+	var rows []frequentProductRow
+	queryErr := r.DB.Raw(
+		frequentlyBoughtQuery,
+		householdID,
+		userID,
+		util.FrequentProductMinPurchases,
+		limit,
+	).Scan(&rows).Error
+	if queryErr != nil {
+		return nil, queryErr
 	}
 
-	type barcodeCount struct {
-		barcode string
-		count   int
-		product database.Product
-	}
-
-	var counts []barcodeCount
-	for barcode, count := range barcodeCounts {
-		counts = append(counts, barcodeCount{
-			barcode: barcode,
-			count:   count,
-			product: barcodeToProduct[barcode],
+	products := make([]apiModel.FrequentProduct, 0, len(rows))
+	for i := range rows {
+		products = append(products, apiModel.FrequentProduct{
+			Barcode:           rows[i].Barcode,
+			ProductName:       rows[i].ProductName,
+			PackSize:          rows[i].PackSize,
+			CategoryKey:       rows[i].CategoryKey,
+			StorageLocationID: rows[i].StorageLocationID,
+			ImageURL:          rows[i].ImageURL,
+			PurchaseCount:     rows[i].PurchaseCount,
+			LastBoughtAt:      rows[i].LastBoughtAt,
 		})
 	}
-
-	sort.Slice(counts, func(i, j int) bool {
-		return counts[i].count > counts[j].count
-	})
-
-	var result []database.Product
-	for i := 0; i < len(counts) && i < limit; i++ {
-		result = append(result, counts[i].product)
-	}
-
-	return result, nil
+	return products, nil
 }
 
 // GetActiveProductsCount counts the user's active products in SQL. It used to
 // load every active row plus a StorageLocation preload just to take len(), which
 // made the stats endpoint scale with the household's full stock rather than with
 // the handful of numbers it returns.
+//
+// It counts the same set the product list returns — the household's rows the
+// caller may see, minus the archived ones — so it can serve as the total of a
+// paged list.
+//
+// The count runs on a query of its own: a statement that already carries a
+// LIMIT would cap the count at the page size, and one that carries an OFFSET
+// would skip the count's own row and answer zero.
 func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error) {
-	householdID, err := r.getUserHouseholdID(userID)
+	query, err := r.activeProductsQuery(userID)
 	if err != nil {
 		return 0, err
 	}
 
 	var count int64
-	err = r.DB.Model(&database.Product{}).
-		Scopes(r.privacyScope(userID)).
-		Where(util.QueryHouseholdId, householdID).
-		Where(util.WhereDeletedIsNull).
-		Count(&count).Error
+	err = query.Model(&database.Product{}).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -1347,19 +1754,20 @@ func (r *ProductRepository) GetActiveProductsCount(userID uint) (int, error) {
 // GetArchivedProductsCount returns how many products the household has archived.
 // It is the count-only sibling of GetUserArchivedProductsBulk, which materialises
 // every archived row (and preloads StorageLocation) for callers that only need a
-// number.
+// number. It counts the same set the archived list returns, so it can serve as
+// the total of a paged list.
+//
+// The count runs on a query of its own: a statement that already carries a
+// LIMIT would cap the count at the page size, and one that carries an OFFSET
+// would skip the count's own row and answer zero.
 func (r *ProductRepository) GetArchivedProductsCount(userID uint) (int, error) {
-	householdID, err := r.getUserHouseholdID(userID)
+	query, err := r.archivedProductsQuery(userID)
 	if err != nil {
 		return 0, err
 	}
 
 	var count int64
-	err = r.DB.Unscoped().Model(&database.Product{}).
-		Scopes(r.privacyScope(userID)).
-		Where(util.WhereDeletedIsNotNull).
-		Where(util.QueryHouseholdId, householdID).
-		Count(&count).Error
+	err = query.Model(&database.Product{}).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -1415,7 +1823,7 @@ func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string
 			counts["Uncategorized"]++
 			continue
 		}
-		first := strings.SplitN(raw, ",", 2)[0]
+		first, _, _ := strings.Cut(raw, ",")
 		first = strings.TrimSpace(first)
 		if idx := strings.Index(first, ":"); idx != -1 {
 			first = strings.TrimSpace(first[idx+1:])
@@ -1458,10 +1866,12 @@ func (r *ProductRepository) GetProductCategoryBreakdown(userID uint) (map[string
 	return result, nil
 }
 
-// GetExpiryTrend buckets the next 12 months of expiries. Only the three columns
-// EffectiveExpireAt reads are projected, so the query cost tracks the row count
-// rather than the row width.
-func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthlyCount, error) {
+// GetExpiryTrend buckets the next 12 months of expiries, starting with the
+// calendar month `now` falls in. The buckets follow the container's zone, so
+// an expiry lands in the month the label next to it shows. Only the three
+// columns EffectiveExpireAt reads are projected, so the query cost tracks the
+// row count rather than the row width.
+func (r *ProductRepository) GetExpiryTrend(userID uint, now time.Time) ([]apiModel.StatsMonthlyCount, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return nil, err
@@ -1478,50 +1888,54 @@ func (r *ProductRepository) GetExpiryTrend(userID uint) ([]apiModel.StatsMonthly
 		return nil, err
 	}
 
-	now := time.Now()
-	monthCounts := make(map[string]int, 12)
-	for i := 0; i < 12; i++ {
-		monthCounts[now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)] = 0
+	monthKeys := util.UpcomingMonthKeys(now, 12)
+	monthCounts := make(map[string]int, len(monthKeys))
+	for _, key := range monthKeys {
+		monthCounts[key] = 0
 	}
 	for i := range products {
 		expiry := products[i].EffectiveExpireAt()
 		if expiry.IsZero() {
 			continue
 		}
-		month := expiry.Format(util.DefaultDateFormatMonthStr)
+		month := util.MonthKey(expiry)
 		if _, ok := monthCounts[month]; ok {
 			monthCounts[month]++
 		}
 	}
 
-	result := make([]apiModel.StatsMonthlyCount, 0, 12)
-	for i := 0; i < 12; i++ {
-		month := now.AddDate(0, i, 0).Format(util.DefaultDateFormatMonthStr)
-		result = append(result, apiModel.StatsMonthlyCount{Month: month, Count: monthCounts[month]})
+	result := make([]apiModel.StatsMonthlyCount, 0, len(monthKeys))
+	for _, key := range monthKeys {
+		result = append(result, apiModel.StatsMonthlyCount{Month: key, Count: monthCounts[key]})
 	}
 	return result, nil
 }
 
-func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]apiModel.StatsExpiringProduct, error) {
+func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int, now time.Time) ([]apiModel.StatsExpiringProduct, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	now := time.Now()
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
 
 	// Candidate scope is a one-sided prune: it only drops rows whose effective
 	// expiry provably cannot reach the window, so the verdict below still runs
 	// in Go through EffectiveExpireAt. Same pattern as GetExpiringSoonCount.
+	//
+	// The id and the foreign key are part of the projection because the
+	// storage location is preloaded: without them the preload has neither a
+	// key to collect nor the pointer to follow.
 	var products []database.Product
 	err = r.DB.Model(&database.Product{}).
-		Select("product_name, expire_at, opened_at, days_after_opening").
+		Select("id, storage_location_id, product_name, quantity, pack_size, expire_at, opened_at, days_after_opening").
+		Preload("StorageLocation").
 		Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
 		Where(util.WhereDeletedIsNull).
 		Scopes(effectiveExpiryCandidateScope(startOfToday, endOfWindow)).
+		Order("id").
 		Find(&products).Error
 	if err != nil {
 		return nil, err
@@ -1534,16 +1948,110 @@ func (r *ProductRepository) GetExpiringSoonProducts(userID uint, days int) ([]ap
 			continue
 		}
 		if !expirationTime.Before(startOfToday) && !expirationTime.After(endOfWindow) {
-			result = append(result, apiModel.StatsExpiringProduct{
-				ProductName: products[i].ProductName,
-				ExpireAt:    expirationTime.Format(util.DefaultDateFormatParseStr),
-			})
+			result = append(result, ExpiringProductStats(&products[i], expirationTime))
 		}
 	}
-	sort.Slice(result, func(i, j int) bool {
+	sort.SliceStable(result, func(i, j int) bool {
 		return result[i].ExpireAt < result[j].ExpireAt
 	})
 	return result, nil
+}
+
+// ExpiringProductStats projects a product onto the wire shape of the expiring
+// list. The location is a flat name and icon pair: the list is a projection,
+// not a product, so it carries no nested object. The id is there so the row
+// can lead to the product it names.
+//
+// The backup export builds the same list from the rows it already carries, so
+// the shape lives here once.
+func ExpiringProductStats(product *database.Product, expirationTime time.Time) apiModel.StatsExpiringProduct {
+	entry := apiModel.StatsExpiringProduct{
+		ID:          product.ID,
+		ProductName: product.ProductName,
+		ExpireAt:    expirationTime.In(time.Local).Format(util.DefaultDateFormatParseStr),
+		Quantity:    product.Quantity,
+		PackSize:    product.PackSize,
+	}
+	if product.StorageLocation != nil {
+		entry.StorageLocationID = &product.StorageLocation.ID
+		entry.StorageLocationName = product.StorageLocation.Name
+		entry.StorageLocationIcon = product.StorageLocation.Icon
+	}
+	return entry
+}
+
+// GetUseFirstProducts returns the household's active products ordered by the
+// effective expiry, soonest first, with the storage location and the pack
+// count of each. It answers "what do we eat next" for the whole pantry, not
+// only for the products inside the warning window.
+//
+// The order is the one the products page uses: the narrow projection is sorted
+// with SortByEffectiveExpiry and only the rows that make up the list are
+// hydrated, so a product holds the same position in the tile and in the list.
+// A limit of zero returns the whole pantry.
+func (r *ProductRepository) GetUseFirstProducts(userID uint, limit int) ([]apiModel.StatsUseFirstProduct, error) {
+	rows, err := r.getProductsByEffectiveExpiry(userID, limit, 0, false)
+	if err != nil {
+		return nil, err
+	}
+	return BuildUseFirstProducts(rows, limit), nil
+}
+
+// hydrateProductsByIDs loads the full rows for the given ids. The query binds
+// one placeholder per id and SQLite caps the number of bound variables, so a
+// list that covers the whole pantry is fetched in chunks.
+func (r *ProductRepository) hydrateProductsByIDs(userID uint, ids []uint) ([]database.Product, error) {
+	if len(ids) == 0 {
+		return []database.Product{}, nil
+	}
+	if len(ids) <= bulkQueryChunkSize {
+		return r.GetUserProductsByIDs(userID, ids)
+	}
+
+	var rows []database.Product
+	for start := 0; start < len(ids); start += bulkQueryChunkSize {
+		end := min(start+bulkQueryChunkSize, len(ids))
+		chunk, chunkErr := r.GetUserProductsByIDs(userID, ids[start:end])
+		if chunkErr != nil {
+			return nil, chunkErr
+		}
+		rows = append(rows, chunk...)
+	}
+	return rows, nil
+}
+
+// BuildUseFirstProducts projects the rows of a use-first list onto the wire
+// shape, ordered by the effective expiry, soonest first, with the products
+// without a date last. The rows are copied, so the caller's slice keeps its
+// own order. A limit of zero returns every row.
+func BuildUseFirstProducts(products []database.Product, limit int) []apiModel.StatsUseFirstProduct {
+	ordered := make([]database.Product, len(products))
+	copy(ordered, products)
+	SortByEffectiveExpiry(ordered)
+	if limit > 0 && len(ordered) > limit {
+		ordered = ordered[:limit]
+	}
+
+	result := make([]apiModel.StatsUseFirstProduct, 0, len(ordered))
+	for i := range ordered {
+		product := &ordered[i]
+		entry := apiModel.StatsUseFirstProduct{
+			ID:          product.ID,
+			ProductName: product.ProductName,
+			Quantity:    product.Quantity,
+			PackSize:    product.PackSize,
+		}
+		if expiry := product.EffectiveExpireAt(); !expiry.IsZero() {
+			entry.ExpireAt = expiry.In(time.Local).Format(util.DefaultDateFormatParseStr)
+		}
+		if product.StorageLocation != nil {
+			entry.StorageLocationID = &product.StorageLocation.ID
+			entry.StorageLocationName = product.StorageLocation.Name
+			entry.StorageLocationIcon = product.StorageLocation.Icon
+		}
+		result = append(result, entry)
+	}
+	return result
 }
 
 func (r *ProductRepository) GetLastNotifiedProduct(householdID uint) (database.Product, error) {
@@ -1761,13 +2269,12 @@ func (r *ProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentic
 	return users, err
 }
 
-func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int) (int, error) {
+func (r *ProductRepository) GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return 0, err
 	}
 
-	now := time.Now()
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	endOfWindow := time.Date(now.Year(), now.Month(), now.Day()+days, 23, 59, 59, 999999999, now.Location())
 
@@ -1848,17 +2355,40 @@ type expiryCandidate struct {
 	DaysAfterOpening *int
 }
 
-func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
+// GetWasteThisMonth counts the waste events of the month. A waste event is one
+// wasted product, full or partial. The savings ledger holds one record per
+// waste, while the products table only knows the wastes that archived a
+// product — a partial waste leaves the product active and would be invisible
+// there, so the two sources would report different numbers for the same waste.
+// The archived rows without a ledger entry are the wastes from before the
+// ledger existed; they keep the count of a household that predates it.
+func (r *ProductRepository) GetWasteThisMonth(userID uint, now time.Time) (int, error) {
 	householdID, err := r.getUserHouseholdID(userID)
 	if err != nil {
 		return 0, err
 	}
 
-	now := time.Now()
-	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	monthStart := util.MonthStart(now)
 	monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
 
-	var count int64
+	// The ledger is joined to the product it names, so the privacy scope still
+	// applies: a member's private product is not part of another member's count.
+	var ledgerCount int64
+	err = r.DB.Table("savings_records AS s").
+		Joins("JOIN products p ON p.id = s.product_id").
+		Where("s.household_id = ?", householdID).
+		Where("s.event_type = ?", database.SavingsEventTypeWasted).
+		Where("s.created_at >= ?", monthStart).
+		Where("s.created_at <= ?", monthEnd).
+		Where("(p.is_private = 0 OR p.user_id = ?)", userID).
+		Count(&ledgerCount).Error
+	if err != nil {
+		return 0, err
+	}
+
+	// An archived waste whose ledger entry landed in the same month is already
+	// counted above; only the ones without such an entry are added here.
+	var archivedCount int64
 	err = r.DB.Unscoped().Model(&database.Product{}).
 		Scopes(r.privacyScope(userID)).
 		Where(util.QueryHouseholdId, householdID).
@@ -1866,11 +2396,14 @@ func (r *ProductRepository) GetWasteThisMonth(userID uint) (int, error) {
 		Where("deleted_at >= ?", monthStart).
 		Where("deleted_at <= ?", monthEnd).
 		Where("removal_reason = ?", database.RemovalReasonWasted).
-		Count(&count).Error
+		Where("NOT EXISTS (SELECT 1 FROM savings_records s WHERE s.product_id = products.id AND s.event_type = ? AND s.created_at >= ? AND s.created_at <= ?)",
+			database.SavingsEventTypeWasted, monthStart, monthEnd).
+		Count(&archivedCount).Error
 	if err != nil {
 		return 0, err
 	}
-	return int(count), nil
+
+	return int(ledgerCount + archivedCount), nil
 }
 
 // GetExpiringProductsByHousehold returns non-private products for a household
@@ -2140,32 +2673,31 @@ func (r *ProductRepository) ConsumeProduct(productID, userID uint) error {
 	})
 }
 
-// ConsumeProductPartial reduces an active product's pack count by the given
-// count, based on the product state read by the caller. A partial reduce
-// is a single guarded UPDATE on the still-active row scoped to the product's
-// household. A full consume (count of 0 or negative, or one that covers the
-// whole stock) re-reads the current count inside a transaction before
-// deciding, so a stale caller read never archives more than actually exists:
-// if the concurrent reduction still leaves more than the requested count,
-// it falls back to a partial reduce, otherwise it soft-deletes with
-// RemovalReasonConsumed and returns the current count. fullyConsumed
-// reports whether the product was archived. The guarded writes compare data
-// values only (quantity, removal_reason, deleted_at) — never updated_at: a
-// timestamp that was not round-tripped through the GORM driver (NULL on
-// legacy rows, or text written by raw SQL) never matches the bound form and
-// fails every guarded write with ErrProductConcurrentModification. The
-// removal_reason precondition is the double-apply guard: once one request
-// claims the row (consumed or wasted), a second full consume cannot archive
-// it again and duplicate the savings/activity entries. When a guarded
-// precondition fails (the row changed between read and write inside
-// the transaction)
-// the transaction is retried once with a fresh read; only a second failure
-// surfaces ErrProductConcurrentModification instead of silently applying.
-func (r *ProductRepository) ConsumeProductPartial(product *database.Product, quantity int) (consumed int, fullyConsumed bool, err error) {
-	// Fast path: the caller's read shows enough stock for a plain reduce.
-	// The guarded UPDATE re-validates the count, so a concurrent change
-	// surfaces as ErrProductConcurrentModification.
-	if quantity > 0 && quantity < product.Quantity {
+// ConsumeProductPartial removes up to quantity packs and archives the row when
+// the request covers its current stock. A zero or negative quantity consumes
+// the whole stock, preserving the recipe-cook contract.
+func (r *ProductRepository) ConsumeProductPartial(product *database.Product, quantity int, mutationID *string) (int, bool, bool, error) {
+	return r.removeProductPartial(product, quantity, database.RemovalReasonConsumed, mutationID, "")
+}
+
+// WasteProductPartial is the waste counterpart of ConsumeProductPartial.
+func (r *ProductRepository) WasteProductPartial(product *database.Product, quantity int, mutationID *string, cause string) (int, bool, bool, error) {
+	return r.removeProductPartial(product, quantity, database.RemovalReasonWasted, mutationID, cause)
+}
+
+// removeProductPartial compares data values only (quantity, removal_reason and
+// deleted_at), never updated_at, whose driver representation is not stable on
+// legacy rows. removal_reason also prevents a second request from claiming an
+// archived row. A mutation claim shares the transaction with the stock change,
+// so an offline replay cannot apply it twice. The cause is why the packs were
+// wasted; it is written beside the removal reason when the waste archives the
+// row.
+func (r *ProductRepository) removeProductPartial(product *database.Product, quantity int, reason string, mutationID *string, cause string) (removed int, fullyRemoved bool, applied bool, err error) {
+	if mutationID != nil && strings.TrimSpace(*mutationID) == "" {
+		mutationID = nil
+	}
+
+	if mutationID == nil && quantity > 0 && quantity < product.Quantity {
 		result := r.DB.Model(&database.Product{}).
 			Where("id = ?", product.ID).
 			Where("household_id = ?", product.HouseholdID).
@@ -2174,27 +2706,33 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, qua
 			Where("quantity > ?", quantity).
 			Update("quantity", gorm.Expr("quantity - ?", quantity))
 		if result.Error != nil {
-			return 0, false, result.Error
+			return 0, false, false, result.Error
 		}
 		if result.RowsAffected > 0 {
-			return quantity, false, nil
+			return quantity, false, true, nil
 		}
-		// RowsAffected == 0 means a concurrent change dropped the stock
-		// below the requested count. Fall through to the transactional
-		// path, which re-reads and resolves full vs partial consume.
 	}
 
-	// Full-consume path: the caller's read may be stale, so re-check the
-	// current count before deciding between full consume and partial
-	// reduce. A guarded precondition failure rolls back and is retried
-	// once with fresh reads before giving up.
 	var txErr error
-	for attempt := 0; attempt < 2; attempt++ {
-		consumed, fullyConsumed = 0, false
+	for range 2 {
+		removed, fullyRemoved, applied = 0, false, false
 		txErr = r.DB.Transaction(func(tx *gorm.DB) error {
+			if mutationID != nil {
+				claim := database.ProductMutationClaim{ProductID: product.ID, MutationID: *mutationID}
+				claimResult := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&claim)
+				if claimResult.Error != nil {
+					return claimResult.Error
+				}
+				if claimResult.RowsAffected == 0 {
+					var claimed database.ProductMutationClaim
+					if err := tx.First(&claimed, "product_id = ? AND mutation_id = ?", product.ID, *mutationID).Error; err != nil {
+						return errMutationClaimRefused
+					}
+					return errMutationAlreadyClaimed
+				}
+			}
+
 			var current database.Product
-			// Household-scoped re-read: a stale caller read must never let a
-			// product from another household be re-read and archived here.
 			if getErr := tx.Where("id = ? AND household_id = ?", product.ID, product.HouseholdID).First(&current).Error; getErr != nil {
 				return getErr
 			}
@@ -2212,40 +2750,49 @@ func (r *ProductRepository) ConsumeProductPartial(product *database.Product, qua
 				if result.RowsAffected == 0 {
 					return errors.ErrProductConcurrentModification
 				}
-				consumed = quantity
+				removed = quantity
+				applied = true
 				return nil
 			}
-			consumed = current.Quantity
-			fullyConsumed = true
-			// The unclaimed-row precondition is the double-apply guard: only
-			// one request may claim the row, so concurrent full consumes
-			// cannot duplicate the savings/activity entries.
+
+			removed = current.Quantity
+			fullyRemoved = true
 			result := tx.Model(&database.Product{}).
 				Where("id = ?", current.ID).
 				Where("household_id = ?", current.HouseholdID).
 				Where(util.WhereDeletedIsNull).
 				Where(util.WhereRemovalReasonUnclaimed).
 				Where("quantity = ?", current.Quantity).
-				Update("removal_reason", database.RemovalReasonConsumed)
+				Updates(map[string]any{
+					"removal_reason": reason,
+					"waste_cause":    cause,
+				})
 			if result.Error != nil {
 				return result.Error
 			}
 			if result.RowsAffected == 0 {
 				return errors.ErrProductConcurrentModification
 			}
-			return tx.Delete(&database.Product{}, current.ID).Error
+			if err := tx.Delete(&database.Product{}, current.ID).Error; err != nil {
+				return err
+			}
+			applied = true
+			return nil
 		})
 		if txErr != errors.ErrProductConcurrentModification {
 			break
 		}
 	}
-	if txErr != nil {
-		return 0, false, txErr
+	if stderrors.Is(txErr, errMutationAlreadyClaimed) {
+		return 0, false, false, nil
 	}
-	return consumed, fullyConsumed, nil
+	if txErr != nil {
+		return 0, false, false, txErr
+	}
+	return removed, fullyRemoved, applied, nil
 }
 
-func (r *ProductRepository) WasteProduct(productID, userID uint) error {
+func (r *ProductRepository) WasteProduct(productID, userID uint, cause string) error {
 	product, err := r.GetProductByID(productID, userID)
 	if err != nil {
 		return err
@@ -2260,7 +2807,10 @@ func (r *ProductRepository) WasteProduct(productID, userID uint) error {
 			Where("household_id = ?", product.HouseholdID).
 			Where(util.WhereDeletedIsNull).
 			Where(util.WhereRemovalReasonUnclaimed).
-			Update("removal_reason", database.RemovalReasonWasted)
+			Updates(map[string]any{
+				"removal_reason": database.RemovalReasonWasted,
+				"waste_cause":    cause,
+			})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -2281,10 +2831,10 @@ func (r *ProductRepository) BulkConsumeProducts(productIDs []uint, userID uint) 
 	return bulkErrors
 }
 
-func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint) []BulkOperationError {
+func (r *ProductRepository) BulkWasteProducts(productIDs []uint, userID uint, cause string) []BulkOperationError {
 	bulkErrors := []BulkOperationError{}
 	for _, productID := range productIDs {
-		if err := r.WasteProduct(productID, userID); err != nil {
+		if err := r.WasteProduct(productID, userID, cause); err != nil {
 			bulkErrors = append(bulkErrors, BulkOperationError{productID, err})
 		}
 	}

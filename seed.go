@@ -34,6 +34,7 @@ var models = []any{
 	&dbModel.WebhookDeliveryLog{},
 	&dbModel.WasteStreak{},
 	&dbModel.ProductCategoryPrice{},
+	&dbModel.HouseholdCategory{},
 	&dbModel.SavingsRecord{},
 	&dbModel.ModelCutover{},
 	&dbModel.ExpiryScan{},

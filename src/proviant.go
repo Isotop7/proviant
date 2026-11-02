@@ -189,6 +189,9 @@ func loadConfig(configDir string) *configuration.ProviantConfiguration {
 	viper.SetDefault("server.authentication.passwordRequireDigit", true)
 	viper.SetDefault("server.authentication.passwordRequireSpecial", false)
 	viper.SetDefault("server.authentication.passwordCheckBreached", true)
+	viper.SetDefault("server.twoFactor.enabled", false)
+	viper.SetDefault("server.twoFactor.issuer", util.DefaultTwoFactorIssuer)
+	viper.SetDefault("server.twoFactor.recoveryCodeCount", util.DefaultTwoFactorRecoveryCodeCount)
 	viper.SetDefault("server.maxUploadSizeMB", 5)
 	viper.SetDefault("server.rateLimit.login_per_minute", 5)
 	viper.SetDefault("server.rateLimit.signup_per_minute", 3)
@@ -368,6 +371,12 @@ func main() {
 		panic(err)
 	}
 
+	// Validate two-factor authentication configuration
+	if err := proviantConfiguration.ValidateTwoFactorConfiguration(); err != nil {
+		logger.Error().Msg(err.Error())
+		panic(err)
+	}
+
 	// Validate receipt scan configuration
 	if err := proviantConfiguration.ValidateOCRReceiptConfiguration(); err != nil {
 		logger.Error().Msg(err.Error())
@@ -421,6 +430,7 @@ func main() {
 		&dbModel.WebhookDeliveryLog{},
 		&dbModel.WasteStreak{},
 		&dbModel.ProductCategoryPrice{},
+		&dbModel.HouseholdCategory{},
 		&dbModel.SavingsRecord{},
 		&dbModel.ModelCutover{},
 		&dbModel.ExpiryScan{},
@@ -434,6 +444,7 @@ func main() {
 		&dbModel.Recipe{},
 		&dbModel.RecipeIngredient{},
 		&dbModel.MealPlanEntry{},
+		&dbModel.TwoFactorRecoveryCode{},
 	)
 	if migrationError != nil {
 		panic(migrationError)

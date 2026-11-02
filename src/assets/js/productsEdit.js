@@ -13,7 +13,53 @@ function getFormElements() {
         inputNotificationLeadDays: document.getElementById('inputNotificationLeadDays'),
         inputMinStockAmount:      document.getElementById('inputMinStockAmount'),
         inputIsPrivate:    document.getElementById('inputIsPrivate'),
+        productCategory:  document.getElementById('productCategory'),
     };
+}
+
+// The household's categories, read from the rendered list. The list carries
+// the shelf life of every category, so the suggestion works without a
+// request.
+function householdCategories() {
+    const select = document.getElementById('productCategory');
+    if (!select) return [];
+    return Array.from(select.options)
+        .filter((option) => option.value !== '')
+        .map((option) => ({
+            categoryKey: option.value,
+            displayName: (option.textContent || '').trim(),
+            defaultShelfLifeDays: option.dataset.shelfLifeDays
+                ? Number.parseInt(option.dataset.shelfLifeDays, 10)
+                : null,
+        }));
+}
+
+// Fills the expiry date with the shelf life of the selected category. A date
+// the user set is theirs and is never overwritten.
+function applyCategorySuggestion() {
+    const select = document.getElementById('productCategory');
+    if (!select) return;
+    const categories = householdCategories();
+    const days = proviant.categoryShelfLifeDays(categories, select.value);
+    if (days === null) {
+        hideExpirySuggestion();
+        return;
+    }
+    const applied = proviant.applyExpirySuggestion(document.getElementById('inputExpireAt'), categories, select.value);
+    const hint = document.getElementById('expirySuggestion');
+    if (!hint) return;
+    if (!applied) {
+        hideExpirySuggestion();
+        return;
+    }
+    const category = proviant.categoryByKey(categories, select.value);
+    hint.textContent = proviant.t('js.products.expirySuggested', category ? category.displayName : select.value, days);
+    hint.classList.remove('d-none');
+}
+
+function hideExpirySuggestion() {
+    const hint = document.getElementById('expirySuggestion');
+    if (hint) hint.classList.add('d-none');
 }
 
 function checkFormValidity() {
@@ -64,6 +110,20 @@ function editProduct() {
     const daysAfterOpening = inputDaysAfterOpening && inputDaysAfterOpening.value !== ''
         ? Number.parseInt(inputDaysAfterOpening.value, 10) : null;
 
+    const categorySelect = els.productCategory;
+    const currentCategoryKey = categorySelect ? (categorySelect.dataset.selectedCategoryKey || '') : '';
+    const selectedCategoryKey = categorySelect && categorySelect.value ? categorySelect.value : '';
+    // An unchanged category is not sent. The value the form starts with is the
+    // category the product carries, or the empty selection when the list does
+    // not show it — a category the household hides may be missing from the
+    // list, and sending the empty selection would clear it behind the user's
+    // back.
+    const listedKeys = categorySelect
+        ? Array.from(categorySelect.options).map((option) => option.value).filter((value) => value !== '')
+        : [];
+    const initialCategoryKey = listedKeys.includes(currentCategoryKey) ? currentCategoryKey : '';
+    const categoryKey = selectedCategoryKey === initialCategoryKey ? undefined : selectedCategoryKey;
+
     const product = {
         "ID": productID,
         "productName": els.inputProductName.value.trim(),
@@ -79,6 +139,7 @@ function editProduct() {
         "priceOverride": priceOverride,
         "openedAt": openedAt,
         "daysAfterOpening": daysAfterOpening,
+        "categoryKey": categoryKey,
     };
 
     proviant.editProduct(product).then((response) => {
@@ -173,9 +234,11 @@ function consumeProduct() {
     const productID = Number.parseInt(labelProductID?.innerText?.trim());
     if (!Number.isInteger(productID) || productID <= 0) return;
 
-    proviant.deleteProduct(productID, true).then((response) => {
+    proviant.consumeProduct(productID).then((response) => {
         if (response.code === 200) {
             window.location.href = '/web/products';
+        } else if (response.code === 202 && response.queued) {
+            proviant.showFeedback('info', proviant.t('js.products.productQueuedOffline'), proviant.t('js.products.partialActionQueued'));
         } else {
             proviant.showFeedback('error', proviant.t("js.products.consumeFailed"), proviant.t("js.products.couldNotMarkConsumed", response.message));
         }
@@ -252,6 +315,21 @@ document.addEventListener("DOMContentLoaded", function () {
             var valid = this.value !== "";
             this.classList.toggle("is-invalid", !valid);
             this.classList.toggle("is-valid", valid);
+        });
+        // A date the user set is theirs: a later suggestion must not
+        // overwrite it.
+        inputExpireAt.addEventListener("input", function () {
+            this.dataset.userEdited = "1";
+        });
+        inputExpireAt.addEventListener("change", function () {
+            this.dataset.userEdited = "1";
+        });
+    }
+
+    var productCategory = document.getElementById("productCategory");
+    if (productCategory) {
+        productCategory.addEventListener("change", function () {
+            applyCategorySuggestion();
         });
     }
 

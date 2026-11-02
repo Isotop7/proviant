@@ -169,7 +169,7 @@ func hashImage(img []byte) string {
 
 // mustParseDate converts ISO string to time.Time; returns zero time on failure
 func mustParseDate(s string) time.Time {
-	if t, err := time.Parse(util.DefaultDateFormatParseStr, s); err == nil {
+	if t, err := time.ParseInLocation(util.DefaultDateFormatParseStr, s, time.Local); err == nil {
 		return t
 	}
 	return time.Time{}

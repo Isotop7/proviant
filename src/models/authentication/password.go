@@ -165,8 +165,8 @@ func (pv *PasswordValidator) validateBreached(password string) error {
 		return nil
 	}
 
-	lines := strings.Split(string(body), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(body), "\n")
+	for line := range lines {
 		parts := strings.Split(line, ":")
 		if len(parts) >= 1 && strings.TrimSpace(parts[0]) == suffix {
 			return errors.ErrPasswordBreached

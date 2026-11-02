@@ -11,6 +11,26 @@ function setButtonLoading(btn, loading) {
   }
 }
 
+// The server names the cause with a stable code beside its message. A toast
+// must never show the raw message, so the known codes are mapped to their
+// catalog key and everything else falls back to the caller's text.
+//
+// The keys are written as literal calls on purpose: the catalog reference
+// check scans for a quoted key after the translator, and a key behind a
+// variable would no longer be verified.
+function serverErrorMessage(reason, fallbackText) {
+  switch (reason) {
+    case "TWO_FACTOR_DISABLED":
+      return proviant.t("js.settings.twoFactorDisabledOnServer");
+    case "TWO_FACTOR_NOT_ENABLED":
+      return proviant.t("js.settings.twoFactorNotEnabled");
+    case "INVALID_CREDENTIALS":
+      return proviant.t("js.settings.invalidCredentials");
+    default:
+      return fallbackText;
+  }
+}
+
 function ShowSuccessModal(message, btnFunction) {
   proviant.showFeedback('success', proviant.t("js.settings.done"), message, btnFunction);
 }
@@ -202,7 +222,7 @@ function saveMonthlyGoal() {
         location.reload();
       });
     } else {
-      proviant.showFeedback("error", proviant.t("js.settings.updateFailedTitle"), response.message || proviant.t("js.settings.couldNotSaveGoal"));
+      proviant.showFeedback("error", proviant.t("js.settings.updateFailedTitle"), serverErrorMessage(response.errorReason, proviant.t("js.settings.couldNotSaveGoal")));
     }
   }).catch((err) => {
     setButtonLoading(btn, false);
@@ -715,14 +735,18 @@ function renderAdminUserRow(user, currentUserID, currentUserIsAdmin, householdAd
       </span>
       <div class="d-flex align-items-center gap-3">
         ${!isSelf ? `
-          <button type="button" class="btn btn-outline theme-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" data-role="${user.role || 'member'}" data-is-admin="${isAdmin}" data-is-self="${isSelf}" title="${proviant.t("js.settings.editUserTitle")}">
+          <button type="button" class="btn btn-outline theme-primary btn-edit-user" data-id="${user.id}" data-username="${user.username}" data-email="${user.mailAddress || ""}" data-role="${user.role || 'member'}" data-is-admin="${isAdmin}" data-is-self="${isSelf}" title="${proviant.t("js.settings.editUserTitle")}" aria-label="${proviant.t("js.settings.editUserAria", user.username)}">
             <i class="bi bi-pencil"></i>
           </button>` : ""}
-          <button type="button" class="btn btn-outline theme-warning btn-reset-password" data-id="${user.id}" title="${proviant.t("js.settings.resetPasswordTooltip")}">
+          <button type="button" class="btn btn-outline theme-warning btn-reset-password" data-id="${user.id}" title="${proviant.t("js.settings.resetPasswordTooltip")}" aria-label="${proviant.t("js.settings.resetPasswordAria", user.username)}">
             <i class="bi bi-key"></i>
           </button>
+          ${user.twoFactorEnabled && !isSelf ? `
+          <button type="button" class="btn btn-outline theme-warning btn-reset-two-factor" data-id="${user.id}" title="${proviant.t("js.settings.resetTwoFactorTooltip")}" aria-label="${proviant.t("js.settings.resetTwoFactorAria", user.username)}">
+            <i class="bi bi-shield-slash"></i>
+          </button>` : ""}
           ${!isSelf ? `
-          <button type="button" class="btn btn-outline theme-danger btn-delete-user" data-id="${user.id}" title="${proviant.t("js.settings.deleteUserTitle")}">
+          <button type="button" class="btn btn-outline theme-danger btn-delete-user" data-id="${user.id}" title="${proviant.t("js.settings.deleteUserTitle")}" aria-label="${proviant.t("js.settings.deleteUserAria", user.username)}">
             <i class="bi bi-trash"></i>
           </button>` : ""}
         </div>
@@ -893,6 +917,28 @@ function handleResetPassword(btn) {
   );
 }
 
+function handleResetTwoFactor(btn) {
+  const userID = btn.dataset.id;
+  proviant.showConfirm(
+    proviant.t("js.settings.resetTwoFactorTitle"),
+    proviant.t("js.settings.resetTwoFactorConfirm"),
+    function () {
+      proviant.resetUserTwoFactor(userID).then((response) => {
+        if (response.code === 200) {
+          proviant.showFeedback("success", proviant.t("js.settings.done"), proviant.t("js.settings.twoFactorCleared"));
+          loadAdminUsers();
+        } else {
+          proviant.showFeedback("error", proviant.t("common.error"), serverErrorMessage(response.errorReason, proviant.t("js.settings.couldNotResetTwoFactor")));
+        }
+      }).catch((err) => {
+        proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
+      });
+    },
+    proviant.t("js.settings.reset"),
+    "warning"
+  );
+}
+
 function handleDeleteUser(btn) {
   const userID = btn.dataset.id;
   proviant.showConfirm(
@@ -926,7 +972,7 @@ function renderPATRow(pat) {
         <i class="bi bi-key me-2"></i>${pat.name}
         <small class="fg-secondary d-block">${lastUsedText} · ${expiresText}</small>
       </span>
-      <button type="button" class="btn btn-sm btn-outline theme-danger btn-delete-pat" data-id="${pat.id}" title="${proviant.t("js.settings.deleteTokenTitle")}">
+      <button type="button" class="btn btn-sm btn-outline theme-danger btn-delete-pat" data-id="${pat.id}" title="${proviant.t("js.settings.deleteTokenTitle")}" aria-label="${proviant.t("js.settings.deleteTokenAria", pat.name)}">
         <i class="bi bi-trash"></i>
       </button>
     </li>
@@ -954,6 +1000,228 @@ function loadPATs() {
     }
   }).catch((err) => {
     proviant.showFeedback('error', proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
+  });
+}
+
+/* ── Two-factor authentication ───────────────────────────────────────────── */
+
+// twoFactorStatus holds the last known state of the second factor of the
+// account. The household policy comes from the rendered page — it belongs to
+// the household, not to the account, and does not change while the page is
+// open. The disable dialog needs it to warn about the policy.
+let twoFactorStatus = { enabled: false, householdRequired: false, pending: false, recoveryCodesRemaining: 0 };
+
+function renderTOTPStatus(status) {
+  const section = document.getElementById("twoFactorSection");
+  const householdRequired = section?.dataset.householdRequired === "true";
+  twoFactorStatus = { ...status, householdRequired };
+
+  const badge = document.getElementById("twoFactorStatusBadge");
+  const text = document.getElementById("twoFactorStatusText");
+  const enableBtn = document.getElementById("btnStartTOTP");
+  const disableBtn = document.getElementById("btnDisableTOTP");
+
+  if (badge) {
+    badge.textContent = status.enabled
+      ? proviant.t("settings.totpStatusOn")
+      : proviant.t("settings.totpStatusOff");
+    badge.classList.toggle("badge--fresh", status.enabled);
+    badge.classList.toggle("badge--neutral", !status.enabled);
+  }
+  if (text) {
+    if (status.enabled) {
+      text.textContent = proviant.t("settings.totpStatusOnHelp", status.recoveryCodesRemaining);
+    } else if (householdRequired) {
+      text.textContent = proviant.t("settings.totpStatusRequiredHelp");
+    } else {
+      text.textContent = proviant.t("settings.totpStatusOffHelp");
+    }
+  }
+  if (enableBtn) enableBtn.classList.toggle("d-none", status.enabled);
+  if (disableBtn) disableBtn.classList.toggle("d-none", !status.enabled);
+}
+
+function loadTOTPStatus() {
+  const section = document.getElementById("twoFactorSection");
+  if (!section) return;
+
+  proviant.getTOTPStatus().then((response) => {
+    if (response.code === 200) {
+      renderTOTPStatus(response.message);
+      return;
+    }
+    // Every other answer — the feature is off, or the server failed — hides
+    // the card. A visible card in an unknown state would offer actions whose
+    // outcome nobody can predict.
+    section.classList.add("d-none");
+  }).catch(() => {
+    section.classList.add("d-none");
+  });
+}
+
+function handleStartTOTP() {
+  const btn = document.getElementById("btnStartTOTP");
+  const modalEl = document.getElementById("twoFactorEnrolModal");
+  const codeInput = document.getElementById("inputTwoFactorCode");
+  const qrImage = document.getElementById("twoFactorQr");
+  const expiryLabel = document.getElementById("twoFactorExpiry");
+  const recoveryBox = document.getElementById("twoFactorRecoveryCodes");
+  const recoveryList = document.getElementById("twoFactorRecoveryCodeList");
+
+  if (codeInput) {
+    codeInput.value = "";
+    codeInput.classList.remove("is-invalid");
+  }
+  if (qrImage) qrImage.removeAttribute("src");
+  if (expiryLabel) expiryLabel.classList.add("d-none");
+  if (recoveryBox) recoveryBox.classList.add("d-none");
+  if (recoveryList) recoveryList.innerHTML = "";
+
+  setButtonLoading(btn, true);
+  proviant.startTOTPEnrolment().then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code !== 200) {
+      proviant.showFeedback("error", proviant.t("common.error"), serverErrorMessage(response.errorReason, proviant.t("js.settings.totpEnrolFailed")));
+      return;
+    }
+    if (qrImage) qrImage.src = response.message.qr;
+    // The QR code only stays valid until the pending enrolment expires.
+    if (expiryLabel && response.message.expiresAt) {
+      const expiry = new Date(response.message.expiresAt);
+      if (!Number.isNaN(expiry.getTime())) {
+        expiryLabel.textContent = proviant.t("js.settings.totpEnrolExpires", expiry.toLocaleString());
+        expiryLabel.classList.remove("d-none");
+      }
+    }
+    if (window.bootstrap && modalEl) {
+      bootstrap.Dialog.getOrCreateInstance(modalEl).show();
+    }
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
+  });
+}
+
+function handleConfirmTOTP() {
+  const codeInput = document.getElementById("inputTwoFactorCode");
+  const code = codeInput ? codeInput.value.trim() : "";
+  if (!code) {
+    if (codeInput) codeInput.classList.add("is-invalid");
+    return;
+  }
+  if (codeInput) codeInput.classList.remove("is-invalid");
+
+  const btn = document.getElementById("btnConfirmTOTP");
+  setButtonLoading(btn, true);
+
+  proviant.confirmTOTPEnrolment(code).then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code !== 200) {
+      proviant.showFeedback("error", proviant.t("common.error"), serverErrorMessage(response.errorReason, proviant.t("js.settings.totpInvalidCode")));
+      return;
+    }
+
+    const recoveryBox = document.getElementById("twoFactorRecoveryCodes");
+    const recoveryList = document.getElementById("twoFactorRecoveryCodeList");
+    if (recoveryList) {
+      recoveryList.innerHTML = "";
+      (response.message.recoveryCodes || []).forEach((recoveryCode) => {
+        const item = document.createElement("li");
+        item.textContent = recoveryCode;
+        recoveryList.appendChild(item);
+      });
+    }
+    if (recoveryBox) recoveryBox.classList.remove("d-none");
+    if (codeInput) codeInput.value = "";
+
+    proviant.showFeedback("success", proviant.t("js.settings.totpEnabled"), proviant.t("js.settings.totpRecoveryShown"));
+    loadTOTPStatus();
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
+  });
+}
+
+function handleDisableTOTP() {
+  const modalEl = document.getElementById("twoFactorDisableModal");
+  const passwordInput = document.getElementById("inputTwoFactorPassword");
+  const warning = document.getElementById("twoFactorDisableWarning");
+  if (passwordInput) {
+    passwordInput.value = "";
+    passwordInput.classList.remove("is-invalid");
+  }
+  // The household policy wins at the next sign-in: a member that turns the
+  // second factor off is sent straight back into the setup.
+  if (warning) warning.classList.toggle("d-none", !twoFactorStatus.householdRequired);
+  if (window.bootstrap && modalEl) {
+    bootstrap.Dialog.getOrCreateInstance(modalEl).show();
+  }
+}
+
+function handleConfirmDisableTOTP() {
+  const passwordInput = document.getElementById("inputTwoFactorPassword");
+  const password = passwordInput ? passwordInput.value : "";
+  if (!password) {
+    if (passwordInput) passwordInput.classList.add("is-invalid");
+    return;
+  }
+  if (passwordInput) passwordInput.classList.remove("is-invalid");
+
+  const btn = document.getElementById("btnConfirmDisableTOTP");
+  setButtonLoading(btn, true);
+
+  proviant.disableTOTP(password).then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code !== 200) {
+      proviant.showFeedback("error", proviant.t("common.error"), serverErrorMessage(response.errorReason, proviant.t("js.settings.totpPasswordWrong")));
+      return;
+    }
+    const modalEl = document.getElementById("twoFactorDisableModal");
+    if (window.bootstrap && modalEl) {
+      bootstrap.Dialog.getOrCreateInstance(modalEl).hide();
+    }
+    proviant.showFeedback("success", proviant.t("js.settings.totpDisabled"), proviant.t("js.settings.totpDisabledHelp"));
+    loadTOTPStatus();
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    proviant.showFeedback("error", proviant.t("common.error"), proviant.t("js.settings.networkErrorWithMessage", err.message));
+  });
+}
+
+function handleSaveRequireTwoFactor() {
+  const toggle = document.getElementById("inputRequireTwoFactor");
+  // The switch is only rendered for an admin of a household that has the
+  // policy or that may set it.
+  if (!toggle) return;
+
+  // The server's value travels on the element: the handler reads the toggle
+  // after the user has flipped it, so restoring by inversion would claim the
+  // opposite of what the server holds.
+  const serverValue = toggle.dataset.requireTwoFactor === "true";
+
+  const btn = document.getElementById("btnSaveRequireTwoFactor");
+  setButtonLoading(btn, true);
+
+  proviant.updateHouseholdTwoFactorPolicy(toggle.checked).then((response) => {
+    setButtonLoading(btn, false);
+    if (response.code === 200) {
+      toggle.dataset.requireTwoFactor = String(toggle.checked);
+      // The two-factor card renders the household policy from the page, so the
+      // card has to learn the new policy before it shows anything about it.
+      const section = document.getElementById("twoFactorSection");
+      if (section) section.dataset.householdRequired = String(toggle.checked);
+      loadTOTPStatus();
+      proviant.showFeedback("success", proviant.t("js.settings.done"), proviant.t("js.settings.totpPolicyUpdated"));
+      return;
+    }
+    // The switch did not reach the server: put it back where the server has
+    // it, so the screen does not claim a policy that is not in effect.
+    toggle.checked = serverValue;
+    proviant.showFeedback("error", proviant.t("js.settings.updateFailedTitle"), serverErrorMessage(response.errorReason, proviant.t("js.settings.couldNotSaveGoal")));
+  }).catch((err) => {
+    setButtonLoading(btn, false);
+    toggle.checked = serverValue;
+    proviant.showFeedback("error", proviant.t("js.settings.networkErrorTitle"), err.message);
   });
 }
 
@@ -1283,6 +1551,11 @@ const AUDIT_ACTION_ICONS = {
   member_left: "bi bi-box-arrow-left fg-secondary",
   admin_changed: "bi bi-shield-check fg-primary",
   account_deleted: "bi bi-trash fg-danger",
+  two_factor_enabled: "bi bi-shield-check fg-success",
+  two_factor_disabled: "bi bi-shield-slash fg-warning",
+  two_factor_reset: "bi bi-shield-slash fg-danger",
+  two_factor_recovered: "bi bi-key fg-primary",
+  two_factor_failed: "bi bi-x-octagon fg-danger",
 };
 
 const AUDIT_ACTION_LABELS = {
@@ -1295,6 +1568,11 @@ const AUDIT_ACTION_LABELS = {
   member_left: "js.settings.auditActionMemberLeft",
   admin_changed: "js.settings.auditActionAdminChanged",
   account_deleted: "js.settings.auditActionAccountDeleted",
+  two_factor_enabled: "js.settings.auditActionTwoFactorEnabled",
+  two_factor_disabled: "js.settings.auditActionTwoFactorDisabled",
+  two_factor_reset: "js.settings.auditActionTwoFactorReset",
+  two_factor_recovered: "js.settings.auditActionTwoFactorRecovered",
+  two_factor_failed: "js.settings.auditActionTwoFactorFailed",
 };
 
 function renderAuditLogRow(log) {
@@ -1414,6 +1692,36 @@ document.addEventListener("click", function (event) {
     return;
   }
 
+  if (target.closest("#btnSaveRequireTwoFactor")) {
+    event.preventDefault();
+    handleSaveRequireTwoFactor();
+    return;
+  }
+
+  if (target.closest("#btnStartTOTP")) {
+    event.preventDefault();
+    handleStartTOTP();
+    return;
+  }
+
+  if (target.closest("#btnConfirmTOTP")) {
+    event.preventDefault();
+    handleConfirmTOTP();
+    return;
+  }
+
+  if (target.closest("#btnDisableTOTP")) {
+    event.preventDefault();
+    handleDisableTOTP();
+    return;
+  }
+
+  if (target.closest("#btnConfirmDisableTOTP")) {
+    event.preventDefault();
+    handleConfirmDisableTOTP();
+    return;
+  }
+
   if (target.closest("#btnCreatePAT")) {
     event.preventDefault();
     handleCreatePAT();
@@ -1492,6 +1800,13 @@ document.addEventListener("click", function (event) {
   if (resetBtn) {
     event.preventDefault();
     handleResetPassword(resetBtn);
+    return;
+  }
+
+  const resetTwoFactorBtn = target.closest(".btn-reset-two-factor");
+  if (resetTwoFactorBtn) {
+    event.preventDefault();
+    handleResetTwoFactor(resetTwoFactorBtn);
     return;
   }
 
@@ -1788,6 +2103,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadCalendarTokenStatus();
   LoadWebhooks();
   void initWebPushNotifications();
+  loadTOTPStatus();
 
   const auditLogSection = document.getElementById("auditLogSection");
   if (auditLogSection) {

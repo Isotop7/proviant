@@ -148,6 +148,14 @@ document.addEventListener("click", function (event) {
         return;
     }
 
+    var partialActionBtn = target.closest('.btn-partial-action');
+    if (partialActionBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        void openPartialActionModal(partialActionBtn.dataset.productId, partialActionBtn);
+        return;
+    }
+
     // Card click
     const card = target.closest('.card');
     if (card) {
@@ -274,8 +282,13 @@ document.addEventListener("click", function (event) {
             void openCookModal(ids, bulkBtn);
             return;
         }
-        var opts = action === 'delete' ? { confirm: true, confirmTitle: proviant.t("js.products.markAsWasted"), confirmMsg: proviant.tn("js.products.markWastedBulkConfirm", ids.length) } : {};
-        void proviant.bulkAction(action, ids, opts);
+        if (action === 'delete') {
+            // The bulk waste asks for the reason, so it gets its own dialog
+            // instead of the plain confirmation.
+            void openBulkWasteModal(ids);
+            return;
+        }
+        void proviant.bulkAction(action, ids, {});
         return;
     }
 
@@ -283,6 +296,24 @@ document.addEventListener("click", function (event) {
     if (target.closest('#btnCookConfirm')) {
         event.preventDefault();
         void submitCook();
+        return;
+    }
+
+    // Bulk waste dialog confirm button
+    if (target.closest('#btnBulkWasteConfirm')) {
+        event.preventDefault();
+        void submitBulkWaste();
+        return;
+    }
+
+    if (target.closest('#btnPartialConsumeConfirm')) {
+        event.preventDefault();
+        void submitPartialAction('consume');
+        return;
+    }
+    if (target.closest('#btnPartialWasteConfirm')) {
+        event.preventDefault();
+        void submitPartialAction('waste');
         return;
     }
 
@@ -304,9 +335,21 @@ document.addEventListener("click", function (event) {
     }
 });
 
+document.addEventListener('focusout', function (event) {
+    if (event.target.id === 'partialActionQuantity') validatePartialActionQuantity();
+});
+
 /* Event delegation for checkbox changes */
 document.addEventListener("change", function (event) {
     var target = event.target;
+
+    // The order the list is shown in. Picking one applies it right away and
+    // keeps the filters that are set — the search alone would drop them.
+    if (target.closest('#sort-param, #sort-order')) {
+        applySort();
+        return;
+    }
+
     if (!target.matches('input[type="checkbox"]')) return;
 
     if (target.id === 'selectAll') {
@@ -373,6 +416,22 @@ function performSearch() {
   window.location.href = `/web/products?${new URLSearchParams(params).toString()}`;
 }
 
+// Applies the chosen order to the list. The filters of the current view stay
+// in the query, only the page number is dropped: the new order starts at the
+// first page again.
+function applySort() {
+    const sortParam = document.getElementById('sort-param');
+    const sortOrder = document.getElementById('sort-order');
+    if (!sortParam || !sortOrder) return;
+
+    const params = new URLSearchParams(window.location.search);
+    params.set('sort', sortParam.value || "created_at");
+    params.set('order', sortOrder.value || "asc");
+    params.delete('page');
+
+    window.location.href = `/web/products?${params.toString()}`;
+}
+
 /* ── Add-product modal ───────────────────────────────────────────────────────
    Bootstrap is loaded after content scripts, so init must wait for
    DOMContentLoaded before calling bootstrap.Dialog.
@@ -427,16 +486,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function setActiveTab(mode) {
         const isCamera = mode === 'camera';
-        if (tabManualInput) {
-            tabManualInput.style.background  = isCamera ? 'transparent' : 'white';
-            tabManualInput.style.boxShadow   = isCamera ? 'none' : '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)';
-            tabManualInput.style.color       = isCamera ? 'var(--meta)' : 'var(--fg)';
-        }
-        if (tabCamera) {
-            tabCamera.style.background  = isCamera ? 'white' : 'transparent';
-            tabCamera.style.boxShadow   = isCamera ? '0 1px 3px color-mix(in oklab, var(--fg) 10%, transparent)' : 'none';
-            tabCamera.style.color       = isCamera ? 'var(--fg)' : 'var(--meta)';
-        }
+        if (tabManualInput) tabManualInput.classList.toggle('active', !isCamera);
+        if (tabCamera) tabCamera.classList.toggle('active', isCamera);
         if (manualSection) manualSection.style.display = isCamera ? 'none' : 'block';
         if (cameraSection) cameraSection.style.display = isCamera ? 'block' : 'none';
 
@@ -636,9 +687,13 @@ function fetchFreshProducts(ids) {
     return fetch('/api/v1/products?ids=' + encodeURIComponent(ids.join(',')))
         .then(function (res) {
             if (!res.ok) return null;
-            return res.json().then(function (products) {
+            return res.json().then(function (body) {
                 var map = new Map();
-                (Array.isArray(products) ? products : []).forEach(function (p) {
+                // The products list answers with an envelope; the products are
+                // in its "products" field. A bare array is read as the
+                // products themselves.
+                var products = Array.isArray(body) ? body : (body && Array.isArray(body.products) ? body.products : []);
+                products.forEach(function (p) {
                     if (p && p.id) map.set(+p.id, p);
                 });
                 return map;
@@ -781,6 +836,218 @@ async function submitCook() {
         btn.disabled = false;
         btn.classList.remove('loading');
         proviant.showFeedback('error', proviant.t("js.products.cookFailed"), err.message);
+    }
+}
+
+// ── Partial consume / waste ─────────────────────────────────────
+var partialActionModalInstance = null;
+var partialActionState = { productID: 0, maxQuantity: 0, busy: false, openToken: 0 };
+
+function getPartialActionModal() {
+    if (!partialActionModalInstance) {
+        var element = document.getElementById('partialActionModal');
+        if (!element || typeof bootstrap === 'undefined') return null;
+        partialActionModalInstance = new bootstrap.Dialog(element);
+    }
+    return partialActionModalInstance;
+}
+
+function validatePartialActionQuantity() {
+    var input = document.getElementById('partialActionQuantity');
+    var error = document.getElementById('partialActionQuantityError');
+    if (!input) return null;
+    var quantity = Number(input.value);
+    var valid = Number.isInteger(quantity) && quantity >= 1 && quantity <= partialActionState.maxQuantity;
+    input.classList.toggle('is-invalid', !valid);
+    input.setAttribute('aria-invalid', valid ? 'false' : 'true');
+    if (error) {
+        error.textContent = valid ? '' : proviant.t('js.products.partialActionQuantityInvalid', partialActionState.maxQuantity);
+    }
+    return valid ? quantity : null;
+}
+
+function setPartialActionBusy(busy, action) {
+    partialActionState.busy = busy;
+    [
+        { id: 'btnPartialConsumeConfirm', action: 'consume' },
+        { id: 'btnPartialWasteConfirm', action: 'waste' },
+    ].forEach(function (entry) {
+        var button = document.getElementById(entry.id);
+        if (!button) return;
+        button.disabled = busy;
+        button.classList.toggle('loading', busy && entry.action === action);
+        if (busy) button.setAttribute('aria-busy', 'true');
+        else button.removeAttribute('aria-busy');
+    });
+    var input = document.getElementById('partialActionQuantity');
+    if (input) input.disabled = busy;
+    var cause = document.getElementById('partialActionCause');
+    if (cause) cause.disabled = busy;
+    document.querySelectorAll('#partialActionModal [data-bs-dismiss="dialog"]').forEach(function (button) {
+        button.disabled = busy;
+    });
+}
+
+async function openPartialActionModal(productID, triggerButton) {
+    var id = Number.parseInt(productID, 10);
+    if (!Number.isInteger(id) || id < 1 || partialActionState.busy) return;
+    // Two products clicked in quick succession would race: the slower fetch
+    // would land last and put its product into the dialog the faster one
+    // opened. The token makes the newer request win and the older one
+    // harmless.
+    var token = ++partialActionState.openToken;
+    var triggerHTML = triggerButton ? triggerButton.innerHTML : '';
+    if (triggerButton) {
+        triggerButton.disabled = true;
+        triggerButton.classList.add('loading');
+        triggerButton.setAttribute('aria-busy', 'true');
+        triggerButton.innerHTML = '<i class="bi bi-hourglass-split" aria-hidden="true"></i>';
+    }
+    try {
+        var freshMap = await fetchFreshProducts([id]);
+        if (token !== partialActionState.openToken) return;
+        if (!freshMap) {
+            proviant.showFeedback('error', proviant.t('js.products.partialActionUnavailable'), proviant.t('js.products.partialActionStockLoadFailed'));
+            return;
+        }
+        var product = freshMap.get(id);
+        var quantity = product ? Number.parseInt(product.quantity, 10) : 0;
+        if (!product || !Number.isInteger(quantity) || quantity < 1) {
+            proviant.showFeedback('warning', proviant.t('js.products.partialActionUnavailable'), proviant.t('js.products.partialActionNoStock'));
+            return;
+        }
+
+        partialActionState.productID = id;
+        partialActionState.maxQuantity = quantity;
+        var name = document.getElementById('partialActionProductName');
+        if (name) name.textContent = product.productName || ('#' + id);
+        var stock = document.getElementById('partialActionStock');
+        if (stock) stock.textContent = proviant.tn('js.products.partialActionStock', quantity);
+        var input = document.getElementById('partialActionQuantity');
+        if (input) {
+            input.max = String(quantity);
+            input.value = '1';
+            input.classList.remove('is-invalid');
+            input.setAttribute('aria-invalid', 'false');
+        }
+        var error = document.getElementById('partialActionQuantityError');
+        if (error) error.textContent = '';
+        var cause = document.getElementById('partialActionCause');
+        if (cause) cause.value = '';
+
+        var modal = getPartialActionModal();
+        if (!modal) {
+            proviant.showFeedback('error', proviant.t('js.products.partialActionUnavailable'), proviant.t('js.products.uiComponentsFailed'));
+            return;
+        }
+        modal.show();
+    } finally {
+        if (triggerButton) {
+            triggerButton.disabled = false;
+            triggerButton.classList.remove('loading');
+            triggerButton.removeAttribute('aria-busy');
+            triggerButton.innerHTML = triggerHTML;
+        }
+    }
+}
+
+async function submitPartialAction(action) {
+    if (partialActionState.busy) return;
+    var quantity = validatePartialActionQuantity();
+    if (quantity === null) return;
+    var productID = partialActionState.productID;
+    // The reason belongs to a waste; a consume has none.
+    var cause = '';
+    if (action === 'waste') {
+        var causeSelect = document.getElementById('partialActionCause');
+        cause = causeSelect ? causeSelect.value : '';
+    }
+    setPartialActionBusy(true, action);
+    try {
+        var send = action === 'consume' ? proviant.consumeProduct : proviant.wasteProduct;
+        var response = await send(productID, quantity, undefined, cause);
+        var modal = getPartialActionModal();
+        if (response.queued && response.code === 202) {
+            if (modal) modal.hide();
+            proviant.showFeedback('info', proviant.t('js.products.productQueuedOffline'), proviant.t('js.products.partialActionQueued'));
+            return;
+        }
+        if (response.code !== 200) {
+            throw new Error(response.message || proviant.t('js.products.requestFailed'));
+        }
+        if (modal) modal.hide();
+        // The server clamps the request to the stock that is actually left, so
+        // the reported count is the one that left the pantry.
+        var removed = typeof response.removed === 'number' ? response.removed : quantity;
+        var successTitle = action === 'consume' ? proviant.t('js.products.consumedButton') : proviant.t('js.products.wastedButton');
+        var messageKey = action === 'consume' ? 'js.products.partialConsumeSuccess' : 'js.products.partialWasteSuccess';
+        proviant.showFeedback('success', successTitle, proviant.tn(messageKey, removed));
+        setTimeout(clearBulkSelectionAndReload, 800);
+    } catch (error) {
+        var errorTitle = action === 'consume' ? proviant.t('js.products.consumeFailed') : proviant.t('js.products.wastedFailed');
+        proviant.showFeedback('error', errorTitle, error.message);
+    } finally {
+        setPartialActionBusy(false, null);
+    }
+}
+
+// ── Bulk waste ────────────────────────────────────────────────
+var bulkWasteModalInstance = null;
+var bulkWasteState = { productIDs: [], busy: false };
+
+function getBulkWasteModal() {
+    if (!bulkWasteModalInstance) {
+        var element = document.getElementById('bulkWasteModal');
+        if (!element || typeof bootstrap === 'undefined') return null;
+        bulkWasteModalInstance = new bootstrap.Dialog(element);
+    }
+    return bulkWasteModalInstance;
+}
+
+function setBulkWasteBusy(busy) {
+    bulkWasteState.busy = busy;
+    var button = document.getElementById('btnBulkWasteConfirm');
+    if (button) {
+        button.disabled = busy;
+        button.classList.toggle('loading', busy);
+        if (busy) button.setAttribute('aria-busy', 'true');
+        else button.removeAttribute('aria-busy');
+    }
+    var cause = document.getElementById('bulkWasteCause');
+    if (cause) cause.disabled = busy;
+    document.querySelectorAll('#bulkWasteModal [data-bs-dismiss="dialog"]').forEach(function (button) {
+        button.disabled = busy;
+    });
+}
+
+function openBulkWasteModal(ids) {
+    if (!ids || !ids.length || bulkWasteState.busy) return;
+    bulkWasteState.productIDs = ids;
+    var count = document.getElementById('bulkWasteCount');
+    if (count) count.textContent = proviant.tn('products.bulkWasteCount', ids.length);
+    var cause = document.getElementById('bulkWasteCause');
+    if (cause) cause.value = '';
+    var modal = getBulkWasteModal();
+    if (!modal) {
+        proviant.showFeedback('error', proviant.t('js.products.partialActionUnavailable'), proviant.t('js.products.uiComponentsFailed'));
+        return;
+    }
+    modal.show();
+}
+
+async function submitBulkWaste() {
+    if (bulkWasteState.busy) return;
+    var ids = bulkWasteState.productIDs;
+    if (!ids.length) return;
+    var causeSelect = document.getElementById('bulkWasteCause');
+    var cause = causeSelect ? causeSelect.value : '';
+    setBulkWasteBusy(true);
+    try {
+        await proviant.bulkAction('delete', ids, { wasteCause: cause });
+        var modal = getBulkWasteModal();
+        if (modal) modal.hide();
+    } finally {
+        setBulkWasteBusy(false);
     }
 }
 

@@ -89,8 +89,8 @@ func (r *AuditLogRepository) GetAuditLogsByDate(ctx context.Context, householdID
 	if err != nil {
 		return nil, err
 	}
-	start := parsedDate.UTC()
-	end := start.Add(24 * time.Hour)
+	start := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, time.Local)
+	end := start.AddDate(0, 0, 1)
 	err = r.DB.WithContext(ctx).
 		Where("household_id = ?", householdID).
 		Where("timestamp >= ? AND timestamp < ?", start, end).

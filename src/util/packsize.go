@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 )
@@ -32,12 +33,7 @@ var countUnits = []string{
 // content.
 func IsCountUnit(raw string) bool {
 	symbol := strings.ToLower(strings.TrimSpace(raw))
-	for _, unit := range countUnits {
-		if symbol == unit {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(countUnits, symbol)
 }
 
 // MaxPackSizeLength bounds a pack size label. The source is a free-text field,

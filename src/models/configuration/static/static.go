@@ -5,7 +5,7 @@ import "time"
 
 const (
 	// Version is the current proviant version
-	Version = "v0.24.0"
+	Version = "v0.25.0"
 
 	// TokenRealm is the realm of tokens
 	TokenRealm = "proviant"
@@ -18,6 +18,14 @@ const (
 
 	// TokenJTIKey is the name of JTI key in tokens
 	TokenJTIKey = "jti"
+
+	// TokenTwoFactorKey marks a session that was completed with a second
+	// factor
+	TokenTwoFactorKey = "two_factor"
+
+	// TokenTwoFactorRecoveredKey marks a session that was completed with a
+	// recovery code, which turned the second factor off
+	TokenTwoFactorRecoveredKey = "two_factor_recovered" //nolint:gosec // G101: claim name, not a credential
 
 	// TokenHeadName is the name of authentication header in token
 	TokenHeadName = "Bearer"

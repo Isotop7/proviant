@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -330,7 +331,7 @@ func repoRoot(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
 	}
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 			return dir
 		}
@@ -415,7 +416,7 @@ func TestSwaggerSuccessMatchesHandler(t *testing.T) {
 
 		var documentedTypes []string
 		documentedAsEnvelope := false
-		for _, line := range strings.Split(doc, "\n") {
+		for line := range strings.SplitSeq(doc, "\n") {
 			matches := successAnnotation.FindStringSubmatch(line)
 			if matches == nil || !isSuccessCode(matches[1]) {
 				continue
@@ -452,10 +453,5 @@ func TestSwaggerSuccessMatchesHandler(t *testing.T) {
 }
 
 func containsString(haystack []string, needle string) bool {
-	for _, item := range haystack {
-		if item == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }

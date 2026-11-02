@@ -48,7 +48,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 
 	t.Run("GetExpiringSoonCount counts window entries", func(t *testing.T) {
-		count, err := repo.GetExpiringSoonCount(user.ID, 7)
+		count, err := repo.GetExpiringSoonCount(user.ID, 7, time.Now())
 		if err != nil {
 			t.Fatalf("GetExpiringSoonCount() error = %v", err)
 		}
@@ -195,14 +195,6 @@ func TestProductRepository_TopUps(t *testing.T) {
 		}
 		if len(archived) != 1 {
 			t.Errorf("archived = %d, want 1", len(archived))
-		}
-
-		top, err := repo.GetTopArchivedProducts(user.ID, 10)
-		if err != nil {
-			t.Fatalf("GetTopArchivedProducts() error = %v", err)
-		}
-		if len(top) != 1 {
-			t.Errorf("top = %d, want 1", len(top))
 		}
 	})
 }

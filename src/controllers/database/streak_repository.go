@@ -34,7 +34,7 @@ func (r *StreakRepository) GetOrCreateStreakForHousehold(householdID uint) (*dbM
 			HouseholdID:     householdID,
 			CurrentStreak:   0,
 			LongestStreak:   0,
-			LastCheckedDate: time.Now().UTC(),
+			LastCheckedDate: time.Now(),
 		}
 		if createErr := r.DB.Create(&streak).Error; createErr != nil {
 			return nil, createErr
@@ -49,7 +49,7 @@ func (r *StreakRepository) RecordWasteEvent(householdID uint) error {
 	if err != nil {
 		return err
 	}
-	now := time.Now().UTC()
+	now := time.Now()
 	streak.LastWastedDate = &now
 	return r.DB.Save(streak).Error
 }

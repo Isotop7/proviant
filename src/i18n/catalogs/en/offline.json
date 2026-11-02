@@ -1,0 +1,6 @@
+{
+  "offline.title": "You're offline",
+  "offline.description": "Proviant needs a connection to load your products.",
+  "offline.hint": "Check your network and try again.",
+  "offline.retry": "Try again"
+}

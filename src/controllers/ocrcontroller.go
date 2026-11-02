@@ -187,7 +187,7 @@ func (c *OCRControllerImpl) extractDateCandidates(text string) []dateCandidate {
 				groups = p.reorder(groups)
 			}
 			// Day-first normalisation covers all three patterns after reorder.
-			t, err := time.Parse(util.DefaultDateFormatParseStr, c.assembleDateString(groups, true))
+			t, err := time.ParseInLocation(util.DefaultDateFormatParseStr, c.assembleDateString(groups, true), time.Local)
 			if err != nil || !isDateInRange(t, now) {
 				continue
 			}

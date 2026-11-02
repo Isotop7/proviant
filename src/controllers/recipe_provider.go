@@ -59,13 +59,7 @@ type RecipeProvider interface {
 // second band, so multi-keyword runs stay possible while a slow or
 // unreachable provider cannot pin the suggestions handler for minutes.
 func recipeFetchContext(config configuration.RecipeAPIConfiguration) (context.Context, context.CancelFunc) {
-	overall := time.Duration(config.Timeout) * time.Second * 2
-	if overall < 20*time.Second {
-		overall = 20 * time.Second
-	}
-	if overall > 30*time.Second {
-		overall = 30 * time.Second
-	}
+	overall := min(max(time.Duration(config.Timeout)*time.Second*2, 20*time.Second), 30*time.Second)
 	return context.WithTimeout(context.Background(), overall)
 }
 

@@ -1,0 +1,78 @@
+{{ define "_settings_twofactor" }}
+<div class="card card-section mb-7" id="twoFactorSection" data-household-required="{{ .Household.RequireTwoFactor }}">
+    <div class="card-header d-flex flex-row justify-content-between align-items-center py-5 px-7">
+        <div class="d-flex align-items-center gap-3">
+            <div class="icon-chip" aria-hidden="true">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <h2 class="h5 mb-0 fw-semibold">{{ t "settings.totpTitle" }}</h2>
+        </div>
+        <span class="badge badge--neutral" id="twoFactorStatusBadge">{{ t "settings.totpStatusOff" }}</span>
+    </div>
+    <div class="card-body px-7 py-7">
+        <p class="fg-secondary small mb-5" id="twoFactorStatusText">{{ t "settings.totpStatusOffHelp" }}</p>
+        <div class="d-flex flex-wrap gap-3">
+            <button type="button" class="btn btn-solid theme-primary" id="btnStartTOTP">
+                <i class="bi bi-shield-plus me-1" aria-hidden="true"></i>{{ t "settings.totpEnable" }}
+            </button>
+            <button type="button" class="btn btn-solid theme-danger d-none" id="btnDisableTOTP">
+                <i class="bi bi-shield-slash me-1" aria-hidden="true"></i>{{ t "settings.totpDisable" }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<dialog class="dialog" id="twoFactorEnrolModal" aria-labelledby="twoFactorEnrolModalLabel">
+            <div class="dialog-header">
+                <h5 class="dialog-title" id="twoFactorEnrolModalLabel">{{ t "settings.totpEnrolTitle" }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
+            </div>
+            <div class="dialog-body">
+                <p class="fg-secondary small mb-5">{{ t "settings.totpEnrolHelp" }}</p>
+                <div class="text-center mb-5">
+                    <img id="twoFactorQr" class="totp-qr" alt="{{ t "settings.totpQrAlt" }}">
+                </div>
+                <p class="fg-secondary small text-center mb-5 d-none" id="twoFactorExpiry"></p>
+                <div class="mb-5">
+                    <label for="inputTwoFactorCode" class="form-label fw-medium">
+                        {{ t "settings.totpCodeLabel" }} <span class="fg-danger" aria-hidden="true">*</span>
+                    </label>
+                    <input type="text" class="form-control font-monospace" id="inputTwoFactorCode"
+                           inputmode="numeric" autocomplete="one-time-code" maxlength="10">
+                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "settings.totpCodeInvalid" }}</div>
+                </div>
+                <div id="twoFactorRecoveryCodes" class="alert alert theme-success d-none">
+                    <strong>{{ t "settings.totpRecoveryTitle" }}</strong> {{ t "settings.totpRecoveryHelp" }}
+                    <ul class="list-unstyled font-monospace mt-3 mb-0" id="twoFactorRecoveryCodeList"></ul>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.close" }}</button>
+                <button type="button" class="btn btn-solid theme-primary" id="btnConfirmTOTP">{{ t "settings.totpConfirm" }}</button>
+            </div>
+        </dialog>
+
+<dialog class="dialog" id="twoFactorDisableModal" aria-labelledby="twoFactorDisableModalLabel">
+            <div class="dialog-header">
+                <h5 class="dialog-title" id="twoFactorDisableModalLabel">{{ t "settings.totpDisableTitle" }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="{{ t "a11y.close" }}"></button>
+            </div>
+            <div class="dialog-body">
+                <p class="fg-secondary small mb-5">{{ t "settings.totpDisableHelp" }}</p>
+                <div id="twoFactorDisableWarning" class="alert alert theme-warning small mb-5 d-none">
+                    <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ t "settings.totpDisableHouseholdWarning" }}
+                </div>
+                <div class="mb-5">
+                    <label for="inputTwoFactorPassword" class="form-label fw-medium">
+                        {{ t "settings.totpPasswordLabel" }} <span class="fg-danger" aria-hidden="true">*</span>
+                    </label>
+                    <input type="password" class="form-control" id="inputTwoFactorPassword" autocomplete="current-password">
+                    <div class="invalid-feedback"><i class="bi bi-exclamation-circle-fill me-1" aria-hidden="true"></i>{{ t "settings.totpPasswordInvalid" }}</div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-outline theme-secondary" data-bs-dismiss="dialog">{{ t "common.cancel" }}</button>
+                <button type="button" class="btn btn-solid theme-danger" id="btnConfirmDisableTOTP">{{ t "settings.totpDisable" }}</button>
+            </div>
+        </dialog>
+{{ end }}

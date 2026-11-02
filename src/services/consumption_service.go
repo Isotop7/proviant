@@ -78,10 +78,7 @@ func (s *ConsumptionService) ComputeConsumptionRate(householdID, userID uint, ba
 	// Round to the nearest day so a 7-day span with sub-hour skew (or a
 	// DST transition) does not get truncated to 6 and silently disable
 	// the rate.
-	spanDays := int(math.Round(last.Sub(first).Hours() / 24))
-	if spanDays < util.ConsumptionSpanFloorDays {
-		spanDays = util.ConsumptionSpanFloorDays
-	}
+	spanDays := max(int(math.Round(last.Sub(first).Hours()/24)), util.ConsumptionSpanFloorDays)
 	rate.DaysCovered = spanDays
 
 	// Require a meaningful observation window before labelling the result

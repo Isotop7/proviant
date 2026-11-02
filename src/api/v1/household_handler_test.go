@@ -8,11 +8,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Isotop7/proviant/api"
+	"github.com/Isotop7/proviant/controllers/database"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/models/authentication"
+	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/testutil"
 	repomocks "github.com/Isotop7/proviant/testutil/mocks"
+	"github.com/Isotop7/proviant/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -90,6 +94,135 @@ func TestGetHouseholdSettingsHandler(t *testing.T) {
 			t.Errorf("status = %d, want 400", env.W.Code)
 		}
 	})
+}
+
+func TestUpdateHouseholdSettingsKeepsTheTwoFactorPolicy(t *testing.T) {
+	env := setupHandlerTest(t)
+
+	if err := env.DB.Model(&dbModel.Household{}).
+		Where("id = ?", env.Household.ID).
+		Update("require_two_factor", true).Error; err != nil {
+		t.Fatalf("update household: %v", err)
+	}
+
+	testutil.CreateTestRequest(env.Ctx, apiModel.UpdateHouseholdSettingsRequest{
+		MonthlyWasteGoalType: "",
+	})
+
+	UpdateHouseholdSettings(env.Ctx, env.AppCtx)
+
+	if env.W.Code != http.StatusOK {
+		t.Fatalf("UpdateHouseholdSettings() = %d, want %d; body = %s", env.W.Code, http.StatusOK, env.W.Body.String())
+	}
+
+	var updated dbModel.Household
+	if err := env.DB.First(&updated, env.Household.ID).Error; err != nil {
+		t.Fatalf("reload household: %v", err)
+	}
+	if !updated.RequireTwoFactor {
+		t.Error("the settings endpoint cleared the two-factor policy")
+	}
+}
+
+func TestUpdateHouseholdTwoFactorPolicyHandler(t *testing.T) {
+	env := setupHandlerTest(t)
+	env.Ctx.Set(util.ContextKeyProviantConfig, twoFactorHandlerConfig())
+
+	testutil.CreateTestRequest(env.Ctx, map[string]bool{"requireTwoFactor": true})
+
+	UpdateHouseholdTwoFactorPolicy(env.Ctx, env.AppCtx)
+
+	if env.W.Code != http.StatusOK {
+		t.Fatalf("UpdateHouseholdTwoFactorPolicy() = %d, want %d; body = %s", env.W.Code, http.StatusOK, env.W.Body.String())
+	}
+
+	var updated dbModel.Household
+	if err := env.DB.First(&updated, env.Household.ID).Error; err != nil {
+		t.Fatalf("reload household: %v", err)
+	}
+	if !updated.RequireTwoFactor {
+		t.Error("require two factor = false, want true")
+	}
+}
+
+// A missing configuration is a wiring mistake, not a disabled feature.
+func TestUpdateHouseholdTwoFactorPolicyWithoutConfiguration(t *testing.T) {
+	env := setupHandlerTest(t)
+
+	ctx, w := testutil.SetupGinContext(env.DB)
+	ctx.Set(util.ContextKeyRepos, database.NewRepositoryContainer(env.DB, nil))
+
+	testutil.CreateTestRequest(ctx, map[string]bool{"requireTwoFactor": true})
+
+	UpdateHouseholdTwoFactorPolicy(ctx, SetupTestAppContext(ctx, env.User.ID))
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("UpdateHouseholdTwoFactorPolicy() = %d, want %d", w.Code, http.StatusInternalServerError)
+	}
+}
+
+// A policy the server would not enforce is refused: the deployment has to
+// offer a second factor at all.
+func TestUpdateHouseholdTwoFactorPolicyWithoutTheFeature(t *testing.T) {
+	env := setupHandlerTest(t)
+	env.Ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+
+	testutil.CreateTestRequest(env.Ctx, map[string]bool{"requireTwoFactor": true})
+
+	UpdateHouseholdTwoFactorPolicy(env.Ctx, env.AppCtx)
+
+	if env.W.Code != http.StatusConflict {
+		t.Fatalf("UpdateHouseholdTwoFactorPolicy() = %d, want %d; body = %s", env.W.Code, http.StatusConflict, env.W.Body.String())
+	}
+
+	// The frontend branches on the code, not on the message: the message is
+	// prose and may be reworded.
+	var response struct {
+		Reason string `json:"reason"`
+	}
+	if err := json.Unmarshal(env.W.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if response.Reason != api.ReasonTwoFactorDisabled {
+		t.Errorf("reason = %q, want %q", response.Reason, api.ReasonTwoFactorDisabled)
+	}
+
+	var updated dbModel.Household
+	if err := env.DB.First(&updated, env.Household.ID).Error; err != nil {
+		t.Fatalf("reload household: %v", err)
+	}
+	if updated.RequireTwoFactor {
+		t.Error("the policy was stored although the deployment has no second factor")
+	}
+}
+
+// Withdrawing a policy must work even while the deployment has no second
+// factor: the rule has to be takeable back.
+func TestUpdateHouseholdTwoFactorPolicyWithdrawsWithoutTheFeature(t *testing.T) {
+	env := setupHandlerTest(t)
+	env.Ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+
+	if err := env.DB.Model(&dbModel.Household{}).
+		Where("id = ?", env.Household.ID).
+		Update("require_two_factor", true).Error; err != nil {
+		t.Fatalf("seed the policy: %v", err)
+	}
+
+	testutil.CreateTestRequest(env.Ctx, map[string]bool{"requireTwoFactor": false})
+
+	UpdateHouseholdTwoFactorPolicy(env.Ctx, env.AppCtx)
+
+	if env.W.Code != http.StatusOK {
+		t.Fatalf("UpdateHouseholdTwoFactorPolicy() = %d, want %d; body = %s", env.W.Code, http.StatusOK, env.W.Body.String())
+	}
+
+	var updated dbModel.Household
+	if err := env.DB.First(&updated, env.Household.ID).Error; err != nil {
+		t.Fatalf("reload household: %v", err)
+	}
+	if updated.RequireTwoFactor {
+		t.Error("the policy was not withdrawn")
+	}
 }
 
 func TestUpdateHouseholdSettingsHandler(t *testing.T) {

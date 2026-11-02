@@ -140,7 +140,7 @@ func TestProductsHandlerPagesTheList(t *testing.T) {
 	user := testutil.CreateTestUser(db, household.ID)
 
 	total := productsPageSize + 10
-	for i := 0; i < total; i++ {
+	for i := range total {
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		product.ProductName = productNameFor(i)
 		if err := db.Save(product).Error; err != nil {
@@ -233,7 +233,7 @@ func TestProductsHandlerOmitsPagerOnASinglePage(t *testing.T) {
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
-	for i := 0; i < productsPageSize-10; i++ {
+	for i := range productsPageSize - 10 {
 		product := testutil.CreateTestProduct(db, household.ID, user.ID)
 		product.ProductName = productNameFor(i)
 		if err := db.Save(product).Error; err != nil {
@@ -376,6 +376,111 @@ func TestProductsGridShowsThePackCount(t *testing.T) {
 	// card shows it next to the count.
 	if !strings.Contains(body, "500 g") {
 		t.Errorf("grid view does not show the pack size")
+	}
+}
+
+// TestProductsHandlerHonoursTheEffectiveExpirySort pins the link the use-first
+// tile points at: the page answers it with the effective expiry order and
+// shows that order in the sort field, so the household sees the list it asked
+// for and can tell which order it is in.
+func TestProductsHandlerHonoursTheEffectiveExpirySort(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	// Created in the reverse of the expiry order: the first product created
+	// expires last.
+	late := testutil.CreateTestProduct(db, household.ID, user.ID)
+	late.ProductName = "Effective Late"
+	late.ExpireAt = time.Now().Add(72 * time.Hour)
+	if err := db.Save(late).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	early := testutil.CreateTestProduct(db, household.ID, user.ID)
+	early.ProductName = "Effective Early"
+	early.ExpireAt = time.Now().Add(1 * time.Hour)
+	if err := db.Save(early).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products?sort=effective_expire_at", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	(&Frontend{TemplateCache: cache}).Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	earlyIdx := strings.Index(body, early.ProductName)
+	lateIdx := strings.Index(body, late.ProductName)
+	if earlyIdx < 0 || lateIdx < 0 {
+		t.Fatalf("rendered body missing one of the products: early=%d late=%d", earlyIdx, lateIdx)
+	}
+	if earlyIdx > lateIdx {
+		t.Errorf("list is not in effective expiry order: %q rendered before %q", late.ProductName, early.ProductName)
+	}
+	if !strings.Contains(body, `value="effective_expire_at" selected`) {
+		t.Errorf("the sort field does not show the effective expiry as the chosen order")
+	}
+}
+
+// TestProductsHandlerReadsTheDirectionCaseInsensitively pins that the page and
+// the repository read the direction the same way: the repository uppercases it,
+// so a page that compared it literally would answer "DESC" with the ascending
+// list the API calls descending.
+func TestProductsHandlerReadsTheDirectionCaseInsensitively(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	early := testutil.CreateTestProduct(db, household.ID, user.ID)
+	early.ProductName = "Direction Early"
+	early.ExpireAt = time.Now().Add(1 * time.Hour)
+	if err := db.Save(early).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	late := testutil.CreateTestProduct(db, household.ID, user.ID)
+	late.ProductName = "Direction Late"
+	late.ExpireAt = time.Now().Add(72 * time.Hour)
+	if err := db.Save(late).Error; err != nil {
+		t.Fatalf("failed to save product: %v", err)
+	}
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products?sort=effective_expire_at&order=DESC", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	(&Frontend{TemplateCache: cache}).Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	earlyIdx := strings.Index(body, early.ProductName)
+	lateIdx := strings.Index(body, late.ProductName)
+	if earlyIdx < 0 || lateIdx < 0 {
+		t.Fatalf("rendered body missing one of the products: early=%d late=%d", earlyIdx, lateIdx)
+	}
+	if lateIdx > earlyIdx {
+		t.Errorf("list is ascending: %q rendered before %q", early.ProductName, late.ProductName)
 	}
 }
 
@@ -590,4 +695,51 @@ func TestHydrateProductsPage(t *testing.T) {
 			t.Errorf("len(rows) = %d, want 0", len(rows))
 		}
 	})
+}
+
+// The add-product dialog carries the strip of staples and the two fields the
+// household names the product by. The bounds the fields declare are the ones
+// the server enforces, so the page has to render them.
+func TestProductsPageRendersTheAddProductDialog(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := testutil.SetupTestDB(t)
+	household := testutil.CreateTestHousehold(db, 0)
+	user := testutil.CreateTestUser(db, household.ID)
+
+	cache, err := templates.NewTemplateCache()
+	if err != nil {
+		t.Fatalf("NewTemplateCache() error = %v", err)
+	}
+	frontend := &Frontend{TemplateCache: cache}
+
+	ctx, w := repomocks.SetupGinContextWithDB(db)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/web/products", nil)
+	testutil.MockJWTClaimsWithKey(ctx, user.ID, static.TokenIdentityKey)
+	ctx.Set(util.ContextKeyProviantConfig, &configuration.ProviantConfiguration{})
+	frontend.Products(ctx)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+
+	if !strings.Contains(body, `id="frequentProducts"`) {
+		t.Error("the page does not carry the frequently bought strip")
+	}
+	if !strings.Contains(body, `id="frequentProductsList"`) {
+		t.Error("the page does not carry the list the strip is rendered into")
+	}
+	if !strings.Contains(body, `id="productName"`) {
+		t.Error("the add-product form does not carry a name field")
+	}
+	if !strings.Contains(body, `id="packSize"`) {
+		t.Error("the add-product form does not carry a pack size field")
+	}
+	if !strings.Contains(body, fmt.Sprintf(`maxlength="%d"`, util.MaxProductNameLength)) {
+		t.Errorf("the name field does not declare the server's bound of %d", util.MaxProductNameLength)
+	}
+	if !strings.Contains(body, fmt.Sprintf(`maxlength="%d"`, util.MaxPackSizeLength)) {
+		t.Errorf("the pack size field does not declare the server's bound of %d", util.MaxPackSizeLength)
+	}
 }

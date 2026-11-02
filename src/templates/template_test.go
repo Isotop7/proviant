@@ -17,7 +17,7 @@ import (
 )
 
 func TestHumanDateFormatting(t *testing.T) {
-	ts := time.Date(2026, 3, 7, 14, 5, 0, 0, time.UTC)
+	ts := time.Date(2026, 3, 7, 14, 5, 0, 0, time.Local)
 
 	if got := humanDate(i18n.LanguageEN, ts); got != "07.03.2026" {
 		t.Errorf("humanDate() = %q, want %q", got, "07.03.2026")

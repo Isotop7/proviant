@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Isotop7/proviant/controllers"
+	"github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/models/authentication"
 	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/Isotop7/proviant/testutil"
@@ -29,7 +30,7 @@ func patTestJWTMiddleware(t *testing.T, db *gorm.DB) *jwt.GinJWTMiddleware {
 	cfg.Server.Authentication.TokenPassword = "test-token-password"
 	cfg.Server.Authentication.TokenLifetime = 1
 
-	middleware, err := JWTMiddleware(cfg, db, func(data any, ctx *gin.Context) bool { return true }, patUnauthorized)
+	middleware, err := JWTMiddleware(cfg, db, database.NewRepositoryContainer(db, nil), func(data any, ctx *gin.Context) bool { return true }, patUnauthorized)
 	if err != nil {
 		t.Fatalf("JWTMiddleware() error = %v", err)
 	}

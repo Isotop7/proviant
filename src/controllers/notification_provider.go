@@ -6,7 +6,7 @@ import (
 
 // NotificationProvider interface defines methods for sending notifications
 type NotificationProvider interface {
-	SendNotification(product *dbModel.Product, recipientInfo interface{}, lang string) error
+	SendNotification(product *dbModel.Product, recipientInfo any, lang string) error
 	GetProviderType() string
 	IsConfigured() bool
 }

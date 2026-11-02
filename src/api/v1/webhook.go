@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/Isotop7/proviant/api"
@@ -269,10 +270,5 @@ func validateWebhookEvents(events []string) error {
 }
 
 func isValidWebhookEvent(event string) bool {
-	for _, e := range apiModel.ValidWebhookEvents {
-		if e == event {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(apiModel.ValidWebhookEvents, event)
 }

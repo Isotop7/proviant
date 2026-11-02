@@ -223,3 +223,31 @@ func TestProductHouseholdIDHidden(t *testing.T) {
 		}
 	})
 }
+
+// WasteCauseList hands out a copy: the list is rendered by every request, so
+// one that could be changed would leak into all of them.
+func TestWasteCauseListHandsOutACopy(t *testing.T) {
+	list := WasteCauseList()
+	if len(list) != len(wasteCauses) {
+		t.Fatalf("list length = %d, want %d", len(list), len(wasteCauses))
+	}
+	list[0] = "changed"
+	if WasteCauseList()[0] == "changed" {
+		t.Error("WasteCauseList() handed out the shared list")
+	}
+}
+
+// IsValidWasteCause knows the fixed list and the empty cause, and nothing else.
+func TestIsValidWasteCause(t *testing.T) {
+	for _, cause := range wasteCauses {
+		if !IsValidWasteCause(cause) {
+			t.Errorf("IsValidWasteCause(%q) = false, want true", cause)
+		}
+	}
+	if !IsValidWasteCause("") {
+		t.Error("IsValidWasteCause(\"\") = false, want true")
+	}
+	if IsValidWasteCause("melted") {
+		t.Error("IsValidWasteCause(\"melted\") = true, want false")
+	}
+}

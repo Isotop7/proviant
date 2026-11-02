@@ -98,7 +98,7 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if _, err := repo.GetUserProductsByIDs(user.ID, []uint{product.ID}); err == nil {
 			t.Error("GetUserProductsByIDs() error = nil")
 		}
-		if _, err := repo.GetUserArchivedProductsBulk(user.ID, 0); err == nil {
+		if _, err := repo.GetUserArchivedProductsBulk(user.ID, 0, 0); err == nil {
 			t.Error("GetUserArchivedProductsBulk() error = nil")
 		}
 		if _, err := repo.GetActiveProductProjections(user.ID, 0); err == nil {
@@ -116,13 +116,13 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if _, err := repo.GetUserProductsBulkByBarcodes(user.ID, []string{"1234567890123"}); err == nil {
 			t.Error("GetUserProductsBulkByBarcodes() error = nil")
 		}
-		if _, err := repo.SearchProducts(ProductName, "x", "", "", user.ID); err == nil {
+		if _, err := repo.SearchProducts(ProductName, "x", "", "", user.ID, 0, 0); err == nil {
 			t.Error("SearchProducts() error = nil")
 		}
 		if _, err := repo.SearchProductProjections(ProductName, "x", "", "", user.ID, 0); err == nil {
 			t.Error("SearchProductProjections() error = nil")
 		}
-		if _, err := repo.GetExpiredProductsCount(user.ID); err == nil {
+		if _, err := repo.GetExpiredProductsCount(user.ID, time.Now()); err == nil {
 			t.Error("GetExpiredProductsCount() error = nil")
 		}
 		if _, err := repo.GetActiveProductsCount(user.ID); err == nil {
@@ -137,22 +137,22 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if _, err := repo.GetProductCategoryBreakdown(user.ID); err == nil {
 			t.Error("GetProductCategoryBreakdown() error = nil")
 		}
-		if _, err := repo.GetExpiryTrend(user.ID); err == nil {
+		if _, err := repo.GetExpiryTrend(user.ID, time.Now()); err == nil {
 			t.Error("GetExpiryTrend() error = nil")
 		}
-		if _, err := repo.GetExpiringSoonProducts(user.ID, 7); err == nil {
+		if _, err := repo.GetExpiringSoonProducts(user.ID, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonProducts() error = nil")
 		}
 		if _, err := repo.GetExpiringInDays(user.ID, 7); err == nil {
 			t.Error("GetExpiringInDays() error = nil")
 		}
-		if _, err := repo.GetExpiringSoonCount(user.ID, 7); err == nil {
+		if _, err := repo.GetExpiringSoonCount(user.ID, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonCount() error = nil")
 		}
 		if _, _, err := repo.GetActiveExpiryCounts(user.ID, time.Now(), 7); err == nil {
 			t.Error("GetActiveExpiryCounts() error = nil")
 		}
-		if _, err := repo.GetWasteThisMonth(user.ID); err == nil {
+		if _, err := repo.GetWasteThisMonth(user.ID, time.Now()); err == nil {
 			t.Error("GetWasteThisMonth() error = nil")
 		}
 		if _, err := repo.GetSubThresholdProducts(user.ID); err == nil {
@@ -199,10 +199,10 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 		if err := repo.ConsumeProduct(product.ID, user.ID); err == nil {
 			t.Error("ConsumeProduct() save error = nil")
 		}
-		if err := repo.WasteProduct(product.ID, user.ID); err == nil {
+		if err := repo.WasteProduct(product.ID, user.ID, ""); err == nil {
 			t.Error("WasteProduct() error = nil")
 		}
-		if errs := repo.BulkWasteProducts([]uint{product.ID}, user.ID); len(errs) != 1 {
+		if errs := repo.BulkWasteProducts([]uint{product.ID}, user.ID, ""); len(errs) != 1 {
 			t.Errorf("BulkWasteProducts() returned %d errors, want 1", len(errs))
 		}
 	})
@@ -267,7 +267,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	t.Run("fast-path update failure surfaces", func(t *testing.T) {
 		product := seed(t, 5)
 		failUpdatesOnTable(t, db, "products")
-		if _, _, err := repo.ConsumeProductPartial(&product, 2); err == nil {
+		if _, _, _, err := repo.ConsumeProductPartial(&product, 2, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 	})
@@ -279,7 +279,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 		stale := product
 		stale.Quantity = 3
 		failUpdatesOnTable(t, db, "products")
-		if _, _, err := repo.ConsumeProductPartial(&stale, 3); err == nil {
+		if _, _, _, err := repo.ConsumeProductPartial(&stale, 3, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 	})
@@ -287,7 +287,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	t.Run("full-consume flag update failure surfaces", func(t *testing.T) {
 		product := seed(t, 2)
 		failUpdatesOnTable(t, db, "products")
-		if _, _, err := repo.ConsumeProductPartial(&product, 5); err == nil {
+		if _, _, _, err := repo.ConsumeProductPartial(&product, 5, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 		var reloaded dbModel.Product
@@ -315,7 +315,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 		})
 		t.Cleanup(func() { db.Callback().Update().Remove("test:consume_partial_concurrent") })
 
-		_, _, err := repo.ConsumeProductPartial(&stale, 3)
+		_, _, _, err := repo.ConsumeProductPartial(&stale, 3, nil)
 		if err != errors.ErrProductConcurrentModification {
 			t.Errorf("ConsumeProductPartial() error = %v, want %v", err, errors.ErrProductConcurrentModification)
 		}

@@ -16,10 +16,11 @@ type Timestamp struct {
 	Timestamp Date `json:"timestamp" binding:"required"`
 }
 
-// UnmarshalJSON parses JSON into Date
+// UnmarshalJSON parses JSON into Date. A date-only string names a calendar day
+// in the container's zone, the zone the app renders dates in.
 func (d *Date) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), "\"")
-	t, err := time.Parse(util.DefaultDateFormatParseStr, s)
+	t, err := time.ParseInLocation(util.DefaultDateFormatParseStr, s, time.Local)
 	if err != nil {
 		return err
 	}

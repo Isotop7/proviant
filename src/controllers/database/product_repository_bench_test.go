@@ -20,7 +20,7 @@ func seedTestData(t *testing.T, db *gorm.DB) (userIDs []uint) {
 	t.Helper()
 
 	// Create households and users
-	for i := 0; i < seedHouseholdCount; i++ {
+	for i := range seedHouseholdCount {
 		household := dbModel.Household{
 			Name:    "Test Household " + string(rune('A'+i)),
 			AdminID: 0,
@@ -52,7 +52,7 @@ func seedTestData(t *testing.T, db *gorm.DB) (userIDs []uint) {
 		}
 
 		// Seed products for this household
-		for j := 0; j < seedProductsPerHousehold; j++ {
+		for j := range seedProductsPerHousehold {
 			product := dbModel.Product{
 				HouseholdID:       household.ID,
 				ProductName:       "Test Product " + string(rune('A'+i)) + "-" + string(rune('0'+j%10)),
@@ -91,16 +91,17 @@ func TestProductListPerformance10k(t *testing.T) {
 	if len(products) != seedProductsPerHousehold {
 		t.Errorf("expected %d products, got %d", seedProductsPerHousehold, len(products))
 	}
-	// Allow 150ms to account for in-memory sort of 1000 products. The race
+	// The wall clock is a regression gate on a clean build only. The race
 	// detector inflates the row scan ~6x (raw find alone measures ~180ms
-	// under -race vs ~15ms clean), so a clean-build budget would fail every
-	// `task test` run without any query regression.
-	budget := 150 * time.Millisecond
+	// under -race vs ~15ms clean) and the multiplier differs per machine and
+	// per load, so a race-build budget either flakes on a slow runner or has
+	// to be so loose it catches nothing. The clean build measures ~28ms
+	// against the 150ms budget below; `task test-perf` runs it without -race.
 	if raceEnabled {
-		budget = 300 * time.Millisecond
+		t.Skip("wall-clock budget is only meaningful on a clean build — see task test-perf")
 	}
-	if elapsed >= budget {
-		t.Errorf("product list query exceeded budget: got %v, want <%v", elapsed, budget)
+	if elapsed >= 150*time.Millisecond {
+		t.Errorf("product list query exceeded budget: got %v, want <150ms", elapsed)
 	}
 }
 
@@ -110,8 +111,7 @@ func BenchmarkGetUserProductsBulk(b *testing.B) {
 	repo := NewProductRepository(db)
 	userID := userIDs[0]
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := repo.GetUserProductsBulk(userID, 0)
 		if err != nil {
 			b.Fatalf("GetUserProductsBulk failed: %v", err)
@@ -125,8 +125,7 @@ func BenchmarkGetExpiringInDays(b *testing.B) {
 	repo := NewProductRepository(db)
 	userID := userIDs[0]
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := repo.GetExpiringInDays(userID, 7)
 		if err != nil {
 			b.Fatalf("GetExpiringInDays failed: %v", err)
@@ -140,8 +139,7 @@ func BenchmarkGetUserProductsBulkByBarcode(b *testing.B) {
 	repo := NewProductRepository(db)
 	userID := userIDs[0]
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := repo.GetUserProductsBulkByBarcode(userID, 123)
 		if err != nil {
 			b.Fatalf("GetUserProductsBulkByBarcode failed: %v", err)
@@ -155,9 +153,8 @@ func BenchmarkGetExpiringSoonCount(b *testing.B) {
 	repo := NewProductRepository(db)
 	userID := userIDs[0]
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := repo.GetExpiringSoonCount(userID, 7)
+	for b.Loop() {
+		_, err := repo.GetExpiringSoonCount(userID, 7, time.Now())
 		if err != nil {
 			b.Fatalf("GetExpiringSoonCount failed: %v", err)
 		}
@@ -185,21 +182,20 @@ func BenchmarkGetProductStats(b *testing.B) {
 	userID := userIDs[0]
 	archiveFirstHouseholdStock(b, db)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := repo.GetActiveProductsCount(userID); err != nil {
 			b.Fatalf("GetActiveProductsCount failed: %v", err)
 		}
-		if _, err := repo.GetExpiredProductsCount(userID); err != nil {
+		if _, err := repo.GetExpiredProductsCount(userID, time.Now()); err != nil {
 			b.Fatalf("GetExpiredProductsCount failed: %v", err)
 		}
-		if _, err := repo.GetExpiringSoonProducts(userID, 7); err != nil {
+		if _, err := repo.GetExpiringSoonProducts(userID, 7, time.Now()); err != nil {
 			b.Fatalf("GetExpiringSoonProducts failed: %v", err)
 		}
 		if _, err := repo.GetProductCategoryBreakdown(userID); err != nil {
 			b.Fatalf("GetProductCategoryBreakdown failed: %v", err)
 		}
-		if _, err := repo.GetExpiryTrend(userID); err != nil {
+		if _, err := repo.GetExpiryTrend(userID, time.Now()); err != nil {
 			b.Fatalf("GetExpiryTrend failed: %v", err)
 		}
 		if _, err := repo.GetArchivedProductsCount(userID); err != nil {
@@ -222,15 +218,14 @@ func BenchmarkGetProductStatsFullTableLoads(b *testing.B) {
 	userID := userIDs[0]
 	archiveFirstHouseholdStock(b, db)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for load := 0; load < 5; load++ {
+	for b.Loop() {
+		for range 5 {
 			if _, err := repo.GetUserProductsBulk(userID, 0); err != nil {
 				b.Fatalf("GetUserProductsBulk failed: %v", err)
 			}
 		}
-		for load := 0; load < 2; load++ {
-			if _, err := repo.GetUserArchivedProductsBulk(userID, -1); err != nil {
+		for range 2 {
+			if _, err := repo.GetUserArchivedProductsBulk(userID, -1, 0); err != nil {
 				b.Fatalf("GetUserArchivedProductsBulk failed: %v", err)
 			}
 		}

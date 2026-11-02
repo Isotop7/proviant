@@ -49,6 +49,10 @@ var (
 	// ErrInvalidUserData is thrown when supplied user data is invalid
 	ErrInvalidUserData = errors.New("invalid user data")
 
+	// ErrInvalidCredentials is thrown when the supplied credentials do not
+	// match. It never says which part was wrong.
+	ErrInvalidCredentials = errors.New("invalid credentials")
+
 	// ErrInvalidUserID is thrown when supplied user data is invalid
 	ErrInvalidUserID = errors.New("invalid user ID")
 
@@ -60,8 +64,8 @@ var (
 	// grid, or a payload above the size limit.
 	ErrDashboardLayoutInvalid = errors.New("invalid dashboard layout")
 
-	// ErrInvalidProductQuantity is thrown when a product is patched with a pack
-	// count of zero: a product always holds at least one pack.
+	// ErrInvalidProductQuantity is thrown when a product write or removal
+	// request carries a pack count below one.
 	ErrInvalidProductQuantity = errors.New("quantity must be at least 1")
 
 	// ErrProductQuantityTooLarge is thrown when a product is patched with a
@@ -139,6 +143,10 @@ var (
 	// ErrBarcodeMissing is thrown if a product request carries no barcode.
 	ErrBarcodeMissing = errors.New("barcode missing")
 
+	// ErrInvalidExpiryDate is thrown if a request carries an expiry date that
+	// is neither a plain date nor an RFC 3339 timestamp.
+	ErrInvalidExpiryDate = errors.New("invalid expiry date")
+
 	// ErrClientSyncIDTooLong is thrown if a product request carries a clientSyncId
 	// longer than util.OfflineSyncIDMaxLength. The column is indexed, so an
 	// unbounded value would fail at insert time as a 500.
@@ -154,6 +162,12 @@ var (
 	// forbids a second row, and the existing row is not the caller's to read.
 	ErrClientSyncIDConflict = errors.New("clientSyncId is already used by another product")
 
+	// ErrDuplicateProduct is thrown if a product create would duplicate an
+	// active row of the household: the same barcode, the same storage location
+	// and the same effective expiry. The caller decides whether the pack
+	// belongs to that row or is a product of its own.
+	ErrDuplicateProduct = errors.New("a matching product already exists")
+
 	// ErrNoValidSearchParameters is thrown if a product search yields no usable
 	// query parameters.
 	ErrNoValidSearchParameters = errors.New("no valid search parameters found")
@@ -165,6 +179,10 @@ var (
 	// ErrShoppingListItemNotFound is thrown if the requested shopping list item
 	// does not exist in the caller's household.
 	ErrShoppingListItemNotFound = errors.New("shopping list item not found")
+
+	// ErrShoppingListItemProductGone is thrown if the product a shopping list
+	// item points at is gone: the packs of the purchase have nowhere to go.
+	ErrShoppingListItemProductGone = errors.New("the product of the shopping list item no longer exists")
 
 	// ErrIntegrationInvalidProvider is thrown if the requested shopping list sync provider is unknown.
 	ErrIntegrationInvalidProvider = errors.New("invalid shopping list sync provider")
@@ -199,6 +217,10 @@ var (
 	// ErrWasteLimitOutOfRange is thrown if the waste analytics limit exceeds the
 	// accepted maximum.
 	ErrWasteLimitOutOfRange = errors.New("limit must be 1..50")
+
+	// ErrInvalidWasteCause is thrown if a waste action carries a cause that is
+	// not one of the known causes.
+	ErrInvalidWasteCause = errors.New("invalid waste cause")
 
 	// ErrDatabaseInvalidSearchParameter is thrown if a database query contains an invalid search parameter
 	ErrDatabaseInvalidSearchParameter = errors.New("invalid search parameter on database call")
@@ -300,6 +322,15 @@ var (
 
 	// ErrStorageLocationNotOwned is thrown when a storage location does not belong to the user's household
 	ErrStorageLocationNotOwned = errors.New("storage location does not belong to this household")
+
+	// ErrCategoryNotFound is thrown when a requested category is not one of the canonical categories
+	ErrCategoryNotFound = errors.New("category not found")
+
+	// ErrCategoryShelfLifeOutOfRange is thrown when a category shelf life is below the minimum or above the maximum
+	ErrCategoryShelfLifeOutOfRange = errors.New("category shelf life is out of range")
+
+	// ErrCategoryDaysAfterOpeningOutOfRange is thrown when a category days-after-opening value is out of range
+	ErrCategoryDaysAfterOpeningOutOfRange = errors.New("category days after opening is out of range")
 
 	// ErrHouseholdNotFound is thrown when a requested household does not exist
 	ErrHouseholdNotFound = errors.New("household not found")
@@ -433,6 +464,74 @@ var (
 
 	// ErrRateLimitInvalidValue is thrown if any rate limit value is zero or negative
 	ErrRateLimitInvalidValue = errors.New("rate limit values must be greater than 0")
+
+	/*
+	 * Two-factor authentication related errors
+	 */
+	// ErrTwoFactorRequired is thrown when an account has a second factor and
+	// the sign-in request did not carry a code
+	ErrTwoFactorRequired = errors.New("two-factor authentication required")
+
+	// ErrTwoFactorSetupRequired is thrown when the household demands a second
+	// factor but the account has none enrolled yet
+	ErrTwoFactorSetupRequired = errors.New("two-factor authentication setup required")
+
+	// ErrTwoFactorNotRequired is thrown when the household does not demand a
+	// second factor, so there is nothing to set up
+	ErrTwoFactorNotRequired = errors.New("the household does not require two-factor authentication")
+
+	// ErrTwoFactorSetupExpired is thrown when the pending enrolment is gone
+	// or has timed out, so a fresh QR code is needed
+	ErrTwoFactorSetupExpired = errors.New("the two-factor setup is no longer valid")
+
+	// ErrTwoFactorInvalidCode is thrown for a code that is wrong, expired or
+	// replayed. The three cases share one error so the response never tells
+	// an attacker which one it was.
+	ErrTwoFactorInvalidCode = errors.New("the two-factor code is invalid")
+
+	// ErrTwoFactorAlreadyEnabled is thrown when an account that already has a
+	// second factor tries to enrol another one
+	ErrTwoFactorAlreadyEnabled = errors.New("two-factor authentication is already enabled")
+
+	// ErrTwoFactorNotEnabled is thrown when an account without a second factor
+	// tries to act on it
+	ErrTwoFactorNotEnabled = errors.New("two-factor authentication is not enabled")
+
+	// ErrTwoFactorPendingExpired is thrown when a setup was started but never
+	// confirmed in time
+	ErrTwoFactorPendingExpired = errors.New("the two-factor setup has expired")
+
+	// ErrServerEmptyTwoFactorKey is thrown if two-factor authentication is
+	// enabled without an encryption key
+	ErrServerEmptyTwoFactorKey = errors.New(
+		"two-factor encryption key cannot be empty: set server.twoFactor.encryptionKey " +
+			"(generate one with 'openssl rand -base64 32') or the " +
+			"PROVIANT_SERVER_TWOFACTOR_ENCRYPTIONKEY environment variable")
+
+	// ErrServerDefaultTwoFactorKey is thrown if the two-factor encryption key
+	// is the publicly known default shipped in the config templates
+	ErrServerDefaultTwoFactorKey = errors.New(
+		"two-factor encryption key is a publicly known default shipped in the config template: " +
+			"set server.twoFactor.encryptionKey (generate one with 'openssl rand -base64 32') or the " +
+			"PROVIANT_SERVER_TWOFACTOR_ENCRYPTIONKEY environment variable")
+
+	// ErrServerInvalidTwoFactorKey is thrown if the two-factor encryption key
+	// is not 32 bytes encoded as base64
+	ErrServerInvalidTwoFactorKey = errors.New(
+		"two-factor encryption key must be 32 bytes encoded as base64: " +
+			"generate one with 'openssl rand -base64 32'")
+
+	// ErrServerTwoFactorKeyEqualsTokenPassword is thrown if the two-factor
+	// encryption key is the JWT token password. Rotating the token password
+	// would then invalidate every enrolment.
+	ErrServerTwoFactorKeyEqualsTokenPassword = errors.New(
+		"two-factor encryption key must differ from server.authentication.tokenPassword: " +
+			"rotating the token password would invalidate every enrolment")
+
+	// ErrServerInvalidTwoFactorRecoveryCodeCount is thrown if the configured
+	// number of recovery codes is outside the supported range
+	ErrServerInvalidTwoFactorRecoveryCodeCount = errors.New(
+		"two-factor recovery code count must be between 1 and 50")
 
 	/*
 	 * CSRF related errors

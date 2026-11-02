@@ -207,8 +207,7 @@ func respondScanError(ctx *gin.Context, logger *zerolog.Logger, scanErr error) {
 	// Upstream failures (unreachable endpoint, non-2xx status, endpoint-reported
 	// errors such as 401/403 auth or config problems) are not internal failures
 	// of this server and must not surface as 500.
-	var endpointErr *errors.ReceiptEndpointError
-	if stderrors.As(scanErr, &endpointErr) {
+	if _, ok := stderrors.AsType[*errors.ReceiptEndpointError](scanErr); ok {
 		logger.Error().Msgf("Receipt scan endpoint error: %s", scanErr.Error())
 		api.RespondError(ctx, http.StatusBadGateway, errors.ErrReceiptEndpoint)
 		return

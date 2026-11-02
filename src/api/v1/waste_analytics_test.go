@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Isotop7/proviant/i18n"
 	"github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/models/authentication"
 	dbModel "github.com/Isotop7/proviant/models/database"
@@ -41,6 +42,52 @@ func TestGetWasteAnalytics(t *testing.T) {
 		}
 		if resp.Monthly == nil || resp.Trend == nil {
 			t.Error("Monthly and Trend must be non-nil empty slices")
+		}
+	})
+
+	t.Run("the empty state follows the language of the user", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.HouseholdID = 0
+		m.Users.User.Language = "de"
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/stats/waste", nil)
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
+
+		GetWasteAnalytics(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", w.Code)
+		}
+		var resp api.WasteAnalyticsResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Insight != i18n.T("de", "waste.insight.insufficientData") {
+			t.Errorf("Insight = %q, want the German empty state", resp.Insight)
+		}
+	})
+
+	t.Run("the empty state follows the Accept-Language header", func(t *testing.T) {
+		m := repomocks.NewMockRepositoryContainer()
+		m.Users.HouseholdID = 0
+		ctx, w := repomocks.SetupGinContextWithMocks(m)
+		ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/stats/waste", nil)
+		ctx.Request.Header.Set("Accept-Language", "de-DE,de;q=0.9")
+		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
+		appCtx := SetupTestAppContext(ctx, 1)
+
+		GetWasteAnalytics(ctx, appCtx)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", w.Code)
+		}
+		var resp api.WasteAnalyticsResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Insight != i18n.T("de", "waste.insight.insufficientData") {
+			t.Errorf("Insight = %q, want the German empty state", resp.Insight)
 		}
 	})
 

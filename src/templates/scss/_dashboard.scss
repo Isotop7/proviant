@@ -14,6 +14,11 @@
 }
 
 .bento__cell {
+  // The layout engine writes the arrangement onto the tile. The defaults keep
+  // the rule below valid before it runs.
+  --tile-order: 0;
+  --tile-w: 1;
+  --tile-h: 1;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -67,6 +72,11 @@
   opacity: .92;
 }
 
+// While a tile is dragged the grid clips what it cannot constrain.
+.bento--dragging {
+  overflow: hidden;
+}
+
 // The ring around a tile that is being resized shows the size it will have.
 .bento__cell--resizing {
   border-radius: var(--radius-md);
@@ -74,7 +84,8 @@
 }
 
 // The landing shadow: the place the dragged tile will take and the size it
-// will have there.
+// will have there. Its position tracks the slot without sliding: only its
+// appearance is animated.
 .bento__slot {
   position: absolute;
   z-index: 0;
@@ -83,7 +94,7 @@
   border-radius: var(--radius-md);
   box-shadow: inset 0 0 0 2px var(--accent), var(--elev-raised);
   opacity: 0;
-  transition: left var(--motion-base) var(--ease-out), top var(--motion-base) var(--ease-out), width var(--motion-base) var(--ease-out), height var(--motion-base) var(--ease-out), opacity var(--motion-fast) var(--ease-out), transform var(--motion-base) var(--ease-out);
+  transition: opacity var(--motion-fast) var(--ease-out), transform var(--motion-base) var(--ease-out);
   transform: scale(.985);
 }
 
