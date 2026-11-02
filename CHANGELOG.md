@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.25.0] - 2026-11-02
+
+### Added
+- (155d7efc): **web:** Serve an app-styled offline page from the server
+- (f6363f77): Feat(products): partial consume and waste of packs
+Closes #417
+- (699584ad): Feat(products): prompt on duplicate creates instead of writing a second
+row
+Closes #418
+- (9135c7ed): Feat(products): canonical product category with household shelf-life
+defaults
+Closes: #419
+- (10030c4c): Feat(waste): record why food was wasted and name what you over-buy
+Closes: #421
+- (2fa3601d): Add missing script
+- (9f51209e): Feat(products): rank the pantry by effective expiry, with a use-first
+tile
+Closes: #420
+- (73751fb2): Feat(auth): add TOTP two-factor authentication with recovery codes
+Closes: #422
+- (8964aa32): **products:** Offer the household's staples in the add-product dialog
+- (01ff7821): Feat(shopping-list): turn a list item into a bought product
+Closes: #443
+- (7a055ce7): **api:** Page the products list by offset and report the total count Closes: #424
+- (c3d996cc): **util:** Add the month calendar helpers
+- (da07a716): **ui:** Unify the brand lockup
+
+
+### Changed
+- (b871357c): Modernize Go code and gate it with the modernize linter
+
+
+### Fixed
+- (a2ecc6fe): Fix sonarqube findings
+- (466f4755): Fix(assets): keep the dragged dashboard tile under the pointer
+Closes: #467
+- (9a5dacbd): **date:** Read date-only values in the container's zone
+- (07ed7582): **stats:** Anchor month windows and buckets to one instant
+- (d191b45e): **notifications:** Run the daily schedulers in the container's zone
+- (23a7d75e): **dashboard:** Default the bento tile placement
+- (863aed15): **date:** Render timestamps in the container's local zone
+
+
+### Miscellaneous
+- (d7e30893): Update CHANGELOG.md for v0.24.0
+- (45b0bf2c): **deps:** Bump undici from 8.11.2 to 8.12.3
+- (afdfa141): **deps:** Bump fast-uri from 3.1.8 to 3.1.9
+- (890b527a): **deps:** Bump postcss-selector-parser from 6.1.4 to 6.1.5
+- (1db1b1a9): **ui-capture:** Refresh the screenshots and the alert selectors
+- (5ceba830): **docs:** Regenerate the godoc and quiet the doc generator
+- (54ba7829): Bump the version to v0.25.0
+
+
 ## [0.24.0] - 2026-10-23
 
 ### Added
