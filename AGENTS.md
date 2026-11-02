@@ -31,6 +31,7 @@ Agent coding guidelines for Proviant codebase.
 | `task test` / `task test-js` | Go suite `-race`; Vitest suite in `tests/js/`. |
 | `task test-perf` | Wall-clock budget test on a clean build (the race detector inflates it past usefulness). |
 | `task check` / `task check-changed` | Go lint via the golangci-lint container; only files changed vs `HEAD`. |
+| `task check-dependabot` | Dependency-pinning invariants (Dependabot config, SHA pins, trivy digest, Go toolchain). |
 | `task doc` | After adding/changing exported Go symbols or Swagger annotations. |
 | `task run` | Local dev server. |
 | `task containerimage` / `task runcontainer` / `task runcontainerdebug` | Build/run containerized app. |
@@ -38,11 +39,32 @@ Agent coding guidelines for Proviant codebase.
 | `task vuln-image` | Scan container image (needs podman/docker; excluded from `task vuln`). |
 | `task seed` / `task seed-reset` | Populate / wipe demo products. |
 
-**Never call the underlying tools directly — always the task**: `npm install` / `npm test` / `npm run *` → `task init` / `test` / `css` / `js` / `lint` (`npm run test-js` → `task test-js`); `podman`/`docker build` → `task containerimage`; `golangci-lint run` → `task check`; `go run` for the dev server → `task run`; `go fix` → `task modernize` (report) / `task modernize-fix` (apply). Single test: `cd src && go test -race -vet=off ./path/to/package [-run TestName]`.
+**Never call the underlying tools directly — always the task**: `npm install` / `npm test` / `npm run *` → `task init` / `test` / `css` / `js` / `lint` (`npm run test-js` → `task test-js`); `node scripts/check-dependabot.mjs` → `task check-dependabot`; `podman`/`docker build` → `task containerimage`; `golangci-lint run` → `task check`; `go run` for the dev server → `task run`; `go fix` → `task modernize` (report) / `task modernize-fix` (apply). Single test: `cd src && go test -race -vet=off ./path/to/package [-run TestName]`.
 
 ## Dependency Auditing
 
 `npm audit` gates **production deps only** (`--omit=dev`); dev findings are reported but never fail. The policy lives once in `scripts/npm-audit.sh` — never inline `npm audit` into a workflow or the Taskfile. That script's header documents the standing dev advisory (`braces`), why it is unreachable at runtime, and the re-check trigger; never reintroduce `npm audit fix --force` or a `braces` `overrides` entry.
+
+## Dependency Updates
+
+Dependabot proposes the Go module (`src/go.mod`), the npm packages, the container base images and the SHA-pinned GitHub Actions weekly (`.github/dependabot.yml`). Every proposal opens a pull request against `main` that runs the CI, so an update is testable before it lands — except the `image-scan` job, which a Dependabot pull request cannot run (read-only token). `scripts/check-dependabot.mjs` (`task check-dependabot`) gates the configuration and the invariants below; CI runs it in the `ops-check` job.
+
+**Who merges / merge gate.** The maintainer merges — never automatically. A proposal is merged when the CI on the pull request is green: the `check` job (golangci-lint, `go test -race`, the 40 % coverage gate), the `frontend-check` job (the three frontend linters, the class-selector check, the vitest suite) and the `ops-check` job (the dependency-pinning invariants). `ops-check` has to be a required status check in the branch protection rules — without it the merge gate is advisory. A red proposal is closed, not force-merged. The proposal lands on `main` — or is carried onto the milestone branch that is currently open, since a dependency commit is self-contained.
+
+**Review checklist per ecosystem.**
+
+- *gomod* — read the `go.mod`/`go.sum` diff; a major bump is an API change (the compile step in `check` catches it). `task tidy` before merging if the module graph looks untidy. `govulncheck` runs in CI.
+- *npm* — a bump changes the **compiled** assets, not just the manifest. The compiled CSS is gitignored (`src/assets/css/` is built by the image and by CI), so `task css` only proves that the SCSS still compiles against the new Bootstrap; the tracked artefacts are `task js` (`src/assets/js/chart.umd.min.js`) and `task fonts` (the woff2 files) — commit those. When the CSS output changed, bump `CACHE_NAME` in `src/assets/js/sw.js`; the service worker serves CSS cache-first, so a forgotten bump leaves every browser on the previous stylesheet. Then `task lint` and `task test-js`.
+- *docker* — two base images move: the Go toolchain (`golang:<version>-alpine`, build stage in `Dockerfile` and `Dockerfile.demo`, plus the demo seeder stage) and the runtime (`alpine:<version>`). The Go version moves together with `GO_VERSION` in `.github/workflows/ci.yml` and `.github/workflows/weekly-vuln-scan.yml` — `task check-dependabot` fails otherwise, because an image built with a different compiler than CI tests with is a silent divergence. An `alpine` bump changes the OS packages, and the image scan does not run on the proposal — verify it locally with `task vuln-image` before merging, and let the `image-scan` job on `main` confirm it afterwards.
+- *github-actions* — the proposal keeps the SHA pin and updates the version comment; check both. A new major of an action may need a workflow change (a new Node runtime, a renamed input).
+
+**The standing `braces` advisory.** `scripts/npm-audit.sh` stays the single source of truth. Dependabot never proposes `braces` directly — it is transitive (`stylelint` → `micromatch` → `braces`). The re-check trigger lives in that script's header: once a `braces` release greater than 3.0.3 ships, drop `--omit=dev` and re-enable the full gate. The trigger fires from the weekly npm audit (which reports the dev finding) or from a Dependabot npm proposal that pulls a newer `micromatch` into the lockfile. Never `npm audit fix --force`, never a `braces` `overrides` entry — `task check-dependabot` fails on both.
+
+**Alpha dependencies (Bootstrap 6).** `bootstrap` is excluded from the automated npm updates; the manual procedure is: read the Bootstrap 6 documentation via Context7 (`/websites/getbootstrap`), bump `package.json`, run `task css` + `task js`, bump `CACHE_NAME` in `src/assets/js/sw.js`, record the departures in `design-system/deviations.md`, run `task lint` + `task test-js`. A security advisory on `bootstrap` is handled by hand — an ignore by dependency name covers version and security updates alike, so Dependabot raises no pull request for it; the advisory itself still shows up in the Dependabot alerts and in the weekly npm audit.
+
+**Container image digest.** The trivy image stays pinned by digest and is not managed by Dependabot — it is not a Dockerfile base image, so no ecosystem touches it. A bump touches **both** `scripts/image-scan.sh` (the `TRIVY_IMAGE` default) and the `Taskfile.yml` `TRIVY_IMAGE` variable, then `task vuln-image` verifies it. Promotion stays digest-based (`docker buildx imagetools create`).
+
+**Dependabot pull requests and the image gate.** A Dependabot-triggered `pull_request` workflow gets a read-only `GITHUB_TOKEN`, so the `image-scan` job is skipped for those pull requests; the gate is enforced after the merge.
 
 ## Container Image Scanning
 

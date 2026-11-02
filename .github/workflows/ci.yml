@@ -154,11 +154,31 @@ jobs:
       - name: Test JS
         run: npm run test-js
 
+  ops-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Check the Dependabot configuration
+        run: node scripts/check-dependabot.mjs
+
   image-scan:
     needs:
       - check
+    # Dependabot branches live in this repository, but a workflow triggered by
+    # Dependabot gets a read-only GITHUB_TOKEN — the ghcr.io push below cannot
+    # succeed. The gate is enforced after the merge on `main`, the same way it
+    # is for fork pull requests. The pull request author, not the actor, tells
+    # a Dependabot proposal apart from a human commit on the same branch.
     if: >-
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]') ||
       github.ref == 'refs/heads/develop' ||
       github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

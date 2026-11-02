@@ -626,7 +626,7 @@ Operator references:
 
 ## Security Scanning
 
-The CI pipeline runs on every push, and on pull requests targeting `main` or `develop`. Dependency scanning gates every run; container-image scanning gates pushes to `main`/`develop` and same-repo pull requests:
+The CI pipeline runs on every push, and on pull requests targeting `main` or `develop`. Dependency scanning gates every run; container-image scanning gates pushes to `main`/`develop` and same-repo pull requests, except the ones from Dependabot (their CI token is read-only):
 
 | Scan | Tool | Scope |
 | --- | --- | --- |
@@ -636,7 +636,13 @@ The CI pipeline runs on every push, and on pull requests targeting `main` or `de
 
 Image scanning blocks on fixable `HIGH`/`CRITICAL` findings. Scan flags and the digest-pinned trivy image live in `scripts/image-scan.sh` — the single source of truth shared by CI and `task vuln-image`. The task uses the pinned container image when no local `trivy` binary is found.
 
-The image scan publishes the scanned image to a `ci-scan-<sha>` tag and the release step promotes that exact digest to the published tags, so the report always covers the image that ships. A scan that fails to complete (unreachable vulnerability database, registry error) is reported as an error rather than as a clean result — the gate never passes because the scanner broke. Pull requests from forks do not run the image scan (their CI token is read-only); the gate is enforced through branch protection on `main` and `develop`.
+The image scan publishes the scanned image to a `ci-scan-<sha>` tag and the release step promotes that exact digest to the published tags, so the report always covers the image that ships. A scan that fails to complete (unreachable vulnerability database, registry error) is reported as an error rather than as a clean result — the gate never passes because the scanner broke. Pull requests from forks and from Dependabot do not run the image scan (their CI token is read-only); the gate is enforced through branch protection on `main` and `develop`.
+
+### Dependency Updates
+
+Dependabot proposes the Go module, the npm packages, the container base images and the pinned GitHub Actions every Monday. The proposal opens a pull request against `main` that runs the CI — the Go lint and test jobs, the coverage gate, the frontend checks and the dependency-pinning check — so an update is testable before it lands. The image scan is the exception: a Dependabot pull request gets a read-only token, so that job runs after the merge instead. Nothing is merged automatically: a maintainer reviews the proposal and merges it once the run is green.
+
+The actions stay pinned to commit SHAs, the trivy image stays pinned to a digest, and Bootstrap 6 (an alpha) is bumped by hand. The triage policy — how a proposal is reviewed, how the standing `braces` advisory is re-checked, how the alpha is handled, who merges and what the merge gate is — lives in [`AGENTS.md`](AGENTS.md) under *Dependency Updates*. `task check-dependabot` verifies the configuration and the pinning invariants.
 
 ## Monitoring
 

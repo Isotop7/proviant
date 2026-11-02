@@ -130,6 +130,14 @@ tasks:
         golangci-lint run \
         -v -c /tmp/.golangci.yml --new-from-rev HEAD~1
 
+  check-dependabot:
+    desc: Check the Dependabot configuration and the dependency-pinning invariants
+    preconditions:
+      - sh: '[ -d ./node_modules/js-yaml ]'
+        msg: "Dependencies are not installed. Please run 'task init' first."
+    cmds:
+      - node scripts/check-dependabot.mjs
+
   packagedoc:
     desc: Generate package documentation as markdown
     dir: src

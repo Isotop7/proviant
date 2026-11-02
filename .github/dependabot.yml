@@ -1,0 +1,115 @@
+# Dependabot — weekly version updates for the Go module, the npm packages, the
+# container base images and the GitHub Actions pinned in .github/workflows.
+#
+# The triage policy (who merges, what the merge gate is, how the standing
+# `braces` advisory and the Bootstrap 6 alpha are handled) lives in AGENTS.md
+# → "Dependency Updates".
+#
+# Every proposal opens a pull request that runs the full CI, so an update is
+# testable before it lands. Nothing is auto-merged: the merge gate is a human
+# review plus a green run.
+
+version: 2
+
+updates:
+  # ── Go module — src/go.mod ────────────────────────────────────────────────
+  - package-ecosystem: "gomod"
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "ops"
+    groups:
+      # A major bump of a Go dependency is an API change: it gets its own pull
+      # request so it can be closed without blocking the rest.
+      go-major:
+        patterns: ["*"]
+        update-types: ["major"]
+      go-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # ── npm — package.json + package-lock.json at the repository root ────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    # `increase-if-necessary` leaves the `^` ranges alone unless a release
+    # falls outside them. The default `auto` widens them to `>=4.5.1 <5.0.0`
+    # whenever the package looks like a library — the manifest has no
+    # `private: true`, so the app/library heuristic is a coin flip.
+    versioning-strategy: "increase-if-necessary"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    labels:
+      - "dependencies"
+      - "ops"
+    ignore:
+      # Bootstrap 6 is an alpha (6.0.0-alpha.1): an automated bump rewrites
+      # the compiled stylesheet. Manual procedure: AGENTS.md →
+      # "Dependency Updates".
+      - dependency-name: "bootstrap"
+    groups:
+      npm-major:
+        patterns: ["*"]
+        update-types: ["major"]
+      npm-production:
+        patterns: ["*"]
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      npm-development:
+        patterns: ["*"]
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+
+  # ── Container images — Dockerfile and Dockerfile.demo ─────────────────────
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "ops"
+    groups:
+      docker-base-images:
+        patterns: ["*"]
+
+  # ── GitHub Actions — .github/workflows ────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - "dependencies"
+      - "ops"
+    groups:
+      actions-major:
+        patterns: ["*"]
+        update-types: ["major"]
+      actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
