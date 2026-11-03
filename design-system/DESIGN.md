@@ -465,6 +465,11 @@ Auth ist die prominenteste Fläche. Hier darf das System spürbar werden:
   `0 0 0 3px var(--accent-soft)`.
 - Tastatur: Tab springt in sichtbarer Reihenfolge, Esc schließt Modals
   und Drawer, Enter löst primäre Aktion aus, Space toggelt Checkboxen.
+- Formularfelder: jedes Bedienelement trägt einen Namen. Der sichtbare
+  Text ist **kein** Label — das Label (`for` + `id`) trägt den Namen und
+  ist visuell versteckt (`visually-hidden`), wenn der sichtbare Text ihn
+  nicht schon trägt. Ein Schalter ist `role="switch"` mit `id`; das
+  Bedienelement darf nie in einem `aria-hidden`-Teilbaum liegen.
 
 ## 9. Do & Don't
 

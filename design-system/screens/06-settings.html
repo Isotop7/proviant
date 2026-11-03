@@ -43,6 +43,7 @@
     .input { width: 100%; height: 44px; padding: 0 var(--space-4); border: 1.5px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--fg); font-family: var(--font-body); font-size: var(--text-sm); transition: border-color var(--motion-base), box-shadow var(--motion-base); }
     .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
     .input::placeholder { color: var(--meta); }
     .input-label { display: block; font-size: var(--text-sm); font-weight: 600; color: var(--fg); margin-bottom: var(--space-2); }
     .form-select { appearance: none; background-color: var(--bg); padding-right: var(--space-8); cursor: pointer; }
@@ -61,8 +62,9 @@
     .badge-soon { background: oklch(0.92 0.05 85deg); color: oklch(0.45 0.14 85deg); }
     .badge-expired { background: oklch(0.92 0.05 25deg); color: var(--status-expired); }
 
-    .toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
-    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle { position: relative; display: inline-flex; align-items: center; }
+    .toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; outline: 0; cursor: pointer; z-index: 1; }
+    .toggle:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
     .toggle-track { width: 44px; height: 24px; border-radius: 12px; background: var(--border-strong); position: relative; transition: background var(--motion-base); }
     .toggle-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: var(--elev-raised); transition: transform var(--motion-base); }
     .toggle input:checked + .toggle-track { background: var(--accent); }
@@ -262,10 +264,11 @@
               <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">Email</div>
               <div class="form-text">Expiry alerts sent to your registered email address.</div>
             </div>
-            <label class="toggle" aria-hidden="true">
-              <input type="checkbox" checked id="toggleEmailNotifications" aria-label="Email notifications">
-              <span class="toggle-track"></span>
-            </label>
+            <span class="toggle">
+              <input type="checkbox" role="switch" checked id="toggleEmailNotifications">
+              <span class="toggle-track" aria-hidden="true"></span>
+            </span>
+            <label class="visually-hidden" for="toggleEmailNotifications">Email notifications</label>
           </div>
           <div id="emailSettings" style="padding:var(--space-4) var(--space-5);background:var(--surface-warm);border-bottom:1px solid var(--border)">
             <p class="form-text" style="margin-bottom:var(--space-3)">
@@ -289,10 +292,11 @@
               <div style="font-size:var(--text-sm);font-weight:600;color:var(--fg)">ntfy.sh</div>
               <div class="form-text">Push alerts via ntfy.sh to any subscribed device.</div>
             </div>
-            <label class="toggle" aria-hidden="true">
-              <input type="checkbox" id="toggleNtfyNotifications" aria-label="ntfy.sh notifications">
-              <span class="toggle-track"></span>
-            </label>
+            <span class="toggle">
+              <input type="checkbox" role="switch" id="toggleNtfyNotifications">
+              <span class="toggle-track" aria-hidden="true"></span>
+            </span>
+            <label class="visually-hidden" for="toggleNtfyNotifications">ntfy.sh notifications</label>
           </div>
           <div id="ntfySettings" style="display:none;padding:var(--space-4) var(--space-5);background:var(--surface-warm);border-bottom:1px solid var(--border)">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3)">
@@ -321,10 +325,11 @@
               <button class="btn btn-ghost btn-sm" onclick="showModal('telegramHelpModal')" aria-label="How to set up Telegram" style="width:28px;height:28px;padding:0;border-radius:var(--radius-sm)">
                 <i class="bi bi-question-circle" style="font-size:14px"></i>
               </button>
-              <label class="toggle" aria-hidden="true">
-                <input type="checkbox" id="toggleTelegramNotifications" aria-label="Telegram notifications">
-                <span class="toggle-track"></span>
-              </label>
+              <span class="toggle">
+                <input type="checkbox" role="switch" id="toggleTelegramNotifications">
+                <span class="toggle-track" aria-hidden="true"></span>
+              </span>
+              <label class="visually-hidden" for="toggleTelegramNotifications">Telegram notifications</label>
             </div>
           </div>
           <div id="telegramSettings" style="display:none;padding:var(--space-4) var(--space-5);background:var(--surface-warm);border-bottom:1px solid var(--border)">
@@ -354,10 +359,11 @@
               <button class="btn btn-ghost btn-sm" onclick="showModal('pushHelpModal')" aria-label="How to set up push notifications" style="width:28px;height:28px;padding:0;border-radius:var(--radius-sm)">
                 <i class="bi bi-question-circle" style="font-size:14px"></i>
               </button>
-              <label class="toggle" aria-hidden="true">
-                <input type="checkbox" id="togglePushNotifications" checked aria-label="Push notifications">
-                <span class="toggle-track"></span>
-              </label>
+              <span class="toggle">
+                <input type="checkbox" role="switch" id="togglePushNotifications" checked>
+                <span class="toggle-track" aria-hidden="true"></span>
+              </span>
+              <label class="visually-hidden" for="togglePushNotifications">Push notifications</label>
             </div>
           </div>
           <div id="pushSettings" style="display:none;padding:var(--space-4) var(--space-5);background:var(--surface-warm)">
@@ -381,10 +387,11 @@
                 <i class="bi bi-calendar-event" style="font-size:12px"></i> Sent on the 1st of each month · items removed and expired per household
               </div>
             </div>
-            <label class="toggle" for="toggleMonthlyWasteReport" aria-hidden="true">
-              <input type="checkbox" checked id="toggleMonthlyWasteReport" aria-label="Monthly waste report">
-              <span class="toggle-track"></span>
-            </label>
+            <span class="toggle">
+              <input type="checkbox" role="switch" checked id="toggleMonthlyWasteReport">
+              <span class="toggle-track" aria-hidden="true"></span>
+            </span>
+            <label class="visually-hidden" for="toggleMonthlyWasteReport">Monthly waste report</label>
           </div>
           <div style="padding:var(--space-4) var(--space-5);background:var(--surface-warm);border-bottom:1px solid var(--border)">
             <ul class="form-text" style="margin:0;padding-left:var(--space-5)">

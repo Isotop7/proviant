@@ -80,8 +80,9 @@
   .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) 0; }
   .toggle-row label { font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
   .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-track { position: absolute; inset: 0; background: var(--border-strong); border-radius: 12px; cursor: pointer; transition: background var(--motion-fast); }
+  .toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; outline: 0; cursor: pointer; z-index: 1; }
+  .toggle:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .toggle-track { position: absolute; inset: 0; background: var(--border-strong); border-radius: 12px; transition: background var(--motion-fast); }
   .toggle-track::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform var(--motion-base) var(--ease-out); }
   .toggle input:checked + .toggle-track { background: var(--accent); }
   .toggle input:checked + .toggle-track::before { transform: translateX(20px); }
@@ -283,10 +284,10 @@
           <div class="field">
             <label class="field-label" for="openedToggle">Opened</label>
             <div style="display:flex;align-items:center;height:44px">
-              <label class="toggle" aria-hidden="true">
-                <input type="checkbox" id="openedToggle">
-                <span class="toggle-track"></span>
-              </label>
+              <span class="toggle">
+                <input type="checkbox" role="switch" id="openedToggle">
+                <span class="toggle-track" aria-hidden="true"></span>
+              </span>
               <span style="font-size:var(--text-sm);color:var(--fg-2);margin-left:var(--space-3)">Mark as opened</span>
             </div>
           </div>
@@ -303,10 +304,10 @@
       <div class="form-section-body tight">
         <div class="toggle-row">
           <label for="alertBeforeExpiry">Alert before expiry</label>
-          <label class="toggle" aria-hidden="true">
-            <input type="checkbox" checked id="alertBeforeExpiry">
-            <span class="toggle-track"></span>
-          </label>
+          <span class="toggle">
+            <input type="checkbox" role="switch" checked id="alertBeforeExpiry">
+            <span class="toggle-track" aria-hidden="true"></span>
+          </span>
         </div>
       </div>
     </div>

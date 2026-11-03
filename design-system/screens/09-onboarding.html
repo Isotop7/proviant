@@ -11,6 +11,7 @@
   html { font-family: var(--font-body); font-size: 16px; color: var(--fg); background: var(--bg); -webkit-font-smoothing: antialiased; }
   body { min-height: 100vh; line-height: var(--leading-body); display: flex; flex-direction: column; }
   *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-family: var(--font-body); font-weight: 600; border: none; cursor: pointer; border-radius: var(--radius-pill); transition: background var(--motion-base), border-color var(--motion-base), color var(--motion-base); white-space: nowrap; text-decoration: none; }
   .btn-primary { background: var(--accent); color: var(--accent-on); padding: 0 var(--space-6); height: 48px; font-size: var(--text-base); text-transform: uppercase; letter-spacing: var(--tracking-button); }
@@ -48,8 +49,9 @@
   .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) 0; }
   .toggle-row label { font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
   .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-track { position: absolute; inset: 0; background: var(--border-strong); border-radius: 12px; cursor: pointer; transition: background var(--motion-fast); }
+  .toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; outline: 0; cursor: pointer; z-index: 1; }
+  .toggle:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .toggle-track { position: absolute; inset: 0; background: var(--border-strong); border-radius: 12px; transition: background var(--motion-fast); }
   .toggle-track::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform var(--motion-base) var(--ease-out); }
   .toggle input:checked + .toggle-track { background: var(--accent); }
   .toggle input:checked + .toggle-track::before { transform: translateX(20px); }
@@ -189,21 +191,33 @@
               <div style="font-weight:600;font-size:var(--text-sm)">Expiry alerts</div>
               <div style="font-size:var(--text-xs);color:var(--muted);margin-top:2px">Get notified 1–2 days before items expire</div>
             </div>
-            <label class="toggle" aria-hidden="true"><input type="checkbox" checked aria-label="Expiry alerts"><span class="toggle-track"></span></label>
+            <span class="toggle">
+              <input type="checkbox" role="switch" checked id="toggleExpiryAlerts">
+              <span class="toggle-track" aria-hidden="true"></span>
+            </span>
+            <label class="visually-hidden" for="toggleExpiryAlerts">Expiry alerts</label>
           </div>
           <div class="toggle-row">
             <div>
               <div style="font-weight:600;font-size:var(--text-sm)">Low stock reminders</div>
               <div style="font-size:var(--text-xs);color:var(--muted);margin-top:2px">Alert when items are running low</div>
             </div>
-            <label class="toggle" aria-hidden="true"><input type="checkbox" checked aria-label="Low stock reminders"><span class="toggle-track"></span></label>
+            <span class="toggle">
+              <input type="checkbox" role="switch" checked id="toggleLowStockReminders">
+              <span class="toggle-track" aria-hidden="true"></span>
+            </span>
+            <label class="visually-hidden" for="toggleLowStockReminders">Low stock reminders</label>
           </div>
           <div class="toggle-row">
             <div>
               <div style="font-weight:600;font-size:var(--text-sm)">Weekly digest</div>
               <div style="font-size:var(--text-xs);color:var(--muted);margin-top:2px">Summary of expiring items every Monday</div>
             </div>
-            <label class="toggle" aria-hidden="true"><input type="checkbox" aria-label="Weekly digest"><span class="toggle-track"></span></label>
+            <span class="toggle">
+              <input type="checkbox" role="switch" id="toggleWeeklyDigest">
+              <span class="toggle-track" aria-hidden="true"></span>
+            </span>
+            <label class="visually-hidden" for="toggleWeeklyDigest">Weekly digest</label>
           </div>
         </div>
         <div class="step-footer">
