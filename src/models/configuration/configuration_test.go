@@ -1425,6 +1425,91 @@ func TestReceiptOCRConfigurationUsesInsecureTransport(t *testing.T) {
 	}
 }
 
+// TestDatabaseConfigurationUsesPublishedPassword verifies that only the MariaDB
+// engine with the compose file's published password is reported.
+func TestDatabaseConfigurationUsesPublishedPassword(t *testing.T) {
+	tests := []struct {
+		name      string
+		config    DatabaseConfiguration
+		published bool
+	}{
+		{
+			name: "MariaDB with the published password",
+			config: DatabaseConfiguration{
+				SelectedEngine: database.MariaDB,
+				MariaDB:        DatabaseMariaDBConfiguration{Password: util.PublishedMariaDBUserPassword},
+			},
+			published: true,
+		},
+		{
+			name: "MariaDB with an own password",
+			config: DatabaseConfiguration{
+				SelectedEngine: database.MariaDB,
+				MariaDB:        DatabaseMariaDBConfiguration{Password: "an-own-secret"},
+			},
+			published: false,
+		},
+		{
+			name: "SQLite never carries a database password",
+			config: DatabaseConfiguration{
+				SelectedEngine: database.SQLite,
+				MariaDB:        DatabaseMariaDBConfiguration{Password: util.PublishedMariaDBUserPassword},
+			},
+			published: false,
+		},
+		{
+			name: "MariaDB with the template placeholder",
+			config: DatabaseConfiguration{
+				SelectedEngine: database.MariaDB,
+				MariaDB:        DatabaseMariaDBConfiguration{Password: util.TemplateMariaDBPassword},
+			},
+			published: true,
+		},
+		{
+			name: "MariaDB with the published root password",
+			config: DatabaseConfiguration{
+				SelectedEngine: database.MariaDB,
+				MariaDB:        DatabaseMariaDBConfiguration{Password: util.PublishedMariaDBRootPassword},
+			},
+			published: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.config.UsesPublishedPassword(); got != tt.published {
+				t.Errorf("UsesPublishedPassword() = %v, want %v", got, tt.published)
+			}
+		})
+	}
+}
+
+// TestValidateDatabaseConfigurationSelectsTheEngine pins the wiring the startup
+// warning depends on: ValidateDatabaseConfiguration resolves SelectedEngine,
+// so the warning only fires when it runs after the validation.
+func TestValidateDatabaseConfigurationSelectsTheEngine(t *testing.T) {
+	config := &ProviantConfiguration{
+		Database: DatabaseConfiguration{
+			Engine: "mariadb",
+			MariaDB: DatabaseMariaDBConfiguration{
+				Host:     "localhost",
+				Port:     3306,
+				Name:     "proviant",
+				User:     "proviant_user",
+				Password: util.PublishedMariaDBUserPassword,
+			},
+		},
+	}
+	if err := config.ValidateDatabaseConfiguration(); err != nil {
+		t.Fatalf("ValidateDatabaseConfiguration() error = %v, want nil", err)
+	}
+	if config.Database.SelectedEngine != database.MariaDB {
+		t.Fatalf("SelectedEngine = %v, want %v", config.Database.SelectedEngine, database.MariaDB)
+	}
+	if !config.Database.UsesPublishedPassword() {
+		t.Error("UsesPublishedPassword() = false, want true")
+	}
+}
+
 // TestShoppingListSyncConfigurationIsProviderEnabled verifies instance-level provider gating.
 func TestShoppingListSyncConfigurationIsProviderEnabled(t *testing.T) {
 	t.Run("master switch disabled rejects all providers", func(t *testing.T) {

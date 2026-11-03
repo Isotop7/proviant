@@ -346,6 +346,36 @@ func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configur
 	}
 }
 
+// publishedPasswordWarning returns the warning for a database password this
+// repository publishes, or an empty string when the password is the
+// operator's own. The compose file and the config template publish database
+// passwords, so a deployment that never overrides them authenticates with a
+// credential everyone who read the repository knows. Allowed — a laptop
+// running the shipped compose file is a legitimate deployment — but never
+// silent.
+func publishedPasswordWarning(config *configuration.ProviantConfiguration) string {
+	if !config.Database.UsesPublishedPassword() {
+		return ""
+	}
+	source := util.PublishedMariaDBPasswordSource(config.Database.MariaDB.Password)
+	advice := "set PROVIANT_DATABASE_MARIADB_PASSWORD to your own value"
+	if source == util.MariaDBComposeFile {
+		// The compose file builds the app's value from its own variable, so
+		// only a compose deployment can act on the second name.
+		advice += " (a compose deployment sets PROVIANT_MARIADB_PASSWORD, which the compose file reads)"
+	}
+	message := fmt.Sprintf("The database password is the placeholder published in %s — the app "+
+		"authenticates as %q with it, and anyone who reaches the database can read and write the household "+
+		"data: %s.",
+		source, config.Database.MariaDB.User, advice)
+	if source == util.MariaDBComposeFile {
+		message += fmt.Sprintf(" The compose file also falls back to the published root password %q unless "+
+			"PROVIANT_MARIADB_ROOT_PASSWORD is set — the server never sees that one, so check it yourself.",
+			util.PublishedMariaDBRootPassword)
+	}
+	return message
+}
+
 // main is the main function used on start of proviant
 func main() {
 	// Setup config
@@ -363,6 +393,10 @@ func main() {
 		panic(dbValidErr)
 	} else {
 		logger.Info().Msg("Database configuration is valid")
+	}
+
+	if warning := publishedPasswordWarning(proviantConfiguration); warning != "" {
+		logger.Warn().Msg(warning)
 	}
 
 	// Validate server configuration

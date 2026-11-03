@@ -238,6 +238,7 @@ Home (`/web/`) is fully client-side: `web/frontend.go → Root` passes only `Has
 - Run `task check` (golangci-lint must pass) before committing.
 - **DB migrations**: add every new/modified model to the `AutoMigrate` call in `src/proviant.go` — omitting it means a runtime "no such table".
 - **Config values**: a new block under `notification:` (e.g. `mailDigest`, `ntfy`, `telegram`) must be added to all three: `config.yaml`, `config.yaml.sqlite.tmpl`, `config.yaml.mariadb.tmpl`.
+- **Config files carry no comments.** The compose files, the config templates and the Dockerfiles state what they set, not why — a variable is described in `README.md`, in the environment variable table and in the section that governs the file. A comment in a config file is a second copy of that text, and the two drift apart the moment one of them changes. The README is the only place an operator reads.
 - **String literals**: centralize new route labels / config keys / section identifiers in `src/util/util.go` under the appropriate group comment.
 - **OpenFoodFacts**: barcode lookups go through the backend proxy `GET /api/v1/products/openfoodfacts/:barcode` (JWT), cached in `open_food_facts_caches` when `openfoodfacts.cacheEnabled: true`. The frontend calls `proviant.getOpenFoodFactsData()` — **never** call `world.openfoodfacts.org` from the browser. Cache ops: `src/controllers/database/product_repository.go` (`GetOpenFoodFactsCacheByBarcode`, `CreateOpenFoodFactsCache`).
 

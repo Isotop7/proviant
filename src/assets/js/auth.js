@@ -354,6 +354,12 @@ function Login() {
 }
 
 // ── Signup ────────────────────────────────────────────────────────────────────
+
+// A local part, an @ and at least two dot-separated labels.
+function isValidSignupEmail(value) {
+    return /^[^\s@]+@[^\s@.]+(\.[^@\s.]+)+$/.test(value);
+}
+
 function Signup() {
     clearAllErrors();
 
@@ -371,7 +377,7 @@ function Signup() {
     if (!email) {
         showFieldError('auth-email', proviant.t('js.auth.emailRequired'));
         valid = false;
-    } else if (!/^[^\s@]+@[^\s@.]+(\.[^@\s.]+)+$/.test(email)) {
+    } else if (!isValidSignupEmail(email)) {
         showFieldError('auth-email', proviant.t('js.auth.emailInvalid'));
         valid = false;
     }

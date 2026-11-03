@@ -4759,6 +4759,7 @@ util contains helper functions and generic vars
 - [func PackSizeFromLegacyAmount\(amount int, unit string\) \(quantity int, packSize string\)](<#PackSizeFromLegacyAmount>)
 - [func PackSizeLabel\(raw string\) string](<#PackSizeLabel>)
 - [func ProductNameLabel\(raw string\) string](<#ProductNameLabel>)
+- [func PublishedMariaDBPasswordSource\(password string\) string](<#PublishedMariaDBPasswordSource>)
 - [func RecentMonthKeys\(anchor time.Time, months int\) \[\]string](<#RecentMonthKeys>)
 - [func UpcomingMonthKeys\(anchor time.Time, count int\) \[\]string](<#UpcomingMonthKeys>)
 
@@ -4961,6 +4962,32 @@ const (
     // with it: anyone who knows it could decrypt a TOTP secret from a database
     // dump and mint codes for every enrolled account.
     RetiredTwoFactorEncryptionKey = "cHJvdmlhbnQtZGVmYXVsdC10b3RwLWtleS0wMDAwMDA=" //nolint:gosec // G101: published placeholder being rejected, not a credential
+
+    // PublishedMariaDBUserPassword is the database password the Docker compose
+    // file falls back to for the proviant user. It is public, so the server
+    // warns about it at startup: anyone who knows it can read and write the
+    // household data in the database. It MUST stay in sync with the fallback
+    // in docker-compose.mariadb.yaml — a drifted copy would silence the
+    // warning.
+    PublishedMariaDBUserPassword = "localdev" //nolint:gosec // G101: published placeholder being warned about, not a credential
+
+    // PublishedMariaDBRootPassword is the root password the Docker compose
+    // file falls back to. It is public, and it reaches every schema of the
+    // server, so the warning names it even though the app never sees it. It
+    // MUST stay in sync with the fallback in docker-compose.mariadb.yaml.
+    PublishedMariaDBRootPassword = "localdev-root" //nolint:gosec // G101: published placeholder being warned about, not a credential
+
+    // TemplateMariaDBPassword is the database password the MariaDB config
+    // template ships. It is public, so the server warns about it at startup for
+    // the same reason. It MUST stay in sync with
+    // src/config.yaml.mariadb.tmpl.
+    TemplateMariaDBPassword = "password" //nolint:gosec // G101: published placeholder being warned about, not a credential
+
+    // MariaDBComposeFile and MariaDBTemplateFile name the files that publish
+    // database passwords. The warning quotes them so the operator knows which
+    // file to change.
+    MariaDBComposeFile  = "docker-compose.mariadb.yaml"
+    MariaDBTemplateFile = "src/config.yaml.mariadb.tmpl"
 
     // DefaultTwoFactorIssuer is the account name prefix shown in the
     // authenticator app when server.twoFactor.issuer is left empty.
@@ -5223,7 +5250,7 @@ func IsCountUnit(raw string) bool
 IsCountUnit reports whether a unit symbol counts items instead of measuring them. An empty or unrecognised symbol is not a count: it is a unit this build cannot read, and treating it as one would silently drop a net content.
 
 <a name="IsHTTPSBaseURL"></a>
-## func [IsHTTPSBaseURL](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L465>)
+## func [IsHTTPSBaseURL](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L491>)
 
 ```go
 func IsHTTPSBaseURL(baseURL string) bool
@@ -5270,7 +5297,7 @@ MonthWindowStart returns the first instant of the month that opens the window of
 A window of no months has no start: the zero time leaves the window empty instead of covering the anchor's month behind the caller's back.
 
 <a name="OffDumpSQLiteFilename"></a>
-## func [OffDumpSQLiteFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L439>)
+## func [OffDumpSQLiteFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L465>)
 
 ```go
 func OffDumpSQLiteFilename(databaseName string) string
@@ -5279,7 +5306,7 @@ func OffDumpSQLiteFilename(databaseName string) string
 OffDumpSQLiteFilename resolves the SQLite dump store for a configured dumpDatabase. A bare name lives beside the main database as data/\<name\>.db; a value that names a path is used verbatim, matching database.sqlite.filepath. An empty name falls back to OffDumpDBFilename.
 
 <a name="OffDumpStagingFilename"></a>
-## func [OffDumpStagingFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L451>)
+## func [OffDumpStagingFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L477>)
 
 ```go
 func OffDumpStagingFilename(databaseName string) string
@@ -5313,6 +5340,15 @@ func ProductNameLabel(raw string) string
 ```
 
 ProductNameLabel normalises a product name for storage: the whitespace is collapsed and the text is capped, because the source is a free\-text field that a client fills in.
+
+<a name="PublishedMariaDBPasswordSource"></a>
+## func [PublishedMariaDBPasswordSource](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L501>)
+
+```go
+func PublishedMariaDBPasswordSource(password string) string
+```
+
+PublishedMariaDBPasswordSource names the file that publishes the given database password, or an empty string when the password is none of the published ones. The source tells the operator which file to change. The published root password is deliberately absent: the app never authenticates with it, so a match on it would name a password the compose file does not publish for the app user.
 
 <a name="RecentMonthKeys"></a>
 ## func [RecentMonthKeys](<https://github.com/Isotop7/proviant/blob/develop/src/util/date.go#L57>)
@@ -14296,6 +14332,7 @@ configuration defines structs and methods for proviants configuration and specif
 - [type CalendarConfiguration](<#CalendarConfiguration>)
 - [type CorsConfiguration](<#CorsConfiguration>)
 - [type DatabaseConfiguration](<#DatabaseConfiguration>)
+  - [func \(dc \*DatabaseConfiguration\) UsesPublishedPassword\(\) bool](<#DatabaseConfiguration.UsesPublishedPassword>)
 - [type DatabaseMariaDBConfiguration](<#DatabaseMariaDBConfiguration>)
 - [type DatabaseSQLiteConfiguration](<#DatabaseSQLiteConfiguration>)
 - [type ExpiryConfiguration](<#ExpiryConfiguration>)
@@ -14407,6 +14444,15 @@ type DatabaseConfiguration struct {
     SelectedEngine database.SupportedEngines
 }
 ```
+
+<a name="DatabaseConfiguration.UsesPublishedPassword"></a>
+### func \(\*DatabaseConfiguration\) [UsesPublishedPassword](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L699>)
+
+```go
+func (dc *DatabaseConfiguration) UsesPublishedPassword() bool
+```
+
+UsesPublishedPassword reports whether the configured database password is one this repository publishes: the fallback of the Docker compose file or the placeholder of the config template. Anyone who read the repository knows it, and it grants the household data, so it is surfaced as a startup warning rather than a rejection: a laptop running the shipped compose file is a legitimate deployment.
 
 <a name="DatabaseMariaDBConfiguration"></a>
 ## type [DatabaseMariaDBConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L20-L26>)

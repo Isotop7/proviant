@@ -690,6 +690,19 @@ func (rc *ReceiptOCRConfiguration) UsesInsecureTransport() bool {
 	return strings.EqualFold(parsed.Scheme, "http")
 }
 
+// UsesPublishedPassword reports whether the configured database password is one
+// this repository publishes: the fallback of the Docker compose file or the
+// placeholder of the config template. Anyone who read the repository knows it,
+// and it grants the household data, so it is surfaced as a startup warning
+// rather than a rejection: a laptop running the shipped compose file is a
+// legitimate deployment.
+func (dc *DatabaseConfiguration) UsesPublishedPassword() bool {
+	if dc.SelectedEngine != database.MariaDB {
+		return false
+	}
+	return util.PublishedMariaDBPasswordSource(dc.MariaDB.Password) != ""
+}
+
 // isSelfHostedRecipeProvider reports whether name identifies a self-hosted
 // provider that requires an API key. This is the single source of truth for
 // that list: RecipeAPIConfiguration.IsSelfHosted delegates here, and

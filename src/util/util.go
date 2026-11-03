@@ -201,6 +201,32 @@ const (
 	// dump and mint codes for every enrolled account.
 	RetiredTwoFactorEncryptionKey = "cHJvdmlhbnQtZGVmYXVsdC10b3RwLWtleS0wMDAwMDA=" //nolint:gosec // G101: published placeholder being rejected, not a credential
 
+	// PublishedMariaDBUserPassword is the database password the Docker compose
+	// file falls back to for the proviant user. It is public, so the server
+	// warns about it at startup: anyone who knows it can read and write the
+	// household data in the database. It MUST stay in sync with the fallback
+	// in docker-compose.mariadb.yaml — a drifted copy would silence the
+	// warning.
+	PublishedMariaDBUserPassword = "localdev" //nolint:gosec // G101: published placeholder being warned about, not a credential
+
+	// PublishedMariaDBRootPassword is the root password the Docker compose
+	// file falls back to. It is public, and it reaches every schema of the
+	// server, so the warning names it even though the app never sees it. It
+	// MUST stay in sync with the fallback in docker-compose.mariadb.yaml.
+	PublishedMariaDBRootPassword = "localdev-root" //nolint:gosec // G101: published placeholder being warned about, not a credential
+
+	// TemplateMariaDBPassword is the database password the MariaDB config
+	// template ships. It is public, so the server warns about it at startup for
+	// the same reason. It MUST stay in sync with
+	// src/config.yaml.mariadb.tmpl.
+	TemplateMariaDBPassword = "password" //nolint:gosec // G101: published placeholder being warned about, not a credential
+
+	// MariaDBComposeFile and MariaDBTemplateFile name the files that publish
+	// database passwords. The warning quotes them so the operator knows which
+	// file to change.
+	MariaDBComposeFile  = "docker-compose.mariadb.yaml"
+	MariaDBTemplateFile = "src/config.yaml.mariadb.tmpl"
+
 	// DefaultTwoFactorIssuer is the account name prefix shown in the
 	// authenticator app when server.twoFactor.issuer is left empty.
 	DefaultTwoFactorIssuer = "Proviant"
@@ -464,4 +490,20 @@ func OffDumpStagingFilename(databaseName string) string {
 // every state-changing request fails.
 func IsHTTPSBaseURL(baseURL string) bool {
 	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(baseURL)), "https://")
+}
+
+// PublishedMariaDBPasswordSource names the file that publishes the given
+// database password, or an empty string when the password is none of the
+// published ones. The source tells the operator which file to change. The
+// published root password is deliberately absent: the app never authenticates
+// with it, so a match on it would name a password the compose file does not
+// publish for the app user.
+func PublishedMariaDBPasswordSource(password string) string {
+	switch password {
+	case PublishedMariaDBUserPassword:
+		return MariaDBComposeFile
+	case TemplateMariaDBPassword:
+		return MariaDBTemplateFile
+	}
+	return ""
 }

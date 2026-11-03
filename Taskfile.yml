@@ -53,7 +53,7 @@ tasks:
   test:
     desc: Run code tests
     dir: src
-    deps: [test-perf]
+    deps: [test-perf, test-published-passwords]
     cmds:
       - go test -race -vet=off ./...
       - go mod verify
@@ -66,15 +66,19 @@ tasks:
 
   test-js:
     desc: Run frontend (vitest) tests
-    deps: [test-fixtures]
     cmds:
       - npm run test-js
 
-  test-fixtures:
-    desc: Check the JS unit-table fixtures against the Go tables (uncached)
+  test-published-passwords:
+    desc: Check the published database passwords against the shipped files (uncached)
     dir: src
     cmds:
-      - go test -count=1 -run TestFrontendUnit ./util/...
+      - |
+        output=$(mktemp)
+        trap 'rm -f "$output"' EXIT
+        go test -v -count=1 -run TestPublishedMariaDBPasswordsMatchShippedFiles ./util/... > "$output" || true
+        cat "$output"
+        grep -q -- '--- PASS: TestPublishedMariaDBPasswordsMatchShippedFiles' "$output"
 
   i18n:
     desc: Validate message catalogs (load, key parity, referenced keys)

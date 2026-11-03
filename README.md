@@ -121,18 +121,55 @@ refuses to start without it:
 echo "PROVIANT_JWT_SECRET=$(openssl rand -hex 32)" > .env
 ```
 
-The MariaDB compose file additionally requires the database credentials, so that no
-password ships in the repository:
+The MariaDB compose file falls back to dev-only database credentials. Set both variables for any
+deployment others can reach — the defaults are `localdev-root` for the root account and `localdev`
+for the `proviant` user, and they are published in this repository: anyone who reaches the compose
+network, the host and every container of the project included, can use them. The MariaDB image
+applies `MARIADB_*` to an empty data directory only, so the root password below only ever applies
+to a fresh volume; the app user's password is handed to the app on every start:
 
 ```bash
 echo "PROVIANT_MARIADB_ROOT_PASSWORD=$(openssl rand -hex 16)" >> .env
 echo "PROVIANT_MARIADB_PASSWORD=$(openssl rand -hex 16)" >> .env
 ```
 
+An emptied variable is not treated as unset: the database then refuses to initialize (root
+password) or starts without that user (app password), and the app fails to authenticate.
+
 `PROVIANT_MARIADB_ROOT_PASSWORD` is the MariaDB root account, `PROVIANT_MARIADB_PASSWORD`
-the `proviant` user the app connects with. The root password is needed for the manual
+the `proviant` user the app connects with — both are compose-level names, the app itself reads
+`PROVIANT_DATABASE_MARIADB_PASSWORD`. The server warns at startup when the password it
+authenticates with is a published placeholder, but it never sees the root password: that one only
+you can check.
+
+For the MariaDB file, start the stack:
+
+```bash
+docker compose -f docker-compose.mariadb.yaml up -d
+```
+
+The compose file mounts `src/config.yaml.mariadb.tmpl` as the container's config: the image ships the
+SQLite template, which has no MariaDB block, and the app reads environment variables only for the
+keys its config file knows.
+
+`PROVIANT_SERVER_BASEURL` is the public URL of the deployment — it decides the `Secure` flag of the
+session and CSRF cookies. The compose file defaults it to `http://localhost:5114`, which drops that
+flag — right for the plain-HTTP local deployment, wrong for one behind a proxy. Set it to the `https`
+URL of your reverse proxy when one terminates TLS in front of the app.
+
+The root password is needed for the manual
 `scripts/mariadb-init.sql` run described under [Database](#database) — the app user
-itself may not grant privileges.
+itself may not grant privileges. An existing volume keeps the password it was created
+with, so the root password in `.env` only ever applies to a fresh volume. To change the
+app user's password, write the new value to `PROVIANT_MARIADB_PASSWORD` in `.env` (the compose
+file's name for it — the app-level `PROVIANT_DATABASE_MARIADB_PASSWORD` is overridden by the
+compose file), set the same value in the database
+(as root, like the init run below: `ALTER USER 'proviant'@'%' IDENTIFIED BY '…'`), then
+recreate the app container so it picks the new value up (`docker compose -f
+docker-compose.mariadb.yaml up -d proviant` — `restart` keeps the old environment).
+Recreating the volume (`docker compose -f docker-compose.mariadb.yaml down -v`) also
+works: it removes the containers, the project network and the `proviantdb`,
+`proviantlogs` and `smtpdb` volumes, so the stack has to come back up with `up -d`.
 
 **IMPORTANT:** The mounted directories need to be chowned by the proviant app user.
 
@@ -181,7 +218,7 @@ Configuration is set via environment variables. The complete list of available o
 |---|---|---|
 | `PROVIANT_SERVER_PORT` | `5114` | Listening port |
 | `PROVIANT_SERVER_HOST` | *(empty)* | Bind address; empty binds every interface, set `127.0.0.1` for a loopback-only listener |
-| `PROVIANT_SERVER_BASEURL` | `https://proviant.local.de` | URL of Proviant with protocol (used in emails, notifications, and to decide whether the session and CSRF cookies carry the Secure attribute) |
+| `PROVIANT_SERVER_BASEURL` | `https://proviant.local.de` (config template) / `http://localhost:5114` (compose file) | URL of Proviant with protocol (used in emails, notifications, and to decide whether the session and CSRF cookies carry the Secure attribute) |
 | `PROVIANT_SERVER_MAXUPLOADSIZEMB` | `5` | Maximum upload size in MB (receipt photos, CSV imports) |
 | `PROVIANT_SERVER_DEBUG` | `false` | Run Gin in debug mode and emit debug-level logs |
 | `PROVIANT_SERVER_DEMOMODE` | `false` | Enable demo mode (read-only demo behaviour) |
@@ -236,13 +273,25 @@ Configuration is set via environment variables. The complete list of available o
 | `PROVIANT_DATABASE_MARIADB_PORT` | `3306` | MariaDB server port |
 | `PROVIANT_DATABASE_MARIADB_NAME` | `proviant` | Database name |
 | `PROVIANT_DATABASE_MARIADB_USER` | `root` (SQLite: `proviant`) | Database user |
-| `PROVIANT_DATABASE_MARIADB_PASSWORD` | `password` | Database user password |
+| `PROVIANT_DATABASE_MARIADB_PASSWORD` | `password` (config template) / `localdev` (compose file) | Database user password — the compose file overrides it, so set `PROVIANT_MARIADB_PASSWORD` there |
 
 MariaDB schemas are provisioned outside the app. `scripts/mariadb-init.sql` creates the main `proviant` schema and, when the [OpenFoodFacts bulk dump](#openfoodfacts) is enabled, its separate dump schema (default `off_dump`) and grants. The Docker compose file mounts it for fresh volumes; on an existing volume run it manually, because the MariaDB entrypoint only executes init scripts on an empty data directory:
 
 ```bash
 mysql -h <host> -u root -p < scripts/mariadb-init.sql
 ```
+
+The compose database publishes no port, so the manual run happens inside the container. The
+script is already mounted there, and the root password is in the container's own environment:
+
+```bash
+docker compose -f docker-compose.mariadb.yaml exec -T database sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -u root < /docker-entrypoint-initdb.d/01-init.sql'
+```
+
+That password is the one the volume was created with: on an existing volume the image keeps the
+root password of its initialization, so the environment value only matches when the volume is
+fresh. A lost root password means a new volume (`docker compose -f docker-compose.mariadb.yaml
+down -v`) — the image applies `MARIADB_ROOT_PASSWORD` at initialization only.
 
 The app never creates schemas. SQLite needs none: the dump store is a plain file beside the main database. With the dump enabled on MariaDB it fails to start if the configured schema (default `off_dump`) is missing or unreachable, rather than running half-configured.
 
@@ -655,6 +704,12 @@ The server exposes two unauthenticated probes and an optional Prometheus endpoin
 | `GET /metrics` | Prometheus metrics; registered only when `PROVIANT_SERVER_METRICSENABLED=true` |
 
 The `docker-compose.sqlite.yaml` health check targets `/health/ready`.
+
+The container's own health check probes `/health` over plain HTTP, because the app terminates no TLS
+— a reverse proxy in front of it does the encryption. The probe falls back to the loopback
+interface, so no clear-text traffic crosses a network boundary unless `PROVIANT_SERVER_HOST` names
+an address that resolves to another host. The app binds `server.host` from its config, so it has to
+listen on the loopback or on every interface for the probe to reach it.
 
 Besides the HTTP counters, the endpoint exports the state of the background workers — notification
 delivery per provider, the database pool, the backup age and the Open Food Facts cache hit rate.

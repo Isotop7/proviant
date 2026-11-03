@@ -1,11 +1,15 @@
 package util
 
 import (
+	"bytes"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 func TestDateFormatConstants(t *testing.T) {
@@ -331,6 +335,98 @@ func TestOffDumpStagingFilename(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := OffDumpStagingFilename(test.databaseName); got != test.want {
 				t.Errorf("OffDumpStagingFilename(%q) = %q, want %q", test.databaseName, got, test.want)
+			}
+		})
+	}
+}
+
+// TestPublishedMariaDBPasswordsMatchShippedFiles pins the published database
+// passwords against the files that ship them. A drifted copy would silence the
+// startup warning that names them.
+func TestPublishedMariaDBPasswordsMatchShippedFiles(t *testing.T) {
+	composePath := filepath.Join("..", "..", "docker-compose.mariadb.yaml")
+	raw, err := os.ReadFile(composePath)
+	if err != nil {
+		t.Fatalf("reading docker-compose.mariadb.yaml failed: %v", err)
+	}
+	compose := viper.New()
+	compose.SetConfigType("yaml")
+	if err := compose.ReadConfig(bytes.NewReader(raw)); err != nil {
+		t.Fatalf("parsing docker-compose.mariadb.yaml failed: %v", err)
+	}
+
+	for _, expected := range []struct {
+		service string
+		entry   string
+	}{
+		{"database", "MARIADB_ROOT_PASSWORD=${PROVIANT_MARIADB_ROOT_PASSWORD-" + PublishedMariaDBRootPassword + "}"},
+		{"database", "MARIADB_USER=proviant"},
+		{"database", "MARIADB_PASSWORD=${PROVIANT_MARIADB_PASSWORD-" + PublishedMariaDBUserPassword + "}"},
+		{"proviant", "PROVIANT_DATABASE_MARIADB_USER=proviant"},
+		{"proviant", "PROVIANT_DATABASE_MARIADB_PASSWORD=${PROVIANT_MARIADB_PASSWORD-" + PublishedMariaDBUserPassword + "}"},
+	} {
+		entries := compose.GetStringSlice("services." + expected.service + ".environment")
+		key, _, _ := strings.Cut(expected.entry, "=")
+		found := 0
+		for _, entry := range entries {
+			entryKey, entryValue, _ := strings.Cut(entry, "=")
+			if entryKey != key {
+				continue
+			}
+			found++
+			// The value pins the interpolation form: ${VAR-default} and
+			// ${VAR:-default} differ in what an emptied variable does.
+			if entryValue != strings.TrimPrefix(expected.entry, key+"=") {
+				t.Errorf("docker-compose.mariadb.yaml has %q, want %q", entry, expected.entry)
+			}
+		}
+		if found != 1 {
+			t.Errorf("docker-compose.mariadb.yaml has %d entries for %q, want 1", found, expected.entry)
+		}
+	}
+
+	mounted := false
+	for _, volume := range compose.GetStringSlice("services.proviant.volumes") {
+		if strings.HasPrefix(volume, "./src/config.yaml.mariadb.tmpl:/app/config.yaml:ro") {
+			mounted = true
+		}
+	}
+	if !mounted {
+		t.Errorf("docker-compose.mariadb.yaml does not mount %q", "./src/config.yaml.mariadb.tmpl:/app/config.yaml:ro")
+	}
+
+	templateRaw, err := os.ReadFile(filepath.Join("..", "config.yaml.mariadb.tmpl"))
+	if err != nil {
+		t.Fatalf("reading config.yaml.mariadb.tmpl failed: %v", err)
+	}
+	template := viper.New()
+	template.SetConfigType("yaml")
+	if err := template.ReadConfig(bytes.NewReader(templateRaw)); err != nil {
+		t.Fatalf("parsing config.yaml.mariadb.tmpl failed: %v", err)
+	}
+	if got := template.GetString("database.mariadb.password"); got != TemplateMariaDBPassword {
+		t.Errorf("config.yaml.mariadb.tmpl has database.mariadb.password %q, want %q", got, TemplateMariaDBPassword)
+	}
+}
+
+// TestPublishedMariaDBPasswordSource pins which file publishes which
+// password. The published root password is deliberately absent: the app never
+// authenticates with it.
+func TestPublishedMariaDBPasswordSource(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+		source   string
+	}{
+		{"the compose file's user password", PublishedMariaDBUserPassword, MariaDBComposeFile},
+		{"the config template's password", TemplateMariaDBPassword, MariaDBTemplateFile},
+		{"the compose file's root password", PublishedMariaDBRootPassword, ""},
+		{"an own password", "an-own-secret", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PublishedMariaDBPasswordSource(tt.password); got != tt.source {
+				t.Errorf("PublishedMariaDBPasswordSource(%q) = %q, want %q", tt.password, got, tt.source)
 			}
 		})
 	}

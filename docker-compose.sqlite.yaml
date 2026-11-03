@@ -17,6 +17,7 @@ services:
       - TZ=${TZ:-UTC}
       - PROVIANT_LOGGING_ENABLED=true
       - PROVIANT_LOGGING_FILE=logs/proviant.log
+      - PROVIANT_SERVER_BASEURL=${PROVIANT_SERVER_BASEURL:-http://localhost:5114}
       - PROVIANT_DATABASE_ENGINE=sqlite
       - PROVIANT_DATABASE_SQLITE_FILEPATH=data/proviant.db
       - PROVIANT_NOTIFICATION_SMTP_HOST=smtp
