@@ -168,6 +168,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Check the Dependabot configuration
         run: node scripts/check-dependabot.mjs
+      - name: Check the workflow files
+        run: node scripts/check-workflows.mjs
 
   image-scan:
     needs:

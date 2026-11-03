@@ -142,6 +142,14 @@ tasks:
     cmds:
       - node scripts/check-dependabot.mjs
 
+  check-workflows:
+    desc: Check that the GitHub Actions workflow files parse
+    preconditions:
+      - sh: '[ -d ./node_modules/js-yaml ]'
+        msg: "Dependencies are not installed. Please run 'task init' first."
+    cmds:
+      - node scripts/check-workflows.mjs
+
   packagedoc:
     desc: Generate package documentation as markdown
     dir: src
@@ -197,6 +205,25 @@ tasks:
         msg: "No container runtime found. Please install podman or docker."
     cmds:
       - '{{.CONTAINER_RUNTIME}} run -it --rm -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z -e PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD=dev-only-local-secret --entrypoint /bin/sh proviant:latest'
+
+  backup-drill:
+    desc: Restore the newest backup into a throwaway database and report whether it still matches
+    dir: src
+    cmds:
+      - |
+        # `go run` swallows the exit code: it always reports 1 when the
+        # program fails, and the exit code is the contract a scheduled job
+        # reads. The binary is built and run directly. Task collapses every
+        # failure onto its own exit code 201, so the drill's code is printed.
+        workdir="$(mktemp -d)"
+        trap 'rm -rf "$workdir"' EXIT
+        go build -o "$workdir/proviant" .
+        set +e
+        "$workdir/proviant" backup-drill {{if .CLI_ARGS}}{{.CLI_ARGS}}{{end}}
+        code=$?
+        set -e
+        echo "Backup drill exit code: $code"
+        exit $code
 
   fonts:
     desc: Copy font files to assets

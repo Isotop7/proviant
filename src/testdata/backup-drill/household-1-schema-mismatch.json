@@ -1,0 +1,24 @@
+{
+  "version": 4,
+  "household": {
+    "name": "Drill Household",
+    "createdAt": "2026-01-01 00:00:00"
+  },
+  "members": [
+    {
+      "username": "drill-admin",
+      "email": "drill@example.invalid",
+      "role": "admin"
+    }
+  ],
+  "storageLocations": [],
+  "products": {
+    "active": [],
+    "archived": []
+  },
+  "stats": {
+    "totalActive": 0,
+    "totalArchived": 0
+  },
+  "exportedAt": "2026-01-20T00:00:00Z"
+}

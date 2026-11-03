@@ -1,0 +1,83 @@
+name: Weekly Backup Drill
+
+env:
+  GO_VERSION: 1.26.10
+
+on:
+  schedule:
+    - cron: '30 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      # The application embeds its compiled CSS, so the Go build needs the
+      # stylesheet the same way the ordinary CI run does.
+      - name: Install dependencies
+        run: npm ci
+      - name: Build CSS
+        run: npm run css
+      - name: Test the backup drill
+        working-directory: src
+        run: go test -race -count=1 -run 'TestBackupDrill' ./controllers/ .
+      # The drill restores a backup document into a throwaway database and
+      # exits non-zero when the backup is broken. The exit codes are the
+      # contract a scheduled job reads: 0 restores, 1 is broken, 2 is a moved
+      # schema and 3 is nothing to drill.
+      #
+      # The binary is built and run directly: `go run` always exits 1 when the
+      # program fails, which would flatten every failure onto one code.
+      - name: Build the drill
+        working-directory: src
+        run: go build -o "$RUNNER_TEMP/proviant" .
+      - name: Drill a healthy backup
+        working-directory: src
+        run: |
+          "$RUNNER_TEMP/proviant" backup-drill --file testdata/backup-drill/household-1.json
+      - name: Drill a backup written against another schema
+        working-directory: src
+        run: |
+          set +e
+          "$RUNNER_TEMP/proviant" backup-drill --file testdata/backup-drill/household-1-schema-mismatch.json
+          code=$?
+          set -e
+          if [ "$code" -ne 2 ]; then
+            echo "::error::the drill exited with $code, want 2 for a moved schema"
+            exit 1
+          fi
+      - name: Drill a truncated backup
+        working-directory: src
+        run: |
+          set +e
+          "$RUNNER_TEMP/proviant" backup-drill --file testdata/backup-drill/household-1-truncated.json
+          code=$?
+          set -e
+          if [ "$code" -ne 1 ]; then
+            echo "::error::the drill exited with $code, want 1 for a broken backup"
+            exit 1
+          fi
+      - name: Drill a backup directory without a document
+        working-directory: src
+        run: |
+          set +e
+          "$RUNNER_TEMP/proviant" backup-drill --directory "$(mktemp -d)"
+          code=$?
+          set -e
+          if [ "$code" -ne 3 ]; then
+            echo "::error::the drill exited with $code, want 3 when there is nothing to drill"
+            exit 1
+          fi

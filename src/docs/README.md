@@ -332,6 +332,7 @@ import "github.com/Isotop7/proviant/controllers"
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
+- [func BackupDrillExitCode\(err error\) int](<#BackupDrillExitCode>)
 - [func BuildFullExport\(db \*gorm.DB, logger \*zerolog.Logger, householdID uint, viewerID uint, includePrivate bool\) \(apiModel.FullExportResponse, error\)](<#BuildFullExport>)
 - [func BuildTwoFactorQRDataURI\(uri string\) \(string, error\)](<#BuildTwoFactorQRDataURI>)
 - [func DecodeTwoFactorEncryptionKey\(encoded string\) \(\[\]byte, error\)](<#DecodeTwoFactorEncryptionKey>)
@@ -365,6 +366,12 @@ import "github.com/Isotop7/proviant/controllers"
   - [func \(c \*BackupController\) Dispatch\(\)](<#BackupController.Dispatch>)
   - [func \(c \*BackupController\) RunOnce\(ctx context.Context\) error](<#BackupController.RunOnce>)
   - [func \(c \*BackupController\) Stop\(\)](<#BackupController.Stop>)
+- [type BackupDrill](<#BackupDrill>)
+  - [func \(d \*BackupDrill\) Run\(ctx context.Context\) \(BackupDrillResult, error\)](<#BackupDrill.Run>)
+- [type BackupDrillCount](<#BackupDrillCount>)
+- [type BackupDrillEntity](<#BackupDrillEntity>)
+- [type BackupDrillMismatch](<#BackupDrillMismatch>)
+- [type BackupDrillResult](<#BackupDrillResult>)
 - [type BringSyncProvider](<#BringSyncProvider>)
   - [func \(p \*BringSyncProvider\) Name\(\) string](<#BringSyncProvider.Name>)
   - [func \(p \*BringSyncProvider\) PullChecked\(ctx context.Context, integration \*dbModel.HouseholdIntegration, refs \[\]dbModel.ShoppingListItemSyncRef\) \(map\[string\]bool, error\)](<#BringSyncProvider.PullChecked>)
@@ -509,6 +516,37 @@ import "github.com/Isotop7/proviant/controllers"
 
 ## Constants
 
+<a name="BackupDrillExitOK"></a>The exit codes the drill command returns. A broken backup and a moved schema are different problems, and a scheduled job has to be able to tell them apart: the first needs the backup fixed, the second needs the migration that reads the new document written.
+
+```go
+const (
+    // BackupDrillExitOK means the newest backup restored and the counts match.
+    BackupDrillExitOK = 0
+    // BackupDrillExitFailed means the backup is broken: it could not be read,
+    // it could not be restored, or the restored rows do not match it.
+    BackupDrillExitFailed = 1
+    // BackupDrillExitSchemaMismatch means the document carries a schema
+    // version this release does not write.
+    BackupDrillExitSchemaMismatch = 2
+    // BackupDrillExitUnavailable means there is nothing to drill: no backup
+    // document, or a backup directory that cannot be used.
+    BackupDrillExitUnavailable = 3
+)
+```
+
+<a name="BackupDrillMismatchProduct"></a>The entities a mismatch can belong to.
+
+```go
+const (
+    // BackupDrillMismatchProduct is a product row.
+    BackupDrillMismatchProduct = "product"
+    // BackupDrillMismatchStorageLocation is a storage location.
+    BackupDrillMismatchStorageLocation = "storage location"
+    // BackupDrillMismatchHousehold is the household metadata.
+    BackupDrillMismatchHousehold = "household"
+)
+```
+
 <a name="MsgFailedCloseResponseBody"></a>
 
 ```go
@@ -611,6 +649,15 @@ var ErrTwoFactorDisabled = errors.New("two-factor authentication is disabled on 
 ```go
 var ErrTwoFactorEncryptionKey = errors.New("the two-factor encryption key is invalid: keep server.twoFactor.encryptionKey configured while accounts have an enrolled second factor")
 ```
+
+<a name="BackupDrillExitCode"></a>
+## func [BackupDrillExitCode](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/backup_drill.go#L537>)
+
+```go
+func BackupDrillExitCode(err error) int
+```
+
+BackupDrillExitCode maps a drill failure to the exit code of the drill command.
 
 <a name="BuildFullExport"></a>
 ## func [BuildFullExport](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/household_backup.go#L31-L37>)
@@ -915,6 +962,134 @@ func (c *BackupController) Stop()
 ```
 
 Stop ends the dispatch goroutine and waits briefly for it to exit.
+
+<a name="BackupDrill"></a>
+## type [BackupDrill](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/backup_drill.go#L115-L130>)
+
+BackupDrill restores a scheduled backup into a throwaway database and compares the restored rows with the rows the document says it carries.
+
+The drill never opens the live database. It restores into a scratch file of its own and deletes that file afterwards, on success and on failure: a drill that wrote into the production database would be worse than no drill.
+
+The comparison is against the document, not against the live household. A backup is as old as the backup interval, and the household buys products in between, so live counts would disagree with a perfectly good backup. The document is the recorded state of the household at the moment it was written, and a restore that reproduces it is a restore that works.
+
+```go
+type BackupDrill struct {
+    Logger *zerolog.Logger
+    // BackupDirectory holds the backup documents. It is the configured
+    // backup.directory.
+    BackupDirectory string
+    // BackupFile drills one specific document instead of the newest one. It
+    // is empty for the everyday drill.
+    BackupFile string
+    // ScratchRoot is the directory the scratch database is created in. It is
+    // empty for the operating system's temporary directory.
+    ScratchRoot string
+    // LiveDatabasePath is the path of the live SQLite database. The drill
+    // asserts that its scratch database is a different file, so a
+    // misconfigured drill can never touch the production data.
+    LiveDatabasePath string
+}
+```
+
+<a name="BackupDrill.Run"></a>
+### func \(\*BackupDrill\) [Run](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/backup_drill.go#L134>)
+
+```go
+func (d *BackupDrill) Run(ctx context.Context) (BackupDrillResult, error)
+```
+
+Run drills the backup and returns what it found. The scratch database is removed before it returns, whatever the outcome.
+
+<a name="BackupDrillCount"></a>
+## type [BackupDrillCount](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/backup_drill.go#L75-L85>)
+
+BackupDrillCount is one row of the drill's comparison table.
+
+```go
+type BackupDrillCount struct {
+    Entity BackupDrillEntity
+    // Expected is the count the document says the entity has.
+    Expected int
+    // Restored is the count the scratch database holds after the restore.
+    Restored int
+    // Covered is false when the document does not carry the entity at all.
+    // The drill still reports what the scratch database holds, but there is
+    // nothing to compare it against.
+    Covered bool
+}
+```
+
+<a name="BackupDrillEntity"></a>
+## type [BackupDrillEntity](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/backup_drill.go#L28>)
+
+BackupDrillEntity names one thing the drill compares between a backup document and the database it was restored into.
+
+```go
+type BackupDrillEntity string
+```
+
+<a name="BackupDrillProducts"></a>
+
+```go
+const (
+    // BackupDrillProducts are the household's active products.
+    BackupDrillProducts BackupDrillEntity = "products"
+    // BackupDrillArchivedProducts are the household's archived products.
+    BackupDrillArchivedProducts BackupDrillEntity = "archivedProducts"
+    // BackupDrillStorageLocations are the household's storage locations.
+    BackupDrillStorageLocations BackupDrillEntity = "storageLocations"
+    // BackupDrillRecipes are the household's saved recipes.
+    BackupDrillRecipes BackupDrillEntity = "recipes"
+    // BackupDrillMealPlanEntries are the household's meal plan entries.
+    BackupDrillMealPlanEntries BackupDrillEntity = "mealPlanEntries"
+    // BackupDrillShoppingListItems are the household's shopping list items.
+    BackupDrillShoppingListItems BackupDrillEntity = "shoppingListItems"
+)
+```
+
+<a name="BackupDrillMismatch"></a>
+## type [BackupDrillMismatch](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/backup_drill_compare.go#L47-L60>)
+
+BackupDrillMismatch names one field that came back different from the document.
+
+```go
+type BackupDrillMismatch struct {
+    // Entity names what the mismatch belongs to: a product, a storage
+    // location or the household.
+    Entity string
+    // Key names the row the mismatch belongs to: the barcode of a product,
+    // the name of a location.
+    Key string
+    // Field is the name of the field that differs.
+    Field string
+    // Document is the value the document carries.
+    Document string
+    // Restored is the value the restore produced.
+    Restored string
+}
+```
+
+<a name="BackupDrillResult"></a>
+## type [BackupDrillResult](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/backup_drill.go#L88-L101>)
+
+BackupDrillResult is what a successful drill found.
+
+```go
+type BackupDrillResult struct {
+    // BackupPath is the document that was drilled.
+    BackupPath string
+    // BackupAge is how long ago the document was written.
+    BackupAge time.Duration
+    // SchemaVersion is the schema version the document carries.
+    SchemaVersion int
+    // Counts is the comparison table.
+    Counts []BackupDrillCount
+    // Mismatches names the fields that came back different from the
+    // document. The counts say how many rows came back; these say whether
+    // they are the right ones.
+    Mismatches []BackupDrillMismatch
+}
+```
 
 <a name="BringSyncProvider"></a>
 ## type [BringSyncProvider](<https://github.com/Isotop7/proviant/blob/develop/src/controllers/shopping_list_sync_provider.go#L481-L485>)
@@ -3075,6 +3250,13 @@ var (
     // locations than the backup schema allows
     ErrBackupTooManyLocations = errors.New("backup contains too many storage locations")
 
+    // ErrBackupNotFound is thrown when the backup directory holds no document
+    ErrBackupNotFound = errors.New("no backup document found")
+
+    // ErrBackupDrillMismatch is thrown when a restored backup does not hold the
+    // rows the document says it carries
+    ErrBackupDrillMismatch = errors.New("the restored backup does not match the document")
+
     /*
      * CSV import related errors
      */
@@ -3127,7 +3309,7 @@ var (
 ```
 
 <a name="ReceiptEndpointError"></a>
-## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L764-L766>)
+## type [ReceiptEndpointError](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L771-L773>)
 
 ReceiptEndpointError marks an OCR scan failure as originating from the upstream vision endpoint rather than from Proviant itself. The API layer maps it to 502 Bad Gateway instead of 500 via errors.As.
 
@@ -3138,7 +3320,7 @@ type ReceiptEndpointError struct {
 ```
 
 <a name="ReceiptEndpointError.Error"></a>
-### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L768>)
+### func \(\*ReceiptEndpointError\) [Error](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L775>)
 
 ```go
 func (e *ReceiptEndpointError) Error() string
@@ -3147,7 +3329,7 @@ func (e *ReceiptEndpointError) Error() string
 
 
 <a name="ReceiptEndpointError.Unwrap"></a>
-### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L770>)
+### func \(\*ReceiptEndpointError\) [Unwrap](<https://github.com/Isotop7/proviant/blob/develop/src/errors/errors.go#L777>)
 
 ```go
 func (e *ReceiptEndpointError) Unwrap() error
@@ -3515,6 +3697,7 @@ import "github.com/Isotop7/proviant/migrations"
 - [func AddNotificationPreferencesMigration\(db \*gorm.DB\) error](<#AddNotificationPreferencesMigration>)
 - [func AddPerformanceIndexes\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#AddPerformanceIndexes>)
 - [func AddWebPushNotificationMigration\(db \*gorm.DB\) error](<#AddWebPushNotificationMigration>)
+- [func AutoMigrateAll\(db \*gorm.DB\) error](<#AutoMigrateAll>)
 - [func BackfillAuditLogHouseholdID\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillAuditLogHouseholdID>)
 - [func BackfillClampDaysAfterOpening\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillClampDaysAfterOpening>)
 - [func BackfillEmailVerification\(logger \*zerolog.Logger, db \*gorm.DB\) error](<#BackfillEmailVerification>)
@@ -3560,6 +3743,15 @@ func AddWebPushNotificationMigration(db *gorm.DB) error
 ```
 
 AddWebPushNotificationMigration adds web push notification columns to users table
+
+<a name="AutoMigrateAll"></a>
+## func [AutoMigrateAll](<https://github.com/Isotop7/proviant/blob/develop/src/migrations/schema.go#L10>)
+
+```go
+func AutoMigrateAll(db *gorm.DB) error
+```
+
+AutoMigrateAll creates or updates the schema of every stored model.
 
 <a name="BackfillAuditLogHouseholdID"></a>
 ## func [BackfillAuditLogHouseholdID](<https://github.com/Isotop7/proviant/blob/develop/src/migrations/migrations.go#L612>)
@@ -3732,6 +3924,7 @@ import "github.com/Isotop7/proviant/models"
 
 ## Index
 
+- [func AllModels\(\) \[\]any](<#AllModels>)
 - [type HouseholdMailDigestTarget](<#HouseholdMailDigestTarget>)
 - [type HouseholdReportTarget](<#HouseholdReportTarget>)
 - [type MailDigestUser](<#MailDigestUser>)
@@ -3739,6 +3932,17 @@ import "github.com/Isotop7/proviant/models"
 - [type TelegramRecipient](<#TelegramRecipient>)
 - [type WasteStats](<#WasteStats>)
 
+
+<a name="AllModels"></a>
+## func [AllModels](<https://github.com/Isotop7/proviant/blob/develop/src/models/schema.go#L15>)
+
+```go
+func AllModels() []any
+```
+
+AllModels returns every model the application stores. The application migrates the list on startup, the tests migrate it for their in\-memory database and the backup drill migrates it for its scratch database: one list, so a drill restores against the schema production runs on.
+
+A new model joins this list, not the migration call in src/proviant.go — omitting it from here means a runtime "no such table".
 
 <a name="HouseholdMailDigestTarget"></a>
 ## type [HouseholdMailDigestTarget](<https://github.com/Isotop7/proviant/blob/develop/src/models/waste_report.go#L57-L61>)
@@ -4634,7 +4838,7 @@ func CreateTestWebhook(db *gorm.DB, userID uint) *dbModel.Webhook
 
 
 <a name="MigrateAllModels"></a>
-## func [MigrateAllModels](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L114>)
+## func [MigrateAllModels](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L75>)
 
 ```go
 func MigrateAllModels(db *gorm.DB) error
@@ -4679,7 +4883,7 @@ func SetupGinContext(db *gorm.DB) (*gin.Context, *httptest.ResponseRecorder)
 
 
 <a name="SetupTestDB"></a>
-## func [SetupTestDB](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L53>)
+## func [SetupTestDB](<https://github.com/Isotop7/proviant/blob/develop/src/testutil/database.go#L14>)
 
 ```go
 func SetupTestDB(t *testing.T) *gorm.DB
@@ -5114,6 +5318,34 @@ const (
     // canceled reliably, so shutdown waits briefly instead of hanging forever.
     DefaultBackupStopWaitSeconds = 5
 
+    // BackupDrillCommand is the subcommand that restores the newest backup
+    // into a throwaway database and reports whether it still matches.
+    BackupDrillCommand = "backup-drill"
+
+    // DefaultBackupDrillTimeoutMinutes bounds one drill run. A restore of a
+    // large household takes minutes; a drill that hangs forever would block
+    // the scheduled job it runs in.
+    DefaultBackupDrillTimeoutMinutes = 10
+
+    // BackupDrillScratchPrefix names the temporary directory the drill's
+    // scratch database lives in. The drill removes the directory when it is
+    // done, on success and on failure.
+    BackupDrillScratchPrefix = "proviant-backup-drill-"
+
+    // BackupDrillScratchFilename is the name of the scratch database inside
+    // the drill's temporary directory.
+    BackupDrillScratchFilename = "drill.db"
+
+    // BackupDrillHouseholdName is the household the drill creates in the
+    // scratch database. A document that names its household replaces it.
+    BackupDrillHouseholdName = "Backup drill"
+
+    // BackupDrillAdminName and BackupDrillAdminMail are the account the drill
+    // falls back to when a document names no members: every restored product
+    // then belongs to it.
+    BackupDrillAdminName = "backup-drill"
+    BackupDrillAdminMail = "backup-drill@example.invalid"
+
     // OpenFoodFacts bulk dump import (issue #412). The dump is OFF's full
     // nightly JSONL export; deltas are the daily change files OFF publishes for
     // a rolling window. This is distinct from open_food_facts_caches, which
@@ -5250,7 +5482,7 @@ func IsCountUnit(raw string) bool
 IsCountUnit reports whether a unit symbol counts items instead of measuring them. An empty or unrecognised symbol is not a count: it is a unit this build cannot read, and treating it as one would silently drop a net content.
 
 <a name="IsHTTPSBaseURL"></a>
-## func [IsHTTPSBaseURL](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L491>)
+## func [IsHTTPSBaseURL](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L519>)
 
 ```go
 func IsHTTPSBaseURL(baseURL string) bool
@@ -5297,7 +5529,7 @@ MonthWindowStart returns the first instant of the month that opens the window of
 A window of no months has no start: the zero time leaves the window empty instead of covering the anchor's month behind the caller's back.
 
 <a name="OffDumpSQLiteFilename"></a>
-## func [OffDumpSQLiteFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L465>)
+## func [OffDumpSQLiteFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L493>)
 
 ```go
 func OffDumpSQLiteFilename(databaseName string) string
@@ -5306,7 +5538,7 @@ func OffDumpSQLiteFilename(databaseName string) string
 OffDumpSQLiteFilename resolves the SQLite dump store for a configured dumpDatabase. A bare name lives beside the main database as data/\<name\>.db; a value that names a path is used verbatim, matching database.sqlite.filepath. An empty name falls back to OffDumpDBFilename.
 
 <a name="OffDumpStagingFilename"></a>
-## func [OffDumpStagingFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L477>)
+## func [OffDumpStagingFilename](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L505>)
 
 ```go
 func OffDumpStagingFilename(databaseName string) string
@@ -5342,7 +5574,7 @@ func ProductNameLabel(raw string) string
 ProductNameLabel normalises a product name for storage: the whitespace is collapsed and the text is capped, because the source is a free\-text field that a client fills in.
 
 <a name="PublishedMariaDBPasswordSource"></a>
-## func [PublishedMariaDBPasswordSource](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L501>)
+## func [PublishedMariaDBPasswordSource](<https://github.com/Isotop7/proviant/blob/develop/src/util/util.go#L529>)
 
 ```go
 func PublishedMariaDBPasswordSource(password string) string

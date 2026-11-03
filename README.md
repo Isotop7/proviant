@@ -398,6 +398,21 @@ The scheduled backup job writes one full household JSON backup per household to 
 | `PROVIANT_BACKUP_DIRECTORY` | `data/backups` | Directory the backup documents are written to |
 | `PROVIANT_BACKUP_RETENTION` | `7` | Backup files kept per household; `0` keeps every file |
 
+#### Restore drill
+
+The backup job writes documents; nothing proves that they can be read back. The drill restores the
+newest document into a throwaway database and compares the restored rows with the rows the document
+says it carries. It never opens the live database.
+
+Run it on a schedule — a cron entry that fails the job when the drill fails:
+
+```cron
+17 4 * * * docker exec proviant /app/proviant backup-drill
+```
+
+The commands, the exit codes, what the drill compares and what a failure means are documented in
+[docs/backup-drill.md](./docs/backup-drill.md).
+
 #### Restore uploads
 
 | Environment Variable | Default | Description |
@@ -466,6 +481,7 @@ The design system has its own documentation:
 Operator references:
 
 - [docs/metrics.md](./docs/metrics.md) — the exported Prometheus metrics, their labels and ready-to-use queries
+- [docs/backup-drill.md](./docs/backup-drill.md) — proving that a scheduled backup can be restored
 
 ## Screenshots
 

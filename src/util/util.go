@@ -352,6 +352,34 @@ const (
 	// canceled reliably, so shutdown waits briefly instead of hanging forever.
 	DefaultBackupStopWaitSeconds = 5
 
+	// BackupDrillCommand is the subcommand that restores the newest backup
+	// into a throwaway database and reports whether it still matches.
+	BackupDrillCommand = "backup-drill"
+
+	// DefaultBackupDrillTimeoutMinutes bounds one drill run. A restore of a
+	// large household takes minutes; a drill that hangs forever would block
+	// the scheduled job it runs in.
+	DefaultBackupDrillTimeoutMinutes = 10
+
+	// BackupDrillScratchPrefix names the temporary directory the drill's
+	// scratch database lives in. The drill removes the directory when it is
+	// done, on success and on failure.
+	BackupDrillScratchPrefix = "proviant-backup-drill-"
+
+	// BackupDrillScratchFilename is the name of the scratch database inside
+	// the drill's temporary directory.
+	BackupDrillScratchFilename = "drill.db"
+
+	// BackupDrillHouseholdName is the household the drill creates in the
+	// scratch database. A document that names its household replaces it.
+	BackupDrillHouseholdName = "Backup drill"
+
+	// BackupDrillAdminName and BackupDrillAdminMail are the account the drill
+	// falls back to when a document names no members: every restored product
+	// then belongs to it.
+	BackupDrillAdminName = "backup-drill"
+	BackupDrillAdminMail = "backup-drill@example.invalid"
+
 	// OpenFoodFacts bulk dump import (issue #412). The dump is OFF's full
 	// nightly JSONL export; deltas are the daily change files OFF publishes for
 	// a rolling window. This is distinct from open_food_facts_caches, which

@@ -708,6 +708,13 @@ var (
 	// locations than the backup schema allows
 	ErrBackupTooManyLocations = errors.New("backup contains too many storage locations")
 
+	// ErrBackupNotFound is thrown when the backup directory holds no document
+	ErrBackupNotFound = errors.New("no backup document found")
+
+	// ErrBackupDrillMismatch is thrown when a restored backup does not hold the
+	// rows the document says it carries
+	ErrBackupDrillMismatch = errors.New("the restored backup does not match the document")
+
 	/*
 	 * CSV import related errors
 	 */

@@ -613,20 +613,20 @@ func nullable[T any](value *T) any {
 	return *value
 }
 
-// recreateBackupStorageLocations creates the document's storage locations and
-// returns their new ids keyed by lowercased name. Product rows refer to
-// locations by name because the exported ids are instance-local.
-func recreateBackupStorageLocations(
-	tx *gorm.DB,
-	householdID uint,
-	backup *apiModel.FullExportResponse,
-) (map[string]uint, int, error) {
-	type locationDraft struct {
-		name      string
-		icon      string
-		sortOrder int
-	}
-	drafts := make([]locationDraft, 0, len(backup.StorageLocations))
+// backupLocationDraft is one storage location a restore creates.
+type backupLocationDraft struct {
+	name      string
+	icon      string
+	sortOrder int
+}
+
+// backupLocationDrafts returns the storage locations a document restores. The
+// document's own list comes first; a product that names a location the list
+// does not carry adds it, because a restore must not drop a product's place.
+// The names are deduplicated case-insensitively, so one place named in two
+// cases is one location.
+func backupLocationDrafts(backup *apiModel.FullExportResponse) []backupLocationDraft {
+	drafts := make([]backupLocationDraft, 0, len(backup.StorageLocations))
 	seen := make(map[string]bool, len(backup.StorageLocations))
 
 	appendDraft := func(name, icon string, sortOrder int) {
@@ -635,7 +635,7 @@ func recreateBackupStorageLocations(
 			return
 		}
 		seen[key] = true
-		drafts = append(drafts, locationDraft{name: strings.TrimSpace(name), icon: icon, sortOrder: sortOrder})
+		drafts = append(drafts, backupLocationDraft{name: strings.TrimSpace(name), icon: icon, sortOrder: sortOrder})
 	}
 
 	for i := range backup.StorageLocations {
@@ -652,6 +652,18 @@ func recreateBackupStorageLocations(
 			appendDraft(location.Name, location.Icon, location.SortOrder)
 		}
 	}
+	return drafts
+}
+
+// recreateBackupStorageLocations creates the document's storage locations and
+// returns their new ids keyed by lowercased name. Product rows refer to
+// locations by name because the exported ids are instance-local.
+func recreateBackupStorageLocations(
+	tx *gorm.DB,
+	householdID uint,
+	backup *apiModel.FullExportResponse,
+) (map[string]uint, int, error) {
+	drafts := backupLocationDrafts(backup)
 	if len(drafts) > util.BackupRestoreMaxStorageLocations {
 		return nil, 0, fmt.Errorf("%w: %d", errors.ErrBackupTooManyLocations, len(drafts))
 	}

@@ -32,12 +32,14 @@ Agent coding guidelines for Proviant codebase.
 | `task test-perf` | Wall-clock budget test on a clean build (the race detector inflates it past usefulness). |
 | `task check` / `task check-changed` | Go lint via the golangci-lint container; only files changed vs `HEAD`. |
 | `task check-dependabot` | Dependency-pinning invariants (Dependabot config, SHA pins, trivy digest, Go toolchain). |
+| `task check-workflows` | The GitHub Actions workflow files parse and name their jobs and steps. |
 | `task doc` | After adding/changing exported Go symbols or Swagger annotations. |
 | `task run` | Local dev server. |
 | `task containerimage` / `task runcontainer` / `task runcontainerdebug` | Build/run containerized app. |
 | `task vuln` / `task vuln-go` / `task vuln-npm` | Security audits (Go + npm). |
 | `task vuln-image` | Scan container image (needs podman/docker; excluded from `task vuln`). |
 | `task seed` / `task seed-reset` | Populate / wipe demo products. |
+| `task backup-drill` | Restore the newest backup into a throwaway database and report whether it still matches. |
 
 **Never call the underlying tools directly — always the task**: `npm install` / `npm test` / `npm run *` → `task init` / `test` / `css` / `js` / `lint` (`npm run test-js` → `task test-js`); `node scripts/check-dependabot.mjs` → `task check-dependabot`; `podman`/`docker build` → `task containerimage`; `golangci-lint run` → `task check`; `go run` for the dev server → `task run`; `go fix` → `task modernize` (report) / `task modernize-fix` (apply). Single test: `cd src && go test -race -vet=off ./path/to/package [-run TestName]`.
 
@@ -208,7 +210,7 @@ Bootstrap 6 (currently `6.0.0-alpha.1`) renames whole component families and dro
 - `strings.Builder` (pre-size the buffer when known) over loop concatenation; `strings.SplitSeq`; avoid `fmt.Sprintf` for simple string building in hot paths.
 
 ## Repository Structure
-`src/api/` handlers · `src/controllers/` business logic · `src/errors/` custom errors · `src/models/` (database, api, authentication, configuration) · `src/router/` Gin router + middleware · `src/templates/` HTML + SCSS · `src/assets/` compiled CSS/JS/icons/fonts · `src/web/` page handlers · `src/docs/` generated godoc + Swagger (written by `task doc`, never hand-edited).
+`src/api/` handlers · `src/controllers/` business logic · `src/errors/` custom errors · `src/models/` (database, api, authentication, configuration) · `src/router/` Gin router + middleware · `src/templates/` HTML + SCSS · `src/assets/` compiled CSS/JS/icons/fonts · `src/web/` page handlers · `src/docs/` generated godoc + Swagger (written by `task doc`, never hand-edited) · `docs/` hand-written operator references.
 
 ## Dashboard / Portal
 
@@ -236,7 +238,7 @@ Home (`/web/`) is fully client-side: `web/frontend.go → Root` passes only `Has
 
 - **NEVER commit or push without explicit user confirmation.** Propose the message and wait for approval — every `git commit` and `git push`, regardless of task size or prior instructions.
 - Run `task check` (golangci-lint must pass) before committing.
-- **DB migrations**: add every new/modified model to the `AutoMigrate` call in `src/proviant.go` — omitting it means a runtime "no such table".
+- **DB migrations**: add every new/modified model to `AllModels()` in `src/models/schema.go` — the application, the tests and the backup drill all migrate that one list, and omitting a model means a runtime "no such table".
 - **Config values**: a new block under `notification:` (e.g. `mailDigest`, `ntfy`, `telegram`) must be added to all three: `config.yaml`, `config.yaml.sqlite.tmpl`, `config.yaml.mariadb.tmpl`.
 - **Config files carry no comments.** The compose files, the config templates and the Dockerfiles state what they set, not why — a variable is described in `README.md`, in the environment variable table and in the section that governs the file. A comment in a config file is a second copy of that text, and the two drift apart the moment one of them changes. The README is the only place an operator reads.
 - **String literals**: centralize new route labels / config keys / section identifiers in `src/util/util.go` under the appropriate group comment.

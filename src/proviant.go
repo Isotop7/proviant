@@ -2,6 +2,8 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	stdlog "log"
 	"net"
@@ -156,93 +158,117 @@ func setupConfig() *configuration.ProviantConfiguration {
 // a parameter so tests can point it at a fixture rather than at a developer's
 // local config file, which is gitignored and therefore absent in CI.
 func loadConfig(configDir string) *configuration.ProviantConfiguration {
-	// Set configuration file path
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(configDir)
-	// Set env prefix
-	viper.SetEnvPrefix("PROVIANT")
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	config, err := readConfigFrom(viper.GetViper(), configDir)
+	if err != nil {
+		panic(err.Error())
+	}
+	return config
+}
 
+// readConfig reads config.yaml from configDir into a configuration of its own.
+// Unlike loadConfig it neither touches the global viper nor terminates the
+// process: the backup drill runs as a command and has to answer with an exit
+// code, and it must not disturb the configuration a running instance reads.
+func readConfig(configDir string) (*configuration.ProviantConfiguration, error) {
+	return readConfigFrom(viper.New(), configDir)
+}
+
+// readConfigFrom reads config.yaml from configDir with the given viper
+// instance.
+func readConfigFrom(config *viper.Viper, configDir string) (*configuration.ProviantConfiguration, error) {
+	// Set configuration file path
+	config.SetConfigName("config")
+	config.SetConfigType("yaml")
+	config.AddConfigPath(configDir)
+	// Set env prefix
+	config.SetEnvPrefix("PROVIANT")
+	config.AutomaticEnv()
+	config.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	applyConfigDefaults(config)
+
+	// Read configuration file
+	if err := config.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
+	// Unmarshal yaml to configuration struct
+	var proviantConfig configuration.ProviantConfiguration
+	if err := config.Unmarshal(&proviantConfig); err != nil {
+		return nil, err
+	}
+	return &proviantConfig, nil
+}
+
+// applyConfigDefaults sets the built-in default of every configuration key that
+// has one.
+func applyConfigDefaults(config *viper.Viper) {
 	// Set defaults for monthly waste report schedule
-	viper.SetDefault("notification.monthlyWasteReport.day", 1)
-	viper.SetDefault("notification.monthlyWasteReport.hour", 8)
+	config.SetDefault("notification.monthlyWasteReport.day", 1)
+	config.SetDefault("notification.monthlyWasteReport.hour", 8)
 
 	// Set defaults for digest scheduler
-	viper.SetDefault("notification.digest.enabled", true)
-	viper.SetDefault("notification.digest.defaultTime", "08:00")
+	config.SetDefault("notification.digest.enabled", true)
+	config.SetDefault("notification.digest.defaultTime", "08:00")
 
 	// Set defaults for Telegram poller pool
-	viper.SetDefault("notification.telegram.pollerWorkers", 10)
+	config.SetDefault("notification.telegram.pollerWorkers", 10)
 
 	// Set defaults for recipe API
-	viper.SetDefault("recipe_api.provider", "themealdb")
-	viper.SetDefault("recipe_api.url", util.DefaultTheMealDBRecipeAPIURL)
-	viper.SetDefault("recipe_api.timeout", 10)
-	viper.SetDefault("recipe_api.cache_enabled", true)
-	viper.SetDefault("recipe_api.cache_ttl", 24)
+	config.SetDefault("recipe_api.provider", "themealdb")
+	config.SetDefault("recipe_api.url", util.DefaultTheMealDBRecipeAPIURL)
+	config.SetDefault("recipe_api.timeout", 10)
+	config.SetDefault("recipe_api.cache_enabled", true)
+	config.SetDefault("recipe_api.cache_ttl", 24)
 
 	// Set default password policy
-	viper.SetDefault("server.authentication.passwordMinLength", 12)
-	viper.SetDefault("server.authentication.passwordRequireUppercase", true)
-	viper.SetDefault("server.authentication.passwordRequireDigit", true)
-	viper.SetDefault("server.authentication.passwordRequireSpecial", false)
-	viper.SetDefault("server.authentication.passwordCheckBreached", true)
-	viper.SetDefault("server.twoFactor.enabled", false)
-	viper.SetDefault("server.twoFactor.issuer", util.DefaultTwoFactorIssuer)
-	viper.SetDefault("server.twoFactor.recoveryCodeCount", util.DefaultTwoFactorRecoveryCodeCount)
-	viper.SetDefault("server.maxUploadSizeMB", 5)
-	viper.SetDefault("server.rateLimit.login_per_minute", 5)
-	viper.SetDefault("server.rateLimit.signup_per_minute", 3)
-	viper.SetDefault("server.rateLimit.export_per_minute", 1)
-	viper.SetDefault("server.rateLimit.recipes_per_minute", 6)
-	viper.SetDefault("server.demoMode", false)
-	viper.SetDefault("server.metricsEnabled", false)
+	config.SetDefault("server.authentication.passwordMinLength", 12)
+	config.SetDefault("server.authentication.passwordRequireUppercase", true)
+	config.SetDefault("server.authentication.passwordRequireDigit", true)
+	config.SetDefault("server.authentication.passwordRequireSpecial", false)
+	config.SetDefault("server.authentication.passwordCheckBreached", true)
+	config.SetDefault("server.twoFactor.enabled", false)
+	config.SetDefault("server.twoFactor.issuer", util.DefaultTwoFactorIssuer)
+	config.SetDefault("server.twoFactor.recoveryCodeCount", util.DefaultTwoFactorRecoveryCodeCount)
+	config.SetDefault("server.maxUploadSizeMB", 5)
+	config.SetDefault("server.rateLimit.login_per_minute", 5)
+	config.SetDefault("server.rateLimit.signup_per_minute", 3)
+	config.SetDefault("server.rateLimit.export_per_minute", 1)
+	config.SetDefault("server.rateLimit.recipes_per_minute", 6)
+	config.SetDefault("server.demoMode", false)
+	config.SetDefault("server.metricsEnabled", false)
 
 	// Receipt scan defaults (issue #61): the OpenAI-compatible endpoint is
 	// assumed unless another is configured; timeout follows the vision-LLM
 	// reality of multi-second responses.
-	viper.SetDefault("ocr.receipt.provider", util.ReceiptOCRProviderOpenAI)
-	viper.SetDefault("ocr.receipt.timeout", util.ReceiptScanDefaultTimeout)
+	config.SetDefault("ocr.receipt.provider", util.ReceiptOCRProviderOpenAI)
+	config.SetDefault("ocr.receipt.timeout", util.ReceiptScanDefaultTimeout)
 
-	viper.SetDefault("shopping_list_sync.enabled", false)
-	viper.SetDefault("shopping_list_sync.interval_minutes", util.DefaultShoppingListSyncIntervalMinutes)
-	viper.SetDefault("shopping_list_sync.bring_enabled", false)
-	viper.SetDefault("shopping_list_sync.todoist_enabled", false)
+	config.SetDefault("shopping_list_sync.enabled", false)
+	config.SetDefault("shopping_list_sync.interval_minutes", util.DefaultShoppingListSyncIntervalMinutes)
+	config.SetDefault("shopping_list_sync.bring_enabled", false)
+	config.SetDefault("shopping_list_sync.todoist_enabled", false)
 
 	// Scheduled household backup defaults
-	viper.SetDefault("backup.enabled", false)
-	viper.SetDefault("backup.intervalHours", util.DefaultBackupIntervalHours)
-	viper.SetDefault("backup.directory", util.DefaultBackupDirectory)
-	viper.SetDefault("backup.retention", util.DefaultBackupRetention)
+	config.SetDefault("backup.enabled", false)
+	config.SetDefault("backup.intervalHours", util.DefaultBackupIntervalHours)
+	config.SetDefault("backup.directory", util.DefaultBackupDirectory)
+	config.SetDefault("backup.retention", util.DefaultBackupRetention)
 
 	// Household backup restore defaults
-	viper.SetDefault("restore.maxUploadSizeMB", util.DefaultRestoreMaxUploadSizeMB)
+	config.SetDefault("restore.maxUploadSizeMB", util.DefaultRestoreMaxUploadSizeMB)
 
 	// Queued offline sync defaults
-	viper.SetDefault("offlineSync.maxBatchBytes", util.ReceiptBulkMaxBodyBytes)
+	config.SetDefault("offlineSync.maxBatchBytes", util.ReceiptBulkMaxBodyBytes)
 
 	// OpenFoodFacts bulk dump import defaults. The feature is opt-in: the full
 	// dump is a multi-gigabyte download, so it never starts on its own.
-	viper.SetDefault("openfoodfacts.dumpImportEnabled", false)
-	viper.SetDefault("openfoodfacts.dumpImportExpiryDays", util.DefaultOpenFoodFactsDumpExpiryDays)
-	viper.SetDefault("openfoodfacts.dumpUrl", util.OpenFoodFactsDumpURL)
-	viper.SetDefault("openfoodfacts.dumpDeltaWindowDays", util.DefaultOpenFoodFactsDeltaWindowDays)
-	viper.SetDefault("openfoodfacts.dumpStagingPath", util.OffDumpStagingDir)
-	viper.SetDefault("openfoodfacts.dumpDatabase", util.OffDumpDefaultDatabase)
-
-	// Read configuration file
-	if err := viper.ReadInConfig(); err != nil {
-		panic(err.Error())
-	}
-
-	// Unmarshal yaml to configuration struct
-	var config configuration.ProviantConfiguration
-	if err := viper.Unmarshal(&config); err != nil {
-		panic(err)
-	}
-	return &config
+	config.SetDefault("openfoodfacts.dumpImportEnabled", false)
+	config.SetDefault("openfoodfacts.dumpImportExpiryDays", util.DefaultOpenFoodFactsDumpExpiryDays)
+	config.SetDefault("openfoodfacts.dumpUrl", util.OpenFoodFactsDumpURL)
+	config.SetDefault("openfoodfacts.dumpDeltaWindowDays", util.DefaultOpenFoodFactsDeltaWindowDays)
+	config.SetDefault("openfoodfacts.dumpStagingPath", util.OffDumpStagingDir)
+	config.SetDefault("openfoodfacts.dumpDatabase", util.OffDumpDefaultDatabase)
 }
 
 // setupLogging initializes the logging and returns a zerolog.Logger instance.
@@ -376,8 +402,116 @@ func publishedPasswordWarning(config *configuration.ProviantConfiguration) strin
 	return message
 }
 
+// runBackupDrill restores the newest backup into a throwaway database and
+// reports whether the restored rows still match the document. It never opens
+// the live database: the drill restores into a scratch file of its own.
+//
+// The exit code tells a scheduled job what happened: zero means the backup
+// restores, one means it is broken, two means the schema moved under it and
+// three means there was nothing to drill.
+func runBackupDrill(args []string) int {
+	config, configErr := readConfig(".")
+	return runBackupDrillWith(args, config, configErr)
+}
+
+// runBackupDrillWith runs the drill against a configuration that is already
+// read. The configuration is a parameter so the drill's decisions can be
+// tested without a configuration file on disk.
+func runBackupDrillWith(
+	args []string,
+	config *configuration.ProviantConfiguration,
+	configErr error,
+) int {
+	if config == nil && configErr == nil {
+		configErr = fmt.Errorf("no configuration was read")
+	}
+
+	flags := flag.NewFlagSet(util.BackupDrillCommand, flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	document := flags.String("file", "", "drill this backup document instead of the newest one")
+	directory := flags.String("directory", "", "directory the backup documents live in")
+	if err := flags.Parse(args); err != nil {
+		// A usage error is neither a broken backup nor a broken schema: there
+		// is nothing to drill.
+		return controllers.BackupDrillExitUnavailable
+	}
+
+	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime}).With().Timestamp().Caller().Logger()
+
+	if configErr != nil {
+		logger.Warn().Msgf("Backup drill: the configuration could not be read (%s), the drill falls back to %s",
+			configErr, util.DefaultBackupDirectory)
+	}
+	backupDirectory := strings.TrimSpace(*directory)
+	if backupDirectory == "" && configErr == nil {
+		backupDirectory = strings.TrimSpace(config.Backup.Directory)
+	}
+	if backupDirectory == "" {
+		backupDirectory = util.DefaultBackupDirectory
+	}
+	liveDatabasePath := ""
+	if configErr == nil {
+		liveDatabasePath = config.Database.SQLite.Filepath
+	}
+
+	// A deployment that does not run the scheduled backup has nothing to
+	// drill. Reporting that as a failure would fail the scheduled job of
+	// every installation that never enabled the backup. A document or a
+	// directory the operator named is drilled either way.
+	if configErr == nil && !config.Backup.Enabled &&
+		strings.TrimSpace(*document) == "" && strings.TrimSpace(*directory) == "" {
+		logger.Info().Msg("Backup drill: the scheduled backup is disabled, there is nothing to drill")
+		return controllers.BackupDrillExitOK
+	}
+
+	drill := &controllers.BackupDrill{
+		Logger:           &logger,
+		BackupDirectory:  backupDirectory,
+		BackupFile:       strings.TrimSpace(*document),
+		LiveDatabasePath: liveDatabasePath,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(util.DefaultBackupDrillTimeoutMinutes)*time.Minute)
+	defer cancel()
+
+	result, err := drill.Run(ctx)
+	if result.BackupPath != "" {
+		printBackupDrillResult(&result)
+	}
+	if err != nil {
+		logger.Error().Msgf("Backup drill failed: %s", err)
+		return controllers.BackupDrillExitCode(err)
+	}
+	logger.Info().Msg("Backup drill: the newest backup restores and its counts match")
+	return controllers.BackupDrillExitOK
+}
+
+// printBackupDrillResult prints the comparison the drill produced.
+func printBackupDrillResult(result *controllers.BackupDrillResult) {
+	fmt.Printf("backup:  %s\n", result.BackupPath)
+	fmt.Printf("age:     %s\n", result.BackupAge.Round(time.Second))
+	fmt.Printf("schema:  %d\n", result.SchemaVersion)
+	for _, count := range result.Counts {
+		if !count.Covered {
+			fmt.Printf("%-18s not carried by the backup document\n", string(count.Entity))
+			continue
+		}
+		fmt.Printf("%-18s %d expected, %d restored\n", string(count.Entity), count.Expected, count.Restored)
+	}
+	for _, mismatch := range result.Mismatches {
+		fmt.Printf("%-18s %s: %s is %q in the document and %q in the restore\n",
+			mismatch.Entity, mismatch.Key, mismatch.Field, mismatch.Document, mismatch.Restored)
+	}
+}
+
 // main is the main function used on start of proviant
 func main() {
+	// The backup drill runs before anything else: it restores a backup into a
+	// throwaway database, so the live database is never opened by it.
+	if len(os.Args) > 1 && os.Args[1] == util.BackupDrillCommand {
+		os.Exit(runBackupDrill(os.Args[2:]))
+	}
+
 	// Setup config
 	proviantConfiguration := setupConfig()
 	// Setup logging
@@ -444,42 +578,7 @@ func main() {
 	}
 
 	// Run migrations for database and check for errors
-	migrationError := dbHandle.AutoMigrate(
-		&dbModel.Household{},
-		&dbModel.StorageLocation{},
-		&authentication.User{},
-		&authentication.RevokedToken{},
-		&authentication.PersonalAccessToken{},
-		&authentication.CalendarToken{},
-		&dbModel.Product{},
-		&dbModel.ProductMutationClaim{},
-		&dbModel.HouseholdApplication{},
-		&dbModel.HouseholdInvitation{},
-		&dbModel.OnboardingState{},
-		&dbModel.OpenFoodFactsCache{},
-		&dbModel.RecipeCache{},
-		&dbModel.EmailVerification{},
-		&dbModel.PasswordReset{},
-		&dbModel.Webhook{},
-		&dbModel.WebhookDeliveryLog{},
-		&dbModel.WasteStreak{},
-		&dbModel.ProductCategoryPrice{},
-		&dbModel.HouseholdCategory{},
-		&dbModel.SavingsRecord{},
-		&dbModel.ModelCutover{},
-		&dbModel.ExpiryScan{},
-		&dbModel.AuditLog{},
-		&dbModel.ActivityLog{},
-		&dbModel.WebPushConfig{},
-		&dbModel.MailDigestUnsubscribeToken{},
-		&dbModel.ShoppingListItem{},
-		&dbModel.HouseholdIntegration{},
-		&dbModel.ShoppingListItemSyncRef{},
-		&dbModel.Recipe{},
-		&dbModel.RecipeIngredient{},
-		&dbModel.MealPlanEntry{},
-		&dbModel.TwoFactorRecoveryCode{},
-	)
+	migrationError := migrations.AutoMigrateAll(dbHandle)
 	if migrationError != nil {
 		panic(migrationError)
 	}

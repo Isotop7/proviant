@@ -5,50 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Isotop7/proviant/models/authentication"
-	dbModel "github.com/Isotop7/proviant/models/database"
+	"github.com/Isotop7/proviant/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-var testModels = []any{
-	&dbModel.Household{},
-	&authentication.User{},
-	&dbModel.Product{},
-	&dbModel.ProductMutationClaim{},
-	&dbModel.StorageLocation{},
-	&dbModel.Webhook{},
-	&dbModel.WebhookDeliveryLog{},
-	&dbModel.RecipeCache{},
-	&dbModel.SavingsRecord{},
-	&dbModel.ModelCutover{},
-	&dbModel.WasteStreak{},
-	&dbModel.OnboardingState{},
-	&dbModel.HouseholdInvitation{},
-	&dbModel.OpenFoodFactsCache{},
-	&dbModel.ExpiryScan{},
-	&dbModel.HouseholdApplication{},
-	&dbModel.EmailVerification{},
-	&dbModel.PasswordReset{},
-	&dbModel.ProductCategoryPrice{},
-	&dbModel.HouseholdCategory{},
-	&dbModel.ActivityLog{},
-	&dbModel.AuditLog{},
-	&authentication.RevokedToken{},
-	&authentication.PersonalAccessToken{},
-	&authentication.CalendarToken{},
-	&dbModel.WebPushConfig{},
-	&dbModel.MailDigestUnsubscribeToken{},
-	&dbModel.ShoppingListItem{},
-	&dbModel.HouseholdIntegration{},
-	&dbModel.ShoppingListItemSyncRef{},
-
-	&dbModel.Recipe{},
-	&dbModel.RecipeIngredient{},
-	&dbModel.MealPlanEntry{},
-	&dbModel.TwoFactorRecoveryCode{},
-}
 
 func SetupTestDB(t *testing.T) *gorm.DB {
 	tempDir := t.TempDir()
@@ -104,7 +65,7 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 		}
 	})
 
-	if err = db.AutoMigrate(testModels...); err != nil {
+	if err = db.AutoMigrate(models.AllModels()...); err != nil {
 		t.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -112,5 +73,5 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 }
 
 func MigrateAllModels(db *gorm.DB) error {
-	return db.AutoMigrate(testModels...)
+	return db.AutoMigrate(models.AllModels()...)
 }
