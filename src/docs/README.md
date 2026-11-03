@@ -4118,7 +4118,7 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool
 
 
 <a name="CSRFMiddleware"></a>
-## func [CSRFMiddleware](<https://github.com/Isotop7/proviant/blob/develop/src/router/csrf.go#L46>)
+## func [CSRFMiddleware](<https://github.com/Isotop7/proviant/blob/develop/src/router/csrf.go#L45>)
 
 ```go
 func CSRFMiddleware(cfg *configuration.ProviantConfiguration) gin.HandlerFunc
@@ -7784,6 +7784,25 @@ type WebPushVAPIDPublicKeyResponse struct {
     PublicKey string `json:"publicKey"`
 }
 ```
+
+# configdoc
+
+```go
+import "github.com/Isotop7/proviant/cmd/configdoc"
+```
+
+configdoc generates the configuration reference from the configuration itself: the key set comes from the configuration struct, the defaults from the default table and the values from the shipped configuration templates.
+
+Usage:
+
+```
+configdoc --output ../docs/configuration.md
+configdoc --check
+```
+
+## Index
+
+
 
 # database
 
@@ -14557,11 +14576,24 @@ import "github.com/Isotop7/proviant/models/configuration"
 
 configuration defines structs and methods for proviants configuration and specific parts of it
 
+reference.go exposes the configuration as an operator\-facing reference: the keys, their types, the value each resolves to when the file omits it and the constraints the validator enforces.
+
+The key set comes from the configuration struct itself, so a field that is not documented fails the test suite instead of quietly disappearing from the documentation. The defaults live here as well, so a default can never be registered under a key the struct does not read.
+
+reference\_doc.go renders the configuration reference and reads the shipped configuration templates, so the document and the templates can be compared against each other.
+
 ## Index
 
+- [Constants](<#constants>)
+- [func Defaults\(\) map\[string\]any](<#Defaults>)
+- [func ParseConfigValues\(content \[\]byte\) \(map\[string\]string, error\)](<#ParseConfigValues>)
+- [func RenderReference\(keys \[\]ConfigKey, templates map\[string\]string\) string](<#RenderReference>)
+- [func TemplateValues\(files \[\]TemplateFile\) \(map\[string\]string, error\)](<#TemplateValues>)
 - [type AuthenticationConfiguration](<#AuthenticationConfiguration>)
 - [type BackupConfiguration](<#BackupConfiguration>)
 - [type CalendarConfiguration](<#CalendarConfiguration>)
+- [type ConfigKey](<#ConfigKey>)
+  - [func ConfigKeys\(\) \[\]ConfigKey](<#ConfigKeys>)
 - [type CorsConfiguration](<#CorsConfiguration>)
 - [type DatabaseConfiguration](<#DatabaseConfiguration>)
   - [func \(dc \*DatabaseConfiguration\) UsesPublishedPassword\(\) bool](<#DatabaseConfiguration.UsesPublishedPassword>)
@@ -14601,8 +14633,69 @@ configuration defines structs and methods for proviants configuration and specif
 - [type ShoppingListSyncConfiguration](<#ShoppingListSyncConfiguration>)
   - [func \(c ShoppingListSyncConfiguration\) IsProviderEnabled\(provider string\) bool](<#ShoppingListSyncConfiguration.IsProviderEnabled>)
 - [type TelegramConfiguration](<#TelegramConfiguration>)
+- [type TemplateFile](<#TemplateFile>)
 - [type TwoFactorConfiguration](<#TwoFactorConfiguration>)
 
+
+## Constants
+
+<a name="DefaultCSRFTokenMaxAge"></a>DefaultCSRFTokenMaxAge is the lifetime of the CSRF cookie, in seconds, when the configuration names none.
+
+```go
+const DefaultCSRFTokenMaxAge = 86400
+```
+
+<a name="DefaultContentSecurityPolicy"></a>DefaultContentSecurityPolicy is the Content\-Security\-Policy the server sends when the configuration names none.
+
+```go
+const DefaultContentSecurityPolicy = "default-src 'self'; script-src 'self' $NONCE; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+```
+
+<a name="DefaultServerPort"></a>DefaultServerPort is the port the server listens on when the configuration names no usable one.
+
+```go
+const DefaultServerPort = 5114
+```
+
+<a name="Defaults"></a>
+## func [Defaults](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/reference.go#L45>)
+
+```go
+func Defaults() map[string]any
+```
+
+Defaults returns the built\-in default of every configuration key, keyed by the key path the configuration file uses.
+
+The keys are the paths of the configuration struct. A camel\-cased key would be lower\-cased by viper and then miss the snake\-cased mapstructure tag of its field, and the default would be dropped without a word: that is how the password policy ended up with a minimum length of zero.
+
+Every key is in the map. A key viper has never heard of is ignored by the environment, so an operator who sets PROVIANT\_SERVER\_DEMOMODE against a configuration file that does not mention the key would watch nothing happen. A key without a default of its own therefore carries the zero value of its type, which is what the code resolved to anyway.
+
+<a name="ParseConfigValues"></a>
+## func [ParseConfigValues](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/reference_doc.go#L90>)
+
+```go
+func ParseConfigValues(content []byte) (map[string]string, error)
+```
+
+ParseConfigValues parses a YAML configuration file and returns the value it sets for every key, keyed by the lower\-cased key path.
+
+<a name="RenderReference"></a>
+## func [RenderReference](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/reference_doc.go#L255>)
+
+```go
+func RenderReference(keys []ConfigKey, templates map[string]string) string
+```
+
+RenderReference renders the operator reference for the given keys.
+
+<a name="TemplateValues"></a>
+## func [TemplateValues](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/reference_doc.go#L28>)
+
+```go
+func TemplateValues(files []TemplateFile) (map[string]string, error)
+```
+
+TemplateValues returns the value each template sets for every key, keyed by the lower\-cased key path. A key the templates set to different values is rendered with every value, labelled by the template it belongs to, so the reference shows what each template ships.
 
 <a name="AuthenticationConfiguration"></a>
 ## type [AuthenticationConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L42-L53>)
@@ -14650,6 +14743,41 @@ type CalendarConfiguration struct {
 }
 ```
 
+<a name="ConfigKey"></a>
+## type [ConfigKey](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/reference.go#L120-L137>)
+
+ConfigKey describes one configuration key for the operator reference.
+
+```go
+type ConfigKey struct {
+    // Path is the key as the configuration file spells it, for example
+    // "server.authentication.tokenPassword".
+    Path string
+    // Env is the environment variable that overrides the key.
+    Env string
+    // Type is the value type: "string", "int", "bool" or "list".
+    Type string
+    // Default is the value the key resolves to when the configuration file
+    // omits it.
+    Default string
+    // Constraint states what the validator rejects.
+    Constraint string
+    // Effect states what the key does.
+    Effect string
+    // Secret marks a key whose value must never appear in the documentation.
+    Secret bool
+}
+```
+
+<a name="ConfigKeys"></a>
+### func [ConfigKeys](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/reference.go#L659>)
+
+```go
+func ConfigKeys() []ConfigKey
+```
+
+ConfigKeys returns every configuration key with its type, its default, its constraint and its effect.
+
 <a name="CorsConfiguration"></a>
 ## type [CorsConfiguration](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/configuration.go#L68-L71>)
 
@@ -14657,8 +14785,8 @@ CorsConfiguration contains all properties for the CORS configuration of the prov
 
 ```go
 type CorsConfiguration struct {
-    AllowAllOrigins bool
-    AllowedOrigins  []string
+    AllowAllOrigins bool     `mapstructure:"allowAllOrigins"`
+    AllowedOrigins  []string `mapstructure:"allowedOrigins"`
 }
 ```
 
@@ -14669,9 +14797,9 @@ DatabaseConfiguration contains all properties regarding the database connection
 
 ```go
 type DatabaseConfiguration struct {
-    Engine  string
-    MariaDB DatabaseMariaDBConfiguration
-    SQLite  DatabaseSQLiteConfiguration
+    Engine  string                       `mapstructure:"engine"`
+    MariaDB DatabaseMariaDBConfiguration `mapstructure:"mariadb"`
+    SQLite  DatabaseSQLiteConfiguration  `mapstructure:"sqlite"`
     // Additional, non parsed vars
     SelectedEngine database.SupportedEngines
 }
@@ -14693,11 +14821,11 @@ UsesPublishedPassword reports whether the configured database password is one th
 
 ```go
 type DatabaseMariaDBConfiguration struct {
-    Host     string
-    Port     int
-    Name     string
-    User     string
-    Password string
+    Host     string `mapstructure:"host"`
+    Port     int    `mapstructure:"port"`
+    Name     string `mapstructure:"name"`
+    User     string `mapstructure:"user"`
+    Password string `mapstructure:"password"`
 }
 ```
 
@@ -14708,7 +14836,7 @@ type DatabaseMariaDBConfiguration struct {
 
 ```go
 type DatabaseSQLiteConfiguration struct {
-    Filepath string
+    Filepath string `mapstructure:"filepath"`
 }
 ```
 
@@ -14731,8 +14859,8 @@ LoggingConfiguration contains all properties regarding the log configuration for
 
 ```go
 type LoggingConfiguration struct {
-    Enabled bool
-    File    string
+    Enabled bool   `mapstructure:"enabled"`
+    File    string `mapstructure:"file"`
 }
 ```
 
@@ -14743,7 +14871,7 @@ MailDigestConfiguration controls when the expiry digest email is sent.
 
 ```go
 type MailDigestConfiguration struct {
-    Enabled     bool
+    Enabled     bool   `mapstructure:"enabled"`
     DefaultTime string `mapstructure:"defaultTime"` // "08:00"
 }
 ```
@@ -14767,10 +14895,10 @@ NotificationConfiguration contains all properties regarding the notification han
 
 ```go
 type NotificationConfiguration struct {
-    Enabled            bool
-    Interval           int
-    SMTP               SMTPConfiguration
-    Ntfy               NtfyConfiguration
+    Enabled            bool                            `mapstructure:"enabled"`
+    Interval           int                             `mapstructure:"interval"`
+    SMTP               SMTPConfiguration               `mapstructure:"smtp"`
+    Ntfy               NtfyConfiguration               `mapstructure:"ntfy"`
     MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
     Telegram           TelegramConfiguration           `mapstructure:"telegram"`
     MailDigest         MailDigestConfiguration         `mapstructure:"mailDigest"`
@@ -14784,9 +14912,9 @@ NtfyConfiguration contains all properties regarding the ntfy.sh notification pro
 
 ```go
 type NtfyConfiguration struct {
-    URL     string
-    Topic   string
-    Timeout int
+    URL     string `mapstructure:"url"`
+    Topic   string `mapstructure:"topic"`
+    Timeout int    `mapstructure:"timeout"`
 }
 ```
 
@@ -14826,11 +14954,11 @@ OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts A
 
 ```go
 type OpenFoodFactsConfiguration struct {
-    URL               string
-    Timeout           int
-    CacheEnabled      bool
-    ImageCacheEnabled bool
-    ImageCachePath    string
+    URL               string `mapstructure:"url"`
+    Timeout           int    `mapstructure:"timeout"`
+    CacheEnabled      bool   `mapstructure:"cacheEnabled"`
+    ImageCacheEnabled bool   `mapstructure:"imageCacheEnabled"`
+    ImageCachePath    string `mapstructure:"imageCachePath"`
 
     // Bulk dump import. It imports the OFF JSONL export into a separate store so
     // a scan resolves offline without a live API call, distinct from the
@@ -14856,12 +14984,12 @@ ProviantConfiguration is the configuration wrapper struct
 
 ```go
 type ProviantConfiguration struct {
-    Database         DatabaseConfiguration
-    Server           ServerConfiguration
-    Calendar         CalendarConfiguration `mapstructure:"calendar"`
-    Logging          LoggingConfiguration
-    Notification     NotificationConfiguration
-    OpenFoodFacts    OpenFoodFactsConfiguration
+    Database         DatabaseConfiguration         `mapstructure:"database"`
+    Server           ServerConfiguration           `mapstructure:"server"`
+    Calendar         CalendarConfiguration         `mapstructure:"calendar"`
+    Logging          LoggingConfiguration          `mapstructure:"logging"`
+    Notification     NotificationConfiguration     `mapstructure:"notification"`
+    OpenFoodFacts    OpenFoodFactsConfiguration    `mapstructure:"openfoodfacts"`
     OCR              OCRConfiguration              `mapstructure:"ocr"`
     RecipeAPI        RecipeAPIConfiguration        `mapstructure:"recipe_api"`
     Expiry           ExpiryConfiguration           `mapstructure:"expiry"`
@@ -15082,12 +15210,12 @@ SMTPConfiguration contains all properties regarding the notification handler tar
 
 ```go
 type SMTPConfiguration struct {
-    Host        string
-    Port        int
-    SSL         bool
-    User        string
-    FromAddress string
-    Password    string
+    Host        string `mapstructure:"host"`
+    Port        int    `mapstructure:"port"`
+    SSL         bool   `mapstructure:"ssl"`
+    User        string `mapstructure:"user"`
+    FromAddress string `mapstructure:"fromAddress"`
+    Password    string `mapstructure:"password"`
 }
 ```
 
@@ -15098,8 +15226,8 @@ SecurityHeadersConfiguration contains all properties for HTTP security headers
 
 ```go
 type SecurityHeadersConfiguration struct {
-    ContentSecurityPolicy string
-    CSRFTokenMaxAge       int `mapstructure:"csrf_token_max_age"` // seconds; default 86400 (24h)
+    ContentSecurityPolicy string `mapstructure:"contentSecurityPolicy"`
+    CSRFTokenMaxAge       int    `mapstructure:"csrf_token_max_age"` // seconds; default 86400 (24h)
 }
 ```
 
@@ -15110,22 +15238,22 @@ ServerConfiguration contains all properties regarding the proviant server
 
 ```go
 type ServerConfiguration struct {
-    Port int
+    Port int `mapstructure:"port"`
     // Host is the bind address. Empty means every interface (wildcard), which
     // is the default and keeps container deployments reachable. Set it to
     // 127.0.0.1 for a loopback-only listener.
-    Host            string
-    Authentication  AuthenticationConfiguration
-    TwoFactor       TwoFactorConfiguration `mapstructure:"twoFactor"`
-    CORS            CorsConfiguration
-    BaseURL         string
-    SecurityHeaders SecurityHeadersConfiguration
-    RateLimit       RateLimitConfiguration `mapstructure:"rateLimit"`
-    TrustedProxies  []string               `mapstructure:"trustedProxies"`
-    MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
-    Debug           bool                   `mapstructure:"debug"`
-    DemoMode        bool                   `mapstructure:"demoMode"`
-    MetricsEnabled  bool                   `mapstructure:"metricsEnabled"`
+    Host            string                       `mapstructure:"host"`
+    Authentication  AuthenticationConfiguration  `mapstructure:"authentication"`
+    TwoFactor       TwoFactorConfiguration       `mapstructure:"twoFactor"`
+    CORS            CorsConfiguration            `mapstructure:"cors"`
+    BaseURL         string                       `mapstructure:"baseURL"`
+    SecurityHeaders SecurityHeadersConfiguration `mapstructure:"securityHeaders"`
+    RateLimit       RateLimitConfiguration       `mapstructure:"rateLimit"`
+    TrustedProxies  []string                     `mapstructure:"trustedProxies"`
+    MaxUploadSizeMB int                          `mapstructure:"maxUploadSizeMB"`
+    Debug           bool                         `mapstructure:"debug"`
+    DemoMode        bool                         `mapstructure:"demoMode"`
+    MetricsEnabled  bool                         `mapstructure:"metricsEnabled"`
 }
 ```
 
@@ -15159,8 +15287,22 @@ TelegramConfiguration holds per\-instance Telegram settings \(no global bot toke
 
 ```go
 type TelegramConfiguration struct {
-    Timeout       int // HTTP client timeout in seconds (default: 15)
-    PollerWorkers int // Number of worker goroutines for polling all users (default: 10)
+    Timeout       int `mapstructure:"timeout"`       // HTTP client timeout in seconds (default: 15)
+    PollerWorkers int `mapstructure:"pollerWorkers"` // Number of worker goroutines for polling all users (default: 10)
+}
+```
+
+<a name="TemplateFile"></a>
+## type [TemplateFile](<https://github.com/Isotop7/proviant/blob/develop/src/models/configuration/reference_doc.go#L17-L22>)
+
+TemplateFile is a shipped configuration template.
+
+```go
+type TemplateFile struct {
+    // Name labels the template in the reference, for example "SQLite".
+    Name string
+    // Content is the raw YAML of the template.
+    Content []byte
 }
 ```
 

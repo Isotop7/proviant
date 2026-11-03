@@ -18,22 +18,22 @@ import (
 const maxTwoFactorRecoveryCodes = 50
 
 type DatabaseMariaDBConfiguration struct {
-	Host     string
-	Port     int
-	Name     string
-	User     string
-	Password string
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Name     string `mapstructure:"name"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
 }
 
 type DatabaseSQLiteConfiguration struct {
-	Filepath string
+	Filepath string `mapstructure:"filepath"`
 }
 
 // DatabaseConfiguration contains all properties regarding the database connection
 type DatabaseConfiguration struct {
-	Engine  string
-	MariaDB DatabaseMariaDBConfiguration
-	SQLite  DatabaseSQLiteConfiguration
+	Engine  string                       `mapstructure:"engine"`
+	MariaDB DatabaseMariaDBConfiguration `mapstructure:"mariadb"`
+	SQLite  DatabaseSQLiteConfiguration  `mapstructure:"sqlite"`
 	// Additional, non parsed vars
 	SelectedEngine database.SupportedEngines
 }
@@ -66,14 +66,14 @@ type TwoFactorConfiguration struct {
 
 // CorsConfiguration contains all properties for the CORS configuration of the proviant server
 type CorsConfiguration struct {
-	AllowAllOrigins bool
-	AllowedOrigins  []string
+	AllowAllOrigins bool     `mapstructure:"allowAllOrigins"`
+	AllowedOrigins  []string `mapstructure:"allowedOrigins"`
 }
 
 // SecurityHeadersConfiguration contains all properties for HTTP security headers
 type SecurityHeadersConfiguration struct {
-	ContentSecurityPolicy string
-	CSRFTokenMaxAge       int `mapstructure:"csrf_token_max_age"` // seconds; default 86400 (24h)
+	ContentSecurityPolicy string `mapstructure:"contentSecurityPolicy"`
+	CSRFTokenMaxAge       int    `mapstructure:"csrf_token_max_age"` // seconds; default 86400 (24h)
 }
 
 // RateLimitConfiguration holds per-endpoint rate limits in requests per minute.
@@ -88,22 +88,22 @@ type RateLimitConfiguration struct {
 
 // ServerConfiguration contains all properties regarding the proviant server
 type ServerConfiguration struct {
-	Port int
+	Port int `mapstructure:"port"`
 	// Host is the bind address. Empty means every interface (wildcard), which
 	// is the default and keeps container deployments reachable. Set it to
 	// 127.0.0.1 for a loopback-only listener.
-	Host            string
-	Authentication  AuthenticationConfiguration
-	TwoFactor       TwoFactorConfiguration `mapstructure:"twoFactor"`
-	CORS            CorsConfiguration
-	BaseURL         string
-	SecurityHeaders SecurityHeadersConfiguration
-	RateLimit       RateLimitConfiguration `mapstructure:"rateLimit"`
-	TrustedProxies  []string               `mapstructure:"trustedProxies"`
-	MaxUploadSizeMB int                    `mapstructure:"maxUploadSizeMB"`
-	Debug           bool                   `mapstructure:"debug"`
-	DemoMode        bool                   `mapstructure:"demoMode"`
-	MetricsEnabled  bool                   `mapstructure:"metricsEnabled"`
+	Host            string                       `mapstructure:"host"`
+	Authentication  AuthenticationConfiguration  `mapstructure:"authentication"`
+	TwoFactor       TwoFactorConfiguration       `mapstructure:"twoFactor"`
+	CORS            CorsConfiguration            `mapstructure:"cors"`
+	BaseURL         string                       `mapstructure:"baseURL"`
+	SecurityHeaders SecurityHeadersConfiguration `mapstructure:"securityHeaders"`
+	RateLimit       RateLimitConfiguration       `mapstructure:"rateLimit"`
+	TrustedProxies  []string                     `mapstructure:"trustedProxies"`
+	MaxUploadSizeMB int                          `mapstructure:"maxUploadSizeMB"`
+	Debug           bool                         `mapstructure:"debug"`
+	DemoMode        bool                         `mapstructure:"demoMode"`
+	MetricsEnabled  bool                         `mapstructure:"metricsEnabled"`
 }
 
 // CalendarConfiguration contains settings for calendar token expiry and warnings.
@@ -114,25 +114,25 @@ type CalendarConfiguration struct {
 
 // LoggingConfiguration contains all properties regarding the log configuration for zerolog
 type LoggingConfiguration struct {
-	Enabled bool
-	File    string
+	Enabled bool   `mapstructure:"enabled"`
+	File    string `mapstructure:"file"`
 }
 
 // SMTPConfiguration contains all properties regarding the notification handler target
 type SMTPConfiguration struct {
-	Host        string
-	Port        int
-	SSL         bool
-	User        string
-	FromAddress string
-	Password    string
+	Host        string `mapstructure:"host"`
+	Port        int    `mapstructure:"port"`
+	SSL         bool   `mapstructure:"ssl"`
+	User        string `mapstructure:"user"`
+	FromAddress string `mapstructure:"fromAddress"`
+	Password    string `mapstructure:"password"`
 }
 
 // NtfyConfiguration contains all properties regarding the ntfy.sh notification provider
 type NtfyConfiguration struct {
-	URL     string
-	Topic   string
-	Timeout int
+	URL     string `mapstructure:"url"`
+	Topic   string `mapstructure:"topic"`
+	Timeout int    `mapstructure:"timeout"`
 }
 
 // MonthlyWasteReportConfiguration controls when the monthly waste report email is sent.
@@ -143,22 +143,22 @@ type MonthlyWasteReportConfiguration struct {
 
 // TelegramConfiguration holds per-instance Telegram settings (no global bot token).
 type TelegramConfiguration struct {
-	Timeout       int // HTTP client timeout in seconds (default: 15)
-	PollerWorkers int // Number of worker goroutines for polling all users (default: 10)
+	Timeout       int `mapstructure:"timeout"`       // HTTP client timeout in seconds (default: 15)
+	PollerWorkers int `mapstructure:"pollerWorkers"` // Number of worker goroutines for polling all users (default: 10)
 }
 
 // MailDigestConfiguration controls when the expiry digest email is sent.
 type MailDigestConfiguration struct {
-	Enabled     bool
+	Enabled     bool   `mapstructure:"enabled"`
 	DefaultTime string `mapstructure:"defaultTime"` // "08:00"
 }
 
 // NotificationConfiguration contains all properties regarding the notification handler
 type NotificationConfiguration struct {
-	Enabled            bool
-	Interval           int
-	SMTP               SMTPConfiguration
-	Ntfy               NtfyConfiguration
+	Enabled            bool                            `mapstructure:"enabled"`
+	Interval           int                             `mapstructure:"interval"`
+	SMTP               SMTPConfiguration               `mapstructure:"smtp"`
+	Ntfy               NtfyConfiguration               `mapstructure:"ntfy"`
 	MonthlyWasteReport MonthlyWasteReportConfiguration `mapstructure:"monthlyWasteReport"`
 	Telegram           TelegramConfiguration           `mapstructure:"telegram"`
 	MailDigest         MailDigestConfiguration         `mapstructure:"mailDigest"`
@@ -166,11 +166,11 @@ type NotificationConfiguration struct {
 
 // OpenFoodFactsConfiguration contains all properties regarding the OpenFoodFacts API controller
 type OpenFoodFactsConfiguration struct {
-	URL               string
-	Timeout           int
-	CacheEnabled      bool
-	ImageCacheEnabled bool
-	ImageCachePath    string
+	URL               string `mapstructure:"url"`
+	Timeout           int    `mapstructure:"timeout"`
+	CacheEnabled      bool   `mapstructure:"cacheEnabled"`
+	ImageCacheEnabled bool   `mapstructure:"imageCacheEnabled"`
+	ImageCachePath    string `mapstructure:"imageCachePath"`
 
 	// Bulk dump import. It imports the OFF JSONL export into a separate store so
 	// a scan resolves offline without a live API call, distinct from the
@@ -279,12 +279,12 @@ func (c ShoppingListSyncConfiguration) IsProviderEnabled(provider string) bool {
 
 // ProviantConfiguration is the configuration wrapper struct
 type ProviantConfiguration struct {
-	Database         DatabaseConfiguration
-	Server           ServerConfiguration
-	Calendar         CalendarConfiguration `mapstructure:"calendar"`
-	Logging          LoggingConfiguration
-	Notification     NotificationConfiguration
-	OpenFoodFacts    OpenFoodFactsConfiguration
+	Database         DatabaseConfiguration         `mapstructure:"database"`
+	Server           ServerConfiguration           `mapstructure:"server"`
+	Calendar         CalendarConfiguration         `mapstructure:"calendar"`
+	Logging          LoggingConfiguration          `mapstructure:"logging"`
+	Notification     NotificationConfiguration     `mapstructure:"notification"`
+	OpenFoodFacts    OpenFoodFactsConfiguration    `mapstructure:"openfoodfacts"`
 	OCR              OCRConfiguration              `mapstructure:"ocr"`
 	RecipeAPI        RecipeAPIConfiguration        `mapstructure:"recipe_api"`
 	Expiry           ExpiryConfiguration           `mapstructure:"expiry"`

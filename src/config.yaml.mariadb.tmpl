@@ -1,20 +1,12 @@
 ---
 server:
-  # Public URL of this deployment. The scheme also decides whether the session
-  # and CSRF cookies carry the Secure attribute: they do over https, and must
-  # not over http, or the browser drops them.
   baseURL: "https://proviant.local.de"
   port: 5114
-  # Bind address. Empty means every interface (needed in a container). Set to
-  # 127.0.0.1 to serve loopback only.
   host: ""
   maxUploadSizeMB: 5
   debug: false
   metricsEnabled: false
   authentication:
-    # REQUIRED. No default is shipped: a publicly known secret lets anyone forge
-    # a session token for any household. Generation: openssl rand -hex 32
-    # Can also be supplied via PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD.
     tokenPassword: ""
     tokenLifetime: 8
     max_login_attempts: 3
@@ -25,16 +17,8 @@ server:
     password_require_special: false
     password_check_breached: true
   twoFactor:
-    # Master switch for TOTP two-factor authentication. While it is off the
-    # server exposes no enrolment endpoints and stores no secrets.
     enabled: false
-    # REQUIRED when enabled: true. 32 random bytes, base64 encoded.
-    # The value below is the published placeholder: startup refuses it, so it
-    # has to be replaced. Generation: openssl rand -base64 32
-    # Can also be supplied via PROVIANT_SERVER_TWOFACTOR_ENCRYPTIONKEY.
-    # Must differ from server.authentication.tokenPassword.
     encryptionKey: "cHJvdmlhbnQtZGVmYXVsdC10b3RwLWtleS0wMDAwMDA="
-    # Shown as the account name in the authenticator app.
     issuer: "Proviant"
     recoveryCodeCount: 10
   cors:
@@ -42,13 +26,6 @@ server:
     allowedOrigins:
       - "http://localhost"
       - "http://myproviant.instance"
-  # If proviant runs behind a reverse proxy (nginx, traefik, caddy), list the
-  # proxy's IP CIDRs here so X-Forwarded-For / X-Real-IP headers are trusted
-  # for rate limiting. Otherwise leave empty (or omit) — headers are ignored
-  # and RemoteAddr is used instead.
-  # trustedProxies:
-  #   - "127.0.0.1/32"
-  #   - "10.0.0.0/8"
   securityHeaders:
     contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
     csrf_token_max_age: 86400
@@ -106,15 +83,10 @@ openfoodfacts:
   cacheEnabled: true
   imageCacheEnabled: false
   imageCachePath: "data/images"
-  # Bulk dump import for offline barcode lookup. Off by default: the full dump is
-  # a multi-gigabyte download. MariaDB needs the schema created by
-  # scripts/mariadb-init.sql before enabling; SQLite uses data/<dumpDatabase>.db.
   dumpImportEnabled: false
   dumpImportExpiryDays: 7
   dumpUrl: https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz
   dumpDeltaWindowDays: 14
-  # Directory the full dump is staged in before import; makes an interrupted
-  # download/import resumable. Needs room for the multi-gigabyte dump.
   dumpStagingPath: data
   dumpDatabase: off_dump
 
@@ -141,25 +113,6 @@ recipe_api:
   timeout: 10
   cache_enabled: true
   cache_ttl: 24
-  # Self-hosted providers (Mealie / Tandoor) — set provider, url and api_key
-  # together. When enabling one you MUST also replace the url above: pointing a
-  # self-hosted provider at the public TheMealDB URL would send your api_key and
-  # your household's product names to a third party on every request.
-  # provider: "mealie"
-  # url: "https://mealie.example.com"
-  # api_key: ""
-  # or:
-  # provider: "tandoor"
-  # url: "https://tandoor.example.com"
-  # api_key: ""
-  #
-  # A wrong self-hosted setup never stops the server from starting. It disables
-  # recipe suggestions instead (the page returns no suggestions and no outbound
-  # request is made) and logs a warning naming the problem, for both of:
-  #   - a missing api_key, and
-  #   - a url still pointing at the public TheMealDB host.
-  # An http:// url is accepted but warns: the api_key and search keywords would
-  # travel unencrypted, so prefer https:// unless the instance is LAN-only.
 
 shopping_list_sync:
   enabled: false
@@ -167,23 +120,11 @@ shopping_list_sync:
   bring_enabled: false
   todoist_enabled: false
 
-# Scheduled household backup. Writes one full JSON backup per household to a
-# local directory. Backup files contain household data in cleartext; point the
-# directory at storage you control and restrict who can read it.
 backup:
   enabled: false
   intervalHours: 24
   directory: "data/backups"
   retention: 7
 
-# Restore upload limits. A full household backup is larger than an ordinary
-# request body, so restore gets its own cap.
 restore:
   maxUploadSizeMB: 50
-
-# Queued offline sync. Bounds one POST /api/v1/products/sync-offline
-# request body; the outbox client reads this value from the page and
-# splits its backlog at it. Leave unset to keep the built-in default
-# (100 items x 4 KiB + headroom).
-# offlineSync:
-#   maxBatchBytes: 413696

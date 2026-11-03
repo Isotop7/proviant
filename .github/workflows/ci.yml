@@ -111,6 +111,13 @@ jobs:
           go test -v -count=1 -run 'TestPublishedMariaDBPasswordsMatchShippedFiles' ./util/... > "$output" || true
           cat "$output"
           grep -q -- '--- PASS: TestPublishedMariaDBPasswordsMatchShippedFiles' "$output"
+      # The configuration reference lives outside the module, so the test cache
+      # does not track it: the checks below have to run uncached.
+      - name: Check the configuration reference
+        run: |
+          cd ./src
+          go run ./cmd/configdoc --output ../docs/configuration.md --check
+          go test -count=1 ./models/configuration/
       - name: Test code coverage
         run: |
           cd ./src

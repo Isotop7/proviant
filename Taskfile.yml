@@ -53,10 +53,17 @@ tasks:
   test:
     desc: Run code tests
     dir: src
-    deps: [test-perf, test-published-passwords]
+    deps: [test-perf, test-published-passwords, configdoc-check]
     cmds:
       - go test -race -vet=off ./...
       - go mod verify
+
+  configdoc-check:
+    desc: Check the configuration reference against the configuration (uncached)
+    dir: src
+    cmds:
+      - go run ./cmd/configdoc --output ../docs/configuration.md --check
+      - go test -count=1 ./models/configuration/
 
   test-perf:
     desc: Run the wall-clock budget test on a clean build (the race detector inflates it beyond usefulness)
@@ -162,9 +169,15 @@ tasks:
     cmds:
       - go run github.com/swaggo/swag/cmd/swag@latest init -g api/api.go --parseDependency --quiet -o ./docs/
 
+  configdoc:
+    desc: Generate the configuration reference (docs/configuration.md)
+    dir: src
+    cmds:
+      - go run ./cmd/configdoc --output ../docs/configuration.md
+
   doc:
     desc: Generate all documentation
-    deps: [packagedoc, apidoc]
+    deps: [packagedoc, apidoc, configdoc]
 
   containerimage:
     desc: Build container image (requires podman or docker)

@@ -203,72 +203,9 @@ func readConfigFrom(config *viper.Viper, configDir string) (*configuration.Provi
 // applyConfigDefaults sets the built-in default of every configuration key that
 // has one.
 func applyConfigDefaults(config *viper.Viper) {
-	// Set defaults for monthly waste report schedule
-	config.SetDefault("notification.monthlyWasteReport.day", 1)
-	config.SetDefault("notification.monthlyWasteReport.hour", 8)
-
-	// Set defaults for digest scheduler
-	config.SetDefault("notification.digest.enabled", true)
-	config.SetDefault("notification.digest.defaultTime", "08:00")
-
-	// Set defaults for Telegram poller pool
-	config.SetDefault("notification.telegram.pollerWorkers", 10)
-
-	// Set defaults for recipe API
-	config.SetDefault("recipe_api.provider", "themealdb")
-	config.SetDefault("recipe_api.url", util.DefaultTheMealDBRecipeAPIURL)
-	config.SetDefault("recipe_api.timeout", 10)
-	config.SetDefault("recipe_api.cache_enabled", true)
-	config.SetDefault("recipe_api.cache_ttl", 24)
-
-	// Set default password policy
-	config.SetDefault("server.authentication.passwordMinLength", 12)
-	config.SetDefault("server.authentication.passwordRequireUppercase", true)
-	config.SetDefault("server.authentication.passwordRequireDigit", true)
-	config.SetDefault("server.authentication.passwordRequireSpecial", false)
-	config.SetDefault("server.authentication.passwordCheckBreached", true)
-	config.SetDefault("server.twoFactor.enabled", false)
-	config.SetDefault("server.twoFactor.issuer", util.DefaultTwoFactorIssuer)
-	config.SetDefault("server.twoFactor.recoveryCodeCount", util.DefaultTwoFactorRecoveryCodeCount)
-	config.SetDefault("server.maxUploadSizeMB", 5)
-	config.SetDefault("server.rateLimit.login_per_minute", 5)
-	config.SetDefault("server.rateLimit.signup_per_minute", 3)
-	config.SetDefault("server.rateLimit.export_per_minute", 1)
-	config.SetDefault("server.rateLimit.recipes_per_minute", 6)
-	config.SetDefault("server.demoMode", false)
-	config.SetDefault("server.metricsEnabled", false)
-
-	// Receipt scan defaults (issue #61): the OpenAI-compatible endpoint is
-	// assumed unless another is configured; timeout follows the vision-LLM
-	// reality of multi-second responses.
-	config.SetDefault("ocr.receipt.provider", util.ReceiptOCRProviderOpenAI)
-	config.SetDefault("ocr.receipt.timeout", util.ReceiptScanDefaultTimeout)
-
-	config.SetDefault("shopping_list_sync.enabled", false)
-	config.SetDefault("shopping_list_sync.interval_minutes", util.DefaultShoppingListSyncIntervalMinutes)
-	config.SetDefault("shopping_list_sync.bring_enabled", false)
-	config.SetDefault("shopping_list_sync.todoist_enabled", false)
-
-	// Scheduled household backup defaults
-	config.SetDefault("backup.enabled", false)
-	config.SetDefault("backup.intervalHours", util.DefaultBackupIntervalHours)
-	config.SetDefault("backup.directory", util.DefaultBackupDirectory)
-	config.SetDefault("backup.retention", util.DefaultBackupRetention)
-
-	// Household backup restore defaults
-	config.SetDefault("restore.maxUploadSizeMB", util.DefaultRestoreMaxUploadSizeMB)
-
-	// Queued offline sync defaults
-	config.SetDefault("offlineSync.maxBatchBytes", util.ReceiptBulkMaxBodyBytes)
-
-	// OpenFoodFacts bulk dump import defaults. The feature is opt-in: the full
-	// dump is a multi-gigabyte download, so it never starts on its own.
-	config.SetDefault("openfoodfacts.dumpImportEnabled", false)
-	config.SetDefault("openfoodfacts.dumpImportExpiryDays", util.DefaultOpenFoodFactsDumpExpiryDays)
-	config.SetDefault("openfoodfacts.dumpUrl", util.OpenFoodFactsDumpURL)
-	config.SetDefault("openfoodfacts.dumpDeltaWindowDays", util.DefaultOpenFoodFactsDeltaWindowDays)
-	config.SetDefault("openfoodfacts.dumpStagingPath", util.OffDumpStagingDir)
-	config.SetDefault("openfoodfacts.dumpDatabase", util.OffDumpDefaultDatabase)
+	for key, value := range configuration.Defaults() {
+		config.SetDefault(key, value)
+	}
 }
 
 // setupLogging initializes the logging and returns a zerolog.Logger instance.
@@ -360,7 +297,7 @@ func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configur
 	// Get server port or instead set default value
 	serverPort := proviantConfiguration.Server.Port
 	if serverPort <= 0 {
-		serverPort = 5114
+		serverPort = configuration.DefaultServerPort
 	}
 
 	// An empty host binds every interface, which is what a container deployment

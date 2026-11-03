@@ -15,10 +15,9 @@ import (
 )
 
 const (
-	csrfCookieName    = "csrf_token"
-	csrfHeaderName    = "X-CSRF-Token"
-	csrfTokenBytes    = 32
-	csrfDefaultMaxAge = 86400 // 24 hours
+	csrfCookieName = "csrf_token"
+	csrfHeaderName = "X-CSRF-Token"
+	csrfTokenBytes = 32
 )
 
 func generateCSRFToken() (string, error) {
@@ -46,7 +45,7 @@ func isStateMutatingMethod(method string) bool {
 func CSRFMiddleware(cfg *configuration.ProviantConfiguration) gin.HandlerFunc {
 	maxAge := cfg.Server.SecurityHeaders.CSRFTokenMaxAge
 	if maxAge <= 0 {
-		maxAge = csrfDefaultMaxAge
+		maxAge = configuration.DefaultCSRFTokenMaxAge
 	}
 
 	return func(ctx *gin.Context) {

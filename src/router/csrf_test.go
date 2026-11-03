@@ -79,8 +79,8 @@ func TestCSRFMiddleware(t *testing.T) {
 		if len(found.Value) != csrfTokenBytes*2 {
 			t.Errorf("cookie token length = %d, want %d", len(found.Value), csrfTokenBytes*2)
 		}
-		if found.MaxAge != csrfDefaultMaxAge {
-			t.Errorf("cookie MaxAge = %d, want %d", found.MaxAge, csrfDefaultMaxAge)
+		if found.MaxAge != configuration.DefaultCSRFTokenMaxAge {
+			t.Errorf("cookie MaxAge = %d, want %d", found.MaxAge, configuration.DefaultCSRFTokenMaxAge)
 		}
 	})
 

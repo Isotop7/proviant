@@ -16,8 +16,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 	gomail "gopkg.in/mail.v2"
+	"gorm.io/gorm"
 )
 
 // familyValue returns the summed value of every series of a metric family, or
