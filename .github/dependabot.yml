@@ -1,8 +1,8 @@
 # Dependabot — weekly version updates for the Go module, the npm packages, the
 # container base images and the GitHub Actions pinned in .github/workflows.
 #
-# The triage policy (who merges, what the merge gate is, how the standing
-# `braces` advisory and the Bootstrap 6 alpha are handled) lives in AGENTS.md
+# The triage policy (who merges, what the merge gate is, how a dev advisory
+# and the Bootstrap 6 alpha are handled) lives in AGENTS.md
 # → "Dependency Updates".
 #
 # Every proposal opens a pull request that runs the full CI, so an update is

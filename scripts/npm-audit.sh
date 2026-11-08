@@ -3,25 +3,31 @@
 #
 # Production dependencies gate the build (`npm audit --audit-level=high
 # --omit=dev`). Dev-dependency findings are reported for visibility but never
-# fail the run: the only dev advisory in this tree has no upstream fix and is
-# unreachable at runtime.
+# fail the run: a dev advisory is either closed by an `overrides` entry in
+# package.json or documented below as unreachable at runtime.
 #
-#   Advisory: GHSA-vfj7-8cjw-p6xm (CVE-2026-93687, high) affects `braces`
-#     through 3.0.3, and 3.0.3 is the latest published version — so `npm audit
-#     fix` can never resolve it.
-#   Reached via: `stylelint` (devDependency) -> `micromatch ^4.0.8` /
-#     `fast-glob` / `globby` -> `braces`. Upgrading stylelint does not help
-#     (stylelint 17.16.0 still depends on micromatch ^4.0.8).
-#   Unreachable: these packages run only during `task lint-css`, on
-#     repo-controlled globs — no untrusted input reaches `braces`, so the DoS
-#     precondition does not exist.
+# Dev advisories closed by an override (package.json):
 #
-# Re-check trigger: once a `braces` release greater than 3.0.3 ships, drop
-#   `--omit=dev` and re-enable the full gate.
-#   Upstream: https://github.com/micromatch/braces/issues/70
+#   GHSA-3g3m-2fjr-6pw4 (moderate) — `glob` up to 14.0.1 ignores an aborted
+#     traversal and keeps touching the filesystem after the timeout.
+#     Fixed in 14.0.2; `htmlhint` (devDependency) asks for `glob ^13.0.6`,
+#     so the tree is pinned to `^14.0.4`.
+#   GHSA-g3hv-75wg-m249 (moderate) — `minimatch` 7.0.0 to 11.0.0 expands a
+#     pattern into an exponential number of parts (denial of service).
+#     Fixed in 11.0.1; `eslint` asks for `minimatch ^10.2.6`, so the tree is
+#     pinned to `^11.0.5`. The pin is scoped to `minimatch@>=7.0.0` because
+#     `npm-run-all` needs the 3.x API.
 #
-# Never reintroduce `npm audit fix --force` or a `braces` `overrides` entry —
-# no fixed version exists, and neither clears the advisory.
+# Withdrawn upstream:
+#
+#   GHSA-vfj7-8cjw-p6xm (CVE-2026-93687, high) — the `braces` advisory this
+#     script used to carry was withdrawn on 2026-10-23 as "not a practically
+#     exploitable vulnerability", so npm audit stopped reporting it. There is
+#     nothing to upgrade and no override to add.
+#
+# Never reintroduce `npm audit fix --force`: it resolves a dev advisory by
+# downgrading the linters (`eslint` 10 to 9, `htmlhint` 1.9 to 1.7) and
+# breaks the toolchain. `task check-dependabot` fails on it.
 #
 # This script is the single source of truth for the policy: both CI workflows
 # invoke it (via the composite action .github/actions/npm-audit) and so does

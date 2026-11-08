@@ -584,7 +584,7 @@ The image scan publishes the scanned image to a `ci-scan-<sha>` tag and the rele
 
 Dependabot proposes the Go module, the npm packages, the container base images and the pinned GitHub Actions every Monday. The proposal opens a pull request against `main` that runs the CI — the Go lint and test jobs, the coverage gate, the frontend checks and the dependency-pinning check — so an update is testable before it lands. The image scan is the exception: a Dependabot pull request gets a read-only token, so that job runs after the merge instead. Nothing is merged automatically: a maintainer reviews the proposal and merges it once the run is green.
 
-The actions stay pinned to commit SHAs, the trivy image stays pinned to a digest, and Bootstrap 6 (an alpha) is bumped by hand. The triage policy — how a proposal is reviewed, how the standing `braces` advisory is re-checked, how the alpha is handled, who merges and what the merge gate is — lives in [`AGENTS.md`](AGENTS.md) under *Dependency Updates*. `task check-dependabot` verifies the configuration and the pinning invariants.
+The actions stay pinned to commit SHAs, the trivy image stays pinned to a digest, and Bootstrap 6 (an alpha) is bumped by hand. The triage policy — how a proposal is reviewed, how a dev advisory is closed, how the alpha is handled, who merges and what the merge gate is — lives in [`AGENTS.md`](AGENTS.md) under *Dependency Updates*. `task check-dependabot` verifies the configuration and the pinning invariants.
 
 ## Monitoring
 
