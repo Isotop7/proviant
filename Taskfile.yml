@@ -220,7 +220,7 @@ tasks:
       - '{{.CONTAINER_RUNTIME}} run -it --rm -v ./src/config.yaml.sqlite.tmpl:/app/config.yaml:Z -e PROVIANT_SERVER_AUTHENTICATION_TOKENPASSWORD=dev-only-local-secret --entrypoint /bin/sh proviant:latest'
 
   backup-drill:
-    desc: Restore the newest backup into a throwaway database and report whether it still matches
+    desc: Restore the newest backup of every household into a throwaway database and report whether it still matches
     dir: src
     cmds:
       - |

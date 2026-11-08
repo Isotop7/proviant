@@ -1,0 +1,79 @@
+{
+  "version": 3,
+  "household": {
+    "name": "Second Drill Household",
+    "createdAt": "2026-01-02 00:00:00"
+  },
+  "members": [
+    {
+      "username": "drill-member",
+      "email": "member@example.invalid",
+      "role": "member"
+    }
+  ],
+  "storageLocations": [
+    {
+      "id": 1,
+      "name": "Pantry",
+      "icon": "📦",
+      "sortOrder": 0
+    }
+  ],
+  "products": {
+    "active": [
+      {
+        "id": 1,
+        "barcode": "1234567890125",
+        "productName": "Rice",
+        "categories": "grain",
+        "countries": "",
+        "imageUrl": "",
+        "expireAt": "2027-01-01T00:00:00Z",
+        "scannedAt": "2026-01-02T00:00:00Z",
+        "notifiedAt": "0001-01-01T00:00:00Z",
+        "isPrivate": true,
+        "quantity": 2,
+        "packSize": "1 kg",
+        "removalReason": "",
+        "wasteCause": "",
+        "minStockAmount": 0,
+        "createdAt": "2026-01-02T00:00:00Z",
+        "ownerUsername": "drill-member",
+        "storageLocation": {
+          "id": 1,
+          "name": "Pantry",
+          "icon": "📦",
+          "sortOrder": 0
+        }
+      },
+      {
+        "id": 2,
+        "barcode": "1234567890126",
+        "productName": "Coffee",
+        "categories": "beverage",
+        "countries": "",
+        "imageUrl": "",
+        "expireAt": "2027-03-01T00:00:00Z",
+        "scannedAt": "2026-01-02T00:00:00Z",
+        "notifiedAt": "0001-01-01T00:00:00Z",
+        "isPrivate": false,
+        "quantity": 1,
+        "packSize": "500 g",
+        "removalReason": "",
+        "wasteCause": "",
+        "minStockAmount": 0,
+        "createdAt": "2026-01-02T00:00:00Z",
+        "ownerUsername": "drill-member"
+      }
+    ],
+    "archived": []
+  },
+  "stats": {
+    "wasteCount": 0,
+    "wastePercent": 0,
+    "totalActive": 2,
+    "totalArchived": 0,
+    "uniqueArchived": 0
+  },
+  "exportedAt": "2026-01-20T00:00:00Z"
+}

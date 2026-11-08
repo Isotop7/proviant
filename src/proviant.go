@@ -365,6 +365,7 @@ func runBackupDrillWith(
 	flags.SetOutput(os.Stderr)
 	document := flags.String("file", "", "drill this backup document instead of the newest one")
 	directory := flags.String("directory", "", "directory the backup documents live in")
+	maxAge := flags.String("max-age", "", "fail when a backup is older than this duration (e.g. 48h); 0 disables the check")
 	if err := flags.Parse(args); err != nil {
 		// A usage error is neither a broken backup nor a broken schema: there
 		// is nothing to drill.
@@ -374,7 +375,7 @@ func runBackupDrillWith(
 	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime}).With().Timestamp().Caller().Logger()
 
 	if configErr != nil {
-		logger.Warn().Msgf("Backup drill: the configuration could not be read (%s), the drill falls back to %s",
+		logger.Warn().Msgf("Backup drill: the configuration could not be read (%s), the drill falls back to %s and does not check the age of the backups",
 			configErr, util.DefaultBackupDirectory)
 	}
 	backupDirectory := strings.TrimSpace(*directory)
@@ -399,36 +400,121 @@ func runBackupDrillWith(
 		return controllers.BackupDrillExitOK
 	}
 
+	backupMaxAge, err := backupDrillMaxAge(*maxAge, config, configErr)
+	if err != nil {
+		logger.Error().Msgf("Backup drill: %s", err)
+		return controllers.BackupDrillExitUnavailable
+	}
+
 	drill := &controllers.BackupDrill{
 		Logger:           &logger,
 		BackupDirectory:  backupDirectory,
 		BackupFile:       strings.TrimSpace(*document),
 		LiveDatabasePath: liveDatabasePath,
+		MaxAge:           backupMaxAge,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(util.DefaultBackupDrillTimeoutMinutes)*time.Minute)
-	defer cancel()
-
-	result, err := drill.Run(ctx)
-	if result.BackupPath != "" {
-		printBackupDrillResult(&result)
-	}
+	run, err := drill.Run(context.Background())
+	printBackupDrillRun(&run)
 	if err != nil {
-		logger.Error().Msgf("Backup drill failed: %s", err)
+		logBackupDrillFailure(&logger, run, err)
 		return controllers.BackupDrillExitCode(err)
 	}
-	logger.Info().Msg("Backup drill: the newest backup restores and its counts match")
+	logger.Info().Msgf("Backup drill: the newest backup of %d households restores and its counts match", len(run.Results))
 	return controllers.BackupDrillExitOK
 }
 
-// printBackupDrillResult prints the comparison the drill produced.
+// logBackupDrillFailure reports what the drill found. The per-household lines
+// carry the failures of the households; the run's own failure — nothing to
+// drill, a scratch database that would not open, the drill running out of
+// time — belongs to no household and is reported on its own.
+func logBackupDrillFailure(logger *zerolog.Logger, run controllers.BackupDrillRun, err error) {
+	if run.Err != nil {
+		logger.Error().Msgf("Backup drill failed: %s", run.Err)
+	}
+	failed := failedHouseholds(run)
+	if failed == 0 {
+		if run.Err == nil {
+			logger.Error().Msgf("Backup drill failed: %s", err)
+		}
+		return
+	}
+	logger.Error().Msgf("Backup drill failed: %d of %d households", failed, len(run.Results))
+}
+
+// failedHouseholds counts the households the drill could not prove.
+func failedHouseholds(run controllers.BackupDrillRun) int {
+	failed := 0
+	for i := range run.Results {
+		if run.Results[i].Err != nil {
+			failed++
+		}
+	}
+	return failed
+}
+
+// backupDrillMaxAge resolves the age a backup may reach before the drill
+// calls it stale. An explicit flag wins; without one the bound follows the
+// backup interval, so a deployment that writes its backups every hour is not
+// drilled against a day-old document.
+func backupDrillMaxAge(
+	flagValue string,
+	config *configuration.ProviantConfiguration,
+	configErr error,
+) (time.Duration, error) {
+	if raw := strings.TrimSpace(flagValue); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return 0, fmt.Errorf("%s is not a duration: %w", raw, err)
+		}
+		return parsed, nil
+	}
+	if configErr != nil || config == nil || !config.Backup.Enabled {
+		return 0, nil
+	}
+	intervalHours := config.Backup.IntervalHours
+	if intervalHours <= 0 {
+		intervalHours = util.DefaultBackupIntervalHours
+	}
+	return 2 * time.Duration(intervalHours) * time.Hour, nil
+}
+
+// printBackupDrillRun prints the comparison the drill produced, one block per
+// household. The entities the backup document does not carry are listed once
+// at the end: they are the same for every household, and the gap is a
+// property of the backup schema, not of one household.
+func printBackupDrillRun(run *controllers.BackupDrillRun) {
+	for i := range run.Results {
+		printBackupDrillResult(&run.Results[i])
+	}
+	if len(run.Results) == 0 {
+		return
+	}
+	for _, entity := range controllers.BackupDrillUncoveredEntities() {
+		fmt.Printf("%-18s not carried by the backup document\n", string(entity))
+	}
+}
+
+// printBackupDrillResult prints the comparison of one household's backup.
 func printBackupDrillResult(result *controllers.BackupDrillResult) {
+	switch {
+	case result.HouseholdName != "" && result.HouseholdID != 0:
+		fmt.Printf("household: %s (id %d)\n", result.HouseholdName, result.HouseholdID)
+	case result.HouseholdName != "":
+		fmt.Printf("household: %s\n", result.HouseholdName)
+	case result.HouseholdID != 0:
+		fmt.Printf("household: id %d\n", result.HouseholdID)
+	default:
+		fmt.Printf("household: unknown\n")
+	}
 	fmt.Printf("backup:  %s\n", result.BackupPath)
 	fmt.Printf("age:     %s\n", result.BackupAge.Round(time.Second))
+	if result.Stale {
+		fmt.Printf("stale:   the backup job stopped writing\n")
+	}
 	fmt.Printf("schema:  %d\n", result.SchemaVersion)
 	for _, count := range result.Counts {
 		if !count.Covered {
-			fmt.Printf("%-18s not carried by the backup document\n", string(count.Entity))
 			continue
 		}
 		fmt.Printf("%-18s %d expected, %d restored\n", string(count.Entity), count.Expected, count.Restored)
@@ -436,6 +522,9 @@ func printBackupDrillResult(result *controllers.BackupDrillResult) {
 	for _, mismatch := range result.Mismatches {
 		fmt.Printf("%-18s %s: %s is %q in the document and %q in the restore\n",
 			mismatch.Entity, mismatch.Key, mismatch.Field, mismatch.Document, mismatch.Restored)
+	}
+	if result.Err != nil {
+		fmt.Printf("%-18s %s\n", "error", result.Err)
 	}
 }
 

@@ -168,7 +168,7 @@ func (c *BackupController) writeHouseholdBackup(
 		return "", err
 	}
 
-	filename := fmt.Sprintf("%shousehold-%d-%s.json", util.BackupFilePrefix, household.ID, time.Now().UTC().Format("20060102T150405.000Z"))
+	filename := util.BackupDocumentName(household.ID, time.Now())
 	path := filepath.Join(directory, filename)
 	tempPath := path + ".tmp"
 	if err := writeBackupFile(ctx, tempPath, payload); err != nil {
@@ -226,7 +226,7 @@ func (c *BackupController) pruneHouseholdBackups(directory string, householdID u
 	if retention <= 0 {
 		return
 	}
-	prefix := fmt.Sprintf("%shousehold-%d-", util.BackupFilePrefix, householdID)
+	prefix := util.BackupDocumentPrefix(householdID)
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		if c.Logger != nil {

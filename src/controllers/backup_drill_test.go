@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	stderrors "errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -51,10 +52,14 @@ func TestBackupDrillRestoresTheNewestBackupAndMatchesTheCounts(t *testing.T) {
 		BackupDirectory: directory,
 		ScratchRoot:     t.TempDir(),
 	}
-	result, err := drill.Run(context.Background())
+	run, err := drill.Run(context.Background())
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
+	if len(run.Results) != 1 {
+		t.Fatalf("results = %d, want 1", len(run.Results))
+	}
+	result := run.Results[0]
 
 	if result.SchemaVersion != apiModel.BackupSchemaVersion {
 		t.Errorf("schema version = %d, want %d", result.SchemaVersion, apiModel.BackupSchemaVersion)
@@ -115,7 +120,7 @@ func TestBackupDrillReportsASchemaMismatchDistinctly(t *testing.T) {
 // at all: a truncated or half-written file.
 func TestBackupDrillReportsACorruptDocument(t *testing.T) {
 	directory := t.TempDir()
-	writeBackupDocument(t, directory, `{"version":3,"products":`)
+	writeBackupDocument(t, directory, `{"version":`+strconv.Itoa(apiModel.BackupSchemaVersion)+`,"products":`)
 
 	logger := zerolog.Nop()
 	drill := &BackupDrill{Logger: &logger, BackupDirectory: directory, ScratchRoot: t.TempDir()}
@@ -248,10 +253,14 @@ func TestBackupDrillReportsTheEntitiesTheDocumentDoesNotCover(t *testing.T) {
 	}
 
 	drill := &BackupDrill{Logger: &logger, BackupDirectory: directory, ScratchRoot: t.TempDir()}
-	result, err := drill.Run(context.Background())
+	run, err := drill.Run(context.Background())
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
+	if len(run.Results) != 1 {
+		t.Fatalf("results = %d, want 1", len(run.Results))
+	}
+	result := run.Results[0]
 
 	for _, entity := range []BackupDrillEntity{BackupDrillRecipes, BackupDrillMealPlanEntries, BackupDrillShoppingListItems} {
 		found := false
@@ -600,8 +609,8 @@ func TestRestoreAppliesTheHouseholdNameTheSeedDidNot(t *testing.T) {
 }
 
 // TestBackupDrillExitCodes pins the exit codes a scheduled job reads: a
-// broken backup, a moved schema and nothing to drill are three different
-// outcomes.
+// broken backup, a moved schema, a backup that stopped being written and
+// nothing to drill are four different outcomes.
 func TestBackupDrillExitCodes(t *testing.T) {
 	cases := []struct {
 		name string
@@ -613,6 +622,12 @@ func TestBackupDrillExitCodes(t *testing.T) {
 		{name: "restore failed", err: errors.ErrBackupRestoreFailed, want: BackupDrillExitFailed},
 		{name: "counts differ", err: errors.ErrBackupDrillMismatch, want: BackupDrillExitFailed},
 		{name: "schema moved", err: errors.ErrBackupUnsupportedVersion, want: BackupDrillExitSchemaMismatch},
+		{name: "stale backup", err: errors.ErrBackupDrillStale, want: BackupDrillExitStale},
+		{name: "out of time", err: errors.ErrBackupDrillTimeout, want: BackupDrillExitTimeout},
+		{name: "a broken backup outranks a stale one", err: stderrors.Join(errors.ErrBackupDrillStale, errors.ErrBackupDrillMismatch), want: BackupDrillExitFailed},
+		{name: "a broken backup outranks a moved schema", err: stderrors.Join(errors.ErrBackupUnsupportedVersion, errors.ErrBackupInvalidDocument), want: BackupDrillExitFailed},
+		{name: "a moved schema outranks a timeout", err: stderrors.Join(errors.ErrBackupDrillTimeout, errors.ErrBackupUnsupportedVersion), want: BackupDrillExitSchemaMismatch},
+		{name: "a timeout outranks a stale backup", err: stderrors.Join(errors.ErrBackupDrillStale, errors.ErrBackupDrillTimeout), want: BackupDrillExitTimeout},
 		{name: "no backup", err: errors.ErrBackupNotFound, want: BackupDrillExitUnavailable},
 		{name: "no directory", err: errors.ErrBackupInvalidDirectory, want: BackupDrillExitUnavailable},
 	}
@@ -623,6 +638,156 @@ func TestBackupDrillExitCodes(t *testing.T) {
 				t.Errorf("exit code = %d, want %d", code, testCase.want)
 			}
 		})
+	}
+}
+
+// TestBackupDrillExitCodePrefersABrokenBackupOverEverythingElse covers the
+// precedence of the exit codes: a broken backup is a defect that needs
+// attention now, whatever else the run found.
+func TestBackupDrillExitCodePrefersABrokenBackupOverEverythingElse(t *testing.T) {
+	joined := stderrors.Join(errors.ErrBackupDrillStale, errors.ErrBackupDrillMismatch)
+
+	if code := BackupDrillExitCode(joined); code != BackupDrillExitFailed {
+		t.Errorf("exit code = %d, want %d", code, BackupDrillExitFailed)
+	}
+}
+
+// TestBackupDrillPicksTheNewestDocumentOfEachHousehold covers the selection:
+// every household is drilled, and the document it is drilled with is the
+// newest one the directory holds for it.
+func TestBackupDrillPicksTheNewestDocumentOfEachHousehold(t *testing.T) {
+	directory := t.TempDir()
+	older := time.Now().Add(-48 * time.Hour)
+	newer := time.Now().Add(-time.Hour)
+	writeBackupDocumentAs(t, directory, 1, older, healthyBackupDocument)
+	writeBackupDocumentAs(t, directory, 1, newer, healthyBackupDocument)
+	writeBackupDocumentAs(t, directory, 10, older, healthyBackupDocument)
+
+	logger := zerolog.Nop()
+	drill := &BackupDrill{Logger: &logger, BackupDirectory: directory, ScratchRoot: t.TempDir()}
+	run, err := drill.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if len(run.Results) != 2 {
+		t.Fatalf("results = %d, want 2 (one per household)", len(run.Results))
+	}
+	if run.Results[0].HouseholdID != 1 {
+		t.Errorf("household = %d, want 1", run.Results[0].HouseholdID)
+	}
+	if want := util.BackupDocumentName(1, newer); filepath.Base(run.Results[0].BackupPath) != want {
+		t.Errorf("document = %s, want the newest one of the household (%s)",
+			filepath.Base(run.Results[0].BackupPath), want)
+	}
+	if run.Results[1].HouseholdID != 10 {
+		t.Errorf("household = %d, want 10", run.Results[1].HouseholdID)
+	}
+}
+
+// TestBackupDrillDrillsEveryHousehold covers the other side of the
+// selection: a household whose newest document is broken does not stop the
+// drill, and the healthy household is still proven.
+func TestBackupDrillDrillsEveryHousehold(t *testing.T) {
+	directory := t.TempDir()
+	writtenAt := time.Now().Add(-time.Hour)
+	writeBackupDocumentAs(t, directory, 1, writtenAt, healthyBackupDocument)
+	writeBackupDocumentAs(t, directory, 2, writtenAt, "not a backup document")
+
+	logger := zerolog.Nop()
+	drill := &BackupDrill{Logger: &logger, BackupDirectory: directory, ScratchRoot: t.TempDir()}
+	run, err := drill.Run(context.Background())
+	if err == nil {
+		t.Fatal("Run error = nil, want the broken household")
+	}
+
+	if len(run.Results) != 2 {
+		t.Fatalf("results = %d, want 2 (one per household)", len(run.Results))
+	}
+	if run.Results[0].Err != nil {
+		t.Errorf("the healthy household failed: %v", run.Results[0].Err)
+	}
+	if run.Results[1].Err == nil {
+		t.Error("the broken household did not fail")
+	}
+	if code := BackupDrillExitCode(err); code != BackupDrillExitFailed {
+		t.Errorf("exit code = %d, want %d", code, BackupDrillExitFailed)
+	}
+}
+
+// TestBackupDrillFailsOnAStaleBackup covers the second silent failure: the
+// backup restores, but the job that writes the backups stopped.
+func TestBackupDrillFailsOnAStaleBackup(t *testing.T) {
+	directory := t.TempDir()
+	writeBackupDocumentAs(t, directory, 1, time.Now().Add(-72*time.Hour), healthyBackupDocument)
+
+	logger := zerolog.Nop()
+	drill := &BackupDrill{
+		Logger:          &logger,
+		BackupDirectory: directory,
+		ScratchRoot:     t.TempDir(),
+		MaxAge:          48 * time.Hour,
+	}
+	run, err := drill.Run(context.Background())
+	if err == nil {
+		t.Fatal("Run error = nil, want a stale backup")
+	}
+	if !stderrors.Is(err, errors.ErrBackupDrillStale) {
+		t.Errorf("error = %v, want %v", err, errors.ErrBackupDrillStale)
+	}
+	if code := BackupDrillExitCode(err); code != BackupDrillExitStale {
+		t.Errorf("exit code = %d, want %d", code, BackupDrillExitStale)
+	}
+	if len(run.Results) != 1 || !run.Results[0].Stale {
+		t.Errorf("results = %+v, want one stale document", run.Results)
+	}
+}
+
+// TestBackupDrillAcceptsAFreshBackup covers the other side of the staleness
+// bound: a backup within the bound is not a failure.
+func TestBackupDrillAcceptsAFreshBackup(t *testing.T) {
+	directory := t.TempDir()
+	writeBackupDocumentAs(t, directory, 1, time.Now().Add(-time.Hour), healthyBackupDocument)
+
+	logger := zerolog.Nop()
+	drill := &BackupDrill{
+		Logger:          &logger,
+		BackupDirectory: directory,
+		ScratchRoot:     t.TempDir(),
+		MaxAge:          48 * time.Hour,
+	}
+	run, err := drill.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(run.Results) != 1 || run.Results[0].Stale {
+		t.Errorf("results = %+v, want one fresh document", run.Results)
+	}
+}
+
+// TestBackupDrillIgnoresStalenessForAnExplicitDocument covers the document
+// the operator named by hand: it is not the backup job's newest output, so
+// its age says nothing about the job.
+func TestBackupDrillIgnoresStalenessForAnExplicitDocument(t *testing.T) {
+	directory := t.TempDir()
+	path := filepath.Join(directory, util.BackupDocumentName(1, time.Now().Add(-72*time.Hour)))
+	if err := os.WriteFile(path, []byte(healthyBackupDocument), 0o600); err != nil {
+		t.Fatalf("write the backup document: %v", err)
+	}
+
+	logger := zerolog.Nop()
+	drill := &BackupDrill{
+		Logger:          &logger,
+		BackupFile:      path,
+		ScratchRoot:     t.TempDir(),
+		MaxAge:          time.Hour,
+	}
+	run, err := drill.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(run.Results) != 1 || run.Results[0].Stale {
+		t.Errorf("results = %+v, want one document that is not stale", run.Results)
 	}
 }
 
@@ -677,6 +842,164 @@ func TestBackupDrillRejectsADocumentWhoseStatsDisagree(t *testing.T) {
 	}
 }
 
+// TestBackupDrillReportsAMissingDocument keeps a document that is not there
+// apart from a broken one: there is nothing to drill.
+func TestBackupDrillReportsAMissingDocument(t *testing.T) {
+	logger := zerolog.Nop()
+	missing := filepath.Join(t.TempDir(), util.BackupDocumentName(1, time.Now()))
+	drill := &BackupDrill{Logger: &logger, BackupFile: missing, ScratchRoot: t.TempDir()}
+	_, err := drill.Run(context.Background())
+	if err == nil {
+		t.Fatal("Run error = nil, want a missing document")
+	}
+	if !stderrors.Is(err, errors.ErrBackupNotFound) {
+		t.Errorf("error = %v, want %v", err, errors.ErrBackupNotFound)
+	}
+	if code := BackupDrillExitCode(err); code != BackupDrillExitUnavailable {
+		t.Errorf("exit code = %d, want %d", code, BackupDrillExitUnavailable)
+	}
+}
+
+// TestBackupDrillReportsADocumentItCannotRead keeps a backup the drill cannot
+// open out of the report: a file it cannot read is a backup it cannot prove,
+// and it must not vanish from the drill — nor take the households behind it
+// down with it.
+func TestBackupDrillReportsADocumentItCannotRead(t *testing.T) {
+	directory := t.TempDir()
+	writeBackupDocumentAs(t, directory, 1, time.Now(), healthyBackupDocument)
+	dangling := filepath.Join(directory, util.BackupDocumentName(2, time.Now()))
+	if err := os.Symlink(filepath.Join(directory, "gone.json"), dangling); err != nil {
+		t.Fatalf("symlink the backup document: %v", err)
+	}
+
+	logger := zerolog.Nop()
+	drill := &BackupDrill{Logger: &logger, BackupDirectory: directory, ScratchRoot: t.TempDir()}
+	run, err := drill.Run(context.Background())
+	if err == nil {
+		t.Fatal("Run error = nil, want the unreadable document")
+	}
+	if !stderrors.Is(err, errors.ErrBackupInvalidDocument) {
+		t.Errorf("error = %v, want %v", err, errors.ErrBackupInvalidDocument)
+	}
+
+	if len(run.Results) != 2 {
+		t.Fatalf("results = %d, want 2 (one per household)", len(run.Results))
+	}
+	if run.Results[0].Err != nil {
+		t.Errorf("the readable household failed: %v", run.Results[0].Err)
+	}
+	if run.Results[1].Err == nil {
+		t.Error("the unreadable household did not fail")
+	}
+	if run.Results[1].HouseholdID != 2 {
+		t.Errorf("household = %d, want 2", run.Results[1].HouseholdID)
+	}
+}
+
+// TestBackupDrillNamesTheHouseholdTheDocumentCarries covers the label of a
+// drilled document: the household knows itself by its name, and the id in the
+// file name is the bookkeeping of the instance that wrote it.
+func TestBackupDrillNamesTheHouseholdTheDocumentCarries(t *testing.T) {
+	directory := t.TempDir()
+	writeBackupDocumentAs(t, directory, 7, time.Now(), healthyBackupDocument)
+
+	logger := zerolog.Nop()
+	drill := &BackupDrill{Logger: &logger, BackupDirectory: directory, ScratchRoot: t.TempDir()}
+	run, err := drill.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(run.Results) != 1 {
+		t.Fatalf("results = %d, want 1", len(run.Results))
+	}
+	if run.Results[0].HouseholdName != "Drill Household" {
+		t.Errorf("household name = %q, want %q", run.Results[0].HouseholdName, "Drill Household")
+	}
+	if run.Results[0].HouseholdID != 7 {
+		t.Errorf("household id = %d, want 7", run.Results[0].HouseholdID)
+	}
+}
+
+// TestBackupDrillReportsATimedOutRestoreAsATimeout keeps a restore that ran
+// out of time apart from a broken backup: the operator has to know which of
+// the two it was, or they go hunting for a corrupt file that is fine.
+func TestBackupDrillReportsATimedOutRestoreAsATimeout(t *testing.T) {
+	directory := t.TempDir()
+	writeBackupDocumentAs(t, directory, 1, time.Now(), healthyBackupDocument)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	logger := zerolog.Nop()
+	drill := &BackupDrill{Logger: &logger, BackupDirectory: directory, ScratchRoot: t.TempDir()}
+	_, err := drill.Run(ctx)
+	if err == nil {
+		t.Fatal("Run error = nil, want a timeout")
+	}
+	if !stderrors.Is(err, errors.ErrBackupDrillTimeout) {
+		t.Errorf("error = %v, want %v", err, errors.ErrBackupDrillTimeout)
+	}
+	if stderrors.Is(err, errors.ErrBackupRestoreFailed) {
+		t.Errorf("error = %v, want it kept apart from a broken backup", err)
+	}
+	if code := BackupDrillExitCode(err); code != BackupDrillExitTimeout {
+		t.Errorf("exit code = %d, want %d", code, BackupDrillExitTimeout)
+	}
+}
+
+// TestDrillFailureNamesATimeout covers the classification of a failure: a
+// restore that ran out of time is not a broken backup.
+func TestDrillFailureNamesATimeout(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := drillFailure(ctx, fmt.Errorf("%w: %s", errors.ErrBackupRestoreFailed, "context deadline exceeded"))
+
+	if !stderrors.Is(err, errors.ErrBackupDrillTimeout) {
+		t.Errorf("error = %v, want %v", err, errors.ErrBackupDrillTimeout)
+	}
+	if stderrors.Is(err, errors.ErrBackupRestoreFailed) {
+		t.Errorf("error = %v, want it kept apart from a broken backup", err)
+	}
+}
+
+// TestBackupDrillUncoveredEntitiesAreTheSchemaGap pins the entities the
+// backup document does not carry. They are the gap issue #469 tracks: a new
+// one is a change to the backup schema, not to the drill.
+func TestBackupDrillUncoveredEntitiesAreTheSchemaGap(t *testing.T) {
+	want := []BackupDrillEntity{BackupDrillRecipes, BackupDrillMealPlanEntries, BackupDrillShoppingListItems}
+
+	got := BackupDrillUncoveredEntities()
+	if len(got) != len(want) {
+		t.Fatalf("uncovered = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("uncovered = %v, want %v", got, want)
+		}
+	}
+}
+
+// TestBackupDrillExpectedCountCoversEveryCarriedEntity keeps the count of
+// every carried entity in step with the list of carried entities. An entity
+// the comparison claims to carry but cannot count is compared against
+// nothing, and the drill would pass on rows the restore dropped.
+func TestBackupDrillExpectedCountCoversEveryCarriedEntity(t *testing.T) {
+	document := apiModel.FullExportResponse{
+		Products: apiModel.FullExportProducts{
+			Active:   []apiModel.ExportProductResponse{{Barcode: "1234567890123"}},
+			Archived: []apiModel.ExportProductResponse{{Barcode: "1234567890124"}},
+		},
+		StorageLocations: []apiModel.StorageLocationResponse{{Name: "Fridge"}},
+	}
+
+	for entity := range backupDrillCarriedEntities {
+		if backupDrillExpectedCount(&document, entity) == 0 {
+			t.Errorf("%s is carried, but the document's rows are not counted", entity)
+		}
+	}
+}
+
 // TestBackupDrillReportsNoBackup keeps an empty backup directory apart from a
 // broken document: there is nothing to drill.
 func TestBackupDrillReportsNoBackup(t *testing.T) {
@@ -723,11 +1046,27 @@ func TestBackupDrillCountsTheStorageLocationsTheRestoreCreates(t *testing.T) {
 	t.Fatal("the storage locations are missing from the comparison table")
 }
 
+// healthyBackupDocument is a backup document that restores: it carries no
+// products and no locations, so the drill's comparison has nothing to
+// disagree about. Its version is the one this release writes, so a schema
+// bump does not turn every test into a "the document names no schema
+// version" failure.
+var healthyBackupDocument = `{"version":` + strconv.Itoa(apiModel.BackupSchemaVersion) +
+	`,"household":{"name":"Drill Household"},"members":[],` +
+	`"products":{"active":[],"archived":[]},"stats":{"totalActive":0,"totalArchived":0}}`
+
 // writeBackupDocument writes a backup document into a backup directory under
 // the name the scheduler gives it.
 func writeBackupDocument(t *testing.T, directory, content string) {
 	t.Helper()
-	name := filepath.Join(directory, util.BackupFilePrefix+"household-1-20260101T000000.000Z.json")
+	writeBackupDocumentAs(t, directory, 1, time.Now(), content)
+}
+
+// writeBackupDocumentAs writes a backup document under the name the
+// scheduler gives the backup of one household.
+func writeBackupDocumentAs(t *testing.T, directory string, householdID uint, writtenAt time.Time, content string) {
+	t.Helper()
+	name := filepath.Join(directory, util.BackupDocumentName(householdID, writtenAt))
 	if err := os.WriteFile(name, []byte(content), 0o600); err != nil {
 		t.Fatalf("write the backup document: %v", err)
 	}

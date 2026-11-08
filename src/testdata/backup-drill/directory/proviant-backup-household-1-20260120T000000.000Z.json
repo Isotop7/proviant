@@ -1,0 +1,87 @@
+{
+  "version": 3,
+  "household": {
+    "name": "Drill Household",
+    "createdAt": "2026-01-01 00:00:00"
+  },
+  "members": [
+    {
+      "username": "drill-admin",
+      "email": "drill@example.invalid",
+      "role": "admin"
+    }
+  ],
+  "storageLocations": [
+    {
+      "id": 1,
+      "name": "Fridge",
+      "icon": "🧊",
+      "sortOrder": 0
+    }
+  ],
+  "products": {
+    "active": [
+      {
+        "id": 1,
+        "barcode": "1234567890123",
+        "productName": "Milk",
+        "categories": "milk",
+        "countries": "",
+        "imageUrl": "",
+        "expireAt": "2026-12-01T00:00:00Z",
+        "scannedAt": "2026-01-01T00:00:00Z",
+        "notifiedAt": "0001-01-01T00:00:00Z",
+        "isPrivate": false,
+        "quantity": 1,
+        "packSize": "1 l",
+        "removalReason": "",
+        "wasteCause": "",
+        "minStockAmount": 0,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "ownerUsername": "drill-admin",
+        "storageLocation": {
+          "id": 1,
+          "name": "Fridge",
+          "icon": "🧊",
+          "sortOrder": 0
+        }
+      }
+    ],
+    "archived": [
+      {
+        "id": 2,
+        "barcode": "1234567890124",
+        "productName": "Yogurt",
+        "categories": "dairy",
+        "countries": "",
+        "imageUrl": "",
+        "expireAt": "2026-01-15T00:00:00Z",
+        "scannedAt": "2026-01-05T00:00:00Z",
+        "notifiedAt": "0001-01-01T00:00:00Z",
+        "isPrivate": false,
+        "quantity": 1,
+        "packSize": "500 g",
+        "removalReason": "spoiled",
+        "wasteCause": "",
+        "minStockAmount": 0,
+        "createdAt": "2026-01-05T00:00:00Z",
+        "archivedAt": "2026-01-15T00:00:00Z",
+        "ownerUsername": "drill-admin",
+        "storageLocation": {
+          "id": 2,
+          "name": "Pantry",
+          "icon": "📦",
+          "sortOrder": 1
+        }
+      }
+    ]
+  },
+  "stats": {
+    "wasteCount": 0,
+    "wastePercent": 0,
+    "totalActive": 1,
+    "totalArchived": 1,
+    "uniqueArchived": 1
+  },
+  "exportedAt": "2026-01-20T00:00:00Z"
+}

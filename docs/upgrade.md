@@ -47,8 +47,8 @@ existing volume the image keeps the password of its initialization.
 household data — products, storage locations, members — and nothing else: no accounts, no
 two-factor secrets, no schema. It restores a household, not a database.
 
-[docs/backup-drill.md](./backup-drill.md) describes the drill that proves the newest document still
-restores.
+[docs/backup-drill.md](./backup-drill.md) describes the drill that proves the newest document of
+every household still restores.
 
 ## Upgrading
 
@@ -116,7 +116,7 @@ cleanly. Three things an operator notices:
   configuration file that never mentions `server.demoMode`.
 
 The server also warns at startup when the database password is one this repository publishes, and
-`proviant backup-drill` proves that the newest scheduled backup still restores.
+`proviant backup-drill` proves that the newest scheduled backup of every household still restores.
 
 ### v0.25.0
 

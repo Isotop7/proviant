@@ -275,8 +275,8 @@ restrict who can read it.
 #### Restore drill
 
 The backup job writes documents; nothing proves that they can be read back. The drill restores the
-newest document into a throwaway database and compares the restored rows with the rows the document
-says it carries. It never opens the live database.
+newest document of every household into a throwaway database and compares the restored rows with the
+rows the document says it carries. It never opens the live database.
 
 Run it on a schedule — a cron entry that fails the job when the drill fails:
 
@@ -291,7 +291,7 @@ The commands, the exit codes, what the drill compares and what a failure means a
 
 A restore upload is a full household backup and is therefore larger than an ordinary request body,
 so it has its own cap (`restore.maxUploadSizeMB`). The restore drill proves that the newest
-scheduled backup still restores.
+scheduled backup of every household still restores.
 
 ## Upgrade / Migration
 

@@ -34,11 +34,12 @@ jobs:
         run: npm run css
       - name: Test the backup drill
         working-directory: src
-        run: go test -race -count=1 -run 'TestBackupDrill' ./controllers/ .
+        run: go test -race -count=1 -run 'TestBackupDrill|TestDrillFailure' ./controllers/ .
       # The drill restores a backup document into a throwaway database and
       # exits non-zero when the backup is broken. The exit codes are the
       # contract a scheduled job reads: 0 restores, 1 is broken, 2 is a moved
-      # schema and 3 is nothing to drill.
+      # schema, 3 is nothing to drill, 4 is a backup that stopped being
+      # written and 5 is a drill that ran out of time.
       #
       # The binary is built and run directly: `go run` always exits 1 when the
       # program fails, which would flatten every failure onto one code.
@@ -80,5 +81,23 @@ jobs:
           set -e
           if [ "$code" -ne 3 ]; then
             echo "::error::the drill exited with $code, want 3 when there is nothing to drill"
+            exit 1
+          fi
+      # The backup directory holds one document per household, and the drill
+      # restores every one of them. The fixtures carry a timestamp from 2026,
+      # so the staleness bound is switched off for them.
+      - name: Drill a backup directory of two households
+        working-directory: src
+        run: |
+          "$RUNNER_TEMP/proviant" backup-drill --directory testdata/backup-drill/directory --max-age 0
+      - name: Drill a backup directory whose backups are too old
+        working-directory: src
+        run: |
+          set +e
+          "$RUNNER_TEMP/proviant" backup-drill --directory testdata/backup-drill/directory --max-age 1h
+          code=$?
+          set -e
+          if [ "$code" -ne 4 ]; then
+            echo "::error::the drill exited with $code, want 4 when the backups stopped being written"
             exit 1
           fi

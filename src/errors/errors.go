@@ -715,6 +715,14 @@ var (
 	// rows the document says it carries
 	ErrBackupDrillMismatch = errors.New("the restored backup does not match the document")
 
+	// ErrBackupDrillStale is thrown when the drilled backup is older than the
+	// bound the drill applies: the job that writes the backups stopped
+	ErrBackupDrillStale = errors.New("the backup is older than the drill allows")
+
+	// ErrBackupDrillTimeout is thrown when the drill ran out of time before
+	// it could restore a household: the backup was not shown to be broken
+	ErrBackupDrillTimeout = errors.New("the drill ran out of time")
+
 	/*
 	 * CSV import related errors
 	 */

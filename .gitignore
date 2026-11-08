@@ -46,6 +46,18 @@ src/test/*.httpie
 .vscode/
 proviant.log
 src/data
+/data
+
+# The drill's fixtures are tracked, but a backup document dropped into the
+# directory is not: backup documents carry household data in cleartext. A new
+# fixture needs its own exception line.
+src/testdata/backup-drill/**
+!src/testdata/backup-drill/household-1.json
+!src/testdata/backup-drill/household-1-schema-mismatch.json
+!src/testdata/backup-drill/household-1-truncated.json
+!src/testdata/backup-drill/directory/
+!src/testdata/backup-drill/directory/proviant-backup-household-1-20260120T000000.000Z.json
+!src/testdata/backup-drill/directory/proviant-backup-household-10-20260120T000000.000Z.json
 /proviant
 
 # Compose secrets (PROVIANT_JWT_SECRET, database passwords)

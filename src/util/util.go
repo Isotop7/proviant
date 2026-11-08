@@ -336,6 +336,12 @@ const (
 	// Retention pruning matches on it, so renaming it orphans old files.
 	BackupFilePrefix                      = "proviant-backup-"
 	DefaultShoppingListSyncTimeoutSeconds = 15
+
+	// BackupDocumentTimestampLayout is the timestamp a backup document's
+	// name carries. The name is the only record of when a document was
+	// written that survives a copy of the backup directory, so the drill
+	// reads the age from it rather than from the file's modification time.
+	BackupDocumentTimestampLayout = "20060102T150405.000Z"
 	DefaultTodoistAPIBaseURL              = "https://api.todoist.com/rest/v2"
 	DefaultBringAPIBaseURL                = "https://api.getbring.com/rest/v2"
 	SyncRefStatusSynced                   = "synced"
@@ -356,9 +362,9 @@ const (
 	// into a throwaway database and reports whether it still matches.
 	BackupDrillCommand = "backup-drill"
 
-	// DefaultBackupDrillTimeoutMinutes bounds one drill run. A restore of a
-	// large household takes minutes; a drill that hangs forever would block
-	// the scheduled job it runs in.
+	// DefaultBackupDrillTimeoutMinutes bounds the restore of one household.
+	// A restore of a large household takes minutes; a restore that hangs
+	// forever would block the scheduled job it runs in.
 	DefaultBackupDrillTimeoutMinutes = 10
 
 	// BackupDrillScratchPrefix names the temporary directory the drill's

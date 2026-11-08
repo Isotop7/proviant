@@ -603,7 +603,11 @@ function checkGoToolchain() {
     for (const version of found) record(file, version);
   }
 
-  for (const file of ['.github/workflows/ci.yml', '.github/workflows/weekly-vuln-scan.yml']) {
+  for (const file of [
+    '.github/workflows/ci.yml',
+    '.github/workflows/weekly-vuln-scan.yml',
+    '.github/workflows/weekly-backup-drill.yml',
+  ]) {
     const content = readOptional(file);
     if (content === null) {
       fail('go-toolchain', `${file} is missing`);
