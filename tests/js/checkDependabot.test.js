@@ -13,7 +13,7 @@ if (!HAS_NODE_MODULES) {
   console.warn("checkDependabot: skipped — the npm dependencies are missing, run 'task init' first");
 }
 
-const ROOT_FILES = ["package.json", "Taskfile.yml", "Dockerfile", "Dockerfile.demo"];
+const ROOT_FILES = ["package.json", "Taskfile.yml", "Dockerfile", "Dockerfile.demo", ".nvmrc"];
 
 function repoFile(file) {
   return fs.readFileSync(path.join(REPO, file), "utf8");
@@ -461,5 +461,51 @@ describe.skipIf(!HAS_NODE_MODULES)("check-dependabot gate", () => {
     const result = runCheck({ "Dockerfile": repoFile("Dockerfile").replace(`alpine:${version}`, `alpine:${bumpPatch(version)}`) });
     expect(result.status).toBe(1);
     expect(result.output).toMatch(/base-image/);
+  });
+
+  it("rejects a Node toolchain that drifted in one image", () => {
+    const result = runCheck({ "Dockerfile": repoFile("Dockerfile").replace("nodejs=~24", "nodejs=~25") });
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/node-toolchain/);
+  });
+
+  it("rejects a workflow that names a second Node version", () => {
+    const workflow = repoFile(".github/workflows/ci.yml").replace("NODE_VERSION: '24'", "NODE_VERSION: '25'");
+    const result = runCheck({ ".github/workflows/ci.yml": workflow });
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/node-toolchain/);
+  });
+
+  it("rejects a workflow that hardcodes the Node version", () => {
+    const workflow = repoFile(".github/workflows/ci.yml").replace("node-version: ${{ env.NODE_VERSION }}", "node-version: '24'");
+    const result = runCheck({ ".github/workflows/ci.yml": workflow });
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/node-toolchain/);
+  });
+
+  it("rejects a manifest without a Node range", () => {
+    const manifest = JSON.parse(repoFile("package.json"));
+    delete manifest.engines;
+    const result = runCheck({ "package.json": JSON.stringify(manifest, null, 2) });
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/node-toolchain/);
+  });
+
+  it("rejects a missing .nvmrc", () => {
+    const result = runCheck({ ".nvmrc": null });
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/node-toolchain/);
+  });
+
+  it("rejects an empty .nvmrc", () => {
+    const result = runCheck({ ".nvmrc": "\n" });
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/node-toolchain/);
+  });
+
+  it("rejects a Node range that reaches into the next major", () => {
+    const result = runCheck({ "package.json": manifestWith({ engines: { node: ">=24.15.0 <26" } }) });
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/node-toolchain/);
   });
 });

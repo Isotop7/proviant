@@ -25,6 +25,10 @@
 //      workflows — a base-image bump that skips the workflows builds the
 //      image with a different compiler than CI tests with.
 //   8. Both Dockerfiles run on the same alpine base image.
+//   9. The Node major is the same in the manifest, in .nvmrc, in the workflows,
+//      in the Dockerfiles and in the interpreter that runs this script — an
+//      image built with a different Node than CI tests with is the same silent
+//      divergence the Go check above exists to catch.
 //
 // The Monday schedule is fixed policy, not a preference: the README documents
 // it, so moving a day means moving the day in the config, here and there.
@@ -642,6 +646,96 @@ function checkGoToolchain() {
   }
 }
 
+// ── 9. The Node toolchain ───────────────────────────────────────────────────
+
+// The manifest names the major; every other surface has to name the same one.
+// The range is ">=X.Y.Z <Y+1": the lower bound is the major the repository runs
+// on, and the upper bound keeps the range off the next one.
+const NODE_RANGE = /^>=(\d+)\.(\d+)\.(\d+) <(\d+)$/;
+
+// Assembled from parts: inside a template literal the expression would be read
+// as a JavaScript interpolation.
+const NODE_VERSION_EXPRESSION = '${{ env.NODE_VERSION }}';
+
+function checkNodeToolchain() {
+  const manifest = readJson('package.json', 'node-toolchain');
+  const engines = manifest?.engines?.node;
+  if (typeof engines !== 'string') {
+    fail('node-toolchain', 'package.json declares no engines.node — the Node version is not pinned');
+    return;
+  }
+  const range = engines.match(NODE_RANGE);
+  if (!range) {
+    fail('node-toolchain', `engines.node must read ">=X.Y.Z <Y+1", got "${engines}"`);
+    return;
+  }
+  const major = range[1];
+  if (range[4] !== String(Number(major) + 1)) {
+    fail('node-toolchain', `engines.node must end at the next major (<${Number(major) + 1}), got "${engines}"`);
+    return;
+  }
+
+  const record = (source, version) => {
+    if (String(version) !== major) {
+      fail('node-toolchain', `${source} pins Node ${version}, the manifest says ${major}`);
+    }
+  };
+
+  const nvmrc = readOptional('.nvmrc');
+  if (nvmrc === null) {
+    fail('node-toolchain', '.nvmrc is missing — the local Node version is not pinned');
+  } else if (nvmrc.trim() === '') {
+    fail('node-toolchain', '.nvmrc is empty — the local Node version is not pinned');
+  } else {
+    record('.nvmrc', nvmrc.trim());
+  }
+
+  // The build stage pins the major with an apk constraint: Alpine's nodejs
+  // package is the only Node in the image, and the constraint fails the build
+  // when the branch moves to the next major.
+  for (const file of ['Dockerfile', 'Dockerfile.demo']) {
+    const content = readOptional(file);
+    if (content === null) {
+      fail('node-toolchain', `${file} is missing`);
+      continue;
+    }
+    const found = [...content.matchAll(/nodejs=~(\d+)/g)].map((match) => match[1]);
+    if (found.length === 0) {
+      fail('node-toolchain', `${file} does not pin the Node major (nodejs=~NN)`);
+      continue;
+    }
+    for (const version of found) record(file, version);
+  }
+
+  // A workflow that sets up Node reads the major from the workflow env, so
+  // there is one place to change and no literal to drift.
+  for (const file of workflowFiles()) {
+    const document = parseYaml(file, 'node-toolchain');
+    if (!document) continue;
+    const steps = Object.values(document.jobs ?? {}).flatMap((job) => job?.steps ?? []);
+    const setups = steps.filter((step) => step?.uses?.startsWith('actions/setup-node'));
+    if (setups.length === 0) continue;
+    const version = document.env?.NODE_VERSION;
+    if (version === undefined) {
+      fail('node-toolchain', `${file} sets up Node but defines no NODE_VERSION`);
+      continue;
+    }
+    record(`${file} NODE_VERSION`, version);
+    for (const step of setups) {
+      if (step.with?.['node-version'] !== NODE_VERSION_EXPRESSION) {
+        fail(
+          'node-toolchain',
+          `${file}: setup-node asks for "${step.with?.['node-version']}" instead of ${NODE_VERSION_EXPRESSION}`,
+        );
+      }
+    }
+  }
+
+  // The interpreter that runs this script — the last surface to drift, and the
+  // one a developer feels first.
+  record('the running Node', process.versions.node.split('.')[0]);
+}
+
 // ── Run ─────────────────────────────────────────────────────────────────────
 
 const config = parseConfig();
@@ -653,6 +747,7 @@ checkTrivyDigest();
 checkNpmAuditPolicy();
 checkBootstrapExcluded(config);
 checkGoToolchain();
+checkNodeToolchain();
 
 if (failures.length > 0) {
   console.error(`\ncheck-dependabot: ${failures.length} problem(s)`);

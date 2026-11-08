@@ -37,6 +37,9 @@
     "stylelint-config-twbs-bootstrap": "^16.1.0",
     "vitest": "^5.0.3"
   },
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
   "overrides": {
     "glob": "^14.0.4",
     "minimatch@>=7.0.0": "^11.0.5"

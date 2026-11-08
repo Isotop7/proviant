@@ -1,7 +1,7 @@
 FROM docker.io/golang:1.26.10-alpine AS buildenv
 WORKDIR /app
 
-RUN apk add --no-cache --update g++ gcc go npm
+RUN apk add --no-cache --update g++ gcc go nodejs=~24 npm
 COPY ./src/go.mod ./src/go.sum ./
 RUN go mod download
 COPY ./ ./
