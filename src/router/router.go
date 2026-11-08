@@ -60,10 +60,8 @@ func mustInitJWT(
 }
 
 // SetupRouter creates the gin engine and associated middleware
-func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) *gin.Engine {
+func SetupRouter(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, repos *dbcontroller.RepositoryContainer, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) *gin.Engine {
 	InitRateLimits(proviantConfiguration.Server.RateLimit)
-
-	repos := dbcontroller.NewRepositoryContainer(dbHandle, logger)
 
 	if proviantConfiguration.Server.Debug {
 		gin.SetMode(gin.DebugMode)

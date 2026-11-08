@@ -21,7 +21,7 @@ import (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/products/frequently-bought [get]
 func GetFrequentlyBoughtProducts(ctx *gin.Context, appCtx *AppContext) {
-	products, err := appCtx.Repos.Products.GetFrequentlyBoughtProducts(appCtx.UserID, util.FrequentProductLimit)
+	products, err := appCtx.Repos.ProductHousehold.GetFrequentlyBoughtProducts(appCtx.UserID, util.FrequentProductLimit)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetFrequentlyBoughtProducts: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

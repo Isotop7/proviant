@@ -9,7 +9,6 @@ import (
 	dbController "github.com/Isotop7/proviant/controllers/database"
 
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 // packSizeBackfillInterval is how often the backfill looks for products whose
@@ -36,7 +35,7 @@ const packSizeBackfillBudget = 10 * time.Minute
 // Open Food Facts: the imported bulk dump first, the live API only for the
 // barcodes the dump does not know.
 type PackSizeController struct {
-	DB     *gorm.DB
+	Repos  *dbController.RepositoryContainer
 	OFFA   DatasetGetter
 	Logger *zerolog.Logger
 
@@ -51,10 +50,10 @@ type PackSizeController struct {
 }
 
 // NewPackSizeController creates a pack size backfill controller.
-func NewPackSizeController(db *gorm.DB, offa DatasetGetter, logger *zerolog.Logger) *PackSizeController {
+func NewPackSizeController(repos *dbController.RepositoryContainer, offa DatasetGetter, logger *zerolog.Logger) *PackSizeController {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &PackSizeController{
-		DB:     db,
+		Repos:  repos,
 		OFFA:   offa,
 		Logger: logger,
 		misses: make(map[string]time.Time),
@@ -87,14 +86,16 @@ func (c *PackSizeController) RunOnce(ctx context.Context) error {
 // runBatch fills the pack size of one batch of products and reports whether
 // the batch held any, i.e. whether the walk may have more to do behind it.
 func (c *PackSizeController) runBatch(ctx context.Context) (bool, error) {
-	if c.DB == nil || c.OFFA == nil {
+	if c.OFFA == nil || c.Repos == nil {
 		return false, nil
 	}
-	repo := dbController.NewProductRepository(c.DB)
 	c.mu.Lock()
 	cursor := c.cursor
 	c.mu.Unlock()
-	products, err := repo.ListProductsWithoutPackSize(cursor, packSizeBackfillBatch)
+	// The batch runs in the job's context, so a cancelled backfill stops at the
+	// database instead of at the next barcode.
+	repos := c.Repos.WithContext(ctx)
+	products, err := repos.Products.ListProductsWithoutPackSize(cursor, packSizeBackfillBatch)
 	if err != nil {
 		return false, err
 	}
@@ -126,12 +127,12 @@ func (c *PackSizeController) runBatch(ctx context.Context) (bool, error) {
 		if c.missed(product.Barcode) {
 			continue
 		}
-		packSize, found := c.packSizeOf(repo, product.Barcode)
+		packSize, found := c.packSizeOf(repos.OpenFoodFactsCache, product.Barcode)
 		if !found {
 			c.rememberMiss(product.Barcode)
 			continue
 		}
-		if setErr := repo.SetProductPackSize(product.ID, packSize); setErr != nil {
+		if setErr := repos.Products.SetProductPackSize(product.ID, packSize); setErr != nil {
 			if c.Logger != nil {
 				c.Logger.Warn().Msgf("Pack size backfill: storing the pack size of product %d failed: %s", product.ID, setErr)
 			}
@@ -177,7 +178,7 @@ func (c *PackSizeController) pruneMissesLocked(now time.Time) {
 // cache is the only place a lookup may read without a network call. A cache
 // entry without a pack size is no answer — every entry written before the
 // pack size column existed has none — so the live lookup answers it.
-func (c *PackSizeController) packSizeOf(repo *dbController.ProductRepository, barcode string) (string, bool) {
+func (c *PackSizeController) packSizeOf(repo dbController.OpenFoodFactsCacheRepositoryInterface, barcode string) (string, bool) {
 	cached, cacheErr := repo.GetOpenFoodFactsCacheByBarcode(barcode)
 	if cacheErr == nil && cached.PackSize != "" {
 		return cached.PackSize, true

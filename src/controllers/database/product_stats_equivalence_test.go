@@ -18,7 +18,8 @@ import (
 // and must land on exactly the same numbers.
 func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
+	statsRepo := NewProductStatsRepository(db)
 
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
@@ -90,7 +91,7 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 
 	// --- Reference: the full-table computation the endpoint used to run. ---
 
-	fullRows, err := repo.GetUserProductsBulk(user.ID, 0)
+	fullRows, err := listRepo.GetUserProductsBulk(user.ID, 0)
 	if err != nil {
 		t.Fatalf("GetUserProductsBulk() error = %v", err)
 	}
@@ -182,7 +183,7 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 		return wantExpiringSoon[i].ExpireAt < wantExpiringSoon[j].ExpireAt
 	})
 
-	archivedRows, err := repo.GetUserArchivedProductsBulk(user.ID, 0, 0)
+	archivedRows, err := listRepo.GetUserArchivedProductsBulk(user.ID, 0, 0)
 	if err != nil {
 		t.Fatalf("GetUserArchivedProductsBulk() error = %v", err)
 	}
@@ -194,30 +195,30 @@ func TestStatsQueriesMatchFullTableComputation(t *testing.T) {
 
 	// --- The replacement queries. ---
 
-	if got, err := repo.GetActiveProductsCount(user.ID); err != nil || got != wantActive {
+	if got, err := statsRepo.GetActiveProductsCount(user.ID); err != nil || got != wantActive {
 		t.Errorf("GetActiveProductsCount() = %d, %v; want %d", got, err, wantActive)
 	}
-	if got, err := repo.GetExpiredProductsCount(user.ID, now); err != nil || got != wantExpired {
+	if got, err := statsRepo.GetExpiredProductsCount(user.ID, now); err != nil || got != wantExpired {
 		t.Errorf("GetExpiredProductsCount() = %d, %v; want %d", got, err, wantExpired)
 	}
-	if got, err := repo.GetArchivedProductsCount(user.ID); err != nil || got != wantArchived {
+	if got, err := statsRepo.GetArchivedProductsCount(user.ID); err != nil || got != wantArchived {
 		t.Errorf("GetArchivedProductsCount() = %d, %v; want %d", got, err, wantArchived)
 	}
-	if got, err := repo.GetUniqueArchivedProductsCount(user.ID); err != nil || got != len(wantUniqueArchived) {
+	if got, err := statsRepo.GetUniqueArchivedProductsCount(user.ID); err != nil || got != len(wantUniqueArchived) {
 		t.Errorf("GetUniqueArchivedProductsCount() = %d, %v; want %d", got, err, len(wantUniqueArchived))
 	}
-	if got, err := repo.GetProductCategoryBreakdown(user.ID); err != nil || !categoryMapsEqual(got, wantCategories) {
+	if got, err := statsRepo.GetProductCategoryBreakdown(user.ID); err != nil || !categoryMapsEqual(got, wantCategories) {
 		t.Errorf("GetProductCategoryBreakdown() = %v, %v; want %v", got, err, wantCategories)
 	}
-	if got, err := repo.GetExpiryTrend(user.ID, now); err != nil || !trendEqual(got, wantTrend) {
+	if got, err := statsRepo.GetExpiryTrend(user.ID, now); err != nil || !trendEqual(got, wantTrend) {
 		t.Errorf("GetExpiryTrend() = %+v, %v; want %+v", got, err, wantTrend)
 	}
-	if got, err := repo.GetExpiringSoonProducts(user.ID, 7, now); err != nil || !expiringSoonEqual(got, wantExpiringSoon) {
+	if got, err := statsRepo.GetExpiringSoonProducts(user.ID, 7, now); err != nil || !expiringSoonEqual(got, wantExpiringSoon) {
 		t.Errorf("GetExpiringSoonProducts() = %+v, %v; want %+v", got, err, wantExpiringSoon)
 	}
 	// The list carries the place and the pack count of every product, so a
 	// household can act on it without opening the product.
-	if got, err := repo.GetExpiringSoonProducts(user.ID, 7, now); err != nil {
+	if got, err := statsRepo.GetExpiringSoonProducts(user.ID, 7, now); err != nil {
 		t.Fatalf("GetExpiringSoonProducts() error = %v", err)
 	} else if len(got) != 1 {
 		t.Fatalf("GetExpiringSoonProducts() = %+v, want the one product in the window", got)

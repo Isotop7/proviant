@@ -43,7 +43,7 @@ func TestNotificationControllerInitialization(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{},
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 	assert.NotNil(t, nc.NotificationRepo)
 }
@@ -57,7 +57,7 @@ func TestGenerateNotifications(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		nc.generateNotifications(&[]dbModel.Product{})
 	})
@@ -69,7 +69,7 @@ func TestGenerateNotifications(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		products := []dbModel.Product{
 			{Model: gorm.Model{ID: 1}, ProductName: "Test", ExpireAt: time.Now().Add(-1 * time.Hour), HouseholdID: 1},
@@ -102,7 +102,7 @@ func TestSendNotificationsForRecipient(t *testing.T) {
 				Logger:           &logger,
 				Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 				NotificationRepo: mockRepos.Notifications,
-				ProductRepo:      mockRepos.Products,
+				ProductRepo:      mockRepos.ProductDigest,
 			}
 			if tt.emailEnabled {
 				nc.Providers = []NotificationProvider{
@@ -127,7 +127,7 @@ func TestSendNotificationsForRecipient(t *testing.T) {
 func TestNewNotificationController(t *testing.T) {
 	logger := zerolog.Nop()
 	mockRepos := repomocks.NewMockRepositoryContainer()
-	nc := NewNotificationController(&logger, &configuration.NotificationConfiguration{}, mockRepos.Notifications, mockRepos.Products)
+	nc := NewNotificationController(&logger, &configuration.NotificationConfiguration{}, mockRepos.Notifications, mockRepos.ProductDigest)
 	assert.NotNil(t, nc)
 	assert.Equal(t, 15*time.Second, nc.telegramClient.Timeout)
 	assert.Equal(t, "https://api.telegram.org", nc.telegramAPIBase)
@@ -142,7 +142,7 @@ func TestInitializeProviders(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		nc.initializeProviders()
 		assert.Empty(t, nc.Providers)
@@ -155,7 +155,7 @@ func TestInitializeProviders(t *testing.T) {
 				SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587},
 			},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		nc.initializeProviders()
 		assert.Len(t, nc.Providers, 1)
@@ -172,7 +172,7 @@ func TestDispatchEarlyReturn(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Enabled: false},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		nc.Dispatch()
 	})
@@ -182,7 +182,7 @@ func TestDispatchEarlyReturn(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Enabled: true, Interval: 24},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		go nc.Dispatch()
 		time.Sleep(50 * time.Millisecond)
@@ -199,7 +199,7 @@ func TestSendStreakMilestoneNotifications(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		nc.sendStreakMilestoneNotifications(1, 7)
 	})
@@ -213,7 +213,7 @@ func TestSendStreakMilestoneNotifications(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		nc.sendStreakMilestoneNotifications(1, 7)
 	})
@@ -231,7 +231,7 @@ func TestSendStreakMilestoneNotifications(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 			telegramClient:   &http.Client{Timeout: 5 * time.Second},
 			telegramAPIBase:  server.URL,
 		}
@@ -252,7 +252,7 @@ func TestSendInvitationEmail(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 
 	t.Run("not configured returns error", func(t *testing.T) {
@@ -260,7 +260,7 @@ func TestSendInvitationEmail(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		err := ncBad.SendInvitationEmail(invitation, "inviter", "Household", "http://example.com", nil, "")
 		assert.Error(t, err)
@@ -302,7 +302,7 @@ func TestSendVerificationEmail(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 
 	t.Run("not configured returns error", func(t *testing.T) {
@@ -310,7 +310,7 @@ func TestSendVerificationEmail(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		err := ncBad.SendVerificationEmail(invitation, "user1", "http://example.com", "")
 		assert.Error(t, err)
@@ -335,7 +335,7 @@ func TestSendEmailVerification(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{SMTP: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 
 	t.Run("not configured returns error", func(t *testing.T) {
@@ -343,7 +343,7 @@ func TestSendEmailVerification(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		err := ncBad.SendEmailVerification("test@example.com", "user1", "token", "http://example.com", time.Now(), "")
 		assert.Error(t, err)
@@ -370,7 +370,7 @@ func TestDispatchInvitationsEarlyReturn(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		nc.DispatchInvitations("http://example.com")
 	})
@@ -385,7 +385,7 @@ func TestDispatchMonthlyWasteReportsEarlyReturn(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{MonthlyWasteReport: configuration.MonthlyWasteReportConfiguration{Day: 1, Hour: 0}},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 		emailProvider := &EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{}}
 		nc.processMonthlyWasteReports(emailProvider)
@@ -401,7 +401,7 @@ func TestDispatchStreakUpdatesEarlyReturn(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 			StreakRepo:       nil,
 		}
 		nc.DispatchStreakUpdates()
@@ -418,7 +418,7 @@ func TestStartAllUserTelegramPollers(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Telegram: configuration.TelegramConfiguration{PollerWorkers: 2}},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 			telegramClient:   &http.Client{Timeout: 5 * time.Second},
 			telegramAPIBase:  "https://api.telegram.org",
 		}
@@ -436,7 +436,7 @@ func TestStartAllUserTelegramPollers(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{Telegram: configuration.TelegramConfiguration{PollerWorkers: 2}},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 			telegramClient:   &http.Client{Timeout: 5 * time.Second},
 			telegramAPIBase:  "https://api.telegram.org",
 		}
@@ -482,7 +482,7 @@ func TestGetUserTelegramBotUsername(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{},
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 	assert.Equal(t, "", nc.GetUserTelegramBotUsername(1))
 }

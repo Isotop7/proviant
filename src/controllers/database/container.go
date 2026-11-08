@@ -1,6 +1,8 @@
 package database
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
@@ -9,7 +11,20 @@ import (
 // Injected into the Gin context under the key "repos" so handlers
 // can depend on interfaces rather than constructing concrete types.
 type RepositoryContainer struct {
+	// db and logger are the handles the repositories were built from. They
+	// are kept so a container can be rebuilt against a different context
+	// (see WithContext) without a caller having to construct one itself.
+	db     *gorm.DB
+	logger *zerolog.Logger
+
 	Products              ProductRepositoryInterface
+	ProductLists          ProductListRepositoryInterface
+	ProductStock          ProductStockRepositoryInterface
+	ProductSearch         ProductSearchRepositoryInterface
+	ProductStats          ProductStatsRepositoryInterface
+	ProductHousehold      ProductHouseholdRepositoryInterface
+	ProductDigest         ProductDigestRepositoryInterface
+	OpenFoodFactsCache    OpenFoodFactsCacheRepositoryInterface
 	Users                 UserRepositoryInterface
 	Households            HouseholdRepositoryInterface
 	Invitations           InvitationRepositoryInterface
@@ -40,7 +55,16 @@ type RepositoryContainer struct {
 // invisible to every household.
 func NewRepositoryContainer(db *gorm.DB, logger *zerolog.Logger) *RepositoryContainer {
 	return &RepositoryContainer{
+		db:                    db,
+		logger:                logger,
 		Products:              NewProductRepository(db),
+		ProductLists:          NewProductListRepository(db),
+		ProductStock:          NewProductStockRepository(db),
+		ProductSearch:         NewProductSearchRepository(db),
+		ProductStats:          NewProductStatsRepository(db),
+		ProductHousehold:      NewProductHouseholdRepository(db),
+		ProductDigest:         NewProductDigestRepository(db),
+		OpenFoodFactsCache:    NewOpenFoodFactsCacheRepository(db),
 		Users:                 NewUserRepository(db),
 		Households:            NewHouseholdRepository(db),
 		Invitations:           NewInvitationRepository(db),
@@ -64,4 +88,19 @@ func NewRepositoryContainer(db *gorm.DB, logger *zerolog.Logger) *RepositoryCont
 		HouseholdIntegrations: NewHouseholdIntegrationRepository(db),
 		ShoppingListSyncRefs:  NewShoppingListItemSyncRefRepository(db),
 	}
+}
+
+// WithContext returns a container whose repositories run their queries in the
+// given context. A background job that is cancelled mid-query then stops at
+// the database instead of at its next check.
+//
+// The repositories are stateless wrappers around the database handle, so the
+// returned container is a fresh set of them over the context-bound handle. A
+// container that was not built by NewRepositoryContainer has no handle to bind
+// and is returned unchanged.
+func (c *RepositoryContainer) WithContext(ctx context.Context) *RepositoryContainer {
+	if c.db == nil {
+		return c
+	}
+	return NewRepositoryContainer(c.db.WithContext(ctx), c.logger)
 }

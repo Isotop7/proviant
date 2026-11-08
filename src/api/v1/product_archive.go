@@ -99,7 +99,7 @@ func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	products, productBulkErr := appCtx.Repos.Products.GetUserArchivedProductsBulk(appCtx.UserID, q.Limit, q.Offset)
+	products, productBulkErr := appCtx.Repos.ProductLists.GetUserArchivedProductsBulk(appCtx.UserID, q.Limit, q.Offset)
 	if productBulkErr != nil {
 		appCtx.Logger.Warn().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
@@ -113,7 +113,7 @@ func GetArchivedProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	total, countErr := appCtx.Repos.Products.GetArchivedProductsCount(appCtx.UserID)
+	total, countErr := appCtx.Repos.ProductStats.GetArchivedProductsCount(appCtx.UserID)
 	if countErr != nil {
 		appCtx.Logger.Error().Msgf("Error counting archived products of user: %s", countErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

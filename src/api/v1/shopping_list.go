@@ -26,7 +26,7 @@ import (
 // @Router       /api/v1/shopping-list/auto [get]
 // @Security     BearerAuth
 func GetAutoShoppingList(ctx *gin.Context, appCtx *AppContext) {
-	products, err := appCtx.Repos.Products.GetSubThresholdProducts(appCtx.UserID)
+	products, err := appCtx.Repos.ProductHousehold.GetSubThresholdProducts(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error loading auto shopping list: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -321,7 +321,7 @@ func ImportAutoListToShoppingList(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	autoProducts, err := appCtx.Repos.Products.GetSubThresholdProducts(appCtx.UserID)
+	autoProducts, err := appCtx.Repos.ProductHousehold.GetSubThresholdProducts(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("Error getting sub-threshold products: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

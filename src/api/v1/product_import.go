@@ -152,7 +152,7 @@ func ImportProducts(ctx *gin.Context, appCtx *AppContext) {
 	// A barcode that already belongs to an active household product is rejected
 	// rather than merged. Archived barcodes are restorable, so they do not count
 	// as duplicates.
-	existing, dupeErr := repos.Products.GetUserProductsBulkByBarcodes(userID, barcodes)
+	existing, dupeErr := repos.ProductLists.GetUserProductsBulkByBarcodes(userID, barcodes)
 	if dupeErr != nil {
 		logger.Error().Msgf(fmtErrImportDupeLookup, dupeErr)
 		api.RespondError(ctx, http.StatusInternalServerError, errors.ErrInternalServer)
@@ -650,7 +650,7 @@ func newImportNameResolver(
 		return resolver
 	}
 
-	cached, cacheErr := repos.Products.GetOpenFoodFactsCachesByBarcodes(barcodes)
+	cached, cacheErr := repos.OpenFoodFactsCache.GetOpenFoodFactsCachesByBarcodes(barcodes)
 	if cacheErr != nil {
 		// A cache miss costs a live lookup, not correctness: fall through with
 		// an empty cache instead of failing the whole import.

@@ -14,11 +14,11 @@ import (
 func TestGetProductSetFingerprint(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	household := testutil.CreateTestHousehold(db, 0)
-	repo := NewProductRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
 
 	fingerprint := func() string {
 		t.Helper()
-		got, err := repo.GetProductSetFingerprint(household.ID)
+		got, err := householdRepo.GetProductSetFingerprint(household.ID)
 		if err != nil {
 			t.Fatalf("GetProductSetFingerprint() error = %v", err)
 		}
@@ -71,10 +71,10 @@ func TestGetProductSetFingerprint(t *testing.T) {
 func TestGetProductSetFingerprint_IgnoresQuantityChanges(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	household := testutil.CreateTestHousehold(db, 0)
-	repo := NewProductRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
 	product := testutil.CreateTestProduct(db, household.ID)
 
-	before, err := repo.GetProductSetFingerprint(household.ID)
+	before, err := householdRepo.GetProductSetFingerprint(household.ID)
 	if err != nil {
 		t.Fatalf("GetProductSetFingerprint() error = %v", err)
 	}
@@ -83,7 +83,7 @@ func TestGetProductSetFingerprint_IgnoresQuantityChanges(t *testing.T) {
 		t.Fatalf("quantity update failed: %v", err)
 	}
 
-	after, err := repo.GetProductSetFingerprint(household.ID)
+	after, err := householdRepo.GetProductSetFingerprint(household.ID)
 	if err != nil {
 		t.Fatalf("GetProductSetFingerprint() error = %v", err)
 	}
@@ -98,9 +98,9 @@ func TestGetProductSetFingerprint_IgnoresQuantityChanges(t *testing.T) {
 func TestGetProductSetFingerprint_IgnoresPrivateProducts(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	household := testutil.CreateTestHousehold(db, 0)
-	repo := NewProductRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
 
-	baseline, err := repo.GetProductSetFingerprint(household.ID)
+	baseline, err := householdRepo.GetProductSetFingerprint(household.ID)
 	if err != nil {
 		t.Fatalf("GetProductSetFingerprint() error = %v", err)
 	}
@@ -110,7 +110,7 @@ func TestGetProductSetFingerprint_IgnoresPrivateProducts(t *testing.T) {
 		t.Fatalf("marking private failed: %v", err)
 	}
 
-	after, err := repo.GetProductSetFingerprint(household.ID)
+	after, err := householdRepo.GetProductSetFingerprint(household.ID)
 	if err != nil {
 		t.Fatalf("GetProductSetFingerprint() error = %v", err)
 	}
@@ -127,12 +127,12 @@ func TestGetProductSetFingerprint_IgnoresPrivateProducts(t *testing.T) {
 func TestGetProductSetFingerprint_TracksExpiryBucket(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	household := testutil.CreateTestHousehold(db, 0)
-	repo := NewProductRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
 	product := testutil.CreateTestProduct(db, household.ID)
 
 	fingerprint := func() string {
 		t.Helper()
-		got, err := repo.GetProductSetFingerprint(household.ID)
+		got, err := householdRepo.GetProductSetFingerprint(household.ID)
 		if err != nil {
 			t.Fatalf("GetProductSetFingerprint() error = %v", err)
 		}

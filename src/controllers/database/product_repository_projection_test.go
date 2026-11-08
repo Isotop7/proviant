@@ -14,7 +14,8 @@ import (
 // privacy, soft delete), stay narrow, and arrive in a deterministic order.
 func TestProductProjections(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
+	searchRepo := NewProductSearchRepository(db)
 
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
@@ -66,7 +67,7 @@ func TestProductProjections(t *testing.T) {
 	})
 
 	t.Run("active projections are household-scoped, ordered and narrow", func(t *testing.T) {
-		projections, err := repo.GetActiveProductProjections(user.ID, 0)
+		projections, err := listRepo.GetActiveProductProjections(user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -92,7 +93,7 @@ func TestProductProjections(t *testing.T) {
 	})
 
 	t.Run("location filter narrows the active projection", func(t *testing.T) {
-		projections, err := repo.GetActiveProductProjections(user.ID, locA.ID)
+		projections, err := listRepo.GetActiveProductProjections(user.ID, locA.ID)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -102,7 +103,7 @@ func TestProductProjections(t *testing.T) {
 	})
 
 	t.Run("archived projections contain only archived rows", func(t *testing.T) {
-		projections, err := repo.GetArchivedProductProjections(user.ID)
+		projections, err := listRepo.GetArchivedProductProjections(user.ID)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -115,7 +116,7 @@ func TestProductProjections(t *testing.T) {
 	})
 
 	t.Run("archived hydration returns full rows with their location", func(t *testing.T) {
-		rows, err := repo.GetUserArchivedProductsByIDs(user.ID, []uint{archived.ID})
+		rows, err := listRepo.GetUserArchivedProductsByIDs(user.ID, []uint{archived.ID})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -131,7 +132,7 @@ func TestProductProjections(t *testing.T) {
 	})
 
 	t.Run("archived hydration with no ids does not query", func(t *testing.T) {
-		rows, err := repo.GetUserArchivedProductsByIDs(user.ID, nil)
+		rows, err := listRepo.GetUserArchivedProductsByIDs(user.ID, nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -141,7 +142,7 @@ func TestProductProjections(t *testing.T) {
 	})
 
 	t.Run("search projections honour visibility and the sort allowlist", func(t *testing.T) {
-		ascending, err := repo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, 0)
+		ascending, err := searchRepo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -155,7 +156,7 @@ func TestProductProjections(t *testing.T) {
 			}
 		}
 
-		descending, err := repo.SearchProductProjections(ProductName, "a", "product_name", "desc", user.ID, 0)
+		descending, err := searchRepo.SearchProductProjections(ProductName, "a", "product_name", "desc", user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -165,7 +166,7 @@ func TestProductProjections(t *testing.T) {
 			}
 		}
 
-		if _, err := repo.SearchProductProjections(ProductName, "a", "product_name; DROP TABLE products;--", "asc", user.ID, 0); err != errors.ErrDatabaseInvalidSortParameter {
+		if _, err := searchRepo.SearchProductProjections(ProductName, "a", "product_name; DROP TABLE products;--", "asc", user.ID, 0); err != errors.ErrDatabaseInvalidSortParameter {
 			t.Errorf("err = %v, want ErrDatabaseInvalidSortParameter", err)
 		}
 	})
@@ -182,7 +183,7 @@ func TestProductProjections(t *testing.T) {
 			{"locB holds apple", locB.ID, apple.ID},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
-				rows, err := repo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, tc.locationID)
+				rows, err := searchRepo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, tc.locationID)
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
@@ -194,7 +195,7 @@ func TestProductProjections(t *testing.T) {
 
 		// A location nothing matches returns nothing — rows without a
 		// storage location (mango) are excluded by any location filter.
-		rows, err := repo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, locB.ID+1000)
+		rows, err := searchRepo.SearchProductProjections(ProductName, "a", "product_name", "asc", user.ID, locB.ID+1000)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

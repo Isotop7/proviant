@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	dbController "github.com/Isotop7/proviant/controllers/database"
 	apperrors "github.com/Isotop7/proviant/errors"
 	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
@@ -292,7 +293,7 @@ func TestShoppingListSyncController(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 
 	t.Run("dispatch and run once return early when disabled", func(t *testing.T) {
-		ctrl := NewShoppingListSyncController(nil, &configuration.ShoppingListSyncConfiguration{Enabled: false}, db)
+		ctrl := NewShoppingListSyncController(nil, &configuration.ShoppingListSyncConfiguration{Enabled: false}, db, dbController.NewRepositoryContainer(db, nil))
 		ctrl.Dispatch()
 		if err := ctrl.RunOnce(context.Background()); err != nil {
 			t.Errorf("RunOnce when disabled: %v", err)

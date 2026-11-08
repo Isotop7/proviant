@@ -146,7 +146,7 @@ const mixedImportHeader = "name,barcode,quantity,unit,pack_size,category,storage
 
 func (f *importFixture) activeProducts(t *testing.T) []dbModel.Product {
 	t.Helper()
-	rows, err := database.NewProductRepository(f.db).GetUserActiveProductsFiltered(f.userID, nil, nil)
+	rows, err := database.NewProductHouseholdRepository(f.db).GetUserActiveProductsFiltered(f.userID, nil, nil)
 	if err != nil {
 		t.Fatalf("read back products: %v", err)
 	}

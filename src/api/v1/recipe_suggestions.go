@@ -7,7 +7,6 @@ import (
 
 	"github.com/Isotop7/proviant/api"
 	"github.com/Isotop7/proviant/controllers"
-	db "github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/errors"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	dbModel "github.com/Isotop7/proviant/models/database"
@@ -27,8 +26,7 @@ import (
 // @Failure      500  {object}  api.APIResponse
 // @Router       /api/v1/recipes/suggestions [get]
 func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext) {
-	userRepo := db.NewUserRepository(appCtx.DB)
-	householdID, err := userRepo.GetUserHouseholdByID(appCtx.UserID)
+	householdID, err := appCtx.Repos.Users.GetUserHouseholdByID(appCtx.UserID)
 	if err != nil || householdID == 0 {
 		api.RespondError(ctx, 400, errors.ErrUserHasNoHousehold)
 		return
@@ -43,11 +41,10 @@ func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext) {
 
 	refresh := ctx.Query("refresh") == "1"
 
-	productRepo := db.NewProductRepository(appCtx.DB)
 	// The window and the ranking horizon are the same number: a product further
 	// out than the horizon scores 0 against every other out-of-window product, so
 	// widening one without the other would rank those products arbitrarily.
-	expiringProducts, err := productRepo.GetExpiringProductsByHousehold(householdID, dbModel.ExpiryRankingHorizonDays)
+	expiringProducts, err := appCtx.Repos.ProductHousehold.GetExpiringProductsByHousehold(householdID, dbModel.ExpiryRankingHorizonDays)
 	if err != nil {
 		appCtx.Logger.Error().Err(err).Msg("failed to get expiring products")
 		api.RespondError(ctx, 500, errors.ErrDatabaseOperationFailed)
@@ -73,10 +70,10 @@ func GetRecipeSuggestions(ctx *gin.Context, appCtx *AppContext) {
 			// Narrow projection: the matcher reads only ID, ProductName and
 			// Categories, so loading every column of every household product
 			// here is pure waste on the cache-miss path.
-			return productRepo.GetMatchableProductsByHousehold(householdID)
+			return appCtx.Repos.ProductHousehold.GetMatchableProductsByHousehold(householdID)
 		},
 		Fingerprint: func() (string, error) {
-			return productRepo.GetProductSetFingerprint(householdID)
+			return appCtx.Repos.ProductHousehold.GetProductSetFingerprint(householdID)
 		},
 	}
 

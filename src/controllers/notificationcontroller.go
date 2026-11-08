@@ -49,7 +49,7 @@ type NotificationController struct {
 	Logger           *zerolog.Logger
 	Configuration    *configuration.NotificationConfiguration
 	NotificationRepo dbController.NotificationRepositoryInterface
-	ProductRepo      dbController.ProductRepositoryInterface
+	ProductRepo      dbController.ProductDigestRepositoryInterface
 	StreakRepo       dbController.StreakRepositoryInterface
 	ActivityLogRepo  dbController.ActivityLogRepositoryInterface
 	Providers        []NotificationProvider
@@ -84,7 +84,7 @@ func NewNotificationController(
 	logger *zerolog.Logger,
 	config *configuration.NotificationConfiguration,
 	notificationRepo dbController.NotificationRepositoryInterface,
-	productRepo dbController.ProductRepositoryInterface,
+	productRepo dbController.ProductDigestRepositoryInterface,
 ) *NotificationController {
 	notificationController := &NotificationController{
 		Logger:           logger,

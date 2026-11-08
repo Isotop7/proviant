@@ -86,13 +86,13 @@ func TestSearchProductsPagesByEffectiveExpiry(t *testing.T) {
 		}
 		expiring = append(expiring, &product)
 	}
-	repo := NewProductRepository(db)
+	searchRepo := NewProductSearchRepository(db)
 
-	first, err := repo.SearchProducts(ProductName, "Milk", SortEffectiveExpiry, "asc", user.ID, 2, 0)
+	first, err := searchRepo.SearchProducts(ProductName, "Milk", SortEffectiveExpiry, "asc", user.ID, 2, 0)
 	if err != nil {
 		t.Fatalf("SearchProducts() error = %v", err)
 	}
-	second, err := repo.SearchProducts(ProductName, "Milk", SortEffectiveExpiry, "asc", user.ID, 2, 2)
+	second, err := searchRepo.SearchProducts(ProductName, "Milk", SortEffectiveExpiry, "asc", user.ID, 2, 2)
 	if err != nil {
 		t.Fatalf("SearchProducts() error = %v", err)
 	}
@@ -116,11 +116,11 @@ func TestGetUserProductsBulkSortedPages(t *testing.T) {
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 	seedPagedProducts(t, db, household.ID, user.ID, 5)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
 
 	seen := map[uint]bool{}
 	for offset := 0; offset < 10; offset += 2 {
-		page, err := repo.GetUserProductsBulkSorted(user.ID, 2, offset, "product_name", "asc")
+		page, err := listRepo.GetUserProductsBulkSorted(user.ID, 2, offset, "product_name", "asc")
 		if err != nil {
 			t.Fatalf("GetUserProductsBulkSorted() error = %v", err)
 		}
@@ -148,13 +148,13 @@ func TestGetUserProductsBulkSortedKeepsTiesInIdOrder(t *testing.T) {
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 	products := seedPagedProducts(t, db, household.ID, user.ID, 4)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
 
-	first, err := repo.GetUserProductsBulkSorted(user.ID, 2, 0, "product_name", "asc")
+	first, err := listRepo.GetUserProductsBulkSorted(user.ID, 2, 0, "product_name", "asc")
 	if err != nil {
 		t.Fatalf("GetUserProductsBulkSorted() error = %v", err)
 	}
-	second, err := repo.GetUserProductsBulkSorted(user.ID, 2, 2, "product_name", "asc")
+	second, err := listRepo.GetUserProductsBulkSorted(user.ID, 2, 2, "product_name", "asc")
 	if err != nil {
 		t.Fatalf("GetUserProductsBulkSorted() error = %v", err)
 	}
@@ -180,13 +180,14 @@ func TestGetActiveProductsCountMatchesTheList(t *testing.T) {
 	otherUser := testutil.CreateTestUser(db, otherHousehold.ID)
 	seedPagedProducts(t, db, otherHousehold.ID, otherUser.ID, 3)
 
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
+	statsRepo := NewProductStatsRepository(db)
 
-	count, err := repo.GetActiveProductsCount(user.ID)
+	count, err := statsRepo.GetActiveProductsCount(user.ID)
 	if err != nil {
 		t.Fatalf("GetActiveProductsCount() error = %v", err)
 	}
-	rows, err := repo.GetUserProductsBulkSorted(user.ID, 0, 0, SortEffectiveExpiry, "asc")
+	rows, err := listRepo.GetUserProductsBulkSorted(user.ID, 0, 0, SortEffectiveExpiry, "asc")
 	if err != nil {
 		t.Fatalf("GetUserProductsBulkSorted() error = %v", err)
 	}
@@ -219,13 +220,14 @@ func TestGetArchivedProductsCountMatchesTheList(t *testing.T) {
 		}
 	}
 
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
+	statsRepo := NewProductStatsRepository(db)
 
-	count, err := repo.GetArchivedProductsCount(user.ID)
+	count, err := statsRepo.GetArchivedProductsCount(user.ID)
 	if err != nil {
 		t.Fatalf("GetArchivedProductsCount() error = %v", err)
 	}
-	rows, err := repo.GetUserArchivedProductsBulk(user.ID, 0, 0)
+	rows, err := listRepo.GetUserArchivedProductsBulk(user.ID, 0, 0)
 	if err != nil {
 		t.Fatalf("GetUserArchivedProductsBulk() error = %v", err)
 	}
@@ -251,13 +253,13 @@ func TestCountSearchProductsMatchesTheSearch(t *testing.T) {
 		t.Fatalf("create product: %v", err)
 	}
 
-	repo := NewProductRepository(db)
+	searchRepo := NewProductSearchRepository(db)
 
-	count, err := repo.CountSearchProducts(ProductName, "Milk", user.ID)
+	count, err := searchRepo.CountSearchProducts(ProductName, "Milk", user.ID)
 	if err != nil {
 		t.Fatalf("CountSearchProducts() error = %v", err)
 	}
-	rows, err := repo.SearchProducts(ProductName, "Milk", "product_name", "asc", user.ID, 0, 0)
+	rows, err := searchRepo.SearchProducts(ProductName, "Milk", "product_name", "asc", user.ID, 0, 0)
 	if err != nil {
 		t.Fatalf("SearchProducts() error = %v", err)
 	}
@@ -280,9 +282,9 @@ func TestProductRepository_CountDoesNotLoadTheRows(t *testing.T) {
 
 	counter := testutil.NewQueryCounter()
 	counting := db.Session(&gorm.Session{Logger: counter})
-	repo := NewProductRepository(counting)
+	statsRepo := NewProductStatsRepository(counting)
 
-	if _, err := repo.GetActiveProductsCount(user.ID); err != nil {
+	if _, err := statsRepo.GetActiveProductsCount(user.ID); err != nil {
 		t.Fatalf("GetActiveProductsCount() error = %v", err)
 	}
 

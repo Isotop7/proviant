@@ -339,7 +339,7 @@ func fetchProductProjections(
 	params *productQueryParams,
 ) ([]dbModel.Product, bool, error) {
 	if params.statusFilter == "archived" {
-		products, err := repos.Products.GetArchivedProductProjections(userID)
+		products, err := repos.ProductLists.GetArchivedProductProjections(userID)
 		return products, false, err
 	}
 
@@ -359,14 +359,14 @@ func fetchProductProjections(
 		if enumParam == database.InvalidParameter {
 			return nil, false, errors.ErrProductSearchInvalidQuery
 		}
-		products, err := repos.Products.SearchProductProjections(
+		products, err := repos.ProductSearch.SearchProductProjections(
 			enumParam, params.queryValue, params.sort, params.order, userID, locationID)
 		if err != nil {
 			return nil, false, err
 		}
 		return products, true, nil
 	}
-	products, err := repos.Products.GetActiveProductProjections(userID, locationID)
+	products, err := repos.ProductLists.GetActiveProductProjections(userID, locationID)
 	return products, false, err
 }
 
@@ -429,9 +429,9 @@ func hydrateProductsPage(repos *database.RepositoryContainer, userID uint, ids [
 	var rows []dbModel.Product
 	var err error
 	if archived {
-		rows, err = repos.Products.GetUserArchivedProductsByIDs(userID, ids)
+		rows, err = repos.ProductLists.GetUserArchivedProductsByIDs(userID, ids)
 	} else {
-		rows, err = repos.Products.GetUserProductsByIDs(userID, ids)
+		rows, err = repos.ProductLists.GetUserProductsByIDs(userID, ids)
 	}
 	if err != nil {
 		return nil, err
@@ -610,7 +610,7 @@ func (frontend *Frontend) Products(ctx *gin.Context) {
 	// instead of loading the active rows it would immediately throw away.
 	var expiredCount, criticalCount, soonCount int
 	if statusFilter == "archived" {
-		if archivedExpired, archivedCritical, statsErr := repos.Products.GetActiveExpiryCounts(userID, now, criticalDays); statsErr != nil {
+		if archivedExpired, archivedCritical, statsErr := repos.ProductStats.GetActiveExpiryCounts(userID, now, criticalDays); statsErr != nil {
 			logger.Warn().Msgf("Error getting active product expiry stats: %s", statsErr)
 		} else {
 			expiredCount, criticalCount = archivedExpired, archivedCritical
@@ -1163,7 +1163,7 @@ func (frontend *Frontend) ShoppingList(ctx *gin.Context) {
 
 	items, _ := repos.ShoppingListItems.ListByHousehold(householdID)
 
-	autoProducts, _ := repos.Products.GetSubThresholdProducts(userID)
+	autoProducts, _ := repos.ProductHousehold.GetSubThresholdProducts(userID)
 
 	autoProductIDs := make(map[uint]bool)
 	for i := range items {

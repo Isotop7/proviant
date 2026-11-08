@@ -81,7 +81,14 @@ func failNthQueryOnTable(t *testing.T, db *gorm.DB, table string, n int) {
 
 func TestProductRepository_QueryErrorInjection(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	cacheRepo := NewOpenFoodFactsCacheRepository(db)
+	digestRepo := NewProductDigestRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
+	listRepo := NewProductListRepository(db)
+	productRepo := NewProductRepository(db)
+	searchRepo := NewProductSearchRepository(db)
+	statsRepo := NewProductStatsRepository(db)
+	stockRepo := NewProductStockRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 	product := testutil.CreateTestProduct(db, household.ID, user.ID)
@@ -92,85 +99,85 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 	t.Run("list and count queries surface query errors", func(t *testing.T) {
 		failQueriesOnTable(t, db, "products")
 
-		if _, err := repo.GetUserProductsBulk(user.ID, 0); err == nil {
+		if _, err := listRepo.GetUserProductsBulk(user.ID, 0); err == nil {
 			t.Error("GetUserProductsBulk() error = nil")
 		}
-		if _, err := repo.GetUserProductsByIDs(user.ID, []uint{product.ID}); err == nil {
+		if _, err := listRepo.GetUserProductsByIDs(user.ID, []uint{product.ID}); err == nil {
 			t.Error("GetUserProductsByIDs() error = nil")
 		}
-		if _, err := repo.GetUserArchivedProductsBulk(user.ID, 0, 0); err == nil {
+		if _, err := listRepo.GetUserArchivedProductsBulk(user.ID, 0, 0); err == nil {
 			t.Error("GetUserArchivedProductsBulk() error = nil")
 		}
-		if _, err := repo.GetActiveProductProjections(user.ID, 0); err == nil {
+		if _, err := listRepo.GetActiveProductProjections(user.ID, 0); err == nil {
 			t.Error("GetActiveProductProjections() error = nil")
 		}
-		if _, err := repo.GetArchivedProductProjections(user.ID); err == nil {
+		if _, err := listRepo.GetArchivedProductProjections(user.ID); err == nil {
 			t.Error("GetArchivedProductProjections() error = nil")
 		}
-		if _, err := repo.GetUserArchivedProductsByIDs(user.ID, []uint{product.ID}); err == nil {
+		if _, err := listRepo.GetUserArchivedProductsByIDs(user.ID, []uint{product.ID}); err == nil {
 			t.Error("GetUserArchivedProductsByIDs() error = nil")
 		}
-		if _, err := repo.GetUserProductsBulkByBarcode(user.ID, 1234567890123); err == nil {
+		if _, err := listRepo.GetUserProductsBulkByBarcode(user.ID, 1234567890123); err == nil {
 			t.Error("GetUserProductsBulkByBarcode() error = nil")
 		}
-		if _, err := repo.GetUserProductsBulkByBarcodes(user.ID, []string{"1234567890123"}); err == nil {
+		if _, err := listRepo.GetUserProductsBulkByBarcodes(user.ID, []string{"1234567890123"}); err == nil {
 			t.Error("GetUserProductsBulkByBarcodes() error = nil")
 		}
-		if _, err := repo.SearchProducts(ProductName, "x", "", "", user.ID, 0, 0); err == nil {
+		if _, err := searchRepo.SearchProducts(ProductName, "x", "", "", user.ID, 0, 0); err == nil {
 			t.Error("SearchProducts() error = nil")
 		}
-		if _, err := repo.SearchProductProjections(ProductName, "x", "", "", user.ID, 0); err == nil {
+		if _, err := searchRepo.SearchProductProjections(ProductName, "x", "", "", user.ID, 0); err == nil {
 			t.Error("SearchProductProjections() error = nil")
 		}
-		if _, err := repo.GetExpiredProductsCount(user.ID, time.Now()); err == nil {
+		if _, err := statsRepo.GetExpiredProductsCount(user.ID, time.Now()); err == nil {
 			t.Error("GetExpiredProductsCount() error = nil")
 		}
-		if _, err := repo.GetActiveProductsCount(user.ID); err == nil {
+		if _, err := statsRepo.GetActiveProductsCount(user.ID); err == nil {
 			t.Error("GetActiveProductsCount() error = nil")
 		}
-		if _, err := repo.GetArchivedProductsCount(user.ID); err == nil {
+		if _, err := statsRepo.GetArchivedProductsCount(user.ID); err == nil {
 			t.Error("GetArchivedProductsCount() error = nil")
 		}
-		if _, err := repo.GetUniqueArchivedProductsCount(user.ID); err == nil {
+		if _, err := statsRepo.GetUniqueArchivedProductsCount(user.ID); err == nil {
 			t.Error("GetUniqueArchivedProductsCount() error = nil")
 		}
-		if _, err := repo.GetProductCategoryBreakdown(user.ID); err == nil {
+		if _, err := statsRepo.GetProductCategoryBreakdown(user.ID); err == nil {
 			t.Error("GetProductCategoryBreakdown() error = nil")
 		}
-		if _, err := repo.GetExpiryTrend(user.ID, time.Now()); err == nil {
+		if _, err := statsRepo.GetExpiryTrend(user.ID, time.Now()); err == nil {
 			t.Error("GetExpiryTrend() error = nil")
 		}
-		if _, err := repo.GetExpiringSoonProducts(user.ID, 7, time.Now()); err == nil {
+		if _, err := statsRepo.GetExpiringSoonProducts(user.ID, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonProducts() error = nil")
 		}
-		if _, err := repo.GetExpiringInDays(user.ID, 7); err == nil {
+		if _, err := householdRepo.GetExpiringInDays(user.ID, 7); err == nil {
 			t.Error("GetExpiringInDays() error = nil")
 		}
-		if _, err := repo.GetExpiringSoonCount(user.ID, 7, time.Now()); err == nil {
+		if _, err := statsRepo.GetExpiringSoonCount(user.ID, 7, time.Now()); err == nil {
 			t.Error("GetExpiringSoonCount() error = nil")
 		}
-		if _, _, err := repo.GetActiveExpiryCounts(user.ID, time.Now(), 7); err == nil {
+		if _, _, err := statsRepo.GetActiveExpiryCounts(user.ID, time.Now(), 7); err == nil {
 			t.Error("GetActiveExpiryCounts() error = nil")
 		}
-		if _, err := repo.GetWasteThisMonth(user.ID, time.Now()); err == nil {
+		if _, err := statsRepo.GetWasteThisMonth(user.ID, time.Now()); err == nil {
 			t.Error("GetWasteThisMonth() error = nil")
 		}
-		if _, err := repo.GetSubThresholdProducts(user.ID); err == nil {
+		if _, err := householdRepo.GetSubThresholdProducts(user.ID); err == nil {
 			t.Error("GetSubThresholdProducts() error = nil")
 		}
-		if _, err := repo.GetUserActiveProductsFiltered(user.ID, &from, &to); err == nil {
+		if _, err := householdRepo.GetUserActiveProductsFiltered(user.ID, &from, &to); err == nil {
 			t.Error("GetUserActiveProductsFiltered() error = nil")
 		}
-		if _, err := repo.GetUserArchivedProductsFiltered(user.ID, &from, &to); err == nil {
+		if _, err := householdRepo.GetUserArchivedProductsFiltered(user.ID, &from, &to); err == nil {
 			t.Error("GetUserArchivedProductsFiltered() error = nil")
 		}
-		if _, err := repo.GetExpiringProductsByHousehold(household.ID, 7); err == nil {
+		if _, err := householdRepo.GetExpiringProductsByHousehold(household.ID, 7); err == nil {
 			t.Error("GetExpiringProductsByHousehold() error = nil")
 		}
-		if _, err := repo.GetExpiringProductsForMailDigest(household.ID); err == nil {
+		if _, err := digestRepo.GetExpiringProductsForMailDigest(household.ID); err == nil {
 			t.Error("GetExpiringProductsForMailDigest() error = nil")
 		}
-		if _, err := repo.GetConsumedSamples(household.ID, user.ID, "1234567890123", "", time.Now()); err == nil {
+		if _, err := digestRepo.GetConsumedSamples(household.ID, user.ID, "1234567890123", "", time.Now()); err == nil {
 			t.Error("GetConsumedSamples() error = nil")
 		}
 	})
@@ -178,56 +185,56 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 	t.Run("write paths surface write errors", func(t *testing.T) {
 		failUpdatesOnTable(t, db, "products")
 
-		if err := repo.UpdateProduct(product.ID, user.ID, &dbModel.ProductDTOPatch{ProductName: "Patched"}); err == nil {
+		if err := productRepo.UpdateProduct(product.ID, user.ID, &dbModel.ProductDTOPatch{ProductName: "Patched"}); err == nil {
 			t.Error("UpdateProduct() error = nil")
 		}
-		if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err == nil {
+		if _, _, err := stockRepo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err == nil {
 			t.Error("UpdateProductQuantity() error = nil")
 		}
-		if err := repo.RestoreProduct(product.ID, user.ID); err == nil {
+		if err := productRepo.RestoreProduct(product.ID, user.ID); err == nil {
 			t.Error("RestoreProduct() error = nil")
 		}
-		if errs := repo.BulkRestoreProducts([]uint{product.ID}, user.ID); len(errs) != 1 {
+		if errs := productRepo.BulkRestoreProducts([]uint{product.ID}, user.ID); len(errs) != 1 {
 			t.Errorf("BulkRestoreProducts() returned %d errors, want 1", len(errs))
 		}
-		if err := repo.SetProductExpireAt(product.ID, user.ID, expireAt); err == nil {
+		if err := productRepo.SetProductExpireAt(product.ID, user.ID, expireAt); err == nil {
 			t.Error("SetProductExpireAt() error = nil")
 		}
-		if err := repo.SetProductNotifiedAt(product.ID); err == nil {
+		if err := productRepo.SetProductNotifiedAt(product.ID); err == nil {
 			t.Error("SetProductNotifiedAt() error = nil")
 		}
-		if err := repo.ConsumeProduct(product.ID, user.ID); err == nil {
+		if err := stockRepo.ConsumeProduct(product.ID, user.ID); err == nil {
 			t.Error("ConsumeProduct() save error = nil")
 		}
-		if err := repo.WasteProduct(product.ID, user.ID, ""); err == nil {
+		if err := stockRepo.WasteProduct(product.ID, user.ID, ""); err == nil {
 			t.Error("WasteProduct() error = nil")
 		}
-		if errs := repo.BulkWasteProducts([]uint{product.ID}, user.ID, ""); len(errs) != 1 {
+		if errs := stockRepo.BulkWasteProducts([]uint{product.ID}, user.ID, ""); len(errs) != 1 {
 			t.Errorf("BulkWasteProducts() returned %d errors, want 1", len(errs))
 		}
 	})
 
 	t.Run("create and delete paths surface write errors", func(t *testing.T) {
 		failCreatesOnTable(t, db, "products")
-		if err := repo.CreateProduct(user.ID, &dbModel.Product{ProductName: "Injected"}); err == nil {
+		if err := productRepo.CreateProduct(user.ID, &dbModel.Product{ProductName: "Injected"}); err == nil {
 			t.Error("CreateProduct() error = nil")
 		}
-		if _, err := repo.CreateProductsBulk(user.ID, []ImportedProduct{{Product: dbModel.Product{ProductName: "Injected"}}}); err == nil {
+		if _, err := productRepo.CreateProductsBulk(user.ID, []ImportedProduct{{Product: dbModel.Product{ProductName: "Injected"}}}); err == nil {
 			t.Error("CreateProductsBulk() error = nil")
 		}
 
 		failDeletesOnTable(t, db, "products")
-		if err := repo.DeleteProduct(product.ID, user.ID, true); err == nil {
+		if err := productRepo.DeleteProduct(product.ID, user.ID, true); err == nil {
 			t.Error("DeleteProduct() error = nil")
 		}
-		if err := repo.ConsumeProduct(product.ID, user.ID); err == nil {
+		if err := stockRepo.ConsumeProduct(product.ID, user.ID); err == nil {
 			t.Error("ConsumeProduct() delete error = nil")
 		}
 	})
 
 	t.Run("bulk import fails when the location count query fails", func(t *testing.T) {
 		failQueriesOnTable(t, db, "storage_locations")
-		if _, err := repo.CreateProductsBulk(user.ID, []ImportedProduct{{Product: dbModel.Product{ProductName: "X"}}}); err == nil {
+		if _, err := productRepo.CreateProductsBulk(user.ID, []ImportedProduct{{Product: dbModel.Product{ProductName: "X"}}}); err == nil {
 			t.Error("CreateProductsBulk() error = nil")
 		}
 	})
@@ -235,14 +242,14 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 	t.Run("bulk import fails when location creation fails", func(t *testing.T) {
 		failCreatesOnTable(t, db, "storage_locations")
 		rows := []ImportedProduct{{Product: dbModel.Product{ProductName: "X"}, NewLocationName: "NewLoc"}}
-		if _, err := repo.CreateProductsBulk(user.ID, rows); err == nil {
+		if _, err := productRepo.CreateProductsBulk(user.ID, rows); err == nil {
 			t.Error("CreateProductsBulk() error = nil")
 		}
 	})
 
 	t.Run("open food facts batch query surfaces errors", func(t *testing.T) {
 		failQueriesOnTable(t, db, "open_food_facts_caches")
-		if _, err := repo.GetOpenFoodFactsCachesByBarcodes([]string{"1"}); err == nil {
+		if _, err := cacheRepo.GetOpenFoodFactsCachesByBarcodes([]string{"1"}); err == nil {
 			t.Error("GetOpenFoodFactsCachesByBarcodes() error = nil")
 		}
 	})
@@ -250,7 +257,7 @@ func TestProductRepository_QueryErrorInjection(t *testing.T) {
 
 func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	stockRepo := NewProductStockRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
@@ -267,7 +274,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	t.Run("fast-path update failure surfaces", func(t *testing.T) {
 		product := seed(t, 5)
 		failUpdatesOnTable(t, db, "products")
-		if _, _, _, err := repo.ConsumeProductPartial(&product, 2, nil); err == nil {
+		if _, _, _, err := stockRepo.ConsumeProductPartial(&product, 2, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 	})
@@ -279,7 +286,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 		stale := product
 		stale.Quantity = 3
 		failUpdatesOnTable(t, db, "products")
-		if _, _, _, err := repo.ConsumeProductPartial(&stale, 3, nil); err == nil {
+		if _, _, _, err := stockRepo.ConsumeProductPartial(&stale, 3, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 	})
@@ -287,7 +294,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 	t.Run("full-consume flag update failure surfaces", func(t *testing.T) {
 		product := seed(t, 2)
 		failUpdatesOnTable(t, db, "products")
-		if _, _, _, err := repo.ConsumeProductPartial(&product, 5, nil); err == nil {
+		if _, _, _, err := stockRepo.ConsumeProductPartial(&product, 5, nil); err == nil {
 			t.Error("ConsumeProductPartial() error = nil, want injected failure")
 		}
 		var reloaded dbModel.Product
@@ -315,7 +322,7 @@ func TestProductRepository_ConsumeProductPartialErrors(t *testing.T) {
 		})
 		t.Cleanup(func() { db.Callback().Update().Remove("test:consume_partial_concurrent") })
 
-		_, _, _, err := repo.ConsumeProductPartial(&stale, 3, nil)
+		_, _, _, err := stockRepo.ConsumeProductPartial(&stale, 3, nil)
 		if err != errors.ErrProductConcurrentModification {
 			t.Errorf("ConsumeProductPartial() error = %v, want %v", err, errors.ErrProductConcurrentModification)
 		}

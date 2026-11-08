@@ -36,8 +36,8 @@ func TestListProductsWithoutPackSizeFindsNullAndEmptyRows(t *testing.T) {
 		t.Fatalf("seed product: %v", err)
 	}
 
-	repo := NewProductRepository(db)
-	products, err := repo.ListProductsWithoutPackSize(0, 50)
+	productRepo := NewProductRepository(db)
+	products, err := productRepo.ListProductsWithoutPackSize(0, 50)
 	if err != nil {
 		t.Fatalf("ListProductsWithoutPackSize() error = %v", err)
 	}
@@ -74,8 +74,8 @@ func TestListProductsWithoutPackSizeRespectsTheCursor(t *testing.T) {
 		t.Fatalf("seed product: %v", err)
 	}
 
-	repo := NewProductRepository(db)
-	products, err := repo.ListProductsWithoutPackSize(first.ID, 50)
+	productRepo := NewProductRepository(db)
+	products, err := productRepo.ListProductsWithoutPackSize(first.ID, 50)
 	if err != nil {
 		t.Fatalf("ListProductsWithoutPackSize() error = %v", err)
 	}

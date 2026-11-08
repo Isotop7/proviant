@@ -47,7 +47,7 @@ func GetProductsByBarcode(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	products, getError := appCtx.Repos.Products.GetUserProductsBulkByBarcode(appCtx.UserID, barcode)
+	products, getError := appCtx.Repos.ProductLists.GetUserProductsBulkByBarcode(appCtx.UserID, barcode)
 
 	switch getError {
 	case nil:
@@ -95,7 +95,7 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	products, productErr := appCtx.Repos.Products.SearchProducts(enumParam, q.QueryValue, q.Sort, q.Order, appCtx.UserID, q.Limit, q.Offset)
+	products, productErr := appCtx.Repos.ProductSearch.SearchProducts(enumParam, q.QueryValue, q.Sort, q.Order, appCtx.UserID, q.Limit, q.Offset)
 	if productErr != nil {
 		// The caller picked the sort column/direction and owns their account
 		// row: those misses are client input, not server faults. The query
@@ -121,7 +121,7 @@ func SearchProducts(ctx *gin.Context, appCtx *AppContext) {
 		}
 	}
 
-	total, countErr := appCtx.Repos.Products.CountSearchProducts(enumParam, q.QueryValue, appCtx.UserID)
+	total, countErr := appCtx.Repos.ProductSearch.CountSearchProducts(enumParam, q.QueryValue, appCtx.UserID)
 	if countErr != nil {
 		appCtx.Logger.Error().Msgf("%s: %s", errors.MsgErrGettingProducts, countErr)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})

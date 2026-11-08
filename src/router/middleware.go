@@ -267,13 +267,44 @@ func AuthorizatorUserAware(data any, ctx *gin.Context) bool {
 		return false
 	}
 
-	// Get database instance from context and fail if not found
-	dbHandle, ok := ctx.MustGet(util.ContextKeyDBHandle).(*gorm.DB)
+	// The repository container is set by the engine middleware for every
+	// request, so a missing one is a wiring fault, not an access decision.
+	// The request is denied either way, but the fault is logged: a silent
+	// refusal would hide it behind an ordinary 403.
+	repos, ok := repositoryContainer(ctx)
 	if !ok {
 		return false
 	}
-	productRepo := database.NewProductRepository(dbHandle)
-	return productRepo.UserHasProductAccess(user.ID, productID)
+	return repos.Products.UserHasProductAccess(user.ID, productID)
+}
+
+// repositoryContainer reads the repository container from the request context.
+func repositoryContainer(ctx *gin.Context) (*database.RepositoryContainer, bool) {
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	if !exists {
+		logAuthorizerFault(ctx, "the repository container is missing from the context")
+		return nil, false
+	}
+	repos, ok := reposVal.(*database.RepositoryContainer)
+	if !ok || repos == nil {
+		logAuthorizerFault(ctx, "the repository container in the context has the wrong type")
+		return nil, false
+	}
+	return repos, true
+}
+
+// logAuthorizerFault records an authorizator that could not decide because the
+// request context was not wired.
+func logAuthorizerFault(ctx *gin.Context, message string) {
+	loggerValue, ok := ctx.Get(util.ContextKeyLogger)
+	if !ok {
+		return
+	}
+	logger, ok := loggerValue.(*zerolog.Logger)
+	if !ok || logger == nil {
+		return
+	}
+	logger.Error().Msg("authorizator: " + message)
 }
 
 func AuthorizatorShoppingListItem(data any, ctx *gin.Context) bool {
@@ -292,11 +323,7 @@ func AuthorizatorShoppingListItem(data any, ctx *gin.Context) bool {
 		return false
 	}
 
-	reposVal, exists := ctx.Get(util.ContextKeyRepos)
-	if !exists {
-		return false
-	}
-	repos, ok := reposVal.(*database.RepositoryContainer)
+	repos, ok := repositoryContainer(ctx)
 	if !ok {
 		return false
 	}

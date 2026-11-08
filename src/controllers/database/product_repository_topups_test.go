@@ -15,7 +15,11 @@ import (
 // and the household/user passthroughs.
 func TestProductRepository_TopUps(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
+	userRepo := NewUserRepository(db)
+	productRepo := NewProductRepository(db)
+	statsRepo := NewProductStatsRepository(db)
+	stockRepo := NewProductStockRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
@@ -32,7 +36,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 	}
 
 	t.Run("GetExpiringInDays returns only products inside the window", func(t *testing.T) {
-		products, err := repo.GetExpiringInDays(user.ID, 7)
+		products, err := householdRepo.GetExpiringInDays(user.ID, 7)
 		if err != nil {
 			t.Fatalf("GetExpiringInDays() error = %v", err)
 		}
@@ -42,13 +46,13 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 
 	t.Run("GetExpiringInDays with unknown user errors", func(t *testing.T) {
-		if _, err := repo.GetExpiringInDays(9999, 7); err == nil {
+		if _, err := householdRepo.GetExpiringInDays(9999, 7); err == nil {
 			t.Error("GetExpiringInDays(9999) error = nil, want error")
 		}
 	})
 
 	t.Run("GetExpiringSoonCount counts window entries", func(t *testing.T) {
-		count, err := repo.GetExpiringSoonCount(user.ID, 7, time.Now())
+		count, err := statsRepo.GetExpiringSoonCount(user.ID, 7, time.Now())
 		if err != nil {
 			t.Fatalf("GetExpiringSoonCount() error = %v", err)
 		}
@@ -58,7 +62,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 
 	t.Run("GetLastInsertedProduct returns most recent row", func(t *testing.T) {
-		product, err := repo.GetLastInsertedProduct(household.ID)
+		product, err := householdRepo.GetLastInsertedProduct(household.ID)
 		if err != nil {
 			t.Fatalf("GetLastInsertedProduct() error = %v", err)
 		}
@@ -68,7 +72,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 
 	t.Run("GetLastNotifiedProduct returns zero NotifiedAt when nothing notified", func(t *testing.T) {
-		product, err := repo.GetLastNotifiedProduct(household.ID)
+		product, err := householdRepo.GetLastNotifiedProduct(household.ID)
 		if err != nil {
 			t.Fatalf("GetLastNotifiedProduct() error = %v", err)
 		}
@@ -79,7 +83,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 
 	t.Run("SetProductExpireAt updates the date", func(t *testing.T) {
 		newDate := databaseTimestamp(time.Now().Add(10 * 24 * time.Hour))
-		if err := repo.SetProductExpireAt(soon.ID, user.ID, newDate); err != nil {
+		if err := productRepo.SetProductExpireAt(soon.ID, user.ID, newDate); err != nil {
 			t.Fatalf("SetProductExpireAt() error = %v", err)
 		}
 		var updated dbModel.Product
@@ -93,7 +97,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 
 	t.Run("SetProductExpireAt rejects household mismatch", func(t *testing.T) {
 		outsider := testutil.CreateTestUser(db, 0)
-		if err := repo.SetProductExpireAt(soon.ID, outsider.ID, databaseTimestamp(time.Now())); err != provErrors.ErrMismatcherUserID {
+		if err := productRepo.SetProductExpireAt(soon.ID, outsider.ID, databaseTimestamp(time.Now())); err != provErrors.ErrMismatcherUserID {
 			t.Errorf("error = %v, want %v", err, provErrors.ErrMismatcherUserID)
 		}
 	})
@@ -104,7 +108,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 			t.Fatalf("failed to save product: %v", err)
 		}
 
-		empty, _, err := repo.UpdateProductQuantity(soon.ID, user.ID, -3, nil)
+		empty, _, err := stockRepo.UpdateProductQuantity(soon.ID, user.ID, -3, nil)
 		if err != nil {
 			t.Fatalf("UpdateProductQuantity() error = %v", err)
 		}
@@ -119,7 +123,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 			t.Errorf("amount = %d, want 2", updated.Quantity)
 		}
 
-		empty, _, err = repo.UpdateProductQuantity(soon.ID, user.ID, 2, nil)
+		empty, _, err = stockRepo.UpdateProductQuantity(soon.ID, user.ID, 2, nil)
 		if err != nil {
 			t.Fatalf("UpdateProductQuantity() error = %v", err)
 		}
@@ -129,13 +133,13 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 
 	t.Run("UpdateProductQuantity with invalid id errors", func(t *testing.T) {
-		if _, _, err := repo.UpdateProductQuantity(0, user.ID, 1, nil); err == nil {
+		if _, _, err := stockRepo.UpdateProductQuantity(0, user.ID, 1, nil); err == nil {
 			t.Error("UpdateProductQuantity(0) error = nil, want error")
 		}
 	})
 
 	t.Run("SetProductNotifiedAt stamps the product", func(t *testing.T) {
-		if err := repo.SetProductNotifiedAt(soon.ID); err != nil {
+		if err := productRepo.SetProductNotifiedAt(soon.ID); err != nil {
 			t.Fatalf("SetProductNotifiedAt() error = %v", err)
 		}
 		var updated dbModel.Product
@@ -145,29 +149,29 @@ func TestProductRepository_TopUps(t *testing.T) {
 		if updated.NotifiedAt.IsZero() {
 			t.Error("NotifiedAt not set")
 		}
-		if err := repo.SetProductNotifiedAt(9999); err == nil {
+		if err := productRepo.SetProductNotifiedAt(9999); err == nil {
 			t.Error("SetProductNotifiedAt(9999) error = nil, want error")
 		}
 	})
 
 	t.Run("passthrough lookups", func(t *testing.T) {
-		if _, err := repo.GetUserByID(user.ID); err != nil {
+		if _, err := userRepo.GetUserByID(user.ID); err != nil {
 			t.Errorf("GetUserByID() error = %v", err)
 		}
-		if _, err := repo.GetUserHouseholdByID(user.ID); err != nil {
+		if _, err := userRepo.GetUserHouseholdByID(user.ID); err != nil {
 			t.Errorf("GetUserHouseholdByID() error = %v", err)
 		}
-		if _, err := repo.GetHouseholdByID(household.ID); err != nil {
+		if _, err := NewHouseholdRepository(db).GetHouseholdByID(household.ID); err != nil {
 			t.Errorf("GetHouseholdByID() error = %v", err)
 		}
-		users, err := repo.GetUsersByHouseholdID(household.ID)
+		users, err := userRepo.GetUsersByHouseholdID(household.ID)
 		if err != nil || len(users) != 1 {
 			t.Errorf("GetUsersByHouseholdID() = %v, %v; want 1 user", users, err)
 		}
 	})
 
 	t.Run("GetUserActiveProductsFiltered with and without date bounds", func(t *testing.T) {
-		all, err := repo.GetUserActiveProductsFiltered(user.ID, nil, nil)
+		all, err := householdRepo.GetUserActiveProductsFiltered(user.ID, nil, nil)
 		if err != nil {
 			t.Fatalf("GetUserActiveProductsFiltered() error = %v", err)
 		}
@@ -176,7 +180,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 		}
 
 		future := time.Now().Add(60 * 24 * time.Hour)
-		bounded, err := repo.GetUserActiveProductsFiltered(user.ID, &future, nil)
+		bounded, err := householdRepo.GetUserActiveProductsFiltered(user.ID, &future, nil)
 		if err != nil {
 			t.Fatalf("GetUserActiveProductsFiltered(bounded) error = %v", err)
 		}
@@ -186,10 +190,10 @@ func TestProductRepository_TopUps(t *testing.T) {
 	})
 
 	t.Run("GetUserArchivedProductsFiltered", func(t *testing.T) {
-		if err := repo.DeleteProduct(far.ID, user.ID, true); err != nil {
+		if err := productRepo.DeleteProduct(far.ID, user.ID, true); err != nil {
 			t.Fatalf("DeleteProduct() error = %v", err)
 		}
-		archived, err := repo.GetUserArchivedProductsFiltered(user.ID, nil, nil)
+		archived, err := householdRepo.GetUserArchivedProductsFiltered(user.ID, nil, nil)
 		if err != nil {
 			t.Fatalf("GetUserArchivedProductsFiltered() error = %v", err)
 		}
@@ -204,7 +208,7 @@ func TestProductRepository_TopUps(t *testing.T) {
 // of one household and another's stock.
 func TestProductRepository_UpdateProductQuantityHouseholdGuard(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	stockRepo := NewProductStockRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 	product := testutil.CreateTestProduct(db, household.ID, user.ID)
@@ -214,7 +218,7 @@ func TestProductRepository_UpdateProductQuantityHouseholdGuard(t *testing.T) {
 	}
 
 	outsider := testutil.CreateTestUser(db, 0)
-	if _, _, err := repo.UpdateProductQuantity(product.ID, outsider.ID, 1, nil); err != provErrors.ErrMismatcherUserID {
+	if _, _, err := stockRepo.UpdateProductQuantity(product.ID, outsider.ID, 1, nil); err != provErrors.ErrMismatcherUserID {
 		t.Errorf("error = %v, want %v", err, provErrors.ErrMismatcherUserID)
 	}
 
@@ -226,7 +230,7 @@ func TestProductRepository_UpdateProductQuantityHouseholdGuard(t *testing.T) {
 		t.Errorf("amount = %d, want 5 — a refused update must not move the amount", unchanged.Quantity)
 	}
 
-	if _, _, err := repo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err != nil {
+	if _, _, err := stockRepo.UpdateProductQuantity(product.ID, user.ID, 1, nil); err != nil {
 		t.Fatalf("owner's update error = %v, want none", err)
 	}
 	var updated dbModel.Product
@@ -240,49 +244,49 @@ func TestProductRepository_UpdateProductQuantityHouseholdGuard(t *testing.T) {
 
 func TestProductRepository_OpenFoodFactsCache(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	cacheRepo := NewOpenFoodFactsCacheRepository(db)
 
 	entry := dbModel.OpenFoodFactsCache{
 		Barcode:     "1234567890123",
 		ProductName: "Cached Product",
 	}
-	if err := repo.CreateOpenFoodFactsCache(&entry); err != nil {
+	if err := cacheRepo.CreateOpenFoodFactsCache(&entry); err != nil {
 		t.Fatalf("CreateOpenFoodFactsCache() error = %v", err)
 	}
 
 	t.Run("GetOpenFoodFactsCacheByBarcode", func(t *testing.T) {
-		got, err := repo.GetOpenFoodFactsCacheByBarcode("1234567890123")
+		got, err := cacheRepo.GetOpenFoodFactsCacheByBarcode("1234567890123")
 		if err != nil || got.Barcode != "1234567890123" {
 			t.Errorf("got = %v, %v; want barcode entry", got, err)
 		}
-		if _, err := repo.GetOpenFoodFactsCacheByBarcode("missing"); err == nil {
+		if _, err := cacheRepo.GetOpenFoodFactsCacheByBarcode("missing"); err == nil {
 			t.Error("missing barcode: error = nil, want error")
 		}
 	})
 
 	t.Run("GetOpenFoodFactsCachesByBarcodes batches and handles empty input", func(t *testing.T) {
-		got, err := repo.GetOpenFoodFactsCachesByBarcodes([]string{"1234567890123", "9999999999999"})
+		got, err := cacheRepo.GetOpenFoodFactsCachesByBarcodes([]string{"1234567890123", "9999999999999"})
 		if err != nil {
 			t.Fatalf("GetOpenFoodFactsCachesByBarcodes() error = %v", err)
 		}
 		if len(got) != 1 {
 			t.Errorf("got = %d, want 1", len(got))
 		}
-		empty, err := repo.GetOpenFoodFactsCachesByBarcodes(nil)
+		empty, err := cacheRepo.GetOpenFoodFactsCachesByBarcodes(nil)
 		if err != nil || len(empty) != 0 {
 			t.Errorf("empty input = %v, %v; want empty result", empty, err)
 		}
 	})
 
 	t.Run("storage hint and image URL updates", func(t *testing.T) {
-		if err := repo.UpdateOpenFoodFactsCacheImageURL("1234567890123", "https://example.com/img.jpg"); err != nil {
+		if err := cacheRepo.UpdateOpenFoodFactsCacheImageURL("1234567890123", "https://example.com/img.jpg"); err != nil {
 			t.Errorf("UpdateOpenFoodFactsCacheImageURL() error = %v", err)
 		}
-		if err := repo.UpdateOpenFoodFactsCacheStorageHint("1234567890123", "Fridge"); err != nil {
+		if err := cacheRepo.UpdateOpenFoodFactsCacheStorageHint("1234567890123", "Fridge"); err != nil {
 			t.Errorf("UpdateOpenFoodFactsCacheStorageHint() error = %v", err)
 		}
 
-		withoutHint, err := repo.GetOpenFoodFactsCacheWithoutStorageHint()
+		withoutHint, err := cacheRepo.GetOpenFoodFactsCacheWithoutStorageHint()
 		if err != nil {
 			t.Fatalf("GetOpenFoodFactsCacheWithoutStorageHint() error = %v", err)
 		}
@@ -290,7 +294,7 @@ func TestProductRepository_OpenFoodFactsCache(t *testing.T) {
 			t.Errorf("withoutHint = %d, want 0 after hint set", len(withoutHint))
 		}
 
-		withRemote, err := repo.GetOpenFoodFactsCacheWithRemoteImageURL()
+		withRemote, err := cacheRepo.GetOpenFoodFactsCacheWithRemoteImageURL()
 		if err != nil {
 			t.Fatalf("GetOpenFoodFactsCacheWithRemoteImageURL() error = %v", err)
 		}
@@ -302,14 +306,14 @@ func TestProductRepository_OpenFoodFactsCache(t *testing.T) {
 
 func TestProductRepository_MarkProductOpened(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	productRepo := NewProductRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 	product := testutil.CreateTestProduct(db, household.ID, user.ID)
 
 	t.Run("first open succeeds", func(t *testing.T) {
 		openedAt := time.Now()
-		current, _, changed, err := repo.MarkProductOpened(product.ID, user.ID, openedAt, false)
+		current, _, changed, err := productRepo.MarkProductOpened(product.ID, user.ID, openedAt, false)
 		if err != nil {
 			t.Fatalf("MarkProductOpened() error = %v", err)
 		}
@@ -322,7 +326,7 @@ func TestProductRepository_MarkProductOpened(t *testing.T) {
 	})
 
 	t.Run("second open without force reports conflict", func(t *testing.T) {
-		_, _, changed, err := repo.MarkProductOpened(product.ID, user.ID, time.Now(), false)
+		_, _, changed, err := productRepo.MarkProductOpened(product.ID, user.ID, time.Now(), false)
 		if err != nil {
 			t.Fatalf("MarkProductOpened() error = %v", err)
 		}
@@ -332,7 +336,7 @@ func TestProductRepository_MarkProductOpened(t *testing.T) {
 	})
 
 	t.Run("reopen with force succeeds", func(t *testing.T) {
-		_, _, changed, err := repo.MarkProductOpened(product.ID, user.ID, time.Now(), true)
+		_, _, changed, err := productRepo.MarkProductOpened(product.ID, user.ID, time.Now(), true)
 		if err != nil {
 			t.Fatalf("MarkProductOpened(force) error = %v", err)
 		}
@@ -343,7 +347,7 @@ func TestProductRepository_MarkProductOpened(t *testing.T) {
 
 	t.Run("open for foreign user errors", func(t *testing.T) {
 		outsider := testutil.CreateTestUser(db, 0)
-		if _, _, _, err := repo.MarkProductOpened(product.ID, outsider.ID, time.Now(), true); err == nil {
+		if _, _, _, err := productRepo.MarkProductOpened(product.ID, outsider.ID, time.Now(), true); err == nil {
 			t.Error("foreign user open: error = nil, want error")
 		}
 	})

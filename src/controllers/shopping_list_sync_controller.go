@@ -309,6 +309,7 @@ type ShoppingListSyncController struct {
 	Logger          *zerolog.Logger
 	Configuration   *configuration.ShoppingListSyncConfiguration
 	DB              *gorm.DB
+	Repos           *dbController.RepositoryContainer
 	ProviderFactory ShoppingListSyncProviderFactory
 	HTTPClient      *http.Client
 }
@@ -318,11 +319,13 @@ func NewShoppingListSyncController(
 	logger *zerolog.Logger,
 	config *configuration.ShoppingListSyncConfiguration,
 	db *gorm.DB,
+	repos *dbController.RepositoryContainer,
 ) *ShoppingListSyncController {
 	return &ShoppingListSyncController{
 		Logger:          logger,
 		Configuration:   config,
 		DB:              db,
+		Repos:           repos,
 		ProviderFactory: NewShoppingListSyncProvider,
 	}
 }
@@ -332,11 +335,10 @@ func (c *ShoppingListSyncController) RunOnce(ctx context.Context) error {
 	if c.Configuration == nil || !c.Configuration.Enabled {
 		return nil
 	}
-	if c.DB == nil {
+	if c.DB == nil || c.Repos == nil {
 		return nil
 	}
-	repos := dbController.NewRepositoryContainer(c.DB, c.Logger)
-	return SyncAllHouseholdsIntegrations(ctx, repos, c.Logger, c.Configuration, c.ProviderFactory, c.HTTPClient)
+	return SyncAllHouseholdsIntegrations(ctx, c.Repos.WithContext(ctx), c.Logger, c.Configuration, c.ProviderFactory, c.HTTPClient)
 }
 
 // Dispatch starts the periodic shopping list sync goroutine when enabled in configuration.

@@ -35,7 +35,7 @@ func assertConsecutiveMonths(t *testing.T, keys []string) {
 // skipped month vanishes from the trend.
 func TestGetExpiryTrendBucketsTwelveConsecutiveMonths(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	statsRepo := NewProductStatsRepository(db)
 
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
@@ -55,7 +55,7 @@ func TestGetExpiryTrendBucketsTwelveConsecutiveMonths(t *testing.T) {
 		t.Fatalf("save product: %v", err)
 	}
 
-	trend, err := repo.GetExpiryTrend(user.ID, anchor)
+	trend, err := statsRepo.GetExpiryTrend(user.ID, anchor)
 	if err != nil {
 		t.Fatalf("GetExpiryTrend: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestGetExpiryTrendBucketsTwelveConsecutiveMonths(t *testing.T) {
 	// The anchor picks the window, not the wall clock: one calendar month
 	// later the product moves into the first bucket.
 	laterAnchor := time.Date(2026, time.November, 30, 12, 0, 0, 0, time.Local)
-	later, err := repo.GetExpiryTrend(user.ID, laterAnchor)
+	later, err := statsRepo.GetExpiryTrend(user.ID, laterAnchor)
 	if err != nil {
 		t.Fatalf("GetExpiryTrend: %v", err)
 	}

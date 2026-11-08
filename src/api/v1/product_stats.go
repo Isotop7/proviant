@@ -15,11 +15,11 @@ import (
 )
 
 func getLastInsertedProductName(repos *database.RepositoryContainer, userID uint) string {
-	householdID, householdErr := repos.Products.GetUserHouseholdByID(userID)
+	householdID, householdErr := repos.Users.GetUserHouseholdByID(userID)
 	if householdErr != nil || householdID == 0 {
 		return ""
 	}
-	lastProduct, lastErr := repos.Products.GetLastInsertedProduct(householdID)
+	lastProduct, lastErr := repos.ProductHousehold.GetLastInsertedProduct(householdID)
 	if lastErr != nil || lastProduct.ID == 0 {
 		return ""
 	}
@@ -37,7 +37,7 @@ func getLastInsertedProductName(repos *database.RepositoryContainer, userID uint
 // @Failure      	500  {object}  api.APIResponse
 // @Router       	/api/v1/products/expired [get]
 func GetExpired(ctx *gin.Context, appCtx *AppContext) {
-	products, getExpiredErr := appCtx.Repos.Products.GetProductsExpired(appCtx.UserID)
+	products, getExpiredErr := appCtx.Repos.ProductLists.GetProductsExpired(appCtx.UserID)
 
 	if getExpiredErr != nil {
 		appCtx.Logger.Error().Msgf("Error getting expired products: %s", getExpiredErr)
@@ -59,28 +59,28 @@ func GetExpired(ctx *gin.Context, appCtx *AppContext) {
 func GetProductSummary(ctx *gin.Context, appCtx *AppContext) {
 	now := time.Now()
 
-	expiringSoonCount, err := appCtx.Repos.Products.GetExpiringSoonCount(appCtx.UserID, 7, now)
+	expiringSoonCount, err := appCtx.Repos.ProductStats.GetExpiringSoonCount(appCtx.UserID, 7, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
 		return
 	}
 
-	expiredCount, err := appCtx.Repos.Products.GetExpiredProductsCount(appCtx.UserID, now)
+	expiredCount, err := appCtx.Repos.ProductStats.GetExpiredProductsCount(appCtx.UserID, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	totalActive, err := appCtx.Repos.Products.GetActiveProductsCount(appCtx.UserID)
+	totalActive, err := appCtx.Repos.ProductStats.GetActiveProductsCount(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetActiveProductsCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingActiveCount})
 		return
 	}
 
-	wasteThisMonth, err := appCtx.Repos.Products.GetWasteThisMonth(appCtx.UserID, now)
+	wasteThisMonth, err := appCtx.Repos.ProductStats.GetWasteThisMonth(appCtx.UserID, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetWasteThisMonth: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -109,14 +109,14 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 	// a stats document have to describe the same point in time.
 	now := time.Now()
 
-	totalActive, err := appCtx.Repos.Products.GetActiveProductsCount(appCtx.UserID)
+	totalActive, err := appCtx.Repos.ProductStats.GetActiveProductsCount(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetActiveProductsCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingActiveCount})
 		return
 	}
 
-	wasteCount, err := appCtx.Repos.Products.GetExpiredProductsCount(appCtx.UserID, now)
+	wasteCount, err := appCtx.Repos.ProductStats.GetExpiredProductsCount(appCtx.UserID, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiredProductsCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingWasteCount})
@@ -129,32 +129,32 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	expiringSoonDays := 7
-	if user, userErr := appCtx.Repos.Products.GetUserByID(appCtx.UserID); userErr == nil && user.NotificationPreferences.NotificationThresholdDays > 0 {
+	if user, userErr := appCtx.Repos.Users.GetUserByID(appCtx.UserID); userErr == nil && user.NotificationPreferences.NotificationThresholdDays > 0 {
 		expiringSoonDays = user.NotificationPreferences.NotificationThresholdDays
 	}
 
-	expiringSoon, err := appCtx.Repos.Products.GetExpiringSoonProducts(appCtx.UserID, expiringSoonDays, now)
+	expiringSoon, err := appCtx.Repos.ProductStats.GetExpiringSoonProducts(appCtx.UserID, expiringSoonDays, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiringSoonProducts, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiringSoon})
 		return
 	}
 
-	useFirst, err := appCtx.Repos.Products.GetUseFirstProducts(appCtx.UserID, util.UseFirstProductsLimit)
+	useFirst, err := appCtx.Repos.ProductStats.GetUseFirstProducts(appCtx.UserID, util.UseFirstProductsLimit)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetUseFirstProducts: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	categories, err := appCtx.Repos.Products.GetProductCategoryBreakdown(appCtx.UserID)
+	categories, err := appCtx.Repos.ProductStats.GetProductCategoryBreakdown(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetProductCategoryBreakdown, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingCategoryBreakdown})
 		return
 	}
 
-	expiryTrend, err := appCtx.Repos.Products.GetExpiryTrend(appCtx.UserID, now)
+	expiryTrend, err := appCtx.Repos.ProductStats.GetExpiryTrend(appCtx.UserID, now)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetExpiryTrend, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingExpiryTrend})
@@ -163,14 +163,14 @@ func GetProductStats(ctx *gin.Context, appCtx *AppContext) {
 
 	// Counts, not row loads: the archived rows are large and the endpoint only
 	// ever reported their totals.
-	totalArchived, err := appCtx.Repos.Products.GetArchivedProductsCount(appCtx.UserID)
+	totalArchived, err := appCtx.Repos.ProductStats.GetArchivedProductsCount(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("GetArchivedProductsCount: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
 		return
 	}
 
-	uniqueArchived, err := appCtx.Repos.Products.GetUniqueArchivedProductsCount(appCtx.UserID)
+	uniqueArchived, err := appCtx.Repos.ProductStats.GetUniqueArchivedProductsCount(appCtx.UserID)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(errors.FmtErrGetUniqueArchivedCount, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrComputingUniqueArchivedCount})

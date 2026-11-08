@@ -87,7 +87,7 @@ type FullExportProducts = apiModel.FullExportProducts
 func ExportProductsCSV(ctx *gin.Context, appCtx *AppContext) {
 	from, to := parseDateRange(ctx)
 
-	products, err := appCtx.Repos.Products.GetUserActiveProductsFiltered(appCtx.UserID, from, to)
+	products, err := appCtx.Repos.ProductHousehold.GetUserActiveProductsFiltered(appCtx.UserID, from, to)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(GetUserActiveProductsFiltered, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
@@ -129,7 +129,7 @@ func ExportProductsCSV(ctx *gin.Context, appCtx *AppContext) {
 func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext) {
 	from, to := parseDateRange(ctx)
 
-	products, err := appCtx.Repos.Products.GetUserActiveProductsFiltered(appCtx.UserID, from, to)
+	products, err := appCtx.Repos.ProductHousehold.GetUserActiveProductsFiltered(appCtx.UserID, from, to)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(GetUserActiveProductsFiltered, err)
 		ctx.JSON(http.StatusInternalServerError, api.APIResponse{Message: errors.MsgErrGettingProducts})
@@ -155,7 +155,7 @@ func ExportProductsJSON(ctx *gin.Context, appCtx *AppContext) {
 func ExportArchiveCSV(ctx *gin.Context, appCtx *AppContext) {
 	from, to := parseDateRange(ctx)
 
-	products, err := appCtx.Repos.Products.GetUserArchivedProductsFiltered(appCtx.UserID, from, to)
+	products, err := appCtx.Repos.ProductHousehold.GetUserArchivedProductsFiltered(appCtx.UserID, from, to)
 	if err != nil {
 		appCtx.Logger.Error().Msgf(fmtGetUserArchivedProductsFilter, err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -208,7 +208,7 @@ func ExportFullJSON(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	response, err := controllers.BuildFullExport(appCtx.DB, appCtx.Logger, householdID, appCtx.UserID, false)
+	response, err := controllers.BuildFullExport(appCtx.Repos, appCtx.Logger, householdID, appCtx.UserID, false)
 	if err != nil {
 		appCtx.Logger.Error().Msgf("BuildFullExport: %s", err)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())

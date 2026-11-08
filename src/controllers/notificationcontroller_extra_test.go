@@ -200,7 +200,7 @@ func newExtraNotificationController(mockRepos *repomocks.MockRepositoryContainer
 		Logger:           &logger,
 		Configuration:    config,
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 }
 
@@ -445,7 +445,7 @@ func TestDispatchMonthlyWasteReportsStarts(t *testing.T) {
 			MonthlyWasteReport: configuration.MonthlyWasteReportConfiguration{Day: 1, Hour: 0},
 		},
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 
 	// The goroutine sleeps until the configured day of the next month, so its
@@ -473,7 +473,7 @@ func TestDispatchStreakUpdatesStarts(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 			StreakRepo:       mockRepos.Streaks,
 		}
 
@@ -502,7 +502,7 @@ func TestDispatchStreakUpdatesStarts(t *testing.T) {
 			Logger:           &logger,
 			Configuration:    &configuration.NotificationConfiguration{},
 			NotificationRepo: mockRepos.Notifications,
-			ProductRepo:      mockRepos.Products,
+			ProductRepo:      mockRepos.ProductDigest,
 		}
 
 		nc.DispatchStreakUpdates()
@@ -926,7 +926,7 @@ func TestProcessMailDigestEmails(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, smtpConfig)
 		nc.NotificationRepo = repo
 		nc.ProductRepo = &digestProductRepo{
-			MockProductRepository: mockRepos.Products,
+			MockProductRepository: mockRepos.ProductDigest,
 			group:                 dbController.MailDigestProductGroup{Today: []dbModel.Product{{ProductName: "Milk"}}},
 		}
 
@@ -955,7 +955,7 @@ func TestProcessMailDigestEmails(t *testing.T) {
 		nc.NotificationRepo = repo
 		// Non-empty groups prove the frequency check is the only reason no email goes out.
 		nc.ProductRepo = &digestProductRepo{
-			MockProductRepository: mockRepos.Products,
+			MockProductRepository: mockRepos.ProductDigest,
 			group:                 dbController.MailDigestProductGroup{Today: []dbModel.Product{{ProductName: "Milk"}}},
 		}
 
@@ -980,7 +980,7 @@ func TestProcessMailDigestEmails(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, smtpConfig)
 		nc.NotificationRepo = repo
 		nc.ProductRepo = &digestProductRepo{
-			MockProductRepository: mockRepos.Products,
+			MockProductRepository: mockRepos.ProductDigest,
 			group:                 dbController.MailDigestProductGroup{Today: []dbModel.Product{{ProductName: "Milk"}}},
 			err:                   errors.New("db down"),
 		}
@@ -1005,7 +1005,7 @@ func TestProcessMailDigestEmails(t *testing.T) {
 		repo.targets = []models.HouseholdMailDigestTarget{{HouseholdID: 1, HouseholdName: "Home", Users: []models.MailDigestUser{dueUser}}}
 		nc := newExtraNotificationController(mockRepos, smtpConfig)
 		nc.NotificationRepo = repo
-		nc.ProductRepo = &digestProductRepo{MockProductRepository: mockRepos.Products}
+		nc.ProductRepo = &digestProductRepo{MockProductRepository: mockRepos.ProductDigest}
 
 		emails := 0
 		origFunc := emailSendFunc
@@ -1028,7 +1028,7 @@ func TestProcessMailDigestEmails(t *testing.T) {
 		nc := newExtraNotificationController(mockRepos, smtpConfig)
 		nc.NotificationRepo = repo
 		nc.ProductRepo = &digestProductRepo{
-			MockProductRepository: mockRepos.Products,
+			MockProductRepository: mockRepos.ProductDigest,
 			group:                 dbController.MailDigestProductGroup{Today: []dbModel.Product{{ProductName: "Milk"}}},
 		}
 

@@ -61,7 +61,7 @@ func (s *ConsumptionService) ComputeConsumptionRate(householdID, userID uint, ba
 	since := time.Now().AddDate(0, 0, -util.ConsumptionHistoryWindowDays)
 	rate := ConsumptionRate{}
 
-	products, err := s.repos.Products.GetConsumedSamples(householdID, userID, barcode, name, since)
+	products, err := s.repos.ProductDigest.GetConsumedSamples(householdID, userID, barcode, name, since)
 	if err != nil {
 		return rate, err
 	}

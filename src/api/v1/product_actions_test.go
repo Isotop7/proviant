@@ -82,11 +82,11 @@ func TestProductActions_OptionalBody(t *testing.T) {
 				var quantities []int
 				var mutationIDs []*string
 				if action.name == "consume" {
-					quantities = m.Products.ConsumePartialQuantities
-					mutationIDs = m.Products.ConsumePartialMutationIDs
+					quantities = m.ProductStock.ConsumePartialQuantities
+					mutationIDs = m.ProductStock.ConsumePartialMutationIDs
 				} else {
-					quantities = m.Products.WastePartialQuantities
-					mutationIDs = m.Products.WastePartialMutationIDs
+					quantities = m.ProductStock.WastePartialQuantities
+					mutationIDs = m.ProductStock.WastePartialMutationIDs
 				}
 				if len(quantities) != 1 || quantities[0] != tt.wantQuantity {
 					t.Errorf("quantities = %v, want [%d]", quantities, tt.wantQuantity)
@@ -139,7 +139,7 @@ func TestProductActions_RejectsInvalidBody(t *testing.T) {
 				if tt.wantText != "" && !strings.Contains(recorder.Body.String(), tt.wantText) {
 					t.Errorf("body %q does not contain %q", recorder.Body.String(), tt.wantText)
 				}
-				if len(m.Products.ConsumePartialQuantities) != 0 || len(m.Products.WastePartialQuantities) != 0 {
+				if len(m.ProductStock.ConsumePartialQuantities) != 0 || len(m.ProductStock.WastePartialQuantities) != 0 {
 					t.Error("invalid body reached a repository removal")
 				}
 			})
@@ -179,7 +179,7 @@ func TestProductActions_RejectsImpossibleInput(t *testing.T) {
 				if !strings.Contains(recorder.Body.String(), tt.wantText) {
 					t.Errorf("body %q does not contain %q", recorder.Body.String(), tt.wantText)
 				}
-				if len(m.Products.ConsumePartialQuantities) != 0 || len(m.Products.WastePartialQuantities) != 0 {
+				if len(m.ProductStock.ConsumePartialQuantities) != 0 || len(m.ProductStock.WastePartialQuantities) != 0 {
 					t.Error("refused input reached a repository removal")
 				}
 			})
@@ -225,9 +225,9 @@ func TestProductActions_ConcurrentModification(t *testing.T) {
 			m := repomocks.NewMockRepositoryContainer()
 			m.Products.Product = dbModel.Product{ProductName: "Yogurt", Quantity: 3}
 			if tt.waste {
-				m.Products.WastePartialErr = errors.ErrProductConcurrentModification
+				m.ProductStock.WastePartialErr = errors.ErrProductConcurrentModification
 			} else {
-				m.Products.ConsumePartialErr = errors.ErrProductConcurrentModification
+				m.ProductStock.ConsumePartialErr = errors.ErrProductConcurrentModification
 			}
 
 			recorder := performProductAction(m, tt.handler, httptest.NewRequest(http.MethodPost, "/api/v1/products/1/action", nil))

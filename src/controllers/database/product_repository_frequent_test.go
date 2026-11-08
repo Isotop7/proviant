@@ -44,7 +44,7 @@ func archivePurchase(t *testing.T, db *gorm.DB, householdID, userID uint, barcod
 
 func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 	location := testutil.CreateTestStorageLocation(db, household.ID)
@@ -52,7 +52,7 @@ func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 	now := time.Now()
 
 	t.Run("an empty archive yields an empty list", func(t *testing.T) {
-		frequent, err := repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+		frequent, err := householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 		if err != nil {
 			t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 		}
@@ -64,7 +64,7 @@ func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 	t.Run("a product bought once never appears", func(t *testing.T) {
 		archivePurchase(t, db, household.ID, user.ID, "4000000000009", "Olive Oil", "1 l", "", nil, false, now.AddDate(0, 0, -1))
 
-		frequent, err := repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+		frequent, err := householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 		if err != nil {
 			t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 		}
@@ -77,7 +77,7 @@ func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 		archivePurchase(t, db, household.ID, user.ID, "4006381333931", "Milk", "1 l", "dairy products", &location.ID, false, now.AddDate(0, 0, -2))
 		archivePurchase(t, db, household.ID, user.ID, "4006381333931", "Milk", "1 l", "dairy products", &location.ID, false, now.AddDate(0, 0, -1))
 
-		frequent, err := repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+		frequent, err := householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 		if err != nil {
 			t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 		}
@@ -111,7 +111,7 @@ func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 		archivePurchase(t, db, otherHousehold.ID, otherUser.ID, "4000000000010", "Foreign Milk", "1 l", "", nil, false, now.AddDate(0, 0, -1))
 		archivePurchase(t, db, otherHousehold.ID, otherUser.ID, "4000000000010", "Foreign Milk", "1 l", "", nil, false, now.AddDate(0, 0, -1))
 
-		frequent, err := repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+		frequent, err := householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 		if err != nil {
 			t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 		}
@@ -127,7 +127,7 @@ func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 		archivePurchase(t, db, household.ID, member.ID, "4000000000011", "Private Coffee", "500 g", "", nil, true, now.AddDate(0, 0, -1))
 		archivePurchase(t, db, household.ID, member.ID, "4000000000011", "Private Coffee", "500 g", "", nil, true, now.AddDate(0, 0, -1))
 
-		frequent, err := repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+		frequent, err := householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 		if err != nil {
 			t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 		}
@@ -143,7 +143,7 @@ func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 		archivePurchase(t, db, household.ID, user.ID, "4000000000012", "Shared Bread", "500 g", "", nil, false, now.AddDate(0, 0, -1))
 		archivePurchase(t, db, household.ID, member.ID, "4000000000012", "Shared Bread", "500 g", "", nil, true, now.AddDate(0, 0, -1))
 
-		frequent, err = repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+		frequent, err = householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 		if err != nil {
 			t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 		}
@@ -158,7 +158,7 @@ func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 		archivePurchase(t, db, household.ID, user.ID, "4000000000013", "Private Tea", "100 g", "", nil, true, now.AddDate(0, 0, -1))
 		archivePurchase(t, db, household.ID, user.ID, "4000000000013", "Private Tea", "100 g", "", nil, true, now.AddDate(0, 0, -1))
 
-		frequent, err := repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+		frequent, err := householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 		if err != nil {
 			t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 		}
@@ -178,7 +178,7 @@ func TestProductRepository_GetFrequentlyBoughtProducts(t *testing.T) {
 // household buys often beats one it buys just as often but bought long ago.
 func TestProductRepository_GetFrequentlyBoughtProductsOrder(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
@@ -196,7 +196,7 @@ func TestProductRepository_GetFrequentlyBoughtProductsOrder(t *testing.T) {
 	archivePurchase(t, db, household.ID, user.ID, "4000000000022", "Twice New", "", "", nil, false, recent)
 	archivePurchase(t, db, household.ID, user.ID, "4000000000022", "Twice New", "", "", nil, false, recent)
 
-	frequent, err := repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+	frequent, err := householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 	if err != nil {
 		t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 	}
@@ -228,9 +228,9 @@ func TestProductRepository_GetFrequentlyBoughtProductsQueryCount(t *testing.T) {
 
 	counter := testutil.NewQueryCounter()
 	counting := db.Session(&gorm.Session{Logger: counter})
-	repo := NewProductRepository(counting)
+	householdRepo := NewProductHouseholdRepository(counting)
 
-	frequent, err := repo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
+	frequent, err := householdRepo.GetFrequentlyBoughtProducts(user.ID, util.FrequentProductLimit)
 	if err != nil {
 		t.Fatalf("GetFrequentlyBoughtProducts() error = %v", err)
 	}

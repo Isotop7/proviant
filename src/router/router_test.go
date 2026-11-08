@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	dbcontroller "github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/models/configuration"
 	"github.com/Isotop7/proviant/templates"
 	"github.com/Isotop7/proviant/testutil"
@@ -29,7 +30,7 @@ func TestSetupRouter_BuildsEngineWithRoutes(t *testing.T) {
 	cfg.TemplateCache = templateCache
 
 	logger := zerolog.Nop()
-	engine := SetupRouter(&logger, cfg, db, nil, nil, nil)
+	engine := SetupRouter(&logger, cfg, db, dbcontroller.NewRepositoryContainer(db, &logger), nil, nil, nil)
 	if engine == nil {
 		t.Fatal("SetupRouter() returned nil engine")
 	}
@@ -85,7 +86,7 @@ func TestSetupRouter_MetricsEnabled(t *testing.T) {
 	cfg.TemplateCache = templateCache
 
 	logger := zerolog.Nop()
-	engine := SetupRouter(&logger, cfg, db, nil, nil, nil)
+	engine := SetupRouter(&logger, cfg, db, dbcontroller.NewRepositoryContainer(db, &logger), nil, nil, nil)
 
 	w := httptest.NewRecorder()
 	engine.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/health", nil))
@@ -134,7 +135,7 @@ func TestSetupRouter_MetricsCountsRecoveredPanic(t *testing.T) {
 	cfg.TemplateCache = templateCache
 
 	logger := zerolog.Nop()
-	engine := SetupRouter(&logger, cfg, db, nil, nil, nil)
+	engine := SetupRouter(&logger, cfg, db, dbcontroller.NewRepositoryContainer(db, &logger), nil, nil, nil)
 	engine.GET("/test-panic", func(ctx *gin.Context) { panic("boom") })
 
 	w := httptest.NewRecorder()

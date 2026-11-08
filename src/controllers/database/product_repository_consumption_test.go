@@ -12,7 +12,7 @@ import (
 
 func TestProductRepository_GetConsumedSamples(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	digestRepo := NewProductDigestRepository(db)
 
 	admin := authentication.User{Username: "a", Password: "x", MailAddress: "a@x"}
 	db.Create(&admin)
@@ -39,7 +39,7 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 		otherHousehold := testutil.CreateTestHousehold(db, 0)
 		seedConsumedWithReason(t, db, otherHousehold.ID, 0, false, barcode, "Milk", dbModel.RemovalReasonConsumed, 1, "L", now.Add(-1*24*time.Hour))
 
-		products, err := repo.GetConsumedSamples(hh.ID, admin.ID, barcode, "Milk", since)
+		products, err := digestRepo.GetConsumedSamples(hh.ID, admin.ID, barcode, "Milk", since)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -61,7 +61,7 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 		old := now.AddDate(0, 0, -120)
 		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Yogurt", 1, old)
 
-		products, err := repo.GetConsumedSamples(hh.ID, admin.ID, barcode, "Yogurt", since)
+		products, err := digestRepo.GetConsumedSamples(hh.ID, admin.ID, barcode, "Yogurt", since)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -75,7 +75,7 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Butter", 1, now.Add(-1*24*time.Hour))
 		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, barcode, "Butter", 1, now.Add(-10*24*time.Hour))
 
-		products, err := repo.GetConsumedSamples(hh.ID, admin.ID, barcode, "Butter", since)
+		products, err := digestRepo.GetConsumedSamples(hh.ID, admin.ID, barcode, "Butter", since)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -92,7 +92,7 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 		testutil.SeedConsumedProduct(t, db, hh.ID, other.ID, true, privateBarcode, "Tea", 1, now.Add(-7*24*time.Hour))
 		testutil.SeedConsumedProduct(t, db, hh.ID, other.ID, true, privateBarcode, "Tea", 1, now.Add(-3*24*time.Hour))
 
-		productsOther, err := repo.GetConsumedSamples(hh.ID, other.ID, privateBarcode, "Tea", since)
+		productsOther, err := digestRepo.GetConsumedSamples(hh.ID, other.ID, privateBarcode, "Tea", since)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -100,7 +100,7 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 			t.Errorf("other user: len = %d, want 2 (own private samples)", len(productsOther))
 		}
 
-		productsAdmin, err := repo.GetConsumedSamples(hh.ID, admin.ID, privateBarcode, "Tea", since)
+		productsAdmin, err := digestRepo.GetConsumedSamples(hh.ID, admin.ID, privateBarcode, "Tea", since)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -115,7 +115,7 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "", name, 1, now.Add(-2*24*time.Hour))
 		testutil.SeedConsumedProduct(t, db, hh.ID, admin.ID, false, "", "Loose Carrots", 1, now.Add(-3*24*time.Hour))
 
-		products, err := repo.GetConsumedSamples(hh.ID, admin.ID, "", name, since)
+		products, err := digestRepo.GetConsumedSamples(hh.ID, admin.ID, "", name, since)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -125,7 +125,7 @@ func TestProductRepository_GetConsumedSamples(t *testing.T) {
 	})
 
 	t.Run("rejects empty barcode and name", func(t *testing.T) {
-		_, err := repo.GetConsumedSamples(hh.ID, admin.ID, "", "", since)
+		_, err := digestRepo.GetConsumedSamples(hh.ID, admin.ID, "", "", since)
 		if err == nil {
 			t.Errorf("expected error for empty barcode+name, got nil")
 		}

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	dbController "github.com/Isotop7/proviant/controllers/database"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
@@ -74,7 +75,7 @@ func TestBuildFullExportStatsCarriesTheUseFirstList(t *testing.T) {
 // rows, so they have to name the same months with the same counts.
 func TestBuildFullExportStatsTrendMatchesTheDashboard(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := database.NewProductRepository(db)
+	repo := database.NewProductStatsRepository(db)
 
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
@@ -150,7 +151,7 @@ func TestBuildFullExportIncludesPrivateProducts(t *testing.T) {
 	}
 
 	logger := zerolog.Nop()
-	document, err := BuildFullExport(db, &logger, household.ID, owner.ID, true)
+	document, err := BuildFullExport(dbController.NewRepositoryContainer(db, &logger), &logger, household.ID, owner.ID, true)
 	if err != nil {
 		t.Fatalf("BuildFullExport: %v", err)
 	}
@@ -343,7 +344,7 @@ func TestBackupControllerRunOnceWritesVersionedDocuments(t *testing.T) {
 		Retention:     7,
 	}
 	logger := zerolog.Nop()
-	controller := NewBackupController(&logger, config, db)
+	controller := NewBackupController(&logger, config, db, dbController.NewRepositoryContainer(db, &logger))
 	if err := controller.RunOnce(context.Background()); err != nil {
 		t.Fatalf("RunOnce: %v", err)
 	}
@@ -377,7 +378,7 @@ func TestBackupControllerPruneKeepsNewestFiles(t *testing.T) {
 	directory := t.TempDir()
 	config := &configuration.BackupConfiguration{Enabled: true, Directory: directory, Retention: 1}
 	logger := zerolog.Nop()
-	controller := NewBackupController(&logger, config, nil)
+	controller := NewBackupController(&logger, config, nil, nil)
 
 	names := []string{
 		util.BackupFilePrefix + "household-1-20260101T000000Z.json",
@@ -430,7 +431,7 @@ func TestBackupControllerDispatchRunsImmediately(t *testing.T) {
 		Retention:     7,
 	}
 	logger := zerolog.Nop()
-	controller := NewBackupController(&logger, config, db)
+	controller := NewBackupController(&logger, config, db, dbController.NewRepositoryContainer(db, &logger))
 	defer controller.Stop()
 	controller.Dispatch()
 
@@ -454,7 +455,7 @@ func TestBackupControllerDisabledWritesNothing(t *testing.T) {
 	directory := t.TempDir()
 	config := &configuration.BackupConfiguration{Directory: directory}
 	logger := zerolog.Nop()
-	controller := NewBackupController(&logger, config, testutil.SetupTestDB(t))
+	controller := NewBackupController(&logger, config, testutil.SetupTestDB(t), nil)
 
 	if err := controller.RunOnce(context.Background()); err != nil {
 		t.Fatalf("RunOnce: %v", err)

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	dbController "github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/errors"
 	"github.com/Isotop7/proviant/metrics"
 	"github.com/Isotop7/proviant/models/configuration"
@@ -27,6 +28,7 @@ type BackupController struct {
 	Logger        *zerolog.Logger
 	Configuration *configuration.BackupConfiguration
 	DB            *gorm.DB
+	Repos         *dbController.RepositoryContainer
 	ctx           context.Context
 	cancel        context.CancelFunc
 	dispatchOnce  sync.Once
@@ -40,12 +42,14 @@ func NewBackupController(
 	logger *zerolog.Logger,
 	config *configuration.BackupConfiguration,
 	db *gorm.DB,
+	repos *dbController.RepositoryContainer,
 ) *BackupController {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &BackupController{
 		Logger:        logger,
 		Configuration: config,
 		DB:            db,
+		Repos:         repos,
 		ctx:           ctx,
 		cancel:        cancel,
 	}
@@ -88,7 +92,7 @@ func (c *BackupController) RunOnce(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if c.Configuration == nil || !c.Configuration.Enabled || c.DB == nil {
+	if c.Configuration == nil || !c.Configuration.Enabled || c.DB == nil || c.Repos == nil {
 		return nil
 	}
 	metrics.RecordWorkerAttempt(util.WorkerBackup)
@@ -108,6 +112,10 @@ func (c *BackupController) RunOnce(ctx context.Context) error {
 		return err
 	}
 
+	// The export runs in the job's context, so a cancelled job stops at the
+	// database instead of at the next check between households.
+	repos := c.Repos.WithContext(ctx)
+
 	var firstErr error
 	for i := range households {
 		if err := ctx.Err(); err != nil {
@@ -115,7 +123,7 @@ func (c *BackupController) RunOnce(ctx context.Context) error {
 			return err
 		}
 		household := &households[i]
-		path, err := c.writeHouseholdBackup(ctx, directory, household)
+		path, err := c.writeHouseholdBackup(ctx, repos, directory, household)
 		if err != nil {
 			if c.Logger != nil {
 				c.Logger.Error().Msgf("Backup job: household %d failed: %s", household.ID, err)
@@ -147,10 +155,11 @@ func (c *BackupController) RunOnce(ctx context.Context) error {
 // looks like a valid file to the restore endpoint.
 func (c *BackupController) writeHouseholdBackup(
 	ctx context.Context,
+	repos *dbController.RepositoryContainer,
 	directory string,
 	household *dbModel.Household,
 ) (string, error) {
-	document, err := BuildFullExport(c.DB.WithContext(ctx), c.Logger, household.ID, household.AdminID, true)
+	document, err := BuildFullExport(repos, c.Logger, household.ID, household.AdminID, true)
 	if err != nil {
 		return "", err
 	}

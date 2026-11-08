@@ -47,7 +47,7 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	if len(q.IDs) > 0 {
-		products, idsErr := appCtx.Repos.Products.GetUserProductsByIDs(appCtx.UserID, q.IDs)
+		products, idsErr := appCtx.Repos.ProductLists.GetUserProductsByIDs(appCtx.UserID, q.IDs)
 		if idsErr != nil {
 			appCtx.Logger.Error().Msgf("Error getting products by IDs for user: %s", idsErr)
 			ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -62,7 +62,7 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	products, productBulkErr := appCtx.Repos.Products.GetUserProductsBulkSorted(appCtx.UserID, q.Limit, q.Offset, sort.Sort, sort.Order)
+	products, productBulkErr := appCtx.Repos.ProductLists.GetUserProductsBulkSorted(appCtx.UserID, q.Limit, q.Offset, sort.Sort, sort.Order)
 	if productBulkErr != nil {
 		appCtx.Logger.Error().Msgf("Error getting products of user: %s", productBulkErr)
 		if productBulkErr == errors.ErrInvalidUserData || productBulkErr == gorm.ErrRecordNotFound {
@@ -76,7 +76,7 @@ func GetProducts(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	total, countErr := appCtx.Repos.Products.GetActiveProductsCount(appCtx.UserID)
+	total, countErr := appCtx.Repos.ProductStats.GetActiveProductsCount(appCtx.UserID)
 	if countErr != nil {
 		appCtx.Logger.Error().Msgf("Error counting products of user: %s", countErr)
 		ctx.JSON(http.StatusInternalServerError, api.InternalError())
@@ -501,7 +501,7 @@ func fillCachedPackSize(appCtx *AppContext, productID uint, barcode, currentPack
 	if currentPackSize != "" || barcode == "" {
 		return ""
 	}
-	cached, cacheErr := appCtx.Repos.Products.GetOpenFoodFactsCacheByBarcode(barcode)
+	cached, cacheErr := appCtx.Repos.OpenFoodFactsCache.GetOpenFoodFactsCacheByBarcode(barcode)
 	if cacheErr != nil || cached.PackSize == "" {
 		return ""
 	}
@@ -594,7 +594,7 @@ func UpdateProductQuantity(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	deleted, applied, updateErr := appCtx.Repos.Products.UpdateProductQuantity(productID, appCtx.UserID, quantityDTO.Delta, quantityDTO.ClientMutationID)
+	deleted, applied, updateErr := appCtx.Repos.ProductStock.UpdateProductQuantity(productID, appCtx.UserID, quantityDTO.Delta, quantityDTO.ClientMutationID)
 
 	switch updateErr {
 	case nil:

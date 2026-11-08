@@ -89,7 +89,7 @@ func TestGetFrequentlyBoughtProductsHandler(t *testing.T) {
 	t.Run("reports a failing lookup as a server error", func(t *testing.T) {
 		env := setupHandlerTest(t)
 		mock := &repomocks.MockProductRepository{Err: errors.New("database is down")}
-		env.AppCtx.Repos.Products = mock
+		env.AppCtx.Repos.ProductHousehold = mock
 		env.Ctx.Request = httptest.NewRequest(http.MethodGet, "/api/v1/products/frequently-bought", nil)
 
 		GetFrequentlyBoughtProducts(env.Ctx, env.AppCtx)

@@ -4,13 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Isotop7/proviant/errors"
 	"github.com/Isotop7/proviant/models/authentication"
 	dbModel "github.com/Isotop7/proviant/models/database"
 
 	"github.com/Isotop7/proviant/testutil"
-
-	"gorm.io/gorm"
 )
 
 func TestProductRepository_SearchParameterEnumFromString(t *testing.T) {
@@ -34,920 +31,6 @@ func TestProductRepository_SearchParameterEnumFromString(t *testing.T) {
 		})
 	}
 }
-
-func TestProductRepository_GetUserProductsBulk(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "Test Product",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-		ExpireAt:    time.Now().Add(24 * time.Hour),
-	}
-	db.Create(&product)
-
-	products, err := repo.GetUserProductsBulk(user.ID, 10)
-	if err != nil {
-		t.Fatalf("GetUserProductsBulk() error = %v", err)
-	}
-
-	if len(products) != 1 {
-		t.Errorf("GetUserProductsBulk() returned %d products, want 1", len(products))
-	}
-}
-
-func TestProductRepository_GetUserProductsByIDs(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	otherHousehold := dbModel.Household{Name: "Other Household"}
-	db.Create(&otherHousehold)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	ownProduct := dbModel.Product{ProductName: "Own", Barcode: "1234567890123", HouseholdID: household.ID}
-	db.Create(&ownProduct)
-	otherProduct := dbModel.Product{ProductName: "Other", Barcode: "1234567890124", HouseholdID: otherHousehold.ID}
-	db.Create(&otherProduct)
-	archived := dbModel.Product{ProductName: "Archived", Barcode: "1234567890125", HouseholdID: household.ID}
-	db.Create(&archived)
-	db.Delete(&archived)
-
-	t.Run("returns only requested, own household, active products", func(t *testing.T) {
-		products, err := repo.GetUserProductsByIDs(user.ID, []uint{ownProduct.ID, otherProduct.ID, archived.ID, 9999})
-		if err != nil {
-			t.Fatalf("GetUserProductsByIDs() error = %v", err)
-		}
-		if len(products) != 1 {
-			t.Fatalf("GetUserProductsByIDs() returned %d products, want 1", len(products))
-		}
-		if products[0].ID != ownProduct.ID {
-			t.Errorf("returned product ID = %d, want %d", products[0].ID, ownProduct.ID)
-		}
-	})
-
-	t.Run("empty ids returns nothing", func(t *testing.T) {
-		products, err := repo.GetUserProductsByIDs(user.ID, []uint{})
-		if err != nil {
-			t.Fatalf("GetUserProductsByIDs() error = %v", err)
-		}
-		if len(products) != 0 {
-			t.Errorf("GetUserProductsByIDs() returned %d products, want 0", len(products))
-		}
-	})
-}
-
-func TestProductRepository_GetProductByID(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "Test Product",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-
-	foundProduct, err := repo.GetProductByID(product.ID, user.ID)
-	if err != nil {
-		t.Fatalf("GetProductByID() error = %v", err)
-	}
-
-	if foundProduct.ProductName != "Test Product" {
-		t.Errorf("GetProductByID() ProductName = %s, want Test Product", foundProduct.ProductName)
-	}
-}
-
-func TestProductRepository_GetProductByID_NotFound(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	_, err := repo.GetProductByID(999, user.ID)
-	if err == nil {
-		t.Error("GetProductByID() expected error for non-existent product")
-	}
-}
-
-func TestProductRepository_CreateProduct(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "New Product",
-		Barcode:     "1234567890123",
-	}
-
-	err := repo.CreateProduct(user.ID, &product)
-	if err != nil {
-		t.Fatalf("CreateProduct() error = %v", err)
-	}
-
-	if product.HouseholdID != household.ID {
-		t.Errorf("CreateProduct() HouseholdID = %d, want %d", product.HouseholdID, household.ID)
-	}
-}
-
-// TestProductRepository_CreateProductValidatesOpenedLifecycle pins the create-
-// path half of the opened-shelf-life invariant: POST binds the raw model, so
-// the repository is the only gate. A row with DaysAfterOpening > 365 would be
-// pruned out of effectiveExpiryCandidateScope's window and silently vanish
-// from expiring-soon lists and notifications.
-func TestProductRepository_CreateProductValidatesOpenedLifecycle(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-	user := authentication.User{
-		Username:    "lifecycleuser",
-		Password:    "password",
-		MailAddress: "lifecycle@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	t.Run("daysAfterOpening above the bound is rejected", func(t *testing.T) {
-		tooManyDays := 366
-		product := dbModel.Product{
-			ProductName:      "Bad Shelf Life",
-			Barcode:          "1111111111111",
-			DaysAfterOpening: &tooManyDays,
-		}
-		if err := repo.CreateProduct(user.ID, &product); err != errors.ErrInvalidOpenedLifecycle {
-			t.Errorf("CreateProduct() error = %v, want %v", err, errors.ErrInvalidOpenedLifecycle)
-		}
-	})
-
-	t.Run("future openedAt is rejected", func(t *testing.T) {
-		future := time.Now().Add(72 * time.Hour)
-		product := dbModel.Product{
-			ProductName: "Future Open",
-			Barcode:     "2222222222222",
-			OpenedAt:    &future,
-		}
-		if err := repo.CreateProduct(user.ID, &product); err != errors.ErrInvalidOpenedLifecycle {
-			t.Errorf("CreateProduct() error = %v, want %v", err, errors.ErrInvalidOpenedLifecycle)
-		}
-	})
-
-	t.Run("valid opened lifecycle is accepted", func(t *testing.T) {
-		opened := time.Now().Add(-24 * time.Hour)
-		validDays := 14
-		product := dbModel.Product{
-			ProductName:      "Good Shelf Life",
-			Barcode:          "3333333333333",
-			OpenedAt:         &opened,
-			DaysAfterOpening: &validDays,
-		}
-		if err := repo.CreateProduct(user.ID, &product); err != nil {
-			t.Fatalf("CreateProduct() error = %v, want nil", err)
-		}
-	})
-}
-
-func TestProductRepository_UpdateProduct(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "Original Name",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-
-	updateData := dbModel.ProductDTOPatch{
-		ProductName: "Updated Name",
-	}
-
-	err := repo.UpdateProduct(product.ID, user.ID, &updateData)
-	if err != nil {
-		t.Fatalf("UpdateProduct() error = %v", err)
-	}
-
-	var updated dbModel.Product
-	db.First(&updated, product.ID)
-	if updated.ProductName != "Updated Name" {
-		t.Errorf("UpdateProduct() ProductName = %s, want Updated Name", updated.ProductName)
-	}
-}
-
-func TestProductRepository_DeleteProduct(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "To Delete",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-
-	err := repo.DeleteProduct(product.ID, user.ID, true)
-	if err != nil {
-		t.Fatalf("DeleteProduct() error = %v", err)
-	}
-
-	var deleted dbModel.Product
-	err = db.Unscoped().First(&deleted, product.ID).Error
-	if err != nil {
-		t.Fatalf("Product not found after delete: %v", err)
-	}
-}
-
-func TestProductRepository_SearchProducts(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	products := []dbModel.Product{
-		{ProductName: "Apple", Barcode: "111", HouseholdID: household.ID},
-		{ProductName: "Banana", Barcode: "222", HouseholdID: household.ID},
-		{ProductName: "Apple Juice", Barcode: "333", HouseholdID: household.ID},
-	}
-	for i := range products {
-		db.Create(&products[i])
-	}
-
-	results, err := repo.SearchProducts(ProductName, "Apple", "", "", user.ID, 0, 0)
-	if err != nil {
-		t.Fatalf("SearchProducts() error = %v", err)
-	}
-
-	if len(results) != 2 {
-		t.Errorf("SearchProducts() returned %d results, want 2", len(results))
-	}
-}
-
-func TestProductRepository_SearchProducts_ByBarcode(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "Test",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-
-	results, err := repo.SearchProducts(Barcode, "1234567890123", "", "", user.ID, 0, 0)
-	if err != nil {
-		t.Fatalf("SearchProducts() error = %v", err)
-	}
-
-	if len(results) != 1 {
-		t.Errorf("SearchProducts() returned %d results, want 1", len(results))
-	}
-}
-
-func TestProductRepository_GetUserArchivedProductsBulk(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "Archived Product",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-	db.Delete(&product)
-
-	archived, err := repo.GetUserArchivedProductsBulk(user.ID, 10, 0)
-	if err != nil {
-		t.Fatalf("GetUserArchivedProductsBulk() error = %v", err)
-	}
-
-	if len(archived) != 1 {
-		t.Errorf("GetUserArchivedProductsBulk() returned %d products, want 1", len(archived))
-	}
-}
-
-func TestProductRepository_RestoreProduct(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "To Restore",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-	db.Delete(&product)
-
-	err := repo.RestoreProduct(product.ID, user.ID)
-	if err != nil {
-		t.Fatalf("RestoreProduct() error = %v", err)
-	}
-
-	var restored dbModel.Product
-	err = db.First(&restored, product.ID).Error
-	if err != nil {
-		t.Fatalf("Product not found after restore: %v", err)
-	}
-	if restored.RemovalReason != "" {
-		t.Errorf("RestoreProduct() RemovalReason = %q, want empty string", restored.RemovalReason)
-	}
-}
-
-func TestProductRepository_ConsumeProduct(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "To Consume",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-
-	err := repo.ConsumeProduct(product.ID, user.ID)
-	if err != nil {
-		t.Fatalf("ConsumeProduct() error = %v", err)
-	}
-
-	var consumed dbModel.Product
-	err = db.Unscoped().First(&consumed, product.ID).Error
-	if err != nil {
-		t.Fatalf("Product not found after consume: %v", err)
-	}
-	if !consumed.DeletedAt.Valid {
-		t.Error("ConsumeProduct() did not soft-delete the product")
-	}
-	if consumed.RemovalReason != dbModel.RemovalReasonConsumed {
-		t.Errorf("ConsumeProduct() RemovalReason = %q, want %q", consumed.RemovalReason, dbModel.RemovalReasonConsumed)
-	}
-}
-
-func TestProductRepository_ConsumeProductPartial(t *testing.T) {
-	setup := func(t *testing.T) (*gorm.DB, *ProductRepository, *authentication.User) {
-		t.Helper()
-		db := testutil.SetupTestDB(t)
-		repo := NewProductRepository(db)
-
-		household := dbModel.Household{Name: "Test Household"}
-		db.Create(&household)
-
-		user := authentication.User{
-			Username:    "testuser",
-			Password:    "password",
-			MailAddress: "test@example.com",
-			HouseholdID: household.ID,
-		}
-		db.Create(&user)
-		return db, repo, &user
-	}
-
-	createProduct := func(db *gorm.DB, householdID uint, name string, amount int) dbModel.Product {
-		product := dbModel.Product{
-			ProductName: name,
-			Barcode:     "1234567890123",
-			HouseholdID: householdID,
-			Quantity:    amount,
-		}
-		db.Create(&product)
-		return product
-	}
-
-	t.Run("partial reduce keeps product active", func(t *testing.T) {
-		db, repo, user := setup(t)
-		product := createProduct(db, user.HouseholdID, "Partial", 5)
-
-		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&product, 2, nil)
-		if err != nil {
-			t.Fatalf("ConsumeProductPartial() error = %v", err)
-		}
-		if consumed != 2 {
-			t.Errorf("ConsumeProductPartial() consumed = %d, want 2", consumed)
-		}
-		if fullyConsumed {
-			t.Error("partial consume must not report fullyConsumed")
-		}
-
-		var updated dbModel.Product
-		if err := db.First(&updated, product.ID).Error; err != nil {
-			t.Fatalf("product not found after partial consume: %v", err)
-		}
-		if updated.Quantity != 3 {
-			t.Errorf("Amount = %d, want 3", updated.Quantity)
-		}
-		if updated.DeletedAt.Valid {
-			t.Error("partial consume must not soft-delete the product")
-		}
-	})
-
-	t.Run("amount equal to current amount fully consumes", func(t *testing.T) {
-		db, repo, user := setup(t)
-		product := createProduct(db, user.HouseholdID, "Equal", 3)
-
-		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&product, 3, nil)
-		if err != nil {
-			t.Fatalf("ConsumeProductPartial() error = %v", err)
-		}
-		if consumed != 3 {
-			t.Errorf("ConsumeProductPartial() consumed = %d, want 3", consumed)
-		}
-		if !fullyConsumed {
-			t.Error("full consume must report fullyConsumed")
-		}
-
-		var archived dbModel.Product
-		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
-			t.Fatalf("product not found after full consume: %v", err)
-		}
-		if !archived.DeletedAt.Valid {
-			t.Error("full consume did not soft-delete the product")
-		}
-		if archived.RemovalReason != dbModel.RemovalReasonConsumed {
-			t.Errorf("RemovalReason = %q, want %q", archived.RemovalReason, dbModel.RemovalReasonConsumed)
-		}
-	})
-
-	t.Run("amount above current amount clamps to full consume", func(t *testing.T) {
-		db, repo, user := setup(t)
-		product := createProduct(db, user.HouseholdID, "Overshoot", 2)
-
-		consumed, _, _, err := repo.ConsumeProductPartial(&product, 5, nil)
-		if err != nil {
-			t.Fatalf("ConsumeProductPartial() error = %v", err)
-		}
-		if consumed != 2 {
-			t.Errorf("ConsumeProductPartial() consumed = %d, want 2", consumed)
-		}
-
-		var archived dbModel.Product
-		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
-			t.Fatalf("product not found after full consume: %v", err)
-		}
-		if !archived.DeletedAt.Valid || archived.RemovalReason != dbModel.RemovalReasonConsumed {
-			t.Error("overshoot must fully consume (soft-delete with reason consumed)")
-		}
-	})
-
-	t.Run("amount zero fully consumes", func(t *testing.T) {
-		db, repo, user := setup(t)
-		product := createProduct(db, user.HouseholdID, "Zero", 4)
-
-		consumed, _, _, err := repo.ConsumeProductPartial(&product, 0, nil)
-		if err != nil {
-			t.Fatalf("ConsumeProductPartial() error = %v", err)
-		}
-		if consumed != 4 {
-			t.Errorf("ConsumeProductPartial() consumed = %d, want 4", consumed)
-		}
-
-		var archived dbModel.Product
-		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
-			t.Fatalf("product not found after full consume: %v", err)
-		}
-		if !archived.DeletedAt.Valid {
-			t.Error("amount 0 must fully consume the product")
-		}
-	})
-
-	t.Run("legacy row without GORM timestamps still consumes", func(t *testing.T) {
-		db, repo, user := setup(t)
-		// Rows written by raw SQL or predating the timestamp columns do not
-		// round-trip through the driver's time binding; the guarded writes
-		// must still apply to them.
-		product := createProduct(db, user.HouseholdID, "Legacy", 3)
-		if err := db.Exec("UPDATE products SET updated_at = NULL WHERE id = ?", product.ID).Error; err != nil {
-			t.Fatalf("raw update: %v", err)
-		}
-
-		var current dbModel.Product
-		if err := db.First(&current, product.ID).Error; err != nil {
-			t.Fatalf("reload product: %v", err)
-		}
-		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&current, 3, nil)
-		if err != nil {
-			t.Fatalf("ConsumeProductPartial() error = %v", err)
-		}
-		if consumed != 3 || !fullyConsumed {
-			t.Errorf("consumed/fullyConsumed = %d/%v, want 3/true", consumed, fullyConsumed)
-		}
-	})
-
-	t.Run("not found", func(t *testing.T) {
-		_, repo, _ := setup(t)
-
-		missing := dbModel.Product{Quantity: 1}
-		missing.ID = 9999
-		consumed, _, _, err := repo.ConsumeProductPartial(&missing, 1, nil)
-		if err != gorm.ErrRecordNotFound {
-			t.Errorf("ConsumeProductPartial() error = %v, want %v", err, gorm.ErrRecordNotFound)
-		}
-		if consumed != 0 {
-			t.Errorf("ConsumeProductPartial() consumed = %d, want 0", consumed)
-		}
-	})
-
-	t.Run("stale fast path falls back when stock dropped below requested amount", func(t *testing.T) {
-		db, repo, user := setup(t)
-		product := createProduct(db, user.HouseholdID, "Raced", 5)
-		// Simulate another request having consumed units before our update runs
-		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("quantity", 1)
-
-		stale := product
-
-		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&stale, 2, nil)
-		if err != nil {
-			t.Fatalf("ConsumeProductPartial() error = %v", err)
-		}
-		if consumed != 1 {
-			t.Errorf("ConsumeProductPartial() consumed = %d, want 1 (remaining stock)", consumed)
-		}
-		if !fullyConsumed {
-			t.Error("fallback after concurrent reduction must fully consume remaining stock")
-		}
-
-		var archived dbModel.Product
-		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
-			t.Fatalf("product not found after fallback consume: %v", err)
-		}
-		if !archived.DeletedAt.Valid || archived.RemovalReason != dbModel.RemovalReasonConsumed {
-			t.Error("fallback must soft-delete with reason consumed")
-		}
-	})
-
-	t.Run("stale read above current amount consumes remaining", func(t *testing.T) {
-		db, repo, user := setup(t)
-		product := createProduct(db, user.HouseholdID, "Stale clamp", 5)
-		// Another request reduced the stock after the caller's read
-		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("quantity", 1)
-
-		stale := product
-
-		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&stale, 5, nil)
-		if err != nil {
-			t.Fatalf("ConsumeProductPartial() error = %v", err)
-		}
-		if consumed != 1 {
-			t.Errorf("ConsumeProductPartial() consumed = %d, want 1 (current stock, not stale read)", consumed)
-		}
-		if !fullyConsumed {
-			t.Error("overshoot against current stock must fully consume")
-		}
-
-		var archived dbModel.Product
-		if err := db.Unscoped().First(&archived, product.ID).Error; err != nil {
-			t.Fatalf("product not found after full consume: %v", err)
-		}
-		if !archived.DeletedAt.Valid || archived.RemovalReason != dbModel.RemovalReasonConsumed {
-			t.Error("stale overshoot must soft-delete with reason consumed")
-		}
-	})
-
-	t.Run("stale read falls back to partial reduce", func(t *testing.T) {
-		db, repo, user := setup(t)
-		product := createProduct(db, user.HouseholdID, "Stale partial", 3)
-		// Another request increased the stock after the caller's read, so
-		// the requested amount no longer covers the whole stock
-		db.Model(&dbModel.Product{}).Where("id = ?", product.ID).Update("quantity", 5)
-
-		stale := product
-
-		consumed, fullyConsumed, _, err := repo.ConsumeProductPartial(&stale, 3, nil)
-		if err != nil {
-			t.Fatalf("ConsumeProductPartial() error = %v", err)
-		}
-		if consumed != 3 || fullyConsumed {
-			t.Errorf("ConsumeProductPartial() = (%d, %v), want (3, false)", consumed, fullyConsumed)
-		}
-
-		var updated dbModel.Product
-		if err := db.First(&updated, product.ID).Error; err != nil {
-			t.Fatalf("product not found after partial consume: %v", err)
-		}
-		if updated.Quantity != 2 {
-			t.Errorf("Amount = %d, want 2", updated.Quantity)
-		}
-		if updated.DeletedAt.Valid {
-			t.Error("fallback partial reduce must not soft-delete the product")
-		}
-	})
-}
-
-func TestProductRepository_WasteProduct(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "To Waste",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-
-	err := repo.WasteProduct(product.ID, user.ID, "")
-	if err != nil {
-		t.Fatalf("WasteProduct() error = %v", err)
-	}
-
-	var wasted dbModel.Product
-	err = db.Unscoped().First(&wasted, product.ID).Error
-	if err != nil {
-		t.Fatalf("WasteProduct() hard-deleted the product — record must be retained for reporting")
-	}
-	if !wasted.DeletedAt.Valid {
-		t.Error("WasteProduct() did not soft-delete the product")
-	}
-	if wasted.RemovalReason != dbModel.RemovalReasonWasted {
-		t.Errorf("WasteProduct() RemovalReason = %q, want %q", wasted.RemovalReason, dbModel.RemovalReasonWasted)
-	}
-}
-
-func TestProductRepository_WasteProduct_ConcurrentModification(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "To Waste",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-
-	// Simulate a concurrent request claiming the row between the repository's
-	// read and its guarded write: set a removal reason before any UPDATE on
-	// products runs, so the unclaimed-row precondition fails.
-	db.Callback().Update().Before("gorm:before_update").Register("test:concurrent_write", func(tx *gorm.DB) {
-		_, _ = tx.Statement.ConnPool.ExecContext(tx.Statement.Context,
-			"UPDATE products SET removal_reason = ? WHERE id = ?", dbModel.RemovalReasonConsumed, product.ID)
-	})
-
-	err := repo.WasteProduct(product.ID, user.ID, "")
-	if err != errors.ErrProductConcurrentModification {
-		t.Fatalf("WasteProduct() error = %v, want %v", err, errors.ErrProductConcurrentModification)
-	}
-
-	var untouched dbModel.Product
-	if getErr := db.Unscoped().First(&untouched, product.ID).Error; getErr != nil {
-		t.Fatalf("product record vanished: %v", getErr)
-	}
-	if untouched.DeletedAt.Valid {
-		t.Error("concurrent-modification failure must roll back the soft-delete")
-	}
-	if untouched.RemovalReason == dbModel.RemovalReasonWasted {
-		t.Error("concurrent-modification failure must roll back the removal-reason update")
-	}
-}
-
-func TestProductRepository_GetActiveProductsCount(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	for range 3 {
-		product := dbModel.Product{
-			ProductName: "Product",
-			Barcode:     "1234567890123",
-			HouseholdID: household.ID,
-		}
-		db.Create(&product)
-	}
-
-	count, err := repo.GetActiveProductsCount(user.ID)
-	if err != nil {
-		t.Fatalf("GetActiveProductsCount() error = %v", err)
-	}
-
-	if count != 3 {
-		t.Errorf("GetActiveProductsCount() = %d, want 3", count)
-	}
-}
-
-func TestProductRepository_UserHasProductAccess(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	product := dbModel.Product{
-		ProductName: "Test",
-		Barcode:     "1234567890123",
-		HouseholdID: household.ID,
-	}
-	db.Create(&product)
-
-	hasAccess := repo.UserHasProductAccess(user.ID, int(product.ID)) //nolint:gosec
-	if !hasAccess {
-		t.Error("User should have access to their own product")
-	}
-
-	hasAccess = repo.UserHasProductAccess(user.ID, 999)
-	if hasAccess {
-		t.Error("User should not have access to non-existent product")
-	}
-}
-
-func TestProductRepository_GetProductCategoryBreakdown(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	household := dbModel.Household{Name: "Test Household"}
-	db.Create(&household)
-
-	user := authentication.User{
-		Username:    "testuser",
-		Password:    "password",
-		MailAddress: "test@example.com",
-		HouseholdID: household.ID,
-	}
-	db.Create(&user)
-
-	products := []dbModel.Product{
-		{ProductName: "P1", HouseholdID: household.ID, Categories: "dairy"},
-		{ProductName: "P2", HouseholdID: household.ID, Categories: "dairy"},
-		{ProductName: "P3", HouseholdID: household.ID, Categories: "meat"},
-	}
-	for i := range products {
-		db.Create(&products[i])
-	}
-
-	breakdown, err := repo.GetProductCategoryBreakdown(user.ID)
-	if err != nil {
-		t.Fatalf("GetProductCategoryBreakdown() error = %v", err)
-	}
-
-	if breakdown["dairy"] != 2 {
-		t.Errorf("GetProductCategoryBreakdown() dairy = %d, want 2", breakdown["dairy"])
-	}
-	if breakdown["meat"] != 1 {
-		t.Errorf("GetProductCategoryBreakdown() meat = %d, want 1", breakdown["meat"])
-	}
-}
-
 func TestUserRepository_GetUserByUsername(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewUserRepository(db)
@@ -972,7 +55,6 @@ func TestUserRepository_GetUserByUsername(t *testing.T) {
 		t.Errorf("GetUserByUsername() = %s, want testuser", found.Username)
 	}
 }
-
 func TestUserRepository_GetUserByID(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewUserRepository(db)
@@ -997,7 +79,6 @@ func TestUserRepository_GetUserByID(t *testing.T) {
 		t.Errorf("GetUserByID() = %s, want testuser", found.Username)
 	}
 }
-
 func TestUserRepository_UserExistsByUsername(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewUserRepository(db)
@@ -1024,7 +105,6 @@ func TestUserRepository_UserExistsByUsername(t *testing.T) {
 		t.Error("Non-existent user should not be found")
 	}
 }
-
 func TestUserRepository_UserExistsByMailAddress(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewUserRepository(db)
@@ -1051,7 +131,6 @@ func TestUserRepository_UserExistsByMailAddress(t *testing.T) {
 		t.Error("Non-existent email should not be found")
 	}
 }
-
 func TestUserRepository_GetOnboardingState(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewUserRepository(db)
@@ -1079,7 +158,6 @@ func TestUserRepository_GetOnboardingState(t *testing.T) {
 		t.Errorf("GetOnboardingState() UserID = %d, want %d", state.UserID, user.ID)
 	}
 }
-
 func TestUserRepository_UpdateDisplayName(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewUserRepository(db)
@@ -1106,7 +184,6 @@ func TestUserRepository_UpdateDisplayName(t *testing.T) {
 		t.Errorf("UpdateDisplayName() DisplayName = %s, want New Display Name", updated.DisplayName)
 	}
 }
-
 func TestUserRepository_IsAccountLocked(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewUserRepository(db)
@@ -1127,7 +204,6 @@ func TestUserRepository_IsAccountLocked(t *testing.T) {
 		t.Error("New user should not be locked")
 	}
 }
-
 func TestHouseholdRepository_GetHouseholdByID(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewHouseholdRepository(db)
@@ -1144,7 +220,6 @@ func TestHouseholdRepository_GetHouseholdByID(t *testing.T) {
 		t.Errorf("GetHouseholdByID() Name = %s, want Test Household", found.Name)
 	}
 }
-
 func TestHouseholdRepository_GetHouseholdMemberCount(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewHouseholdRepository(db)
@@ -1166,7 +241,6 @@ func TestHouseholdRepository_GetHouseholdMemberCount(t *testing.T) {
 		t.Errorf("GetHouseholdMemberCount() = %d, want 2", count)
 	}
 }
-
 func TestHouseholdRepository_GetHouseholdMembers(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewHouseholdRepository(db)
@@ -1186,7 +260,6 @@ func TestHouseholdRepository_GetHouseholdMembers(t *testing.T) {
 		t.Errorf("GetHouseholdMembers() returned %d members, want 1", len(members))
 	}
 }
-
 func TestStorageLocationRepository_GetByHousehold(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewStorageLocationRepository(db)
@@ -1219,7 +292,6 @@ func TestStorageLocationRepository_GetByHousehold(t *testing.T) {
 		t.Errorf("GetByHousehold() returned %d locations, want 1", len(locations))
 	}
 }
-
 func TestStorageLocationRepository_GetByID(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewStorageLocationRepository(db)
@@ -1252,7 +324,6 @@ func TestStorageLocationRepository_GetByID(t *testing.T) {
 		t.Errorf("GetByID() Name = %s, want Fridge", found.Name)
 	}
 }
-
 func TestWebhookRepository_Create(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewWebhookRepository(db)
@@ -1282,7 +353,6 @@ func TestWebhookRepository_Create(t *testing.T) {
 		t.Error("CreateWebhook() should set ID")
 	}
 }
-
 func TestWebhookRepository_GetByID(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewWebhookRepository(db)
@@ -1313,7 +383,6 @@ func TestWebhookRepository_GetByID(t *testing.T) {
 		t.Errorf("GetByID() URL = %s, want https://example.com/webhook", found.URL)
 	}
 }
-
 func TestWebhookRepository_GetActiveWebhooksByEvent(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewWebhookRepository(db)
@@ -1344,7 +413,6 @@ func TestWebhookRepository_GetActiveWebhooksByEvent(t *testing.T) {
 		t.Errorf("GetActiveWebhooksByEvent() returned %d webhooks, want 1", len(webhooks))
 	}
 }
-
 func TestWebhookRepository_CreateDeliveryLog(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewWebhookRepository(db)
@@ -1381,7 +449,6 @@ func TestWebhookRepository_CreateDeliveryLog(t *testing.T) {
 		t.Error("CreateDeliveryLog() should set ID")
 	}
 }
-
 func TestRecipeCacheRepository_CreateAndGetCache(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewRecipeCacheRepository(db)
@@ -1407,7 +474,6 @@ func TestRecipeCacheRepository_CreateAndGetCache(t *testing.T) {
 		t.Errorf("GetCacheByQueryHash() QueryHash = %s, want testhash123", found.QueryHash)
 	}
 }
-
 func TestRecipeCacheRepository_GetCacheByQueryHash_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewRecipeCacheRepository(db)
@@ -1417,7 +483,6 @@ func TestRecipeCacheRepository_GetCacheByQueryHash_NotFound(t *testing.T) {
 		t.Error("GetCacheByQueryHash() should return error for non-existent cache")
 	}
 }
-
 func TestRecipeCacheRepository_UpdateCacheHit(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewRecipeCacheRepository(db)
@@ -1442,7 +507,6 @@ func TestRecipeCacheRepository_UpdateCacheHit(t *testing.T) {
 		t.Errorf("UpdateCacheHit() HitCount = %d, want 6", updated.HitCount)
 	}
 }
-
 func TestStreakRepository_UpsertAndGet(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewStreakRepository(db)
@@ -1459,7 +523,6 @@ func TestStreakRepository_UpsertAndGet(t *testing.T) {
 		t.Errorf("GetOrCreateStreakForHousehold() HouseholdID = %d, want %d", streak.HouseholdID, household.ID)
 	}
 }
-
 func TestInvitationRepository_CreateInvitation(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewInvitationRepository(db)
@@ -1489,7 +552,6 @@ func TestInvitationRepository_CreateInvitation(t *testing.T) {
 		t.Errorf("GetInvitationsForHousehold() returned %d invitations, want 1", len(invitations))
 	}
 }
-
 func TestInvitationRepository_GetInvitationByToken(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewInvitationRepository(db)
@@ -1514,7 +576,6 @@ func TestInvitationRepository_GetInvitationByToken(t *testing.T) {
 		t.Errorf("GetInvitationByToken() Token = %s, want uniquetoken", found.Token)
 	}
 }
-
 func TestNotificationRepository_GetProductsExpiredAndNotificationPending(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewNotificationRepository(db)
@@ -1538,7 +599,6 @@ func TestNotificationRepository_GetProductsExpiredAndNotificationPending(t *test
 		t.Errorf("GetProductsExpiredAndNotificationPending() returned %d products, want 1", len(products))
 	}
 }
-
 func TestNotificationRepository_GetHouseholdMembersMailAddressesByID(t *testing.T) {
 	t.Skip("Skipping - investigating query issue")
 	db := testutil.SetupTestDB(t)
@@ -1576,7 +636,6 @@ func TestNotificationRepository_GetHouseholdMembersMailAddressesByID(t *testing.
 		t.Errorf("GetHouseholdMembersMailAddressesByID() returned %d emails, want 1", len(emails))
 	}
 }
-
 func TestExpiryScanRepository_CreateExpiryScan(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewExpiryScanRepository(db)
@@ -1618,61 +677,3 @@ func TestExpiryScanRepository_CreateExpiryScan(t *testing.T) {
 // through to Save(&zeroValueProduct), which gorm writes as an INSERT of a
 // blank product row (empty name, household 0). Failed ids must be reported
 // and nothing else written.
-func TestProductRepository_BulkRestoreProductsSkipsUnattributableIDs(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
-
-	householdA := dbModel.Household{Name: "Household A"}
-	householdB := dbModel.Household{Name: "Household B"}
-	db.Create(&householdA)
-	db.Create(&householdB)
-	userA := authentication.User{
-		Username:    "bulkrestorea",
-		Password:    "password",
-		MailAddress: "a@example.com",
-		HouseholdID: householdA.ID,
-	}
-	db.Create(&userA)
-
-	// An archived product of ANOTHER household: must be rejected, not restored.
-	foreign := dbModel.Product{
-		ProductName: "Foreign Archived",
-		Barcode:     "4444444444444",
-		HouseholdID: householdB.ID,
-	}
-	db.Create(&foreign)
-	db.Delete(&foreign)
-
-	countRows := func() int64 {
-		t.Helper()
-		var n int64
-		if err := db.Unscoped().Model(&dbModel.Product{}).Count(&n).Error; err != nil {
-			t.Fatalf("count failed: %v", err)
-		}
-		return n
-	}
-
-	before := countRows()
-
-	unknownID := uint(999999)
-	errs := repo.BulkRestoreProducts([]uint{unknownID, foreign.ID}, userA.ID)
-
-	if len(errs) != 2 {
-		t.Errorf("got %d errors, want 2 (both ids must fail)", len(errs))
-	}
-	if len(errs) == 2 && errs[0].ProductID() != unknownID {
-		t.Errorf("errs[0].ProductID() = %d, want %d", errs[0].ProductID(), unknownID)
-	}
-	if got := countRows(); got != before {
-		t.Errorf("product rows = %d, want %d (failed restores must not insert rows)", got, before)
-	}
-
-	// The foreign product must still be archived.
-	var reloaded dbModel.Product
-	if err := db.Unscoped().First(&reloaded, foreign.ID).Error; err != nil {
-		t.Fatalf("failed to reload foreign product: %v", err)
-	}
-	if !reloaded.DeletedAt.Valid {
-		t.Errorf("foreign product was restored across household boundary")
-	}
-}

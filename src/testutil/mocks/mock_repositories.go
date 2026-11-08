@@ -13,14 +13,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// MockProductRepository is a configurable in-memory stub for ProductRepositoryInterface.
+// MockProductRepository is a configurable in-memory stub for the product
+// repository interfaces. One type satisfies all of them, so a test picks the
+// domain it drives by handing the mock to that domain's field.
 type MockProductRepository struct {
 	Products      []dbModel.Product
 	Product       dbModel.Product
 	OFFCache      dbModel.OpenFoodFactsCache
-	Household     dbModel.Household
-	User          authentication.User
-	Users         []authentication.User
 	StatsMonthly  []apiModel.StatsMonthlyCount
 	ExpiringProds []apiModel.StatsExpiringProduct
 	UseFirstProds []apiModel.StatsUseFirstProduct
@@ -249,23 +248,23 @@ func (m *MockProductRepository) UpdateOpenFoodFactsCacheStorageHint(barcode, sto
 func (m *MockProductRepository) GetOpenFoodFactsCacheWithRemoteImageURL() ([]dbModel.OpenFoodFactsCache, error) {
 	return nil, m.Err
 }
-func (m *MockProductRepository) GetUserByID(userID uint) (authentication.User, error) {
-	return m.User, m.Err
-}
-func (m *MockProductRepository) GetUserHouseholdByID(userID uint) (uint, error) {
-	return m.User.HouseholdID, m.Err
-}
-func (m *MockProductRepository) GetHouseholdByID(householdID uint) (dbModel.Household, error) {
-	return m.Household, m.Err
-}
 func (m *MockProductRepository) GetUserActiveProductsFiltered(userID uint, from, to *time.Time) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
 func (m *MockProductRepository) GetUserArchivedProductsFiltered(userID uint, from, to *time.Time) ([]dbModel.Product, error) {
 	return m.Products, m.Err
 }
-func (m *MockProductRepository) GetUsersByHouseholdID(householdID uint) ([]authentication.User, error) {
-	return m.Users, m.Err
+func (m *MockProductRepository) GetHouseholdProductsForBackup(householdID uint) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
+func (m *MockProductRepository) GetHouseholdArchivedProductsForBackup(householdID uint) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
+func (m *MockProductRepository) GetMatchableProductsByHousehold(householdID uint) ([]dbModel.Product, error) {
+	return m.Products, m.Err
+}
+func (m *MockProductRepository) GetProductSetFingerprint(householdID uint) (string, error) {
+	return "", m.Err
 }
 func (m *MockProductRepository) GetExpiringSoonCount(userID uint, days int, now time.Time) (int, error) {
 	return m.IntResult, m.Err
@@ -374,6 +373,13 @@ func (m *MockProductRepository) BulkWasteProducts(productIDs []uint, userID uint
 }
 
 var _ database.ProductRepositoryInterface = (*MockProductRepository)(nil)
+var _ database.ProductListRepositoryInterface = (*MockProductRepository)(nil)
+var _ database.ProductStockRepositoryInterface = (*MockProductRepository)(nil)
+var _ database.ProductSearchRepositoryInterface = (*MockProductRepository)(nil)
+var _ database.ProductStatsRepositoryInterface = (*MockProductRepository)(nil)
+var _ database.ProductHouseholdRepositoryInterface = (*MockProductRepository)(nil)
+var _ database.ProductDigestRepositoryInterface = (*MockProductRepository)(nil)
+var _ database.OpenFoodFactsCacheRepositoryInterface = (*MockProductRepository)(nil)
 
 // MockUserRepository is a configurable in-memory stub for UserRepositoryInterface.
 type MockUserRepository struct {
@@ -677,6 +683,9 @@ type MockStorageLocationRepository struct {
 }
 
 func (m *MockStorageLocationRepository) GetByHousehold(userID uint) ([]dbModel.StorageLocation, error) {
+	return m.Locations, m.Err
+}
+func (m *MockStorageLocationRepository) GetByHouseholdID(householdID uint) ([]dbModel.StorageLocation, error) {
 	return m.Locations, m.Err
 }
 func (m *MockStorageLocationRepository) GetByID(locationID, userID uint) (dbModel.StorageLocation, error) {
@@ -1213,8 +1222,21 @@ func (m *MockShoppingListItemSyncRefRepository) DeleteByHouseholdAndProvider(hou
 var _ database.ShoppingListItemSyncRefRepository = (*MockShoppingListItemSyncRefRepository)(nil)
 
 // MockRepositoryContainer holds mock implementations of all repository interfaces.
+//
+// Every product domain gets its own mock instance. They share one type, so a
+// single mock satisfies every product interface, but they do not share state:
+// an error injected into one domain stays in that domain, so a test that
+// fails the list query cannot pass because the stats query happened to fail
+// too.
 type MockRepositoryContainer struct {
 	Products              *MockProductRepository
+	ProductLists          *MockProductRepository
+	ProductStock          *MockProductRepository
+	ProductSearch         *MockProductRepository
+	ProductStats          *MockProductRepository
+	ProductHousehold      *MockProductRepository
+	ProductDigest         *MockProductRepository
+	OpenFoodFactsCache    *MockProductRepository
 	Users                 *MockUserRepository
 	Households            *MockHouseholdRepository
 	Invitations           *MockInvitationRepository
@@ -1236,9 +1258,23 @@ type MockRepositoryContainer struct {
 }
 
 // NewMockRepositoryContainer creates a MockRepositoryContainer with all mocks initialised.
+//
+// Every product domain gets its own mock instance. They share one type, so a
+// single mock satisfies every product interface, but they do not share state:
+// an error injected into one domain stays in that domain. A shared instance
+// would make "the list query fails" indistinguishable from "the stats query
+// fails", and a test could pass because an unrelated domain happened to fail
+// too.
 func NewMockRepositoryContainer() *MockRepositoryContainer {
 	return &MockRepositoryContainer{
 		Products:              &MockProductRepository{},
+		ProductLists:          &MockProductRepository{},
+		ProductStock:          &MockProductRepository{},
+		ProductSearch:         &MockProductRepository{},
+		ProductStats:          &MockProductRepository{},
+		ProductHousehold:      &MockProductRepository{},
+		ProductDigest:         &MockProductRepository{},
+		OpenFoodFactsCache:    &MockProductRepository{},
 		Users:                 &MockUserRepository{},
 		Households:            &MockHouseholdRepository{},
 		Invitations:           &MockInvitationRepository{},
@@ -1265,6 +1301,13 @@ func NewMockRepositoryContainer() *MockRepositoryContainer {
 func (m *MockRepositoryContainer) ToRepositoryContainer() *database.RepositoryContainer {
 	return &database.RepositoryContainer{
 		Products:              m.Products,
+		ProductLists:          m.ProductLists,
+		ProductStock:          m.ProductStock,
+		ProductSearch:         m.ProductSearch,
+		ProductStats:          m.ProductStats,
+		ProductHousehold:      m.ProductHousehold,
+		ProductDigest:         m.ProductDigest,
+		OpenFoodFactsCache:    m.OpenFoodFactsCache,
 		Users:                 m.Users,
 		Households:            m.Households,
 		Invitations:           m.Invitations,

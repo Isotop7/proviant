@@ -123,17 +123,15 @@ func setupOffDumpDatabase(logger *zerolog.Logger, databaseConfiguration *configu
 }
 
 // setupNotificationController initializes the notification controller and starts the notification handler goroutine.
-func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB) *controllers.NotificationController {
-	notificationRepo := dbController.NewNotificationRepositoryWithLogger(dbHandle, logger)
-	productRepo := dbController.NewProductRepository(dbHandle)
+func setupNotificationController(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, repos *dbController.RepositoryContainer) *controllers.NotificationController {
 	notificationController := controllers.NewNotificationController(
 		logger,
 		&proviantConfiguration.Notification,
-		notificationRepo,
-		productRepo,
+		repos.Notifications,
+		repos.ProductDigest,
 	)
-	notificationController.StreakRepo = dbController.NewStreakRepository(dbHandle)
-	notificationController.SetActivityLogRepo(dbController.NewActivityLogRepository(dbHandle))
+	notificationController.StreakRepo = repos.Streaks
+	notificationController.SetActivityLogRepo(repos.ActivityLogs)
 	// Dispatch notification handler goroutine
 	notificationController.Dispatch()
 	// Dispatch invitation email retry goroutine (uses same Interval config)
@@ -290,9 +288,9 @@ func validateAPIs(config *configuration.ProviantConfiguration, logger *zerolog.L
 }
 
 // startProviantServer starts the Proviant server.
-func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) {
+func startProviantServer(logger *zerolog.Logger, proviantConfiguration *configuration.ProviantConfiguration, dbHandle *gorm.DB, repos *dbController.RepositoryContainer, offacntrl *controllers.OpenFoodFactsAPIController, notificationController *controllers.NotificationController, ocrController *controllers.OCRControllerImpl) {
 	// Call function to setup router and pass references
-	proviantEngine := router.SetupRouter(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
+	proviantEngine := router.SetupRouter(logger, proviantConfiguration, dbHandle, repos, offacntrl, notificationController, ocrController)
 
 	// Get server port or instead set default value
 	serverPort := proviantConfiguration.Server.Port
@@ -581,18 +579,23 @@ func main() {
 	}
 	proviantConfiguration.TemplateCache = templateCache
 
-	notificationController := setupNotificationController(logger, proviantConfiguration, dbHandle)
+	// One repository container for the whole process: the router, the
+	// background workers and the handlers all read through it, so a consumer
+	// never constructs a repository itself.
+	repos := dbController.NewRepositoryContainer(dbHandle, logger)
+
+	notificationController := setupNotificationController(logger, proviantConfiguration, repos)
 
 	// Initialize OCR controller
 	ocrController := controllers.NewOCRController(logger, &proviantConfiguration.OCR)
 
-	shoppingListSyncController := controllers.NewShoppingListSyncController(logger, &proviantConfiguration.ShoppingListSync, dbHandle)
+	shoppingListSyncController := controllers.NewShoppingListSyncController(logger, &proviantConfiguration.ShoppingListSync, dbHandle, repos)
 	shoppingListSyncController.Dispatch()
 
-	backupController := controllers.NewBackupController(logger, &proviantConfiguration.Backup, dbHandle)
+	backupController := controllers.NewBackupController(logger, &proviantConfiguration.Backup, dbHandle, repos)
 	backupController.Dispatch()
 
-	packSizeController := controllers.NewPackSizeController(dbHandle, offacntrl, logger)
+	packSizeController := controllers.NewPackSizeController(repos, offacntrl, logger)
 	packSizeController.Dispatch()
 
 	// Start background cleanup of expired revoked tokens
@@ -609,10 +612,10 @@ func main() {
 
 	// Backfill storage hints and images for existing cache entries
 	if proviantConfiguration.OpenFoodFacts.CacheEnabled {
-		go backfillOpenFoodFactsCache(logger, dbHandle, offacntrl)
+		go backfillOpenFoodFactsCache(logger, repos, offacntrl)
 	}
 
-	startProviantServer(logger, proviantConfiguration, dbHandle, offacntrl, notificationController, ocrController)
+	startProviantServer(logger, proviantConfiguration, dbHandle, repos, offacntrl, notificationController, ocrController)
 }
 
 // startRevokedTokenCleanup runs a goroutine that periodically cleans up expired revoked tokens
@@ -692,12 +695,12 @@ func startRecipeCacheCleanup(logger *zerolog.Logger, dbHandle *gorm.DB) {
 
 // backfillOpenFoodFactsCache fetches missing storage hints and downloads remote product images
 // for cache entries created before these features were added. Runs once at startup.
-func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offacntrl *controllers.OpenFoodFactsAPIController) {
-	productRepo := dbController.NewProductRepository(dbHandle)
+func backfillOpenFoodFactsCache(logger *zerolog.Logger, repos *dbController.RepositoryContainer, offacntrl *controllers.OpenFoodFactsAPIController) {
+	cacheRepo := repos.OpenFoodFactsCache
 
 	// Pass 1: entries missing storage hint — requires an OFF API call.
 	// Also download the image while we have the entry, if image caching is enabled.
-	hintEntries, err := productRepo.GetOpenFoodFactsCacheWithoutStorageHint()
+	hintEntries, err := cacheRepo.GetOpenFoodFactsCacheWithoutStorageHint()
 	if err != nil {
 		logger.Warn().Msgf("Cache backfill: failed to query entries missing storage hint: %s", err)
 	}
@@ -717,7 +720,7 @@ func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offac
 		}
 
 		if product.StorageHint != "" {
-			if updateErr := productRepo.UpdateOpenFoodFactsCacheStorageHint(entry.Barcode, product.StorageHint); updateErr != nil {
+			if updateErr := cacheRepo.UpdateOpenFoodFactsCacheStorageHint(entry.Barcode, product.StorageHint); updateErr != nil {
 				logger.Warn().Msgf("Cache backfill: failed to update storage hint for %s: %s", entry.Barcode, updateErr)
 			} else {
 				hintsUpdated++
@@ -734,7 +737,7 @@ func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offac
 				localPath, imgErr := offacntrl.DownloadImage(imageURL, entry.Barcode)
 				if imgErr != nil {
 					logger.Warn().Msgf("Cache backfill: failed to download image for %s: %s", entry.Barcode, imgErr)
-				} else if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(entry.Barcode, localPath); updateErr != nil {
+				} else if updateErr := cacheRepo.UpdateOpenFoodFactsCacheImageURL(entry.Barcode, localPath); updateErr != nil {
 					logger.Warn().Msgf("Cache backfill: failed to update image URL for %s: %s", entry.Barcode, updateErr)
 				}
 			}
@@ -747,7 +750,7 @@ func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offac
 	// No API call needed — just download the image directly.
 	imagesDownloaded := 0
 	if offacntrl.Configuration.ImageCacheEnabled {
-		imageEntries, imgQueryErr := productRepo.GetOpenFoodFactsCacheWithRemoteImageURL()
+		imageEntries, imgQueryErr := cacheRepo.GetOpenFoodFactsCacheWithRemoteImageURL()
 		if imgQueryErr != nil {
 			logger.Warn().Msgf("Cache backfill: failed to query entries with remote images: %s", imgQueryErr)
 		}
@@ -760,7 +763,7 @@ func backfillOpenFoodFactsCache(logger *zerolog.Logger, dbHandle *gorm.DB, offac
 			localPath, imgErr := offacntrl.DownloadImage(entry.ImageURL, entry.Barcode)
 			if imgErr != nil {
 				logger.Warn().Msgf("Cache backfill: failed to download image for %s: %s", entry.Barcode, imgErr)
-			} else if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(entry.Barcode, localPath); updateErr != nil {
+			} else if updateErr := cacheRepo.UpdateOpenFoodFactsCacheImageURL(entry.Barcode, localPath); updateErr != nil {
 				logger.Warn().Msgf("Cache backfill: failed to update image URL for %s: %s", entry.Barcode, updateErr)
 			} else {
 				imagesDownloaded++

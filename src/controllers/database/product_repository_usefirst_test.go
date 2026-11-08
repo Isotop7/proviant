@@ -13,7 +13,7 @@ import (
 // the storage location and the pack count of each.
 func TestGetUseFirstProducts(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	statsRepo := NewProductStatsRepository(db)
 
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
@@ -67,7 +67,7 @@ func TestGetUseFirstProducts(t *testing.T) {
 	})
 
 	t.Run("the list is ordered by the effective expiry", func(t *testing.T) {
-		list, err := repo.GetUseFirstProducts(user.ID, 0)
+		list, err := statsRepo.GetUseFirstProducts(user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -83,7 +83,7 @@ func TestGetUseFirstProducts(t *testing.T) {
 	})
 
 	t.Run("the products without a date are the last group", func(t *testing.T) {
-		list, err := repo.GetUseFirstProducts(user.ID, 0)
+		list, err := statsRepo.GetUseFirstProducts(user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -102,7 +102,7 @@ func TestGetUseFirstProducts(t *testing.T) {
 	})
 
 	t.Run("an opened product is ordered by its shelf life, not by its printed date", func(t *testing.T) {
-		list, err := repo.GetUseFirstProducts(user.ID, 0)
+		list, err := statsRepo.GetUseFirstProducts(user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -116,7 +116,7 @@ func TestGetUseFirstProducts(t *testing.T) {
 	})
 
 	t.Run("every entry carries the location and the pack count", func(t *testing.T) {
-		list, err := repo.GetUseFirstProducts(user.ID, 0)
+		list, err := statsRepo.GetUseFirstProducts(user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -144,7 +144,7 @@ func TestGetUseFirstProducts(t *testing.T) {
 	})
 
 	t.Run("the limit cuts the head of the order", func(t *testing.T) {
-		list, err := repo.GetUseFirstProducts(user.ID, 2)
+		list, err := statsRepo.GetUseFirstProducts(user.ID, 2)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -157,7 +157,7 @@ func TestGetUseFirstProducts(t *testing.T) {
 	})
 
 	t.Run("the rows of other households and private rows stay out", func(t *testing.T) {
-		list, err := repo.GetUseFirstProducts(user.ID, 0)
+		list, err := statsRepo.GetUseFirstProducts(user.ID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -176,7 +176,7 @@ func TestGetUseFirstProducts(t *testing.T) {
 // does, and a product then lands on two pages or on none.
 func TestEffectiveExpiryOrderingsAgree(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
 
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
@@ -203,13 +203,13 @@ func TestEffectiveExpiryOrderingsAgree(t *testing.T) {
 		OpenedAt: &openedAt, DaysAfterOpening: &daysAfterOpening})
 	create(database.Product{ProductName: "Undated"})
 
-	projections, err := repo.GetActiveProductProjections(user.ID, 0)
+	projections, err := listRepo.GetActiveProductProjections(user.ID, 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	SortByEffectiveExpiry(projections)
 
-	rows, err := repo.GetUserProductsBulkSorted(user.ID, 0, 0, SortEffectiveExpiry, "asc")
+	rows, err := listRepo.GetUserProductsBulkSorted(user.ID, 0, 0, SortEffectiveExpiry, "asc")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

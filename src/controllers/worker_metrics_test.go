@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	dbController "github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/metrics"
 	"github.com/Isotop7/proviant/models"
 	"github.com/Isotop7/proviant/models/configuration"
@@ -151,7 +152,7 @@ func TestBackupWorkerExportsMetricsAfterRun(t *testing.T) {
 		Retention:     7,
 	}
 	logger := zerolog.Nop()
-	controller := NewBackupController(&logger, config, db)
+	controller := NewBackupController(&logger, config, db, dbController.NewRepositoryContainer(db, &logger))
 
 	attemptsBefore := labeledValue(t, registry, "proviant_worker_attempts_total", util.WorkerBackup)
 	if err := controller.RunOnce(context.Background()); err != nil {
@@ -193,7 +194,7 @@ func TestMailDigestWorkerExportsMetricsAfterRun(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 
 	attemptsBefore := labeledValue(t, registry, "proviant_worker_attempts_total", util.WorkerMailDigest)
@@ -220,7 +221,7 @@ func TestGenerateNotificationsRetriesAfterAFailedDelivery(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 		NotificationRepo: repo,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 	nc.Providers = []NotificationProvider{&failingNtfyProvider{}}
 
@@ -246,7 +247,7 @@ func TestGenerateNotificationsMarksAfterADelivery(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 		NotificationRepo: repo,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 	nc.Providers = []NotificationProvider{
 		&EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
@@ -276,7 +277,7 @@ func TestGenerateNotificationsClearsProductsNobodyWants(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 		NotificationRepo: repo,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 	nc.Providers = []NotificationProvider{
 		&EmailNotificationProvider{Configuration: configuration.SMTPConfiguration{Host: "smtp.example.com", Port: 587}},
@@ -305,7 +306,7 @@ func TestGenerateNotificationsKeepsProductPendingForOneMember(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 		NotificationRepo: repo,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 	nc.Providers = []NotificationProvider{&failingNtfyProvider{}}
 
@@ -327,7 +328,7 @@ func TestGenerateNotificationsReportsAPartialFailure(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 		NotificationRepo: &preferencesErrRepo{mockRepos.Notifications},
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 
 	products := []dbModel.Product{{Model: gorm.Model{ID: 11}, ProductName: "Milk", ExpireAt: time.Now().Add(-time.Hour)}}
@@ -347,7 +348,7 @@ func TestGenerateNotificationsReportsSuccess(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 		NotificationRepo: repo,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 	nc.Providers = []NotificationProvider{&failingNtfyProvider{}}
 
@@ -370,7 +371,7 @@ func TestNotificationDeliveryExportsProviderOutcomes(t *testing.T) {
 		Logger:           &logger,
 		Configuration:    &configuration.NotificationConfiguration{Interval: 24},
 		NotificationRepo: mockRepos.Notifications,
-		ProductRepo:      mockRepos.Products,
+		ProductRepo:      mockRepos.ProductDigest,
 	}
 
 	recipient := &models.NotificationRecipientInfo{EmailEnabled: true, EmailAddress: "member@example.com"}

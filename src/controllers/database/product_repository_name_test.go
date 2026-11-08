@@ -15,7 +15,7 @@ import (
 // name from a client draft.
 func TestCreateProductCapsTheNameToTheColumn(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	productRepo := NewProductRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
@@ -27,7 +27,7 @@ func TestCreateProductCapsTheNameToTheColumn(t *testing.T) {
 		UserID:      user.ID,
 		Quantity:    1,
 	}
-	if err := repo.CreateProduct(user.ID, &product); err != nil {
+	if err := productRepo.CreateProduct(user.ID, &product); err != nil {
 		t.Fatalf("CreateProduct() error = %v", err)
 	}
 
@@ -47,7 +47,7 @@ func TestCreateProductCapsTheNameToTheColumn(t *testing.T) {
 // column counts bytes, so a character bound would still overflow it.
 func TestCreateProductCapsTheNameInBytes(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	productRepo := NewProductRepository(db)
 	household := testutil.CreateTestHousehold(db, 0)
 	user := testutil.CreateTestUser(db, household.ID)
 
@@ -58,7 +58,7 @@ func TestCreateProductCapsTheNameInBytes(t *testing.T) {
 		UserID:      user.ID,
 		Quantity:    1,
 	}
-	if err := repo.CreateProduct(user.ID, &product); err != nil {
+	if err := productRepo.CreateProduct(user.ID, &product); err != nil {
 		t.Fatalf("CreateProduct() error = %v", err)
 	}
 

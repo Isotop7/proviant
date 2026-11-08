@@ -73,16 +73,16 @@ func seedTestData(t *testing.T, db *gorm.DB) (userIDs []uint) {
 func TestProductListPerformance10k(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	userIDs := seedTestData(t, db)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
 
 	// Use first user for testing
 	userID := userIDs[0]
 
 	// Warm up query to avoid cold start overhead
-	_, _ = repo.GetUserProductsBulk(userID, 0)
+	_, _ = listRepo.GetUserProductsBulk(userID, 0)
 
 	start := time.Now()
-	products, err := repo.GetUserProductsBulk(userID, 0)
+	products, err := listRepo.GetUserProductsBulk(userID, 0)
 	elapsed := time.Since(start)
 
 	if err != nil {
@@ -108,11 +108,11 @@ func TestProductListPerformance10k(t *testing.T) {
 func BenchmarkGetUserProductsBulk(b *testing.B) {
 	db := testutil.SetupTestDB(&testing.T{})
 	userIDs := seedTestData(&testing.T{}, db)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
 	userID := userIDs[0]
 
 	for b.Loop() {
-		_, err := repo.GetUserProductsBulk(userID, 0)
+		_, err := listRepo.GetUserProductsBulk(userID, 0)
 		if err != nil {
 			b.Fatalf("GetUserProductsBulk failed: %v", err)
 		}
@@ -122,11 +122,11 @@ func BenchmarkGetUserProductsBulk(b *testing.B) {
 func BenchmarkGetExpiringInDays(b *testing.B) {
 	db := testutil.SetupTestDB(&testing.T{})
 	userIDs := seedTestData(&testing.T{}, db)
-	repo := NewProductRepository(db)
+	householdRepo := NewProductHouseholdRepository(db)
 	userID := userIDs[0]
 
 	for b.Loop() {
-		_, err := repo.GetExpiringInDays(userID, 7)
+		_, err := householdRepo.GetExpiringInDays(userID, 7)
 		if err != nil {
 			b.Fatalf("GetExpiringInDays failed: %v", err)
 		}
@@ -136,11 +136,11 @@ func BenchmarkGetExpiringInDays(b *testing.B) {
 func BenchmarkGetUserProductsBulkByBarcode(b *testing.B) {
 	db := testutil.SetupTestDB(&testing.T{})
 	userIDs := seedTestData(&testing.T{}, db)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
 	userID := userIDs[0]
 
 	for b.Loop() {
-		_, err := repo.GetUserProductsBulkByBarcode(userID, 123)
+		_, err := listRepo.GetUserProductsBulkByBarcode(userID, 123)
 		if err != nil {
 			b.Fatalf("GetUserProductsBulkByBarcode failed: %v", err)
 		}
@@ -150,11 +150,11 @@ func BenchmarkGetUserProductsBulkByBarcode(b *testing.B) {
 func BenchmarkGetExpiringSoonCount(b *testing.B) {
 	db := testutil.SetupTestDB(&testing.T{})
 	userIDs := seedTestData(&testing.T{}, db)
-	repo := NewProductRepository(db)
+	statsRepo := NewProductStatsRepository(db)
 	userID := userIDs[0]
 
 	for b.Loop() {
-		_, err := repo.GetExpiringSoonCount(userID, 7, time.Now())
+		_, err := statsRepo.GetExpiringSoonCount(userID, 7, time.Now())
 		if err != nil {
 			b.Fatalf("GetExpiringSoonCount failed: %v", err)
 		}
@@ -178,30 +178,30 @@ func archiveFirstHouseholdStock(b *testing.B, db *gorm.DB) {
 func BenchmarkGetProductStats(b *testing.B) {
 	db := testutil.SetupTestDB(&testing.T{})
 	userIDs := seedTestData(&testing.T{}, db)
-	repo := NewProductRepository(db)
+	statsRepo := NewProductStatsRepository(db)
 	userID := userIDs[0]
 	archiveFirstHouseholdStock(b, db)
 
 	for b.Loop() {
-		if _, err := repo.GetActiveProductsCount(userID); err != nil {
+		if _, err := statsRepo.GetActiveProductsCount(userID); err != nil {
 			b.Fatalf("GetActiveProductsCount failed: %v", err)
 		}
-		if _, err := repo.GetExpiredProductsCount(userID, time.Now()); err != nil {
+		if _, err := statsRepo.GetExpiredProductsCount(userID, time.Now()); err != nil {
 			b.Fatalf("GetExpiredProductsCount failed: %v", err)
 		}
-		if _, err := repo.GetExpiringSoonProducts(userID, 7, time.Now()); err != nil {
+		if _, err := statsRepo.GetExpiringSoonProducts(userID, 7, time.Now()); err != nil {
 			b.Fatalf("GetExpiringSoonProducts failed: %v", err)
 		}
-		if _, err := repo.GetProductCategoryBreakdown(userID); err != nil {
+		if _, err := statsRepo.GetProductCategoryBreakdown(userID); err != nil {
 			b.Fatalf("GetProductCategoryBreakdown failed: %v", err)
 		}
-		if _, err := repo.GetExpiryTrend(userID, time.Now()); err != nil {
+		if _, err := statsRepo.GetExpiryTrend(userID, time.Now()); err != nil {
 			b.Fatalf("GetExpiryTrend failed: %v", err)
 		}
-		if _, err := repo.GetArchivedProductsCount(userID); err != nil {
+		if _, err := statsRepo.GetArchivedProductsCount(userID); err != nil {
 			b.Fatalf("GetArchivedProductsCount failed: %v", err)
 		}
-		if _, err := repo.GetUniqueArchivedProductsCount(userID); err != nil {
+		if _, err := statsRepo.GetUniqueArchivedProductsCount(userID); err != nil {
 			b.Fatalf("GetUniqueArchivedProductsCount failed: %v", err)
 		}
 	}
@@ -214,18 +214,18 @@ func BenchmarkGetProductStats(b *testing.B) {
 func BenchmarkGetProductStatsFullTableLoads(b *testing.B) {
 	db := testutil.SetupTestDB(&testing.T{})
 	userIDs := seedTestData(&testing.T{}, db)
-	repo := NewProductRepository(db)
+	listRepo := NewProductListRepository(db)
 	userID := userIDs[0]
 	archiveFirstHouseholdStock(b, db)
 
 	for b.Loop() {
 		for range 5 {
-			if _, err := repo.GetUserProductsBulk(userID, 0); err != nil {
+			if _, err := listRepo.GetUserProductsBulk(userID, 0); err != nil {
 				b.Fatalf("GetUserProductsBulk failed: %v", err)
 			}
 		}
 		for range 2 {
-			if _, err := repo.GetUserArchivedProductsBulk(userID, -1, 0); err != nil {
+			if _, err := listRepo.GetUserArchivedProductsBulk(userID, -1, 0); err != nil {
 				b.Fatalf("GetUserArchivedProductsBulk failed: %v", err)
 			}
 		}

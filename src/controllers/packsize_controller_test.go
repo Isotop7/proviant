@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	dbController "github.com/Isotop7/proviant/controllers/database"
 	dbModel "github.com/Isotop7/proviant/models/database"
 	"github.com/Isotop7/proviant/testutil"
 
@@ -51,7 +52,7 @@ func TestPackSizeControllerFallsThroughToTheLiveLookup(t *testing.T) {
 		getter := &stubDatasetGetter{datasets: map[string]dbModel.Product{
 			"4006381333931": {Barcode: "4006381333931", PackSize: "1 l"},
 		}}
-		controller := NewPackSizeController(db, getter, &logger)
+		controller := NewPackSizeController(dbController.NewRepositoryContainer(db, &logger), getter, &logger)
 
 		if err := controller.RunOnce(t.Context()); err != nil {
 			t.Fatalf("RunOnce: %v", err)
@@ -83,7 +84,7 @@ func TestPackSizeControllerFallsThroughToTheLiveLookup(t *testing.T) {
 		getter := &stubDatasetGetter{datasets: map[string]dbModel.Product{
 			"4006381333931": {Barcode: "4006381333931", PackSize: "1 l"},
 		}}
-		controller := NewPackSizeController(db, getter, &logger)
+		controller := NewPackSizeController(dbController.NewRepositoryContainer(db, &logger), getter, &logger)
 
 		if err := controller.RunOnce(t.Context()); err != nil {
 			t.Fatalf("RunOnce: %v", err)
@@ -119,7 +120,7 @@ func TestPackSizeControllerPassCoversTheWholeBacklog(t *testing.T) {
 		datasets[barcode] = dbModel.Product{Barcode: barcode, PackSize: "1 l"}
 	}
 	getter := &stubDatasetGetter{datasets: datasets}
-	controller := NewPackSizeController(db, getter, &logger)
+	controller := NewPackSizeController(dbController.NewRepositoryContainer(db, &logger), getter, &logger)
 
 	if err := controller.RunOnce(t.Context()); err != nil {
 		t.Fatalf("RunOnce: %v", err)
@@ -145,7 +146,7 @@ func TestPackSizeControllerKeepsUnknownBarcodesOnACooldown(t *testing.T) {
 		t.Fatalf("seed product: %v", err)
 	}
 	getter := &stubDatasetGetter{datasets: map[string]dbModel.Product{}}
-	controller := NewPackSizeController(db, getter, &logger)
+	controller := NewPackSizeController(dbController.NewRepositoryContainer(db, &logger), getter, &logger)
 
 	// Three runs: the first walks the table, the second finds the table
 	// walked to its end and starts over, the third walks it again.

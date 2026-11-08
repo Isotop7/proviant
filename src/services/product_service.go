@@ -141,7 +141,7 @@ func (s *ProductService) ConsumeProductPartial(productID, userID uint, quantity 
 		return 0, err
 	}
 
-	consumed, _, applied, err := s.repos.Products.ConsumeProductPartial(&product, quantity, mutationID)
+	consumed, _, applied, err := s.repos.ProductStock.ConsumeProductPartial(&product, quantity, mutationID)
 	if err != nil || !applied {
 		return 0, err
 	}
@@ -170,7 +170,7 @@ func (s *ProductService) WasteProductPartial(productID, userID uint, quantity in
 		return 0, err
 	}
 
-	wasted, fullyWasted, applied, err := s.repos.Products.WasteProductPartial(&product, quantity, mutationID, cause)
+	wasted, fullyWasted, applied, err := s.repos.ProductStock.WasteProductPartial(&product, quantity, mutationID, cause)
 	if err != nil || !applied {
 		return 0, err
 	}
@@ -235,7 +235,7 @@ func (s *ProductService) BulkConsumeProducts(productIDs []uint, userID uint) ([]
 			continue
 		}
 
-		if consumeErr := s.repos.Products.ConsumeProduct(productID, userID); consumeErr != nil {
+		if consumeErr := s.repos.ProductStock.ConsumeProduct(productID, userID); consumeErr != nil {
 			failed = append(failed, productID)
 			s.logBulkFailure("BulkConsumeProducts", productID, consumeErr, &serverErr)
 			continue
@@ -266,7 +266,7 @@ func (s *ProductService) BulkWasteProducts(productIDs []uint, userID uint, cause
 			continue
 		}
 
-		if wasteErr := s.repos.Products.WasteProduct(productID, userID, cause); wasteErr != nil {
+		if wasteErr := s.repos.ProductStock.WasteProduct(productID, userID, cause); wasteErr != nil {
 			failed = append(failed, productID)
 			s.logBulkFailure("BulkWasteProducts", productID, wasteErr, &serverErr)
 			continue
@@ -362,7 +362,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 			continue
 		}
 
-		consumedQuantity, fullyConsumed, _, cookErr := s.repos.Products.ConsumeProductPartial(&product, item.Quantity, nil)
+		consumedQuantity, fullyConsumed, _, cookErr := s.repos.ProductStock.ConsumeProductPartial(&product, item.Quantity, nil)
 		// The repo retries guarded writes once internally; a second
 		// optimistic-lock failure means the row is still hot. Re-attempting
 		// against the same product pointer is safe — the repo re-reads
@@ -370,7 +370,7 @@ func (s *ProductService) CookProducts(items []apiModel.CookItemAPIModel, userID 
 		// the whole cook only after every attempt lost the race.
 		for retry := 1; cookErr == errors.ErrProductConcurrentModification && retry < cookMaxConsumeAttempts; retry++ {
 			s.logger.Debug().Msgf("CookProducts: product %d changed concurrently, retrying (%d/%d)", item.ProductID, retry, cookMaxConsumeAttempts-1)
-			consumedQuantity, fullyConsumed, _, cookErr = s.repos.Products.ConsumeProductPartial(&product, item.Quantity, nil)
+			consumedQuantity, fullyConsumed, _, cookErr = s.repos.ProductStock.ConsumeProductPartial(&product, item.Quantity, nil)
 		}
 		if cookErr != nil {
 			if cookErr == gorm.ErrRecordNotFound || cookErr == errors.ErrProductConcurrentModification {
@@ -485,7 +485,7 @@ func (s *ProductService) BulkRestoreProducts(productIDs []uint, userID uint) ([]
 	// queries per restored row on the request path plus one goroutine each.
 	// It also confirms the rows really are active again before they are
 	// logged as restored.
-	products, err := s.repos.Products.GetUserProductsByIDs(userID, restored)
+	products, err := s.repos.ProductLists.GetUserProductsByIDs(userID, restored)
 	if err != nil {
 		// The restores may well have landed, but nothing was verified and no
 		// activity was logged: a server-side read fault must surface as a

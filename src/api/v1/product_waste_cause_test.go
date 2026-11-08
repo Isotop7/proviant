@@ -27,8 +27,8 @@ func TestProductActions_WasteCause(t *testing.T) {
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d; body: %s", recorder.Code, http.StatusOK, recorder.Body.String())
 		}
-		if len(m.Products.WastePartialCauses) != 1 || m.Products.WastePartialCauses[0] != dbModel.WasteCauseSpoiled {
-			t.Errorf("waste causes = %v, want [%s]", m.Products.WastePartialCauses, dbModel.WasteCauseSpoiled)
+		if len(m.ProductStock.WastePartialCauses) != 1 || m.ProductStock.WastePartialCauses[0] != dbModel.WasteCauseSpoiled {
+			t.Errorf("waste causes = %v, want [%s]", m.ProductStock.WastePartialCauses, dbModel.WasteCauseSpoiled)
 		}
 	})
 
@@ -42,8 +42,8 @@ func TestProductActions_WasteCause(t *testing.T) {
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d; body: %s", recorder.Code, http.StatusOK, recorder.Body.String())
 		}
-		if len(m.Products.WastePartialCauses) != 1 || m.Products.WastePartialCauses[0] != "" {
-			t.Errorf("waste causes = %v, want one empty cause", m.Products.WastePartialCauses)
+		if len(m.ProductStock.WastePartialCauses) != 1 || m.ProductStock.WastePartialCauses[0] != "" {
+			t.Errorf("waste causes = %v, want one empty cause", m.ProductStock.WastePartialCauses)
 		}
 	})
 
@@ -61,7 +61,7 @@ func TestProductActions_WasteCause(t *testing.T) {
 		if !strings.Contains(recorder.Body.String(), errors.ErrInvalidWasteCause.Error()) {
 			t.Errorf("body %q does not contain %q", recorder.Body.String(), errors.ErrInvalidWasteCause.Error())
 		}
-		if len(m.Products.WastePartialQuantities) != 0 {
+		if len(m.ProductStock.WastePartialQuantities) != 0 {
 			t.Error("a refused cause reached a repository removal")
 		}
 	})
@@ -77,11 +77,11 @@ func TestProductActions_WasteCause(t *testing.T) {
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d; body: %s", recorder.Code, http.StatusOK, recorder.Body.String())
 		}
-		if len(m.Products.ConsumePartialQuantities) != 1 {
-			t.Errorf("consume quantities = %v, want one removal", m.Products.ConsumePartialQuantities)
+		if len(m.ProductStock.ConsumePartialQuantities) != 1 {
+			t.Errorf("consume quantities = %v, want one removal", m.ProductStock.ConsumePartialQuantities)
 		}
-		if len(m.Products.WastePartialCauses) != 0 {
-			t.Errorf("a consume recorded a waste cause: %v", m.Products.WastePartialCauses)
+		if len(m.ProductStock.WastePartialCauses) != 0 {
+			t.Errorf("a consume recorded a waste cause: %v", m.ProductStock.WastePartialCauses)
 		}
 	})
 }

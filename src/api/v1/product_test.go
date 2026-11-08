@@ -49,7 +49,7 @@ func TestGetProducts(t *testing.T) {
 
 	t.Run("get products successfully", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Products = []dbModel.Product{
+		m.ProductLists.Products = []dbModel.Product{
 			{ProductName: "Product 1", Barcode: "1111111111111"},
 			{ProductName: "Product 2", Barcode: "2222222222222"},
 		}
@@ -67,7 +67,7 @@ func TestGetProducts(t *testing.T) {
 
 	t.Run("repo error returns 400", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Err = gorm.ErrRecordNotFound
+		m.ProductLists.Err = gorm.ErrRecordNotFound
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
@@ -87,7 +87,7 @@ func TestGetArchivedProducts(t *testing.T) {
 
 	t.Run("get archived products successfully", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Products = []dbModel.Product{
+		m.ProductLists.Products = []dbModel.Product{
 			{ProductName: "Archived Product 1"},
 			{ProductName: "Archived Product 2"},
 		}
@@ -560,7 +560,7 @@ func TestSearchProducts(t *testing.T) {
 
 	t.Run("search products by name successfully", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Products = []dbModel.Product{
+		m.ProductSearch.Products = []dbModel.Product{
 			{ProductName: "Apple Juice"},
 		}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
@@ -582,7 +582,7 @@ func TestSearchProducts(t *testing.T) {
 
 	t.Run("search products by barcode successfully", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Products = []dbModel.Product{
+		m.ProductSearch.Products = []dbModel.Product{
 			{ProductName: "Test Product", Barcode: "1234567890123"},
 		}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
@@ -646,7 +646,7 @@ func TestSearchProducts(t *testing.T) {
 
 	t.Run("allowlisted sort is accepted", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Products = []dbModel.Product{{ProductName: "Apple Juice"}}
+		m.ProductLists.Products = []dbModel.Product{{ProductName: "Apple Juice"}}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
@@ -677,7 +677,7 @@ func TestSearchProducts(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := repomocks.NewMockRepositoryContainer()
-			m.Products.Err = tc.err
+			m.ProductSearch.Err = tc.err
 			ctx, w := repomocks.SetupGinContextWithMocks(m)
 			testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 			ctx.Request = &http.Request{Header: make(http.Header)}
@@ -703,7 +703,7 @@ func TestGetProductsByBarcode(t *testing.T) {
 
 	t.Run("valid EAN-13 barcode returns 200", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Products = []dbModel.Product{
+		m.ProductLists.Products = []dbModel.Product{
 			{ProductName: "Nutella", Barcode: "4001724814405"},
 		}
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
@@ -822,7 +822,7 @@ func TestGetProductsByBarcode(t *testing.T) {
 	// and stays 400; an unknown barcode never errors at all — it is an empty 200.
 	t.Run("user without a household returns 400", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Err = errors.ErrInvalidUserData
+		m.ProductLists.Err = errors.ErrInvalidUserData
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
@@ -842,7 +842,7 @@ func TestGetProductsByBarcode(t *testing.T) {
 
 	t.Run("repository failure returns 500", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.Err = errors.ErrInternalServer
+		m.ProductLists.Err = errors.ErrInternalServer
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 		ctx.Request = &http.Request{Header: make(http.Header)}
@@ -973,7 +973,7 @@ func TestCookProducts(t *testing.T) {
 
 	t.Run("all items failed returns 400 with errors", func(t *testing.T) {
 		m := repomocks.NewMockRepositoryContainer()
-		m.Products.ConsumePartialErr = errors.ErrProductConcurrentModification
+		m.ProductStock.ConsumePartialErr = errors.ErrProductConcurrentModification
 		ctx, w := repomocks.SetupGinContextWithMocks(m)
 		testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 
@@ -1139,7 +1139,7 @@ func TestUpdateProductQuantityAccessErrorIs404(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	m := repomocks.NewMockRepositoryContainer()
-	m.Products.Err = errors.ErrMismatcherUserID
+	m.ProductStock.Err = errors.ErrMismatcherUserID
 	ctx, w := repomocks.SetupGinContextWithMocks(m)
 	testutil.MockJWTClaimsWithKey(ctx, 1, testutil.TokenIdentityKey)
 	ctx.Request = testutil.CreateJSONRequest(http.MethodPost, "/api/v1/products/1/quantity", apiModel.ProductQuantityDTO{Delta: -1})

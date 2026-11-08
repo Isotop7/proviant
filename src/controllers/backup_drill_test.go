@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	dbController "github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/errors"
 	apiModel "github.com/Isotop7/proviant/models/api"
 	"github.com/Isotop7/proviant/models/configuration"
@@ -40,7 +41,7 @@ func TestBackupDrillRestoresTheNewestBackupAndMatchesTheCounts(t *testing.T) {
 		Enabled:   true,
 		Directory: directory,
 		Retention: 7,
-	}, db)
+	}, db, dbController.NewRepositoryContainer(db, &logger))
 	if err := controller.RunOnce(context.Background()); err != nil {
 		t.Fatalf("RunOnce: %v", err)
 	}
@@ -192,7 +193,7 @@ func TestBackupDrillNeverTouchesTheLiveDatabase(t *testing.T) {
 		Enabled:   true,
 		Directory: directory,
 		Retention: 7,
-	}, db)
+	}, db, dbController.NewRepositoryContainer(db, &logger))
 	if err := controller.RunOnce(context.Background()); err != nil {
 		t.Fatalf("RunOnce: %v", err)
 	}
@@ -241,7 +242,7 @@ func TestBackupDrillReportsTheEntitiesTheDocumentDoesNotCover(t *testing.T) {
 		Enabled:   true,
 		Directory: directory,
 		Retention: 7,
-	}, db)
+	}, db, dbController.NewRepositoryContainer(db, &logger))
 	if err := controller.RunOnce(context.Background()); err != nil {
 		t.Fatalf("RunOnce: %v", err)
 	}

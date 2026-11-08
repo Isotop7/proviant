@@ -13,7 +13,7 @@ import (
 // sits in another calendar month names the same period for both.
 func TestWasteThisMonthAndTheMonthlyReportCountTheSameMonth(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	productRepo := NewProductRepository(db)
+	statsRepo := NewProductStatsRepository(db)
 	notificationRepo := NewNotificationRepository(db)
 
 	household := testutil.CreateTestHousehold(db, 0)
@@ -44,7 +44,7 @@ func TestWasteThisMonthAndTheMonthlyReportCountTheSameMonth(t *testing.T) {
 	archive(time.Date(container.Year(), container.Month(), 20, 12, 0, 0, 0, time.Local))
 	archive(time.Date(container.Year(), container.Month()+1, 20, 12, 0, 0, 0, time.Local))
 
-	count, err := productRepo.GetWasteThisMonth(user.ID, anchor)
+	count, err := statsRepo.GetWasteThisMonth(user.ID, anchor)
 	if err != nil {
 		t.Fatalf("GetWasteThisMonth: %v", err)
 	}

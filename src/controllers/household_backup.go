@@ -29,49 +29,47 @@ var backupBarcodePattern = regexp.MustCompile(util.CsvImportBarcodePattern)
 // it, while a backup must carry every member's stock or a restore would silently
 // lose private products.
 func BuildFullExport(
-	db *gorm.DB,
+	repos *database.RepositoryContainer,
 	logger *zerolog.Logger,
 	householdID uint,
 	viewerID uint,
 	includePrivate bool,
 ) (apiModel.FullExportResponse, error) {
-	if db == nil {
+	if repos == nil {
 		return apiModel.FullExportResponse{}, errors.ErrDatabaseContextNotFound
 	}
-	productRepo := database.NewProductRepository(db)
-	locationRepo := database.NewStorageLocationRepository(db)
 
-	var household dbModel.Household
-	if err := db.First(&household, householdID).Error; err != nil {
+	household, err := repos.Households.GetHouseholdByID(householdID)
+	if err != nil {
 		return apiModel.FullExportResponse{}, err
 	}
 
-	var members []authentication.User
-	if err := db.Where(util.QueryHouseholdId, householdID).Find(&members).Error; err != nil {
+	members, err := repos.Users.GetUsersByHouseholdID(householdID)
+	if err != nil {
 		return apiModel.FullExportResponse{}, err
 	}
 
-	locations, err := locationRepo.GetByHouseholdID(householdID)
+	locations, err := repos.StorageLocations.GetByHouseholdID(householdID)
 	if err != nil {
 		return apiModel.FullExportResponse{}, err
 	}
 
 	var activeProducts, archivedProducts []dbModel.Product
 	if includePrivate {
-		activeProducts, err = productRepo.GetHouseholdProductsForBackup(householdID)
+		activeProducts, err = repos.ProductHousehold.GetHouseholdProductsForBackup(householdID)
 		if err != nil {
 			return apiModel.FullExportResponse{}, err
 		}
-		archivedProducts, err = productRepo.GetHouseholdArchivedProductsForBackup(householdID)
+		archivedProducts, err = repos.ProductHousehold.GetHouseholdArchivedProductsForBackup(householdID)
 		if err != nil {
 			return apiModel.FullExportResponse{}, err
 		}
 	} else {
-		activeProducts, err = productRepo.GetUserActiveProductsFiltered(viewerID, nil, nil)
+		activeProducts, err = repos.ProductHousehold.GetUserActiveProductsFiltered(viewerID, nil, nil)
 		if err != nil {
 			return apiModel.FullExportResponse{}, err
 		}
-		archivedProducts, err = productRepo.GetUserArchivedProductsFiltered(viewerID, nil, nil)
+		archivedProducts, err = repos.ProductHousehold.GetUserArchivedProductsFiltered(viewerID, nil, nil)
 		if err != nil {
 			return apiModel.FullExportResponse{}, err
 		}

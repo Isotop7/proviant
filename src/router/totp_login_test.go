@@ -18,6 +18,7 @@ import (
 	"github.com/Isotop7/proviant/api"
 	"github.com/Isotop7/proviant/controllers"
 	"github.com/Isotop7/proviant/controllers/database"
+	dbcontroller "github.com/Isotop7/proviant/controllers/database"
 	"github.com/Isotop7/proviant/models/authentication"
 	"github.com/Isotop7/proviant/models/configuration"
 	dbModel "github.com/Isotop7/proviant/models/database"
@@ -91,7 +92,7 @@ func twoFactorTestEngineWithFeature(t *testing.T, db *gorm.DB, featureEnabled bo
 	cfg.TemplateCache = templateCache
 
 	logger := zerolog.Nop()
-	return SetupRouter(&logger, cfg, db, nil, nil, nil)
+	return SetupRouter(&logger, cfg, db, dbcontroller.NewRepositoryContainer(db, &logger), nil, nil, nil)
 }
 
 // twoFactorTestUser creates a user with a known password.

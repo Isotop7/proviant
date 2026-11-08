@@ -19,11 +19,11 @@ func TestFindDuplicateProduct(t *testing.T) {
 	setup := func(t *testing.T) (*gorm.DB, *ProductRepository, uint, uint, uint) {
 		t.Helper()
 		db := testutil.SetupTestDB(t)
-		repo := NewProductRepository(db)
+		productRepo := NewProductRepository(db)
 		household := testutil.CreateTestHousehold(db, 0)
 		user := testutil.CreateTestUser(db, household.ID)
 		location := testutil.CreateTestStorageLocation(db, household.ID)
-		return db, repo, user.ID, household.ID, location.ID
+		return db, productRepo, user.ID, household.ID, location.ID
 	}
 
 	draft := func(barcode string, expireAt time.Time, locationID *uint) *database.Product {
@@ -31,7 +31,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 	}
 
 	t.Run("an exact match is found", func(t *testing.T) {
-		db, repo, userID, householdID, locationID := setup(t)
+		db, productRepo, userID, householdID, locationID := setup(t)
 		existing := database.Product{
 			Barcode:           "4006381333931",
 			ProductName:       "Yogurt",
@@ -45,7 +45,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		found, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
+		found, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}
@@ -58,7 +58,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 	})
 
 	t.Run("a row with a padded barcode is a match", func(t *testing.T) {
-		db, repo, userID, householdID, locationID := setup(t)
+		db, productRepo, userID, householdID, locationID := setup(t)
 		existing := database.Product{
 			Barcode:           " 4006381333931 ",
 			HouseholdID:       householdID,
@@ -70,7 +70,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		found, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
+		found, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}
@@ -83,7 +83,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 	})
 
 	t.Run("a differing expiry is not a match", func(t *testing.T) {
-		db, repo, userID, householdID, locationID := setup(t)
+		db, productRepo, userID, householdID, locationID := setup(t)
 		existing := database.Product{
 			Barcode:           "4006381333931",
 			HouseholdID:       householdID,
@@ -95,7 +95,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		_, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("4006381333931", expiry.AddDate(0, 0, 1), &locationID))
+		_, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("4006381333931", expiry.AddDate(0, 0, 1), &locationID))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}
@@ -105,7 +105,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 	})
 
 	t.Run("a differing location is not a match", func(t *testing.T) {
-		db, repo, userID, householdID, locationID := setup(t)
+		db, productRepo, userID, householdID, locationID := setup(t)
 		otherLocationID := locationID + 1
 		existing := database.Product{
 			Barcode:           "4006381333931",
@@ -118,7 +118,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		_, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &otherLocationID))
+		_, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &otherLocationID))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}
@@ -128,7 +128,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 	})
 
 	t.Run("an archived row is not a match", func(t *testing.T) {
-		db, repo, userID, householdID, locationID := setup(t)
+		db, productRepo, userID, householdID, locationID := setup(t)
 		existing := database.Product{
 			Barcode:           "4006381333931",
 			HouseholdID:       householdID,
@@ -143,7 +143,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 			t.Fatalf("archive: %v", err)
 		}
 
-		_, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
+		_, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}
@@ -153,7 +153,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 	})
 
 	t.Run("another member's private row is neither matched nor disclosed", func(t *testing.T) {
-		db, repo, userID, householdID, locationID := setup(t)
+		db, productRepo, userID, householdID, locationID := setup(t)
 		other := testutil.CreateTestUser(db, householdID)
 		existing := database.Product{
 			Barcode:           "4006381333931",
@@ -167,7 +167,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		found, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
+		found, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}
@@ -180,7 +180,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 	})
 
 	t.Run("the caller's own private row is a match", func(t *testing.T) {
-		db, repo, userID, householdID, locationID := setup(t)
+		db, productRepo, userID, householdID, locationID := setup(t)
 		existing := database.Product{
 			Barcode:           "4006381333931",
 			HouseholdID:       householdID,
@@ -193,7 +193,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		_, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
+		_, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}
@@ -203,7 +203,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 	})
 
 	t.Run("a row of another household is not a match", func(t *testing.T) {
-		db, repo, userID, _, locationID := setup(t)
+		db, productRepo, userID, _, locationID := setup(t)
 		otherHousehold := testutil.CreateTestHousehold(db, 0)
 		existing := database.Product{
 			Barcode:           "4006381333931",
@@ -216,7 +216,7 @@ func TestFindDuplicateProduct(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		_, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
+		_, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("4006381333931", expiry, &locationID))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}
@@ -226,8 +226,8 @@ func TestFindDuplicateProduct(t *testing.T) {
 	})
 
 	t.Run("a draft without a barcode matches nothing", func(t *testing.T) {
-		_, repo, userID, _, _ := setup(t)
-		_, isDuplicate, err := repo.FindDuplicateProduct(userID, draft("", expiry, nil))
+		_, productRepo, userID, _, _ := setup(t)
+		_, isDuplicate, err := productRepo.FindDuplicateProduct(userID, draft("", expiry, nil))
 		if err != nil {
 			t.Fatalf("FindDuplicateProduct: %v", err)
 		}

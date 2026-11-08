@@ -172,7 +172,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 		return
 	}
 
-	productRepo := database.NewProductRepository(appCtx.DB)
+	cacheRepo := appCtx.Repos.OpenFoodFactsCache
 
 	if product, found := offacntrl.LookupOffline(barcode); found {
 		appCtx.Logger.Info().Msgf("Offline dump hit for barcode '%s'", barcode)
@@ -191,7 +191,7 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	if offacntrl.Configuration.CacheEnabled {
-		cached, cacheErr := productRepo.GetOpenFoodFactsCacheByBarcode(barcode)
+		cached, cacheErr := cacheRepo.GetOpenFoodFactsCacheByBarcode(barcode)
 		if cacheErr == nil {
 			appCtx.Logger.Info().Msgf("Cache hit for barcode '%s'", barcode)
 			ctx.JSON(http.StatusOK, apiModel.NewOpenFoodFactsCacheResponse(&cached))
@@ -221,14 +221,14 @@ func GetOpenFoodFactsData(ctx *gin.Context, appCtx *AppContext) {
 	}
 
 	if offacntrl.Configuration.CacheEnabled {
-		storeCacheEntry(productRepo, offacntrl, appCtx.Logger, barcode, &entry)
+		storeCacheEntry(cacheRepo, offacntrl, appCtx.Logger, barcode, &entry)
 	}
 
 	ctx.JSON(http.StatusOK, apiModel.NewOpenFoodFactsCacheResponse(&entry))
 }
 
-func storeCacheEntry(productRepo *database.ProductRepository, offacntrl *controllers.OpenFoodFactsAPIController, logger *zerolog.Logger, barcode string, entry *dbModel.OpenFoodFactsCache) {
-	if storeErr := productRepo.CreateOpenFoodFactsCache(entry); storeErr != nil {
+func storeCacheEntry(cacheRepo database.OpenFoodFactsCacheRepositoryInterface, offacntrl *controllers.OpenFoodFactsAPIController, logger *zerolog.Logger, barcode string, entry *dbModel.OpenFoodFactsCache) {
+	if storeErr := cacheRepo.CreateOpenFoodFactsCache(entry); storeErr != nil {
 		logger.Warn().Msgf("Failed to store cache entry for barcode '%s': %s", barcode, storeErr)
 		return
 	}
@@ -241,7 +241,7 @@ func storeCacheEntry(productRepo *database.ProductRepository, offacntrl *control
 		return
 	}
 	entry.ImageURL = localPath
-	if updateErr := productRepo.UpdateOpenFoodFactsCacheImageURL(barcode, localPath); updateErr != nil {
+	if updateErr := cacheRepo.UpdateOpenFoodFactsCacheImageURL(barcode, localPath); updateErr != nil {
 		logger.Warn().Msgf("Failed to update cached image URL for barcode '%s': %s", barcode, updateErr)
 	}
 }

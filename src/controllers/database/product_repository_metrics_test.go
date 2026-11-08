@@ -42,17 +42,17 @@ func TestProductRepository_BulkCacheLookupIsCounted(t *testing.T) {
 	metrics.RegisterCollectors(registry)
 
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	cacheRepo := NewOpenFoodFactsCacheRepository(db)
 
 	entry := dbModel.OpenFoodFactsCache{Barcode: "1234567890123", ProductName: "Cached Product"}
-	if err := repo.CreateOpenFoodFactsCache(&entry); err != nil {
+	if err := cacheRepo.CreateOpenFoodFactsCache(&entry); err != nil {
 		t.Fatalf("CreateOpenFoodFactsCache() error = %v", err)
 	}
 
 	hitsBefore := lookupCount(t, registry, "hit")
 	missesBefore := lookupCount(t, registry, "miss")
 
-	if _, err := repo.GetOpenFoodFactsCachesByBarcodes([]string{"1234567890123", "9999999999999"}); err != nil {
+	if _, err := cacheRepo.GetOpenFoodFactsCachesByBarcodes([]string{"1234567890123", "9999999999999"}); err != nil {
 		t.Fatalf("GetOpenFoodFactsCachesByBarcodes() error = %v", err)
 	}
 
@@ -71,17 +71,17 @@ func TestProductRepository_BulkCacheLookupCountsDuplicatesOnce(t *testing.T) {
 	metrics.RegisterCollectors(registry)
 
 	db := testutil.SetupTestDB(t)
-	repo := NewProductRepository(db)
+	cacheRepo := NewOpenFoodFactsCacheRepository(db)
 
 	entry := dbModel.OpenFoodFactsCache{Barcode: "1234567890123", ProductName: "Cached Product"}
-	if err := repo.CreateOpenFoodFactsCache(&entry); err != nil {
+	if err := cacheRepo.CreateOpenFoodFactsCache(&entry); err != nil {
 		t.Fatalf("CreateOpenFoodFactsCache() error = %v", err)
 	}
 
 	hitsBefore := lookupCount(t, registry, "hit")
 	missesBefore := lookupCount(t, registry, "miss")
 
-	if _, err := repo.GetOpenFoodFactsCachesByBarcodes([]string{"1234567890123", "1234567890123"}); err != nil {
+	if _, err := cacheRepo.GetOpenFoodFactsCachesByBarcodes([]string{"1234567890123", "1234567890123"}); err != nil {
 		t.Fatalf("GetOpenFoodFactsCachesByBarcodes() error = %v", err)
 	}
 

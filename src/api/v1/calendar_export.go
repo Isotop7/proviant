@@ -14,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 )
 
 const (
@@ -89,8 +88,15 @@ func formatProductDescription(product *database.Product) string {
 func ExportICalendar(ctx *gin.Context) {
 	loggerVal, _ := ctx.Get(util.ContextKeyLogger)
 	logger, _ := loggerVal.(*zerolog.Logger)
-	db, _ := ctx.Get(util.ContextKeyDBHandle)
-	dbHandle, _ := db.(*gorm.DB)
+	reposVal, exists := ctx.Get(util.ContextKeyRepos)
+	repos, ok := reposVal.(*dbRepo.RepositoryContainer)
+	if !exists || !ok || repos == nil {
+		if logger != nil {
+			logger.Error().Msg("calendar export: repository container missing from context")
+		}
+		api.RespondError(ctx, http.StatusInternalServerError, apperrors.ErrDatabaseContextNotFound)
+		return
+	}
 
 	token := ctx.Query("token")
 	if token == "" {
@@ -98,8 +104,7 @@ func ExportICalendar(ctx *gin.Context) {
 		return
 	}
 
-	calendarTokenRepo := dbRepo.NewCalendarTokenRepository(dbHandle)
-	ct, err := calendarTokenRepo.GetByToken(token)
+	ct, err := repos.CalendarTokens.GetByToken(token)
 	if err != nil {
 		if logger != nil {
 			logger.Debug().Msgf("Invalid calendar token: %s", err)
@@ -112,8 +117,7 @@ func ExportICalendar(ctx *gin.Context) {
 		return
 	}
 
-	productRepo := dbRepo.NewProductRepository(dbHandle)
-	products, err := productRepo.GetExpiringInDays(ct.UserID, CalendarExpireDays)
+	products, err := repos.ProductHousehold.GetExpiringInDays(ct.UserID, CalendarExpireDays)
 	if err != nil {
 		if logger != nil {
 			logger.Error().Msgf("GetExpiringInDays: %s", err)
